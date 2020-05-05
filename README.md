@@ -3,7 +3,7 @@
 ![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)
 [![Build Status](https://img.shields.io/travis/with_precedent/sourdough.svg)](https://travis-ci.org/with_precedent/sourdough)
 
-<em>"Sourdough is complicated and alive; it�s fickle and mysterious; it�s impossible and it�s beautiful."</em> - [Sophie Lucido Johnson](https://www.bonappetit.com/story/sourdough-starter-love-letter)
+<em>"Sourdough is complicated and alive; it's fickle and mysterious; it's impossible and it's beautiful."</em> - [Sophie Lucido Johnson](https://www.bonappetit.com/story/sourdough-starter-love-letter)
 
 <em>"Sourdough is basically an edible Tamagotchi."</em> - Meik Wiking
 
@@ -38,4 +38,3 @@ Highlights of sourdough include:
 * Dynamic, accessible pipeline objects: Although there a lot of workflow pipeline options out there, many have a difficult learning curve, require substantial overhead, or limit post-construction accessiblity. The last shortcoming arises largely because python dicitonaries do not store duplicate keys and lists are only accessible via index. The Plan class provides a clever way to pipeline objects that has the accessibility of a dictionary but allows duplicate "keys" like a list does. Because it behaves like a basic python type, it doesn't require any specialized coding or learning.
 
 I always welcome suggestions and contributions to make sourdough better.
-"# sourdough" 
