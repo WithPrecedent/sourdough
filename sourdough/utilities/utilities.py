@@ -32,6 +32,7 @@ def add_prefix(
     Args:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         prefix (str): prefix to be added.
+
     Returns:
         list or dict with prefixes added.
 
@@ -51,6 +52,7 @@ def add_suffix(
     Args:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         suffix (str): suffix to be added.
+
     Returns:
         list or dict with suffixes added.
 
@@ -69,7 +71,8 @@ def datetime_string() -> str:
     """
     return datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
 
-def deduplicate(iterable: Union[List, pd.DataFrame, pd.Series]) -> (
+def deduplicate(
+    iterable: Union[List, pd.DataFrame, pd.Series]) -> (
         Union[List, pd.DataFrame, pd.Series]):
     """Deduplicates list, pandas DataFrame, or pandas Series.
 
@@ -357,91 +360,3 @@ def simple_timer(process: Optional[str] = None) -> Callable:
             return result
         return decorated
     return shell_timer
-
-def localize_arguments(
-        override: Optional[bool] = True,
-        excludes: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None) -> Callable:
-    """Converts passed arguments into local attributes in the class instance.
-
-    The created attributes use the same names as the keyword parameters.
-
-    Args:
-        method (Callable): wrapped method within a class instance.
-        override (Optional[bool]): whether to override local attributes that
-            already exist. Defaults to True.
-        excludes (Optional[List[str]]): names of parameters for which a local
-            attribute should not be created.
-        includes (Optional[List[str]]): names of parameters for which a local
-            attribute can be created.
-
-    Return:
-        Callable, unchanged.
-
-    """
-    def shell_localize_arguments(method: Callable, *args, **kwargs):
-        def wrapper(self, *args, **kwargs):
-            arguments = dict(
-                inspect.signature(method).bind(*args, **kwargs).arguments)
-            for argument, value in arguments.items():
-                if argument not in self.__dict__ or override:
-                    if ((includes and argument in includes)
-                            or (excludes and argument not in excludes)):
-                        self.__dict__[argument] = value
-            return method(self, *args, **kwargs)
-        return wrapper
-    return shell_localize_arguments
-
-def use_local_backups(
-        excludes: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None) -> Callable:
-    """Decorator which uses class instance attributes for unpassed parameters.
-
-    If an optional parameter is not passed, the decorator looks for an attribute
-    of the same name. If excludes is passed, the name of the parameter cannot
-    be on that list. If includes is passed, the name of the parameter must be on
-    that list. Only includes or excludes should be passed - if both are passed,
-    excludes is ignored.
-
-    Args:
-        method (Callable): wrapped method within a class instance.
-        excludes (Optional[List[str]]): names of parameters for which a local
-            attribute should not be used.
-        includes (Optional[List[str]]): names of parameters for which a local
-            attribute can be used.
-
-    Return:
-        Callable with passed arguments in addition to replaced unpassed
-            parameters.
-
-    """
-    def shell_use_local_backups(method: Callable, *args, **kwargs):
-        def wrapper(self, *args, **kwargs):
-            call_inspect.signature = inspect.signature(method)
-            parameters = dict(call_inspect.signature.parameters)
-            arguments = dict(
-                call_inspect.signature.bind(*args, **kwargs).arguments)
-            unpassed = list(parameters.keys() - arguments.keys())
-            for argument in unpassed:
-                if includes:
-                    if argument in includes:
-                        try:
-                            arguments.update(
-                                {argument: getattr(self, argument)})
-                        except AttributeError:
-                            pass
-                elif excludes:
-                    if argument not in excludes:
-                        try:
-                            arguments.update(
-                                {argument: getattr(self, argument)})
-                        except AttributeError:
-                            pass
-                else:
-                    try:
-                        arguments.update({argument: getattr(self, argument)})
-                    except AttributeError:
-                        pass
-            return method(self, **arguments)
-        return wrapper
-    return shell_use_local_backups

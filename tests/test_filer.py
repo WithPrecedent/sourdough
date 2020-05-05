@@ -6,13 +6,10 @@
 :license: Apache-2.0
 """
 
-import os
 import pathlib
-import sys
-
-print(pathlib.Path.cwd())
 
 import sourdough
+
 
 def test_filer():
     settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
@@ -23,7 +20,6 @@ def test_filer():
     # Tests injection from settings.
     assert filer.file_encoding == 'windows-1252'
     return
-
 
 if __name__ == '__main__':
     test_filer()
