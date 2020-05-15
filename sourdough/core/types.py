@@ -2,13 +2,14 @@
 .. module:: definition
 :synopsis: typing made simple
 :author: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 
 import collections.abc
 import dataclasses
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
 import sourdough
 
@@ -17,7 +18,7 @@ import sourdough
 class MirrorType(collections.abc.MutableMapping):
     """Base class for proxy typing.
 
-    Args:
+    Arguments:
         types (Dict[str, Any]): keys are proxy names of types and values are
             the actual types.
 
@@ -34,7 +35,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __getitem__(self, key: str) -> Any:
         """Returns 'key' in the 'types' or 'reversed_types' dictionary.
 
-        Args:
+        Arguments:
             key (str): name of key to find.
 
         Returns:
@@ -56,7 +57,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __setitem__(self, key: str, value: Any) -> None:
         """Stores arguments in 'types' and 'reversed_types' dictionaries.
 
-        Args:
+        Arguments:
             key (str): name of key to set.
             value (Any): value tto be paired with key.
 
@@ -68,7 +69,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __delitem__(self, key: str) -> None:
         """Deletes key in the 'types' and 'reversed_types' dictionaries.
 
-        Args:
+        Arguments:
             key (str): name of key to delete.
 
         """

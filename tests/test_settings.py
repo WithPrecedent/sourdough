@@ -2,7 +2,7 @@
 .. module:: test settings
 :synopsis: tests Settings class
 :author: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 
@@ -32,7 +32,7 @@ def test_settings():
             'project_workers': ['parser', 'munger']},
         'parser': {
             'parser_steps': 'divide',
-            'divide_techniques': ['slice', 'dice']},
+            'divide_tasks': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
     ini_settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
     assert ini_settings.contents == actual_settings
@@ -42,12 +42,12 @@ def test_settings():
     assert json_settings.contents == actual_settings
     assert ini_settings.get_workers(section = 'project') == ['parser', 'munger']
     assert ini_settings.get_steps(worker = 'parser') == ['divide']
-    assert ini_settings.get_techniques(
+    assert ini_settings.get_tasks(
         worker = 'parser',
         step = 'divide') == ['slice', 'dice']
     assert ini_settings.get_parameters(
         step = 'divide',
-        technique = 'slice') == {'replace_strings': True}
+        task = 'slice') == {'replace_strings': True}
     assert ini_settings['general']['seed'] == 43
     ini_settings['new_section'] = {}
     ini_settings.contents['new_section']['new_setting'] = 'value'

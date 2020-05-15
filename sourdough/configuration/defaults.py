@@ -2,7 +2,7 @@
 .. module:: defaults
 :synopsis: stored default settings for sourdough
 :publisher: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 

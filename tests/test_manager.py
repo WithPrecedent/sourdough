@@ -1,5 +1,5 @@
 """
-.. module:: test system
+.. module:: test manager
 :synopsis: tests Manager class
 :author: Corey Rayburn Yung
 :copyright: 2020
@@ -27,15 +27,15 @@ class SomeManager(sourdough.Manager):
         pass
 
 
-def test_system():
-    a_system = SomeManager(
-        stages = ['some_action', 'another_action', 'final_action'])
-    assert a_system.name == 'some_system'
-    assert a_system.stages == ['some_action', 'another_action', 'final_action']
-    for method in a_system:
+def test_manager():
+    a_manager = SomeManager(
+        items = ['some_action', 'another_action', 'final_action'])
+    assert a_manager.name == 'some_manager'
+    assert a_manager.stages == ['some_action', 'another_action', 'final_action']
+    for method in a_manager:
         result = method()
     return
 
 
 if __name__ == '__main__':
-    test_system()
+    test_manager()

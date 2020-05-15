@@ -1,30 +1,26 @@
 """
-.. module:: plan
-:synopsis: sourdough project iterable
+.. module:: structure
+:synopsis: sourdough composite objects
 :author: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 
-import collections.abc
+import abc
 import dataclasses
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+import itertools
+import re
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Plan(sourdough.Component, collections.abc.MutableSequence):
-    """Base class for iterating Component instances.
+class Overview(sourdough.base.MappingBase):
+    """Base class for outlining a sourdough project.
 
-    A Plan stores a list of items with 'name' attributes. Each 'name'
-    acts as a key to create the facade of a dictionary with the items in the
-    stored list serving as values. This allows for duplicate keys and the
-    storage of class instances at the expense of lookup speed. Since normal
-    use cases do not include repeat accessing of Plan instances, the
-    loss of lookup speed should have negligible effect on overall performance.
-
-    Args:
+    Arguments:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -32,229 +28,300 @@ class Plan(sourdough.Component, collections.abc.MutableSequence):
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[List[Component]]): stored list. Defaults to an
-            empty list.
-        extender (Optional[bool]): whether to extend (True) 'contents' when
-            using the 'add' method or '+' (True) or append (False) when using
-            those methods. Defaults to True
+        contents (Dict[str, List[str]]): a dictionary with keys corresponding
+            to step names and a list of tasks in the values. Defaults to an
+            empty dictionary.
 
     """
     name: Optional[str] = None
-    contents: Optional[List[sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-    extender: Optional[bool] = True
+    contents: Optional[Dict[str, 'Overview']] = dataclasses.field(
+            default_factory = dict)
 
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        super().__post_init__()
-        if self.__class__ == Plan:
-            if self.extender:
-                return Extender(name = self.name, contents = self.contents)
-            else:
-                return Appended(name = self.name, contents = self.contents)
-        return self
+    def add(self, component: 'sourdough.Component') -> None:
+        """[summary]
 
-    """ Required ABC Methods """
-
-    def insert(self, index: int, value: sourdough.Component) -> None:
-        """Inserts 'value' at 'index' in 'contents'.
-
-        Args:
-            index (int): index to insert 'value' at.
-            value (Component): object to be inserted.
-
-        """
-        self.contents.insert[index] = value
-        return self
-
-    def __getitem__(self, key: str) -> List[sourdough.Component]:
-        """Returns value(s) for 'key' in 'contents' as a list.
-
-        Args:
-            key (str): name to search for in 'contents'.
+        Arguments:
+            level {[type]} -- [description]
 
         Returns:
-            List[Component]: value(s) stored in 'contents'.
+            [type] -- [description]
+            
+        """
+        self.contents[component.name] = component
+        return self
+
+
+@dataclasses.dataclass
+class Plan(sourdough.base.MappingBase):
+    """Base class for lists storing sourdough Component instances.
+
+    Plan takes advantage of the 'name' attribute of Component instances. It
+    allows flexible access methods using the 'name' attributes of stored items.
+    Each 'name' acts as a index to create the facade of a dictionary with the 
+    items in the stored list serving as values. This allows for duplicate indexs 
+    for storing class instances at the expense of lookup speed. Since normal
+    use cases do not include repeat accessing of Plan instances, the loss of 
+    lookup speed should have negligible effect on overall performance.
+    
+    By allowing some dictionary functionality, but storing a list, complicated
+    iteration can be more easily implemented. For example, the Manager subclass
+    implements a state-tracking iterable that could not easily be implemented
+    by a dictionary (even with ordered dictionaries after python 3.6).
+
+    Arguments:
+        name (Optional[str]): designates the name of the class instance used
+            for internal referencing throughout sourdough. If the class instance
+            needs settings from the shared Settings instance, 'name' should
+            match the appropriate section name in that Settings instance. When
+            subclassing, it is a good settings to use the same 'name' attribute
+            as the base class for effective coordination between sourdough
+            classes. Defaults to None or __class__.__name__.lower().
+        items (Optional[List[Component]]): stored iterable of actions to take
+            as part of the Plan. Defaults to an empty list.
+
+    """
+    name: Optional[str] = None
+    items: Optional[List[sourdough.Component]] = dataclasses.field(
+        default_factory = list)
+
+    """ Overview Property """
+    
+    @property
+    def overview(self) -> 'Overview':
+        """Returns string snapshot of current state of the Plan.
+        
+        With a basic plan, the overview just appears as a simple dictionary of
+        item 'name' attributes as keys and items as values. When using more
+        complicated Plan subclasses, such as CompositeProject, the overview
+        includes the entire composite structure, appearing as a tree-like
+        object.
+        
+        Returns:
+            Overview: configured according to the '_get_overview' method.
+        
+        """
+        return self._get_overview() 
+            
+    """ Private Methods """
+    
+    def _get_overview(self) -> Union['sourdough.Overview', List[str]]:
+        """Returns Overview instance filled with stored Plan items.
+                
+        Returns:
+            Overview: with 'contents' determined by the Plan 'items'.
+        
+        """
+        overview = sourdough.Overview(name = f'{self.name}_overview')
+        for item in self.items:
+            overview.add(item)
+        return overview
+
+    """ Public Methods """
+       
+    def add(self, items: Union['Plan', 'sourdough.Component']) -> None:
+        """Appends arguments to 'items'.
+
+        If you wish to instead extend 'items' with a Plan, please use the
+        normal python 'extend' method. The default implementation of Plan
+        assumes that passed Plan instances will be stored as single items, via
+        the 'append' method.
+        
+        Arguments:
+            items (Union['Plan', sourdough.Component]): Component(s) to add
+                to 'items'.
 
         """
-        return [c for c in self.contents if c.name == key]
+        self.items.append(items)
+        return self    
 
-    def __setitem__(self, key: str, value: sourdough.Component) -> None:
-        """Adds 'value' to 'contents' if 'key' matches 'value.name'.
+    """ Dunder Methods """
 
-        Args:
-            key (str): name of key(s) to set in 'contents'.
-            value (Component): value(s) to be added at the end of
-                'contents'.
+    def __getitem__(self, 
+            index: Union[str, int]) -> Union['Plan', 'sourdough.Component']:
+        """Returns value(s) for 'index' in 'items'.
+        
+        If 'index' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances.
 
-        Raises:
-            TypeError: if 'name' attribute in value either doesn't exist or
-                doesn't match 'key'.
+        Arguments:
+            index (Union[str, int]): name or index to search for in 'items'.
+
+        Returns:
+            Union['Plan', sourdough.Component]: value(s) stored in 'items' 
+                that corresponder to 'index'.
 
         """
-        if hasattr(value, name) and value.name in [key]:
-            self.add(contents = contents)
+        if isinstance(index, int):
+            return self.items[index]
         else:
-            raise TypeError(
-                f'{self.name} requires a value with a name atttribute')
-        return self
+            matches = [c for c in self.items if c.name == index]
+            if len(matches) == 1:
+                return matches[0]
+            else:
+                return self.__class__(name = self.name, items = matches)
 
-    def __delitem__(self, key: str) -> None:
-        """Deletes 'key' in 'contents'.
+    def __delitem__(self, index: Union[str, int]) -> None:
+        """Deletes item matching 'index' in 'items'.
 
-        Args:
-            key (str): name(s) of key(s) in 'contents' to
-                delete the key/value pair.
+        If 'index' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances.
+
+        Arguments:
+            index (Union[str, int]): name or index in 'items' to delete.
 
         """
-        try:
-            self.contents = [item for item in self.contents if item.name != key]
-        except AttributeError:
-            raise TypeError(
-                f'{self.name} requires a value with a name atttribute')
+        if isinstance(index, int):
+            del self.items[index]
+        else:
+            try:
+                self.items = [c for c in self.items if c.name != index]
+            except AttributeError:
+                raise TypeError(
+                    f'{self.name} requires a value with a name atttribute')
         return self
 
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
+    def __iter__(self) -> Iterable:
+        """Returns chained iterable of 'items'.
+     
         Returns:
-            Integer: length of 'contents'.
-
+            Iterable: using the itertools method which automatically iterates
+                all stored iterables within 'items'.Any
+               
         """
-        return len(self.contents)
+        return iter(itertools.chain.from_iterable(self.items))
 
-    """ Other Dunder Methods """
 
-    def __add__(self,
-            other: Union[
-                List[sourdough.Component],
-                sourdough.Component]) -> None:
-        """Combines argument with 'contents'.
+# @dataclasses.dataclass
+# class PlanDesigner(abc.ABC):
+#     """[summary]
 
-        Args:
-            other (Union[List[Component], Component]):
-                Component(s) to add to 'contents'.
+#     Arguments:
+#         sourdough {[type]} -- [description]
+        
+#     """
+#     name: Optional[str] = None
 
-        """
-        self.add(contents = other)
-        return self
-
-    def __iadd__(self,
-            other: Union[
-                List[sourdough.Component],
-                sourdough.Component]) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Union[List[Component], Component]):
-                Component(s) to add to 'contents'.
-
-        """
-        self.add(contents = other)
-        return self
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default dictionary representation of 'contents'.
-
-        """
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns representation of 'contents'.
-
-        Returns:
-            str: representation of 'contents'.
-
-        """
-        return (
-            f'sourdough {self.name} '
-            f'contents: {self.contents} ')
+#     """ Required Subclass Methods """
+    
+#     @abc.abstractmethod
+#     def create(self, *args, **kwargs) -> NotImplementedError:
+#         """Subclasses must provide their own methods."""
+#         raise NotImplementedError(
+#             'PlanDesigner subclasses must include create methods')
 
 
 @dataclasses.dataclass
-class Appender(Plan):
-    """Plan subclass which appends its contents by default.
+class ParallelPlan(Plan):
+    """[summary]
 
-    'Contents' is appended by the 'add' method and when using '+' to join a
-    Plan with another object.
-
-    Args:
-        name (Optional[str]): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[List[Component]]): stored list. Defaults to an
-            empty list.
-
+    Arguments:
+        sourdough {[type]} -- [description]
+        
     """
     name: Optional[str] = None
-    contents: Optional[List[sourdough.Component]] = dataclasses.field(
-        default_factory = list)
 
     """ Public Methods """
+    
+    def reorganize(self, overview: 'Overview') -> 'Plan':
+        """Creates a 'Plan' with a parallel structure.
 
-    def add(self,
-            contents: Union[
-                List[sourdough.Component],
-                sourdough.Component]) -> None:
-        """Appends arguments to 'contents'.
-
-        Args:
-            contents (Union[List[Component], Component]): Component(s) to add
-                to 'contents'.
+        Returns:
+            'Plan': configured to specifications in 'overview'.
 
         """
-        self.contents.append(contents)
-        return self
+        outer_name = self.name
+        inner_name = 'plan'
+        # Creates a 'Plan' instance to store other 'Plan' instances.
+        outer_plan = sourdough.SerialPlan(name = outer_name)
+        # Creates list of steps from 'overview'.
+        steps = list(overview.keys())
+        # Creates 'possible' list of lists.
+        possible = list(overview.values())
+        # Creates a list of lists of the Cartesian product of 'possible'.
+        combinations = list(map(list, itertools.product(*possible)))
+        # Creates a 'inner_plan' for each combination of tasks and adds that
+        # 'inner_plan' to 'outer_plan'.
+        for i, tasks in enumerate(combinations):
+            inner_plan = sourdough.SerialPlan(
+                name = f'{inner_name}_{i}',
+                extender = False)
+            step_tasks = tuple(zip(steps, tasks))
+            for task in step_tasks:
+                task = self.instructions.task.load()(
+                    name = task[0],
+                    task = task[1])
+                task = self.parametizer.get(task = task)
+                inner_plan.add(contents = task)
+            outer_plan.add(contents = inner_plan)
+        return outer_plan
 
 
 @dataclasses.dataclass
-class Extender(Plan):
-    """Plan subclass which extends its contents by default.
+class SerialPlan(Plan):
+    """[summary]
 
-    'Contents' is extended by the 'add' method and when using '+' to join a
-    Plan with another object.
-
-    Args:
-        name (Optional[str]): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[List[Component]]): stored list. Defaults to an
-            empty list.
-
+    Arguments:
+        sourdough {[type]} -- [description]
+        
     """
     name: Optional[str] = None
-    contents: Optional[List[sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-
+    
     """ Public Methods """
+ 
+    def create(self,
+            overview: Optional[Dict[str,str]] = None,
+            outer_name: Optional[str] = None,
+            inner_name: Optional[str] = None) -> 'Plan':
+        """Drafts a outer_plan with a serial inner_plan structure.
 
-    def add(self,
-            contents: Union[
-                List[sourdough.Component],
-                sourdough.Component]) -> None:
-        """Extends 'contents' with argument, if possible.
-
-        If the argument can not be used to extend 'contents', it is appended
-        instead.
-
-        Args:
-            contents (Union[List[Component], Component]): Component(s) to add to
-                'contents'.
+        Returns:
+            'Plan': configured to spefications in 'instructions'.
 
         """
-        try:
-            self.contents.extend(contents)
-        except TypeError:
-            self.contents.append(contents)
-        return self
+        if overview is None:
+            overview = self.overview
+        if outer_name is None:
+            outer_name = self.instructions.name
+        # Creates a 'Plan' instance to store other 'Plan' instances.
+        outer_plan = sourdough.Plan(name = outer_name)
+        # Creates a 'inner_plan' for each step in 'overview'.
+        for step, tasks in self.overview.items():
+            inner_plan = sourdough.Plan(name = step)
+            for task in tasks:
+                task = self.instructions.task(
+                    name = step,
+                    task = task)
+                task = self.parametizer.get(task = task)
+                inner_plan.add(contents = task)
+            outer_plan.add(contents = inner_plan)
+        return outer_plan
+
+
+# @dataclasses.dataclass
+# class PlanFactory(sourdough.base.FactoryBase):
+#     """The PlanFactory interface instances a class from available options.
+
+#     Arguments:
+#         product (Optional[str]): name of sourdough object to return. 'product' 
+#             must correspond to a key in 'products'. Defaults to None.
+#         default (ClassVar[str]): the name of the default object to instance. If 
+#             'product' is not passed, 'default' is used. 'default' must 
+#             correspond  to a key in 'products'. Defaults to None. If 'default'
+#             is to be used, it should be specified by a subclass, declared in an
+#             instance, or set via the class attribute.
+#         products (ClassVar[MutableMapping]): a dictionary or other mapping of 
+#             available options for object creation. Keys are the names of the 
+#             'product'. Values are the objects to create. Defaults to an 
+#             empty dictionary.
+
+#     Returns:
+#         Any: the factory uses the '__new__' method to return a different object 
+#             instance with kwargs as the parameters.
+
+#     """    
+#     product: Optional[str] = None
+#     default: ClassVar[str] = 'serial'
+#     products: ClassVar[collections.abc.MutableMapping] = {
+#         'parallel': ParallelPlan,
+#         'serial': SerialPlan,
+#         'project': sourdough.Project}

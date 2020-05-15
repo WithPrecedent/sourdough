@@ -10,5 +10,5 @@ settings = {
         'project_workers': ['parser', 'munger']},
     'parser': {
         'parser_steps': 'divide',
-        'divide_techniques': ['slice', 'dice']},
+        'divide_tasks': ['slice', 'dice']},
     'divide_parameters': {'replace_strings': True}}

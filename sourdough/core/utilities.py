@@ -2,7 +2,7 @@
 .. module:: utilities
 :synopsis: general functions and decorators for sourdough
 :author: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 
@@ -13,7 +13,8 @@ import pathlib
 import re
 import time
 import types
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
 import more_itertools
 import numpy as np
@@ -29,7 +30,7 @@ def add_prefix(
 
     An underscore is automatically added after the string prefix.
 
-    Args:
+    Arguments:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         prefix (str): prefix to be added.
 
@@ -49,7 +50,7 @@ def add_suffix(
 
     An underscore is automatically added after the string suffix.
 
-    Args:
+    Arguments:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         suffix (str): suffix to be added.
 
@@ -62,21 +63,24 @@ def add_suffix(
     except TypeError:
         return [item + '_' + suffix for item in iterable]
 
-def datetime_string() -> str:
+def datetime_string(prefix: Optional[str] = None) -> str:
     """Creates a string from current date and time.
 
     Returns:
         str with current date and time in Y/M/D/H/M format.
 
     """
-    return datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    if prefix is None:
+        prefix = ''
+    time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    return f'{prefix}_{time_string}'
 
 def deduplicate(
     iterable: Union[List, pd.DataFrame, pd.Series]) -> (
         Union[List, pd.DataFrame, pd.Series]):
     """Deduplicates list, pandas DataFrame, or pandas Series.
 
-    Args:
+    Arguments:
         iterable (list, DataFrame, or Series): iterable to have duplicate
             entries removed.
 
@@ -93,7 +97,7 @@ def deduplicate(
 def is_nested(dictionary: Dict[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
 
-    Args:
+    Arguments:
         dictionary (dict): dict to be tested.
 
     Returns:
@@ -109,7 +113,7 @@ def listify(
         default_empty: Optional[bool] = False) -> Union[list, None]:
     """Stores passed variable as a list (if not already a list).
 
-    Args:
+    Arguments:
         variable (any): variable to be transformed into a list to allow proper
             iteration.
         default_null (boolean): whether to return None (True) or ['none']
@@ -135,7 +139,7 @@ def listify(
 def numify(variable: str) -> Union[int, float, str]:
     """Attempts to convert 'variable' to a numeric type.
 
-    Args:
+    Arguments:
         variable (str): variable to be converted.
 
     Returns
@@ -153,7 +157,7 @@ def numify(variable: str) -> Union[int, float, str]:
 def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
     """Converts string 'path' to pathlib.pathlib.Path object.
 
-    Args:
+    Arguments:
         path (Union[str, pathlib.Path]): either a string representation of a
             path or a pathlib.Path object.
 
@@ -179,7 +183,7 @@ def propertify(
         deleter: Optional[Callable]) -> object:
     """Adds 'name' property to 'instance' at runtime.
 
-    Args:
+    Arguments:
         instance (object): instance to add a property to.
         name (str): name that the new property should be given.
         getter (Callable): getter method for the new property.
@@ -193,7 +197,7 @@ def propertify(
     def _bind_process(process: Callable, instance: object) -> Callable:
         """Binds 'process' to 'instance'.
 
-        Args:
+        Arguments:
             process (Callable): function, method in 'instance' or method in
                 another class instance.
             instance (object): class instance to bind 'process to'.
@@ -240,7 +244,7 @@ def propertify(
 def snakify(variable: str) -> str:
     """Converts a capitalized word name to snake case.
 
-    Args:
+    Arguments:
         variable (str): string to convert.
 
     Returns:
@@ -255,7 +259,7 @@ def stringify(
         default_empty: Optional[bool] = False) -> str:
     """Converts one item list to a string (if not already a string).
 
-    Args:
+    Arguments:
         variable (str, list): variable to be transformed into a string.
         default_null (boolean): whether to return None (True) or ['none']
             (False).
@@ -287,7 +291,7 @@ def subsetify(
 
     The returned subset is a dictionary with keys in 'subset'.
 
-    Args:
+    Arguments:
         dictionary (Dict[Any, Any]): dict to be subsetted.
         subset (Union[Any, List[Any]]): key(s) to get key/value pairs from
             'dictionary'.
@@ -306,7 +310,7 @@ def typify(variable: str) -> Union[List, int, float, bool, str]:
     alternative datatype is found, the variable is returned in its original
     form.
 
-    Args:
+    Arguments:
         variable (str): string to be converted to appropriate datatype.
 
     Returns:
@@ -336,7 +340,7 @@ def typify(variable: str) -> Union[List, int, float, bool, str]:
 def simple_timer(process: Optional[str] = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
-    Args:
+    Arguments:
         process (Optional[str]): name of class or method to be used in the
             output describing time elapsed.
 

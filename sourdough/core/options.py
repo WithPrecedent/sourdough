@@ -1,27 +1,29 @@
 """
-.. module:: repository
-:synopsis: option storage made simple
+.. module:: options
+:synopsis: sourdough wildcard dictionary
 :author: Corey Rayburn Yung
-:copyright: 2019-2020
+:copyright: 2020
 :license: Apache-2.0
 """
 
+import abc
 import collections.abc
 import dataclasses
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Repository(sourdough.Component, collections.abc.MutableMapping):
+class Options(sourdough.base.MappingBase):
     """Base class for wilcard-accepting dictionary.
 
     If a wildcard key or list of keys is sought using '__getitem__', a list of
     values is returned. If a string is sought a string is returned unless
     'always_return_list' is set to True.
 
-    Args:
+    Arguments:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -38,6 +40,9 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
             the key passed is not a list (True) or to return a list in all cases
             (False). Defaults to False.
 
+    ToDo:
+        Fix '_nestify' recursion problem.
+
     """
     name: Optional[str] = None
     contents: Optional[Dict[str, Any]] = dataclasses.field(
@@ -49,35 +54,35 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
         super().__post_init__()
-        # Stores nested dictionaries as Repository instances.
-        self.contents = self._nestify(contents = self.contents)
+        # Stores nested dictionaries as Options instances.
+        # self.contents = self._nestify(contents = self.contents)
         # Sets 'default' to all keys of 'contents', if not passed.
         self.defaults = self.defaults or list(self.contents.keys())
         return self
 
     """ Public Methods """
 
-    def add(self, contents: Union[Repository, Dict[str, Any]]) -> None:
+    def add(self, contents: Union['Options', Dict[str, Any]]) -> None:
         """Combines arguments with 'contents'.
 
-        Args:
-            contents (Union[Repository, Dict[str, Any]]): another
-                Repository instance/subclass or a compatible dictionary.
+        Arguments:
+            contents (Union[Options, Dict[str, Any]]): another
+                Options instance/subclass or a compatible dictionary.
 
         """
         self.contents.update(contents)
-        self.contents = self._nestify(contents = self.contents)
+        # self.contents = self._nestify(contents = self.contents)
         return self
 
-    def subset(self, subset: Union[Any, List[Any]]) -> Repository:
+    def subsetify(self, subset: Union[str, List[str]]) -> 'Options':
         """Returns a subset of 'contents'.
 
-        Args:
-            subset (Union[Any, List[Any]]): key(s) to get key/value pairs from
-                'dictionary'.
+        Arguments:
+            subset (Union[str, List[str]]): key(s) to get key/value pairs from
+                'contents'.
 
         Returns:
-            Repository: with only keys in 'subset'.
+            Options: with only keys in 'subset'.
 
         """
         return self.__class__(
@@ -85,9 +90,10 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
             contents = sourdough.utilities.subsetify(
                 dictionary = self.contents,
                 subset = subset),
-            defaults = self.defaults)
+            defaults = self.defaults,
+            always_return_list = self.always_return_list)
 
-    """ Required ABC Methods """
+    """ Dunder Methods """
 
     def __getitem__(self, key: Union[List[str], str]) -> Union[List[Any], Any]:
         """Returns value(s) for 'key' in 'contents'.
@@ -95,7 +101,7 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
         The method searches for 'all', 'default', and 'none' matching wildcard
         options before searching for direct matches in 'contents'.
 
-        Args:
+        Arguments:
             key (Union[List[str], str]): name(s) of key(s) in 'contents'.
 
         Returns:
@@ -131,7 +137,7 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
             value: Union[List[Any], Any]) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
-        Args:
+        Arguments:
             key (Union[List[str], str]): name of key(s) to set in 'contents'.
             value (Union[List[Any], Any]): value(s) to be paired with 'key' in
                 'contents'.
@@ -149,7 +155,7 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
     def __delitem__(self, key: Union[List[str], str]) -> None:
         """Deletes 'key' in 'contents'.
 
-        Args:
+        Arguments:
             key (Union[List[str], str]): name(s) of key(s) in 'contents' to
                 delete the key/value pair.
 
@@ -159,68 +165,16 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
             for i in self.contents if i not in sourdough.utilities.listify(key)}
         return self
 
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: of 'contents'.
-
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            Integer: length of 'contents'.
-
-        """
-        return len(self.contents)
-
-    """ Other Dunder Methods """
-
-    def __add__(self,
-            other: Union[Repository, Dict[str, Any]]) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Union[Repository, Dict[str, Any]]): another
-                Repository instance or compatible dictionary.
-
-        """
-        self.add(contents = other)
-        return self
-
-    def __iadd__(self,
-            other: Union[Repository, Dict[str, Any]]) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Union[Repository, Dict[str, Any]]): another
-                Repository instance or compatible dictionary.
-
-        """
-        self.add(contents = other)
-        return self
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default dictionary representation of 'contents'.
-
-        """
-        return self.__str__()
-
     def __str__(self) -> str:
-        """Returns default dictionary representation of contents.
+        """Returns default dictionary representation of 'contents'.
 
         Returns:
             str: default dictionary representation of 'contents'.
 
         """
         return (
-            f'{self.name} '
+            f'sourdough {self.__class__.__name__} '
+            f'name: {self.name} '
             f'contents: {self.contents.__str__()} '
             f'defaults: {self.defaults} ')
 
@@ -228,23 +182,24 @@ class Repository(sourdough.Component, collections.abc.MutableMapping):
 
     def _nestify(self,
             contents: Union[
-                Repository,
-                Dict[str, Any]]) -> Repository:
-        """Converts nested dictionaries to Repository instances.
+                'Options',
+                Dict[str, Any]]) -> 'Options':
+        """Converts nested dictionaries to Options instances.
 
-        Args:
-            contents (Union[Repository, Dict[str, Any]]): mutable
-                mapping to be converted to a Repository instance.
+        Arguments:
+            contents (Union[Options, Dict[str, Any]]): mutable
+                mapping to be converted to a Options instance.
 
         Returns:
-            Repository: subclass instance with 'contents' stored.
+            Options: subclass instance with 'contents' stored.
 
         """
-        new_repository = self.__new__()
+        new_Options = self.__class__()
         for key, value in contents.items():
-            if isinstance(value, dict):
-                new_repository.add(
+            if not isinstance(value, Options):
+                new_Options.add(
                     contents = {key: self._nestify(contents = value)})
             else:
-                new_repository.add(contents = {key: value})
-        return new_repository
+                new_Options.add(contents = {key: value})
+        return new_Options
+    
