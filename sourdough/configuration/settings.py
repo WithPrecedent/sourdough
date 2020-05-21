@@ -52,7 +52,7 @@ class Settings(collections.abc.MutableMapping):
     prohibited, but the forgiving '__getitem__' method will only catch for
     matches in the first nested level.
 
-    Arguments:
+    Args:
         contents (Optional[Union[str, pathlib.Path, Dict[str, Any]]): a dict, a
             str file path to a file with settings, or a pathlib Path to a file
             with settings. Defaults to an empty dictionary.
@@ -79,12 +79,12 @@ class Settings(collections.abc.MutableMapping):
         self.contents = self._chain_defaults(contents = self.contents)
         return self
 
-    """ Core sourdough Methods """
+    """ Public Methods """
 
     def add(self, section: str, settings: Dict[str, Any]) -> None:
         """Adds 'settings' to 'contents'.
 
-        Arguments:
+        Args:
             section (str): name of section to add 'dictionary' to.
             settings (Dict[str, Any]): dict to add to 'section'.
 
@@ -101,7 +101,7 @@ class Settings(collections.abc.MutableMapping):
             overwrite: Optional[bool] = False) -> object:
         """Injects appropriate items into 'instance' from 'contents'.
 
-        Arguments:
+        Args:
             instance (object): sourdough class instance to be modified.
             other_sections (Optional[Union[List[str], str]]): other section(s)
                 in 'contents' to inject into 'instance'. Defaults to None.
@@ -132,59 +132,47 @@ class Settings(collections.abc.MutableMapping):
                 pass
         return instance
 
-    def get_workers(self, section: str) -> List[str]:
-        """Returns 'workers' list appropriate to 'section'.
+    def get_managers(self, section: str, name: str) -> List[str]:
+        """Returns a list of names of managers.
 
-        Arguments:
-            section (str): name of section in 'contents' to search for
-                steps.
-
-        Returns:
-            List[str]: steps list stored in 'contents'.
-
-        """
-        return sourdough.utilities.listify(
-            self.contents[section][f'{section}_workers'])
-
-    def get_steps(self, worker: str) -> List[str]:
-        """Returns 'steps' list appropriate to 'worker'.
-
-        Arguments:
-            section (str): name of section in 'contents' to search for
-                steps.
-            worker (str): name of worker for which 'steps' are sought.
+        Args:
+            section (str): name of section of 'contents' to search.
+            name (str): prefix of key ending in '_managers'.
 
         Returns:
-            List[str]: steps list stored in 'contents'.
+            List[str]: values stored in 'contents' converted to a list.
 
         """
-        return sourdough.utilities.listify(
-            self.contents[worker][f'{worker}_steps'])
+        return self._get_special(
+            section = section,
+            prefix = name, 
+            suffix = 'managers')
 
-    def get_tasks(self, worker: str, step: str) -> List[str]:
-        """Returns 'tasks' list appropriate to 'step' in 'worker'.
+    def get_tasks(self, section: str, name: str) -> List[str]:
+        """Returns a list of names of tasks.
 
-        Arguments:
-            worker (str): name of section in 'contents' to search for
-                tasks.
-            step (str): name of 'step' for which tasks are sought.
+        Args:
+            section (str): name of section of 'contents' to search.
+            name (str): prefix of key ending in '_tasks'.
 
         Returns:
-            List[str]: tasks list stored in 'contents'.
+            List[str]: values stored in 'contents' converted to a list.
 
         """
-        return sourdough.utilities.listify(
-            self.contents[worker][f'{step}_tasks'])
+        return self._get_special(
+            section = section,
+            prefix = name, 
+            suffix = 'tasks')
 
-    def get_parameters(self, step: str, task: str) -> Dict[str, Any]:
-        """Returns 'parameters' dictionary appropriate to 'step' or 'task'.
+    def get_parameters(self, worker: str, task: str) -> Dict[str, Any]:
+        """Returns 'parameters' dictionary appropriate to 'worker' or 'task'.
 
         The method firsts look for a match with 'task' as a prefix (the
-        more specific label) and then 'step' as a prefix' if there is no match
+        more specific label) and then 'worker' as a prefix' if there is no match
         for 'task'.
 
-        Arguments:
-            step (str): name of 'step' for which parameters are sought.
+        Args:
+            worker (str): name of 'worker' for which parameters are sought.
             task (str): name of 'task' for which parameters are
                 sought.
 
@@ -196,17 +184,17 @@ class Settings(collections.abc.MutableMapping):
             return self[f'{task}_parameters']
         except KeyError:
             try:
-                return self[f'{step}_parameters']
+                return self[f'{worker}_parameters']
             except KeyError:
                 raise KeyError(
-                    f'parameters for {step} and {task} not found')
+                    f'parameters for {worker} and {task} not found')
 
     """ Required ABC Methods """
 
     def __getitem__(self, key: str) -> Union[Dict[str, Any], Any]:
         """Returns a section of the active dictionary or key within a section.
 
-        Arguments:
+        Args:
             key (str): the name of the dictionary key for which the value is
                 sought.
 
@@ -230,7 +218,7 @@ class Settings(collections.abc.MutableMapping):
     def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
         """Creates new key/value pair(s) in a section of the active dictionary.
 
-        Arguments:
+        Args:
             key (str): name of a section in the active dictionary.
             value (Dict): the dictionary to be placed in that section.
 
@@ -251,7 +239,7 @@ class Settings(collections.abc.MutableMapping):
     def __delitem__(self, key: str) -> None:
         """Deletes 'key' entry in 'contents'.
 
-        Arguments:
+        Args:
             key (str): name of key in 'contents'.
 
         """
@@ -287,7 +275,7 @@ class Settings(collections.abc.MutableMapping):
             Dict[str, Any]]) -> Dict[str, Any]:
         """
 
-        Arguments:
+        Args:
             contents (Union[str,pathlib.Path,Dict[str, Any]]): [description]
 
         Raises:
@@ -308,10 +296,25 @@ class Settings(collections.abc.MutableMapping):
         else:
             raise TypeError('contents must be a dict, Path, or str type')
 
+    def _get_special(self, section: str, prefix: str, suffix: str) -> List[str]:
+        """Returns list of items in 'section' with key of f'{sprefix}_{suffix}'.
+
+        Args:
+            section (str): name of section in 'contents' to search.
+            prefix (str): prefix of key in section to search for.
+            suffix (str): suffix of key in section to search for.
+
+        Returns:
+            List[str]: stored in 'contents'.
+
+        """
+        return sourdough.utilities.listify(
+            self.contents[section][f'{prefix}_{suffix}'])
+
     def _load_from_ini(self, file_path: str) -> Dict[str, Any]:
         """Returns settings dictionary from an .ini file.
 
-        Arguments:
+        Args:
             file_path (str): path to configparser-compatible .ini file.
 
         Returns:
@@ -332,7 +335,7 @@ class Settings(collections.abc.MutableMapping):
     def _load_from_json(self, file_path: str) -> Dict[str, Any]:
         """Returns settings dictionary from an .json file.
 
-        Arguments:
+        Args:
             file_path (str): path to configparser-compatible .json file.
 
         Returns:
@@ -352,7 +355,7 @@ class Settings(collections.abc.MutableMapping):
     def _load_from_py(self, file_path: str) -> Dict[str, Any]:
         """Returns a settings dictionary from a .py file.
 
-        Arguments:
+        Args:
             file_path (str): path to python module with '__dict__' dict
                 defined.
 
@@ -381,7 +384,7 @@ class Settings(collections.abc.MutableMapping):
             contents: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Converts stored values to appropriate datatypes.
 
-        Arguments:
+        Args:
             contents (Dict[str, Dict[str, Any]]): a nested contents dictionary
                 to review.
 
@@ -406,7 +409,7 @@ class Settings(collections.abc.MutableMapping):
         """Creates a backup set of mappings for sourdough settings lookup.
 
 
-        Arguments:
+        Args:
             contents (Dict[str, Dict[str, Any]]): a nested contents dictionary
                 to review.
 
@@ -424,7 +427,7 @@ class Settings(collections.abc.MutableMapping):
             overwrite: bool) -> object:
         """Adds attribute to 'instance' based on conditions.
 
-        Arguments:
+        Args:
             instance (object): sourdough class instance to be modified.
             attribute (str): name of attribute to inject.
             value (Any): value to assign to attribute.

@@ -6,43 +6,61 @@
 :license: Apache-2.0
 """
 
+import dataclasses
 import pathlib
-
-import pandas as pd
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
 import sourdough
 
 
-class Author(sourdough.Stage):
+@dataclasses.dataclass
+class Distributor(sourdough.Stage):
     
     def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
         return project
+   
+
+@dataclasses.dataclass
+class Slice(sourdough.Worker):
+    pass
 
 
-class Publisher(sourdough.Stage):
-    
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
-        return project
+@dataclasses.dataclass
+class Dice(sourdough.Worker):
+    pass
 
 
-class Reader(sourdough.Stage):
-    
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
-        return project
+@dataclasses.dataclass    
+class Divider(sourdough.Manager):
+
+    options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
+        contents = {'slice': Slice, 'dice': Dice})
+
+
+@dataclasses.dataclass      
+class Parser(sourdough.Manager):
+
+    options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
+        contents = {'divider': Divider})
+
+
+@dataclasses.dataclass
+class Munger(sourdough.Worker):
+    pass
 
 
 def test_project():
-    settings = sourdough.Settings(
-        contents = pathlib.Path.cwd().joinpath(
-            'tests', 
-            'ini_settings.ini'))
+    settings = pathlib.Path.cwd().joinpath('tests', 'composite_settings.py')
+    sourdough.Project.add_option(name = 'parser', employee = Parser)
+    sourdough.Project.add_option(name = 'munger', employee = Munger)
     project = sourdough.Project(settings = settings)
-    sourdough.Manager.add_stage('author', Author)
-    sourdough.Manager.add_stage('publisher', Publisher)
-    sourdough.Manager.add_stage('reader', Reader)
-    manager = sourdough.Manager(
-        stages = ['author', 'publisher', 'reader'], 
+    sourdough.Stage.add(key = 'distribute', option = Distributor)
+    director = sourdough.Director(
+        stages = ['draft', 'edit', 'publish', 'distribute', 'apply'],
         project = project)
+    print('test project contents', director.project.contents)
+    # print('test parser contents', director.project['parser'].contents)
     return
 
 if __name__ == '__main__':

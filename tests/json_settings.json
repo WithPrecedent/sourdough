@@ -10,10 +10,10 @@
         "analysis_format": "csv",
         "file_encoding": "windows-1252"},
     "project": {
-        "project_workers": "parser, munger"
+        "project_managers": "parser, munger"
     },
     "parser": {
-        "parser_steps": "divide",
+        "parser_workers": "divide",
         "divide_tasks": "slice, dice"
     },
     "divide_parameters": {

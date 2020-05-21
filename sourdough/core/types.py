@@ -18,7 +18,7 @@ import sourdough
 class MirrorType(collections.abc.MutableMapping):
     """Base class for proxy typing.
 
-    Arguments:
+    Args:
         types (Dict[str, Any]): keys are proxy names of types and values are
             the actual types.
 
@@ -35,7 +35,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __getitem__(self, key: str) -> Any:
         """Returns 'key' in the 'types' or 'reversed_types' dictionary.
 
-        Arguments:
+        Args:
             key (str): name of key to find.
 
         Returns:
@@ -57,7 +57,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __setitem__(self, key: str, value: Any) -> None:
         """Stores arguments in 'types' and 'reversed_types' dictionaries.
 
-        Arguments:
+        Args:
             key (str): name of key to set.
             value (Any): value tto be paired with key.
 
@@ -69,7 +69,7 @@ class MirrorType(collections.abc.MutableMapping):
     def __delitem__(self, key: str) -> None:
         """Deletes key in the 'types' and 'reversed_types' dictionaries.
 
-        Arguments:
+        Args:
             key (str): name of key to delete.
 
         """

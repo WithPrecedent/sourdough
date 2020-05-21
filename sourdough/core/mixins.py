@@ -38,7 +38,7 @@ class ProxyMixin(abc.ABC):
             proxify_methods: Optional[bool] = True) -> None:
         """Adds a proxy property to refer to class attribute.
 
-        Arguments:
+        Args:
             proxy (str): name of proxy property to create.
             attribute (str): name of attribute to link the proxy property to.
             default_value (Optional[Any]): default value to use when deleting
@@ -73,7 +73,7 @@ class ProxyMixin(abc.ABC):
     def _proxy_setter(self, value: Any) -> None:
         """Proxy setter for '_proxied_attribute'.
 
-        Arguments:
+        Args:
             value (Any): value to set attribute to.
 
         """
@@ -90,7 +90,7 @@ class ProxyMixin(abc.ABC):
     def _proxify_attribute(self, proxy: str) -> None:
         """Creates proxy property for '_proxied_attribute'.
 
-        Arguments:
+        Args:
             proxy (str): name of proxy property to create.
 
         """
@@ -103,7 +103,7 @@ class ProxyMixin(abc.ABC):
     def _proxify_methods(self, proxy: str) -> None:
         """Creates proxy method with an alternate name.
 
-        Arguments:
+        Args:
             proxy (str): name of proxy to repalce in method names.
 
         """

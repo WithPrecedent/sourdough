@@ -11,6 +11,7 @@ import collections.abc
 import dataclasses
 import importlib
 import inspect
+import itertools
 from typing import (
     Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
@@ -19,11 +20,11 @@ import sourdough
 
 @dataclasses.dataclass
 class MappingBase(sourdough.Component, collections.abc.MutableMapping):
-    """Base class for sourdough dictionaries.
+    """Base class for sourdough dictionar`ies.
     
     All subclasses must implement an 'add' method.
     
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. For example if a 
             class instance needs settings from the shared Settings instance, 
@@ -41,25 +42,27 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
     contents: Optional[Dict[str, Any]] = dataclasses.field(
         default_factory = dict)
 
-    """ Required Subclass Methods """
+    """ Public Methods """
 
-    @abc.abstractmethod
-    def add(self, *args, **kwargs) -> NotImplementedError:
-        """Subclasses must implement their own methods.
+    def add(self, key: str, value: str) -> NotImplementedError:
+        """Adds 'key' and 'value' to 'contents'.
         
         The 'add' method should contain the default mechanism for adding new
         items to 'contents'. Users are still free to use the normal 'update' 
         method, which is made available by subclassing MutableMapping.
         
-        """
-        pass
+        Args:
+            key (str): key to store 'value' at.
+            value (str): value to store in 'contents'.
         
-    """ Public Methods """
+        """
+        self.contents[key] = value
+        return self
     
     def subsetify(self, subset: Union[str, List[str]]) -> 'MappingBase':
         """Returns a subset of 'contents'.
 
-        Arguments:
+        Args:
             subset (Union[str, List[str]]): key(s) to get key/value pairs from
                 'contents'.
 
@@ -68,17 +71,17 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
 
         """
         return self.__class__(
-            name = name,
+            name = self.name,
             contents = sourdough.utilities.subsetify(
                 dictionary = self.contents,
                 subset = subset))
 
-    """ Required ABC Methods """
+    """ Dunder Methods """
 
     def __getitem__(self, key: str) -> Any:
         """Returns value for 'key' in 'contents'.
 
-        Arguments:
+        Args:
             key (str): name of key in 'contents' for which value is sought.
 
         Returns:
@@ -90,7 +93,7 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
     def __setitem__(self, key: str, value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
-        Arguments:
+        Args:
             key (str): name of key to set in 'contents'.
             value (Any): value to be paired with 'key' in 'contents'.
 
@@ -101,7 +104,7 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
     def __delitem__(self, key: str) -> None:
         """Deletes 'key' in 'contents'.
 
-        Arguments:
+        Args:
             key (str): name of key in 'contents' to delete the key/value pair.
 
         """
@@ -126,42 +129,42 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
         """
         return len(self.contents)
 
-    """ Other Dunder Methods """
-
-    def __add__(self, other: 'MappingBase') -> None:
+    def __add__(self, other: Union['MappingBase', Dict[str, Any]]) -> None:
         """Combines argument with 'contents'.
 
-        Arguments:
-            other (MappingBase): another MappingBase or compatiable dictionary
+        Args:
+            other ( Union['MappingBase', Dict[str, Any]]): another MappingBase 
+                or compatiable dictionary.
 
         """
-        self.add(contents = other)
+        self.contents.update(other)
         return self
     
     def __iadd__(self, other: 'MappingBase') -> None:
         """Combines argument with 'contents'.
 
-        Arguments:
-            other (MappingBase): another MappingBase or compatiable dictionary
-
+        Args:
+            other ( Union['MappingBase', Dict[str, Any]]): another MappingBase 
+                or compatiable dictionary.
+                
         """
-        self.add(contents = other)
+        self.contents.update(other)
         return self
 
     def __repr__(self) -> str:
         """Returns '__str__' representation.
 
         Returns:
-            str: default dictionary representation of 'contents'.
+            str: default representation of 'contents'.
 
         """
         return self.__str__()
 
     def __str__(self) -> str:
-        """Returns default dictionary representation of 'contents'.
+        """Returns default representation of 'contents'.
 
         Returns:
-            str: default dictionary representation of 'contents'.
+            str: default representation of 'contents'.
 
         """
         return (
@@ -172,11 +175,22 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
 
 @dataclasses.dataclass
 class SequenceBase(sourdough.Component, collections.abc.MutableSequence):
-    """Base class for sourdough lists.
+    """Base class for iterables storing sourdough Component instances.
     
-    All subclasses must implement an 'add' method.
+    SequenceBase has an interface of a dictionary but stores a list. 
+    SequenceBase does this by taking advantage of the 'name' attribute in 
+    Componentt instances. A 'name' acts as a key to create the facade of a 
+    dictionary with the items in the stored list serving as values. This allows 
+    for duplicate keys for storing class instances, easier iteration, and
+    returning multiple matching items. This design comes at the expense of 
+    lookup speed. As a result, SequenceBase should only be used if repeat 
+    accesing of the stored 'contents' is not anticipated. Ordinarily, the loss 
+    of lookup speed should have negligible effect on overall performance. 
     
-    Arguments:
+    Iterating SequenceBase also iterates all contained iterables by using the
+    'itertools.chain_from_iterable' method.
+
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -184,119 +198,223 @@ class SequenceBase(sourdough.Component, collections.abc.MutableSequence):
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        items (Optional[List[Any]]): stored list. Defaults to an empty list.
+        contents (Optional[List[Component]]): stored iterable of actions to take
+            as part of the SequenceBase. Defaults to an empty list.
 
     """
 
     name: Optional[str] = None
-    items: Optional[List[Any]] = dataclasses.field(default_factory = list)
-    
-    """ Required Subclass Methods """
+    contents: Optional[List['sourdough.Component']] = dataclasses.field(
+        default_factory = list)
 
-    @abc.abstractmethod
-    def add(self, *args, **kwargs) -> NotImplementedError:
-        """Subclasses must implement their own methods.
+    """ Public Methods """
+       
+    def add(self, component: 'sourdough.Component') -> None:
+        """Appends 'component' to 'contents'.
         
-        The 'add' method should contain the default mechanism for adding new
-        items to 'items'. Users are still free to use the 'extend' and 
-        'append' methods which are made available by subclassing 
-        MutableSequence.
-        
+        Args:
+            component (sourdough.Component): Component to add to 'contents'.
+
+        Raises:
+            TypeError: if 'component' is not a Component instance.
+            
         """
-        pass
+        if isinstance(component, sourdough.Component):
+            self.append(component)
+        else:
+            raise TypeError('component must be a Component type')
+        return self    
+
+    def append(self, component: 'sourdough.Component') -> None:
+        """Appends 'component' to 'contents'.
+        
+        Args:
+            component (sourdough.Component): Component to add to 'contents'.
+
+        """
+        if isinstance(component, sourdough.Component):
+            self.contents.append(component)
+        else:
+            raise TypeError('component must be a Component type')
+        return self    
+   
+    def extend(self, component: 'sourdough.Component') -> None:
+        """Extends 'component' to 'contents'.
+        
+        Args:
+            component (sourdough.Component): Component to add to 'contents'.
+
+        """
+        if isinstance(component, sourdough.Component):
+            self.contents.extend(component)
+        else:
+            raise TypeError('component must be a Component type')
+        return self   
     
-    """ ABC Public Methods """
-    
-    def insert(self, index: int, value: Any) -> None:
+    def insert(self, index: int, component: 'sourdough.Component') -> None:
         """Inserts 'value' at 'index' in 'items'.
 
-        Arguments:
+        Args:
             index (int): index to insert 'value' at.
-            value (sourdough.Component): object to be inserted.
+            component (sourdough.Component): object to be inserted.
 
         """
-        self.items.insert[index] = value
+        if isinstance(component, sourdough.Component):
+            self.items.insert[index] = component
+        else:
+            raise TypeError('component must be a Component type')
         return self
+ 
+    def subsetify(self, subset: Union[str, List[str]]) -> 'SequenceBase':
+        """Returns a subset of 'contents'.
 
-    """ ABC Dunder Methods """
-
-    def __getitem__(self, index: int) -> Any:
-        """Returns value at 'index' in 'items'.
-
-        Arguments:
-            index (int): location of object in 'items' to return.
+        Args:
+            subset (Union[str, List[str]]): key(s) to get key/value pairs from
+                'contents'.
 
         Returns:
-            Any: object located at 'index'.
+            SequenceBase: with only items with 'name' attributes in 'subset'.
 
         """
-        return self.items[index]
-    
-    def __setitem__(self, index: int, value: Any) -> None:
-        """Sets item at 'index' to 'value'.
+        subset = sourdough.utilities.listify(subset)
+        return self.__class__(
+            name = self.name,
+            contents = [c for c in self.contents if c.name in subset])    
+        
+    """ Dunder Methods """
 
-        Arguments:
-            index (int): location of item to set in 'items'.
-            value (Any): value to be set at 'index' in 'items'.
+    def __getitem__(self, key: Union[str, int]) -> 'sourdough.Component':
+        """Returns value(s) for 'key' in 'contents'.
+        
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances.
+
+        Args:
+            key (Union[str, int]): name or index to search for in 'contents'.
+
+        Returns:
+            Component: value stored in 'contents' that corresponder to 'key'.
+
         """
-        self.items[index] = value
+        if isinstance(key, int):
+            return self.contents[key]
+        else:
+            matches = [c for c in self.contents if c.name == key]
+            if len(matches) == 1:
+                return matches[0]
+            else:
+                return self.__class__(name = self.name, contents = matches)
 
-    def __delitem__(self, index: int) -> None:
-        """Deletes item at 'index' in 'items'.
+    def __setitem__(self, 
+            key: Union[str, int], 
+            value: 'sourdough.Component') -> None:
+        """Sets 'key' in 'contents' to 'value'.
 
-        Arguments:
-            index (int): location of item in 'items' to delete.
+        Args:
+            key (Union[str, int]): if key is a string, it is ignored (since the
+                'name' attribute of the value will be acting as the key). In
+                such a case, the 'value' is added to the end of 'contents'. If
+                key is an int, 'value' is assigned at the that index number in
+                'contents'.
+            value (Any): value to be paired with 'key' in 'contents'.
 
         """
-        del self.items[index]
+        if isinstance(key, int):
+            self.contents[key] = value
+        else:
+            self.contents.add(value)
         return self
+
+    def __delitem__(self, key: Union[str, int]) -> None:
+        """Deletes item matching 'key' in 'contents'.
+
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances and deletes all such items. If 'key'
+        is an integer, only the item at that index is deleted.
+
+        Args:
+            key (Union[str, int]): name or index in 'contents' to delete.
+
+        """
+        if isinstance(key, int):
+            del self.contents[key]
+        else:
+            self.contents = [c for c in self.contents if c.name != key]
+        return self
+
+    def __iter__(self) -> Iterable:
+        """Returns chained iterable of 'contents'.
+     
+        Returns:
+            Iterable: using the itertools method which automatically iterates
+                all stored iterables within 'contents'.Any
+               
+        """
+        # return iter(itertools.chain.from_iterable(self.contents))
+        return(iter(self.contents))
 
     def __len__(self) -> int:
-        """Returns length of 'items'.
+        """Returns length of 'contents'.
 
         Returns:
-            int: length of 'items'.
+            int: length of 'contents'.
 
         """
-        return len(self.items)
+        return len(self.contents)
+    
+    def __add__(self, other: 'SequenceBase') -> None:
+        """Extends 'contents' with 'other'
 
-    """ Other Dunder Methods """
+        Args:
+            other (SequenceBase): another SequenceBase instance.
 
+        """
+        self.contents.extend(other)
+        return self
+    
+    def __iadd__(self, other: 'MappingBase') -> None:
+        """Extends 'contents' with 'other'
+
+        Args:
+            other (SequenceBase): another SequenceBase instance.
+
+        """
+        self.contents.extend(other)
+        return self
     def __repr__(self) -> str:
         """Returns '__str__' representation.
 
         Returns:
-            str: default list representation of 'items'.
+            str: default representation of 'contents'.
 
         """
         return self.__str__()
 
     def __str__(self) -> str:
-        """Returns default list representation of 'items'.
+        """Returns default representation of 'contents'.
 
         Returns:
-            str: default list representation of 'items'.
+            str: default representation of 'contents'.
 
         """
         return (
             f'sourdough {self.__class__.__name__} '
             f'name: {self.name} '
-            f'items: {self.items.__str__()} ')   
-
+            f'contents: {self.contents.__str__()} ')   
 
 @dataclasses.dataclass
 class FactoryBase(abc.ABC):
     """The Factory interface instances a class from available options.
 
-    Arguments:
+    Args:
         product (Optional[str]): name of sourdough object to return. 'product' 
-            must correspond to a key in 'products'. Defaults to None.
+            must correspond to a key in 'options'. Defaults to None.
         default (ClassVar[str]): the name of the default object to instance. If 
             'product' is not passed, 'default' is used. 'default' must 
-            correspond  to a key in 'products'. Defaults to None. If 'default'
+            correspond  to a key in 'options'. Defaults to None. If 'default'
             is to be used, it should be specified by a subclass, declared in an
             instance, or set via the class attribute.
-        products (ClassVar[MutableMapping]): a dictionary or other mapping of 
+        options (ClassVar[MutableMapping]): a dictionary or other mapping of 
             available options for object creation. Keys are the names of the 
             'product'. Values are the objects to create. Defaults to an 
             empty dictionary.
@@ -308,31 +426,45 @@ class FactoryBase(abc.ABC):
     """
     product: Optional[str] = None
     default: ClassVar[str] = None
-    products: ClassVar[collections.abc.MutableMapping] = {}
+    options: ClassVar[collections.abc.MutableMapping] = {}
 
     """ Initialization Methods """
     
     def __new__(cls, 
             product: Optional[str] = None, 
             **kwargs) -> Any:
-        """Returns an instance from 'products'.
+        """Returns an instance from 'options'.
 
-        Arguments:
+        Args:
             product (Optional[str]): name of sourdough object to return. 
-                'product' must correspond to a key in 'products'. Defaults to 
+                'product' must correspond to a key in 'options'. Defaults to 
                 None. If not passed, the product listed in 'default' will be 
                 used.
             kwargs (Dict[str, Any]): parameters to pass to the object being 
                 created.
 
         Returns:
-            Any: an instance of an object stored in 'products'.
+            Any: an instance of an object stored in 'options'.
         
         """
         if product:
-            return cls.products[product](**kwargs) 
+            return cls.options[product](**kwargs) 
         else:
-            return cls.products[cls.default](**kwargs)
+            return cls.options[cls.default](**kwargs)
+    
+    """ Class Methods """
+    
+    @classmethod
+    def add(cls, key: str, option: 'sourdough.Component') -> None:
+        """Adds 'option' to 'options' at 'key'.
+        
+        Args:
+            key (str): name of key to link to 'option'.
+            option (sourdough.Component): object to store in 'options'.
+            
+        """
+        cls.options[key] = option
+        return cls
         
     """ Dunder Methods """
     
@@ -356,14 +488,14 @@ class FactoryBase(abc.ABC):
             f'sourdough {self.__class__.__name__} '
             f'product: {self.product} '
             f'default: {self.default} '
-            f'products: {str(self.products)}') 
+            f'options: {str(self.options)}') 
         
 
 @dataclasses.dataclass
 class ImporterBase(abc.ABC):
     """Base class for lazy loading of python modules and objects.
 
-    Arguments:
+    Args:
         module (Optional[str]): name of module where object to use is located
             (can either be a sourdough or non-sourdough module). Defaults to
             'sourdough'.
@@ -390,7 +522,7 @@ class ImporterBase(abc.ABC):
         loadable from the module or if it is the name of a local attribute that
         has a value of a loadable object in the module.
 
-        Arguments:
+        Args:
             attribute (str): name of attribute to load from 'module' or
                 'default_module'.
 

@@ -19,13 +19,12 @@ from typing import (
 
 import sourdough
 
-
    
 @dataclasses.dataclass
 class Library(collections.abc.MutableMapping): 
     """Stores subclass instances.
     
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -59,7 +58,7 @@ class Library(collections.abc.MutableMapping):
     def __getitem__(self, key: str) -> Any:
         """Returns value for 'key' in 'contents'.
 
-        Arguments:
+        Args:
             key (str): name of key in 'contents' for which value is sought.
 
         Returns:
@@ -71,7 +70,7 @@ class Library(collections.abc.MutableMapping):
     def __setitem__(self, key: str, value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
-        Arguments:
+        Args:
             key (str): name of key to set in 'contents'.
             value (Any): value to be paired with 'key' in 'contents'.
 
@@ -82,7 +81,7 @@ class Library(collections.abc.MutableMapping):
     def __delitem__(self, key: str) -> None:
         """Deletes 'key' in 'contents'.
 
-        Arguments:
+        Args:
             key (str): name of key in 'contents' to delete the key/value pair.
 
         """
@@ -112,7 +111,7 @@ class Library(collections.abc.MutableMapping):
     def __add__(self, other: 'MappingBase') -> None:
         """Combines argument with 'contents'.
 
-        Arguments:
+        Args:
             other (MappingBase): another MappingBase or compatiable dictionary
 
         """
@@ -122,7 +121,7 @@ class Library(collections.abc.MutableMapping):
     def __iadd__(self, other: 'MappingBase') -> None:
         """Combines argument with 'contents'.
 
-        Arguments:
+        Args:
             other (MappingBase): another MappingBase or compatiable dictionary
 
         """
@@ -155,7 +154,7 @@ class Library(collections.abc.MutableMapping):
 class Catalog(Library): 
     """Base class for storing Component subclasses.
 
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -204,7 +203,7 @@ class Catalog(Library):
     def create(self, name: str, **kwargs) -> 'Component':
         """Returns an instance of a stored subclass.
         
-        Arguments:
+        Args:
             name (str): key to desired Component in 'contents'.
             
         Returns:
@@ -220,7 +219,7 @@ class Catalog(Library):
         
         If 'recursive' is True, subfolders are searched as well.
         
-        Arguments:
+        Args:
             folder (Union[str, pathlib.Path]): folder to initiate search for 
                 Component subclasses.
             recursive (Optional[bool]): whether to also search subfolders (True)
@@ -244,7 +243,7 @@ class Catalog(Library):
     def _import_from_path(self, file_path: Union[pathlib.Path, str]) -> object:
         """Returns an imported module from a file path.
         
-        Arguments:
+        Args:
             file_path (Union[pathlib.Path, str]): path of a python module.
         
         Returns:
@@ -259,7 +258,7 @@ class Catalog(Library):
     def _get_subclasses(self, module: object) -> List['Component']:
         """Returns a list of Component subclasses.
         
-        Arguments:
+        Args:
             module (object): an import python module.
         
         Returns:
@@ -305,7 +304,7 @@ class Component(abc.ABC):
     too cumbersome or likely to confuse users (without overly verbose feedback
     about the alternate key used).
 
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. For example if a 
             class instance needs settings from the shared Settings instance, 
@@ -354,11 +353,11 @@ class Component(abc.ABC):
     #         **kwargs) -> 'Component':
     #     """Returns a Component subclass for 'component'.
 
-    #     Arguments:
+    #     Args:
     #         component (Union[str, Component]): either a key in 'catalog' or a
     #             Component subclass. If a Component subclass is passed, it is
     #             automatically added to 'catalog' and instanced.
-    #         kwArguments: arguments to be passed to instanced Component subclass.
+    #         kwArgs: arguments to be passed to instanced Component subclass.
 
     #     Raises:
     #         ValueError: if 'component' is a string but does not exist in
@@ -401,7 +400,7 @@ class Component(abc.ABC):
     #     instance is used. If 'component' has not been instanced, the snake case
     #     of the class name (lower case and underscored appropriately) is used.
 
-    #     Arguments:
+    #     Args:
     #         component (Component): subclass of Component to add to 'library'.
     #         name (Optional[str]): optional key name to use in 'library'.
 
@@ -458,7 +457,7 @@ class Component(abc.ABC):
     def _register_in_catalog(cls, component: 'Component', name: str) -> None:
         """Adds 'component' class to 'catalog'.
 
-        Arguments:
+        Args:
             component (Component): subclass of Component to add to 'catalog'.
             name (str): key name to use in 'catalog'.
 
@@ -498,7 +497,7 @@ class Component(abc.ABC):
     def _register_in_library(cls, component: 'Component', name: str) -> None:
         """Adds 'component' to 'library' if it is an instance.
 
-        Arguments:
+        Args:
             component (Component): subclass of Component to add to 'library'.
             name (str): key name to use in 'library'.
 

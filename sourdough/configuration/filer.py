@@ -25,7 +25,7 @@ class Filer(sourdough.Component):
     for import and export, and provides methods for loading and saving
     sourdough, pandas, and numpy objects.
 
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -37,7 +37,7 @@ class Filer(sourdough.Component):
             with file-management related settings.
         root_folder (Optional[Union[str, Path, List[str], List[Path]]]): the
             complete path from which the other paths and folders used by
-            FileManager should be created. Defaults to None. If not passed, the
+            FileDirector should be created. Defaults to None. If not passed, the
             parent folder of the parent folder of the current working directory
             is used.
         input_folder (Optional[Union[str, Path]]): the input_folder subfolder
@@ -98,7 +98,7 @@ class Filer(sourdough.Component):
         If needed arguments are not passed, default values are used. If
         'file_path' is passed, 'folder' and 'file_name' are ignored.
 
-        Arguments:
+        Args:
             file_path (Optional[Union[str, Path]]): a complete file path.
                 Defaults to None.
             folder (Optional[Union[str, Path]]): a complete folder path or the
@@ -108,7 +108,7 @@ class Filer(sourdough.Component):
             file_format (Optional[Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArguments: can be passed if additional options are desired specific
+            **kwArgs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -135,7 +135,7 @@ class Filer(sourdough.Component):
         If needed arguments are not passed, default values are used. If
         file_path is passed, folder and file_name are ignored.
 
-        Arguments:
+        Args:
             variable (Any): object to be save to disk.
             file_path (Optional[Union[str, pathlib.Path]]): a complete file path.
                 Defaults to None.
@@ -146,7 +146,7 @@ class Filer(sourdough.Component):
             file_format (Optional[Union[str, 'FileFormat']]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArguments: can be passed if additional options are desired specific
+            **kwArgs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         """
@@ -171,7 +171,7 @@ class Filer(sourdough.Component):
         If 'name' and 'extension' are passed, a file path is created. Otherwise,
         a folder path is created.
 
-        Arguments:
+        Args:
             folder (str): folder for file location.
             name (Optional[str]): the name of the file.
             extension (Optional[str]): the extension of the file.
@@ -195,7 +195,7 @@ class Filer(sourdough.Component):
             path: Union[str, List[str], pathlib.Path]) -> pathlib.Path:
         """Turns 'file_path' into a pathlib.Path object.
 
-        Arguments:
+        Args:
             path (Union[str, List[str], pathlib.Path]): string, Path, or list
                 used to create final Path object.
 
@@ -311,7 +311,7 @@ class Filer(sourdough.Component):
             settings: sourdough.Settings) -> Dict[str, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
-        Arguments:
+        Args:
             settings (Settings): an instance with a section named 'files' which
                 contains default parameters for file transfers.
 
@@ -326,7 +326,7 @@ class Filer(sourdough.Component):
 
         Parent folders are created as needed.
 
-        Arguments:
+        Args:
             folder (Union[str, Path]): intended folder to write to disk.
 
         """
@@ -341,7 +341,7 @@ class Filer(sourdough.Component):
         Thanks to RealPython for this bit of code:
         https://realpython.com/python-pathlib/.
 
-        Arguments:
+        Args:
             folder (Path): the folder where the file or folder will be located.
             name (str): the basic name that should be used.
 
@@ -363,7 +363,7 @@ class Filer(sourdough.Component):
 class Distributor(abc.ABC):
     """Base class for sourdough FileLoader and FileSaver.
 
-    Arguments:
+    Args:
         filer (Filer): a related Filer instance.
 
     """
@@ -379,10 +379,10 @@ class Distributor(abc.ABC):
 
     def _check_required_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArguments: Dict[str, Any]) -> Dict[str, Any]:
+            passed_kwArgs: Dict[str, Any]) -> Dict[str, Any]:
         """Adds requited parameters if not passed.
 
-        Arguments:
+        Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
             passed_kwargs (Dict[str, Any]): kwargs passed to method.
@@ -394,18 +394,18 @@ class Distributor(abc.ABC):
         new_kwargs = passed_kwargs
         if file_format.required_parameters:
             for key, value in file_format.required_parameters:
-                if value not in new_kwArguments:
+                if value not in new_kwArgs:
                     new_kwargs[key] = value
         return new_kwargs
 
     def _check_shared_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArguments: Dict[str, Any]) -> Dict[str, Any]:
+            passed_kwArgs: Dict[str, Any]) -> Dict[str, Any]:
         """Selects kwargs for particular methods.
 
         If a needed argument was not passed, default values are used.
 
-        Arguments:
+        Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
             passed_kwargs (Dict[str, Any]): kwargs passed to method.
@@ -426,7 +426,7 @@ class Distributor(abc.ABC):
             file_format: Union[str, 'FileFormat']) -> 'FileFormat':
         """Selects 'file_format' or returns FileFormat instance intact.
 
-        Arguments:
+        Args:
             file_format (Union[str, FileFormat]): name of file format or a
                 FileFormat instance.
 
@@ -449,10 +449,10 @@ class Distributor(abc.ABC):
             **kwargs) -> Dict[str, Any]:
         """Creates complete parameters for a file input/output method.
 
-        Arguments:
+        Args:
             file_format (FileFormat): an instance with information about the
                 needed and optional parameters.
-            kwArguments: additional parameters to pass to an input/output method.
+            kwArgs: additional parameters to pass to an input/output method.
 
         Returns:
             Dict[str, Any]: parameters to be passed to an input/output method.
@@ -475,7 +475,7 @@ class Distributor(abc.ABC):
                 'FileFormat']:
         """Prepares file path related arguments for loading or saving a file.
 
-        Arguments:
+        Args:
             file_path (Union[str, Path]): a complete file path.
             folder (Union[str, Path]): a complete folder path or the name of a
                 folder stored in 'filer'.
@@ -483,7 +483,7 @@ class Distributor(abc.ABC):
             file_format (Union[str, FileFormat]): object with information about
                 how the file should be loaded or the key to such an object
                 stored in 'filer'.
-            **kwArguments: can be passed if additional options are desired specific
+            **kwArgs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -510,7 +510,7 @@ class Distributor(abc.ABC):
 class FileLoader(Distributor):
     """Manages file importing for sourdough.
 
-    Arguments:
+    Args:
         filer (Filer): related Filer instance.
 
     """
@@ -533,7 +533,7 @@ class FileLoader(Distributor):
         If needed arguments are not passed, default values are used. If
         file_path is passed, folder and file_name are ignored.
 
-        Arguments:
+        Args:
             file_path (Optional[Union[str, Path]]): a complete file path.
                 Defaults to None.
             folder (Optional[Union[str, Path]]): a complete folder path or the
@@ -543,7 +543,7 @@ class FileLoader(Distributor):
             file_format (Optional[Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArguments: can be passed if additional options are desired specific
+            **kwArgs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -568,7 +568,7 @@ class FileLoader(Distributor):
 class FileSaver(Distributor):
     """Manages file exporting for sourdough.
 
-    Arguments:
+    Args:
         filer (Filer): related Filer instance.
 
     """
@@ -594,7 +594,7 @@ class FileSaver(Distributor):
         If needed arguments are not passed, default values are used. If
         file_path is passed, folder and file_name are ignored.
 
-        Arguments:
+        Args:
             variable (Any): object to be save to disk.
             file_path (Optional[Union[str, Path]]): a complete file path.
                 Defaults to None.
@@ -605,7 +605,7 @@ class FileSaver(Distributor):
             file_format (Optional[Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArguments: can be passed if additional options are desired specific
+            **kwArgs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         """
@@ -626,7 +626,7 @@ class FileSaver(Distributor):
 class FileFormat(sourdough.base.ImporterBase):
     """File format information.
 
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should

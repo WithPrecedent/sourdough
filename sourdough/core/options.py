@@ -23,7 +23,7 @@ class Options(sourdough.base.MappingBase):
     values is returned. If a string is sought a string is returned unless
     'always_return_list' is set to True.
 
-    Arguments:
+    Args:
         name (Optional[str]): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
@@ -65,7 +65,7 @@ class Options(sourdough.base.MappingBase):
     def add(self, contents: Union['Options', Dict[str, Any]]) -> None:
         """Combines arguments with 'contents'.
 
-        Arguments:
+        Args:
             contents (Union[Options, Dict[str, Any]]): another
                 Options instance/subclass or a compatible dictionary.
 
@@ -77,7 +77,7 @@ class Options(sourdough.base.MappingBase):
     def subsetify(self, subset: Union[str, List[str]]) -> 'Options':
         """Returns a subset of 'contents'.
 
-        Arguments:
+        Args:
             subset (Union[str, List[str]]): key(s) to get key/value pairs from
                 'contents'.
 
@@ -101,7 +101,7 @@ class Options(sourdough.base.MappingBase):
         The method searches for 'all', 'default', and 'none' matching wildcard
         options before searching for direct matches in 'contents'.
 
-        Arguments:
+        Args:
             key (Union[List[str], str]): name(s) of key(s) in 'contents'.
 
         Returns:
@@ -137,7 +137,7 @@ class Options(sourdough.base.MappingBase):
             value: Union[List[Any], Any]) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
-        Arguments:
+        Args:
             key (Union[List[str], str]): name of key(s) to set in 'contents'.
             value (Union[List[Any], Any]): value(s) to be paired with 'key' in
                 'contents'.
@@ -155,7 +155,7 @@ class Options(sourdough.base.MappingBase):
     def __delitem__(self, key: Union[List[str], str]) -> None:
         """Deletes 'key' in 'contents'.
 
-        Arguments:
+        Args:
             key (Union[List[str], str]): name(s) of key(s) in 'contents' to
                 delete the key/value pair.
 
@@ -186,7 +186,7 @@ class Options(sourdough.base.MappingBase):
                 Dict[str, Any]]) -> 'Options':
         """Converts nested dictionaries to Options instances.
 
-        Arguments:
+        Args:
             contents (Union[Options, Dict[str, Any]]): mutable
                 mapping to be converted to a Options instance.
 

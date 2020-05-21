@@ -1,6 +1,6 @@
 """
-.. module:: test Worker
-:synopsis: tests Worker and related classes
+.. module:: test Manager
+:synopsis: tests Manager and related classes
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -12,13 +12,13 @@ import sourdough
 class NewInstructions(sourdough.Instructions):
     pass
 
-class NewWorker(sourdough.Worker):
+class NewManager(sourdough.Manager):
     pass
 
-def test_worker():
+def test_manager():
 
     return
 
 
 if __name__ == '__main__':
-    test_worker()
+    test_manager()

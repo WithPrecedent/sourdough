@@ -21,7 +21,228 @@ import numpy as np
 import pandas as pd
 
 
-""" Functions """
+""" Conversion/Validation Functions """
+
+def classify(
+        variable: Any, 
+        options: Optional[Dict[str, Any]] = None) -> object:
+    """Converts 'variable' to a class, if possible.
+
+    Args:
+        variable (Any): variable to create a class out of.
+        options (Optional[Dict[str, Any]]): mapping containing str keys and
+            classes as values. If 'variable' is a string, the method will seek
+            to use it as a key in options. Defaults to None.
+
+    Returns:
+        object: a class object, if possible.
+        
+    """
+    if inspect.isclass(variable):
+        return variable
+    else:
+        if options:
+            try:
+                return options[variable]
+            except (KeyError, TypeError):
+                pass
+        try:
+            return variable.__class__
+        except AttributeError:
+            return variable
+            
+def instancify(
+        variable: Any, 
+        options: Optional[Dict[str, Any]] = None,
+        **kwargs) -> object:
+    """Converts 'variable' to a class instance with 'kwargs' as parameters.
+
+    Args:
+        variable (Any): variable to create an instance out of.
+        options (Optional[Dict[str, Any]]): mapping containing str keys and
+            classes as values. If 'variable' is a string, the method will seek
+            to use it as a key in options. Defaults to None.
+
+    Returns:
+        object: a class instance, if possible.
+        
+    """
+    if options:
+        try:
+            variable = options[variable]
+        except (KeyError, TypeError):
+            pass           
+    if inspect.isclass(variable):
+        return variable(**kwargs)
+    else:
+        return variable
+            
+def listify(
+        variable: Any,
+        default_value: Any = None) -> List[Any]:
+    """Returns passed variable as a list (if not already a list).
+
+    Args:
+        variable (any): variable to be transformed into a list to allow proper
+            iteration.
+        default_value (Any): the default value to return if 'variable' is None.
+            Unfortunately, to indicate you want None to be the default value,
+            you need to put 'None' in quotes. If not passed, 'default_value'
+            is set to [].
+
+    Returns:
+        List[Any]: a passed list, 'variable' converted to a list, or 
+            'default_value'.
+
+    """
+    if variable is None:
+        if default_value is None:
+            return []
+        elif default_value in ['None', 'none']:
+            return None
+        else:
+            return default_value
+    elif isinstance(variable, list):
+        return variable
+    else:
+        return list(variable)
+
+def numify(variable: str) -> Union[int, float, str]:
+    """Attempts to convert 'variable' to a numeric type.
+    
+    If 'variable' cannot be converted to a numeric type, it is returned as is.
+
+    Args:
+        variable (str): variable to be converted.
+
+    Returns
+        variable (int, float, str) converted to numeric type, if possible.
+
+    """
+    try:
+        return int(variable)
+    except ValueError:
+        try:
+            return float(variable)
+        except ValueError:
+            return variable
+
+def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
+    """Converts string 'path' to pathlib.pathlib.Path object.
+
+    Args:
+        path (Union[str, pathlib.Path]): either a string representation of a
+            path or a pathlib.Path object.
+
+    Returns:
+        pathlib.Path object.
+
+    Raises:
+        TypeError if 'path' is neither a str or pathlib.Path type.
+
+    """
+    if isinstance(path, str):
+        return pathlib.Path(path)
+    elif isinstance(path, pathlib.Path):
+        return path
+    else:
+        raise TypeError('path must be str or pathlib.Path type')
+
+def snakify(variable: str) -> str:
+    """Converts a capitalized word name to snake case.
+
+    Args:
+        variable (str): string to convert.
+
+    Returns:
+        str: 'variable' converted to snake case.
+
+    """
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', variable).lower()
+
+def stringify(
+        variable: Union[str, List],
+        default_null: Optional[bool] = False,
+        default_empty: Optional[bool] = False) -> str:
+    """Converts one item list to a string (if not already a string).
+
+    Args:
+        variable (str, list): variable to be transformed into a string.
+        default_null (boolean): whether to return None (True) or ['none']
+            (False).
+
+    Returns:
+        variable (str): either the original str, a string pulled from a
+            one-item list, or the original list.
+
+    """
+    if variable is None:
+        if default_null:
+            return None
+        elif default_empty:
+            return []
+        else:
+            return ['none']
+    elif isinstance(variable, str):
+        return variable
+    else:
+        try:
+            return variable[0]
+        except TypeError:
+            return variable
+
+def subsetify(
+    dictionary: Dict[Any, Any],
+    subset: Union[Any, List[Any]]) -> Dict[Any, Any]:
+    """Returns a subset of a dictionary.
+
+    The returned subset is a dictionary with keys in 'subset'.
+
+    Args:
+        dictionary (Dict[Any, Any]): dict to be subsetted.
+        subset (Union[Any, List[Any]]): key(s) to get key/value pairs from
+            'dictionary'.
+
+    Returns:
+        Dict[Any, Any]: with only keys in 'subset'
+
+    """
+    return {key: dictionary[key] for key in listify(subset)}
+
+def typify(variable: str) -> Union[List, int, float, bool, str]:
+    """Converts stingsr to appropriate, supported datatypes.
+
+    The method converts strings to list (if ', ' is present), int, float,
+    or bool datatypes based upon the content of the string. If no
+    alternative datatype is found, the variable is returned in its original
+    form.
+
+    Args:
+        variable (str): string to be converted to appropriate datatype.
+
+    Returns:
+        variable (str, list, int, float, or bool): converted variable.
+
+    """
+    if not isinstance(variable, str):
+        return variable
+    try:
+        return int(variable)
+    except ValueError:
+        try:
+            return float(variable)
+        except ValueError:
+            if variable.lower() in ['true', 'yes']:
+                return True
+            elif variable.lower() in ['false', 'no']:
+                return False
+            elif ', ' in variable:
+                variable = variable.split(', ')
+                return [numify(item) for item in variable]
+            else:
+                return variable
+
+""" Other Functions """
 
 def add_prefix(
         iterable: Union[Dict[str, Any], List],
@@ -30,7 +251,7 @@ def add_prefix(
 
     An underscore is automatically added after the string prefix.
 
-    Arguments:
+    Args:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         prefix (str): prefix to be added.
 
@@ -50,7 +271,7 @@ def add_suffix(
 
     An underscore is automatically added after the string suffix.
 
-    Arguments:
+    Args:
         iterable (list(str) or dict(str: any)): iterable to be modified.
         suffix (str): suffix to be added.
 
@@ -80,7 +301,7 @@ def deduplicate(
         Union[List, pd.DataFrame, pd.Series]):
     """Deduplicates list, pandas DataFrame, or pandas Series.
 
-    Arguments:
+    Args:
         iterable (list, DataFrame, or Series): iterable to have duplicate
             entries removed.
 
@@ -97,7 +318,7 @@ def deduplicate(
 def is_nested(dictionary: Dict[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
 
-    Arguments:
+    Args:
         dictionary (dict): dict to be tested.
 
     Returns:
@@ -107,74 +328,6 @@ def is_nested(dictionary: Dict[Any, Any]) -> bool:
     """
     return any(isinstance(v, dict) for v in dictionary.values())
 
-def listify(
-        variable: Any,
-        default_null: Optional[bool]  = False,
-        default_empty: Optional[bool] = False) -> Union[list, None]:
-    """Stores passed variable as a list (if not already a list).
-
-    Arguments:
-        variable (any): variable to be transformed into a list to allow proper
-            iteration.
-        default_null (boolean): whether to return None (True) or ['none']
-            (False).
-
-    Returns:
-        variable (list): either the original list, a string converted to a
-            list, None, or a list containing 'none' as its only item.
-
-    """
-    if not variable or variable in ['none', ['none']]:
-        if default_null:
-            return None
-        elif default_empty:
-            return []
-        else:
-            return ['none']
-    elif isinstance(variable, list):
-        return variable
-    else:
-        return [variable]
-
-def numify(variable: str) -> Union[int, float, str]:
-    """Attempts to convert 'variable' to a numeric type.
-
-    Arguments:
-        variable (str): variable to be converted.
-
-    Returns
-        variable (int, float, str) converted to numeric type, if possible.
-
-    """
-    try:
-        return int(variable)
-    except ValueError:
-        try:
-            return float(variable)
-        except ValueError:
-            return variable
-
-def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
-    """Converts string 'path' to pathlib.pathlib.Path object.
-
-    Arguments:
-        path (Union[str, pathlib.Path]): either a string representation of a
-            path or a pathlib.Path object.
-
-    Returns:
-        pathlib.Path object.
-
-    Raises:
-        TypeError if 'path' is neither a str or pathlib.Path type.
-
-    """
-    if isinstance(path, str):
-        return pathlib.Path(path)
-    elif isinstance(path, pathlib.Path):
-        return path
-    else:
-        raise TypeError('path must be str or pathlib.Path type')
-
 def propertify(
         instance: object,
         name: str,
@@ -183,7 +336,7 @@ def propertify(
         deleter: Optional[Callable]) -> object:
     """Adds 'name' property to 'instance' at runtime.
 
-    Arguments:
+    Args:
         instance (object): instance to add a property to.
         name (str): name that the new property should be given.
         getter (Callable): getter method for the new property.
@@ -197,7 +350,7 @@ def propertify(
     def _bind_process(process: Callable, instance: object) -> Callable:
         """Binds 'process' to 'instance'.
 
-        Arguments:
+        Args:
             process (Callable): function, method in 'instance' or method in
                 another class instance.
             instance (object): class instance to bind 'process to'.
@@ -241,106 +394,13 @@ def propertify(
             fdel = _property_not_implemented)
     return instance
 
-def snakify(variable: str) -> str:
-    """Converts a capitalized word name to snake case.
-
-    Arguments:
-        variable (str): string to convert.
-
-    Returns:
-        str: 'variable' converted to snake case.
-
-    """
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', variable).lower()
-
-def stringify(
-        variable: Union[str, List],
-        default_null: Optional[bool] = False,
-        default_empty: Optional[bool] = False) -> str:
-    """Converts one item list to a string (if not already a string).
-
-    Arguments:
-        variable (str, list): variable to be transformed into a string.
-        default_null (boolean): whether to return None (True) or ['none']
-            (False).
-
-    Returns:
-        variable (str): either the original str, a string pulled from a
-            one-item list, or the original list.
-
-    """
-    if variable is None:
-        if default_null:
-            return None
-        elif default_empty:
-            return []
-        else:
-            return ['none']
-    elif isinstance(variable, str):
-        return variable
-    else:
-        try:
-            return variable[0]
-        except TypeError:
-            return variable
-
-def subsetify(
-    dictionary: Dict[Any, Any],
-    subset: Union[Any, List[Any]]) -> Dict[Any, Any]:
-    """Returns a subset of a dictionary.
-
-    The returned subset is a dictionary with keys in 'subset'.
-
-    Arguments:
-        dictionary (Dict[Any, Any]): dict to be subsetted.
-        subset (Union[Any, List[Any]]): key(s) to get key/value pairs from
-            'dictionary'.
-
-    Returns:
-        Dict[Any, Any]: with only keys in 'subset'
-
-    """
-    return {key: dictionary[key] for key in listify(subset)}
-
-def typify(variable: str) -> Union[List, int, float, bool, str]:
-    """Converts stingsr to appropriate, supported datatypes.
-
-    The method converts strings to list (if ', ' is present), int, float,
-    or bool datatypes based upon the content of the string. If no
-    alternative datatype is found, the variable is returned in its original
-    form.
-
-    Arguments:
-        variable (str): string to be converted to appropriate datatype.
-
-    Returns:
-        variable (str, list, int, float, or bool): converted variable.
-
-    """
-    if not isinstance(variable, str):
-        return variable
-    try:
-        return int(variable)
-    except ValueError:
-        try:
-            return float(variable)
-        except ValueError:
-            if variable.lower() in ['true', 'yes']:
-                return True
-            elif variable.lower() in ['false', 'no']:
-                return False
-            elif ', ' in variable:
-                variable = variable.split(', ')
-                return [numify(item) for item in variable]
-            else:
-                return variable
 
 """ Decorators """
 
 def simple_timer(process: Optional[str] = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
-    Arguments:
+    Args:
         process (Optional[str]): name of class or method to be used in the
             output describing time elapsed.
 

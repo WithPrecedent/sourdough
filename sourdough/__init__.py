@@ -31,12 +31,18 @@ from sourdough.configuration import defaults
 from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
-from sourdough.structure.plan import Plan
+from sourdough.structure.hierarchy import Employee
+from sourdough.structure.hierarchy import Manager
+from sourdough.structure.hierarchy import Worker
+from sourdough.structure.hierarchy import Task
 from sourdough.structure.project import Project
-
-from sourdough.workflow.manager import Stage
-from sourdough.workflow.manager import Manager
-
+from sourdough.structure.designs import Design
+from sourdough.structure.stages import Stage
+from sourdough.structure.director import Director
+from sourdough.structure.stages import Author
+from sourdough.structure.stages import Editor
+from sourdough.structure.stages import Publisher
+from sourdough.structure.stages import Reader
 
 __version__ = '0.1.0'
 
@@ -52,8 +58,13 @@ __all__ = [
     'defaults',
     'Settings',
     'Filer',
-    'Plan',
+    'Task',
+    'Worker',
+    'Employee',
     'Project',
+    'CompositeProject',
+    'CompositeDirector',
     'Stage',
-    'Manager',
+    'Director',
+    
     ]
