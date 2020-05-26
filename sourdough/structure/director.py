@@ -1,6 +1,6 @@
 """
 .. module:: director
-:synopsis: sourdough project workflow
+:synopsis: sourdough workflow controller
 :publisher: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -27,25 +27,60 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[List[sourdough.Stage]]): list of recognized
-            states which correspond to methods within a class instance. 
-            Defaults to ['draft', 'edit', 'publish', 'apply'].
-        automatic (Optional[bool]): whether to automatically advance 'item'
-            when one of the item methods is called (True) or whether 'item'
-            must be changed manually by using the 'advance' method (False).
-            Defaults to True.
-
+        contents (Optional[List[Union['sourdough.Stage', str]]]): list of Stage
+            instance or strings which correspond to keys in 'stage_options'.
+            Defaults to 'default', which will use the 'defaults' attribute of
+            'stage_options' to select Stage instance.
+        project (Optional[Union['sourdough.Project'], str]): a Project instance
+            or strings which correspond to keys in 'project_options'. Defaults 
+            to 'default', which will use the 'defaults' attribute of 
+            'project_options' to select a Project instance.
+        settings (Optional[Union[sourdough.Settings, str]]): an instance of 
+            Settings or a string containing the file path where a file of a 
+            supported file type with settings for an Settings instance is 
+            located. Defaults to None.
+        filer (Optional[Union[sourdough.Filer, str]]): an instance of Filer or a 
+            string containing the full path of where the root folder should be 
+            located for file input and output. A Filer instance contains all 
+            file path and import/export methods for use throughout sourdough. 
+            Defaults to None.
+        automatic (Optional[bool]): whether to automatically advance 'contents'
+            (True) or whether the stages must be changed manually by using the 
+            'advance' or '__iter__' methods (False). Defaults to True.
+        project_options (ClassVar['sourdough.Options']): stores options for
+            the 'project' attribute.
+        stage_options (ClassVar['sourdough.Stages']): stores options for the 
+            'contents' attribute.
+        design_options (ClassVar['sourdough.Designs']): stores options used by
+            the stages stored in 'contents' to design Component instances within
+            a 'project'.
+            
     """
     name: Optional[str] = None
-    stages: List[Union['sourdough.Stage', str]] = dataclasses.field(
-        default_factory = lambda: ['draft', 'edit', 'publish', 'apply'])
+    contents: Optional[List[Union['sourdough.Stage', str]]] = dataclasses.field(
+        default_factory = lambda: 'default')
+    project: Optional[Union['sourdough.Project'], str] = dataclasses.field(
+        default_factory = lambda: 'default')
+    settings: Optional[Union['sourdough.Settings', str]] = None
+    filer: Optional[Union['sourdough.Filer', str]] = None
     automatic: Optional[bool] = True
-    project: Optional['sourdough.Project'] = dataclasses.field(
-        default_factory = sourdough.Project)
-    factories: ClassVar[Dict[str, 'sourdough.Component']] = {
-        'stage': sourdough.Stage,
-        'design': sourdough.Design,
-        'task': sourdough.Task}
+    
+    project_options: ClassVar['sourdough.Options'] = sourdough.Options(
+        contents = {
+            'generic': sourdough.Project},
+        defaults = 'generic')
+    stage_options: ClassVar['sourdough.Options'] = sourdough.Options(
+        contents = {
+            'draft': sourdough.Author,
+            'edit': sourdough.Editor,
+            'publish': sourdough.Publisher,
+            'apply': sourdough.Reader},
+        defaults = ['draft', 'edit', 'publish', 'apply'])
+    design_options: ClassVar['sourdough.Options'] = sourdough.Options(
+        contents = {
+            'chained': sourdough.structure.designs.ChainedDesign,
+            'comparative': sourdough.structure.designs.ComparativeDesign},
+        defaults = 'chained')
     
     """ Initialization Methods """
 
@@ -55,141 +90,141 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
         super().__post_init__()
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Creates proxy property referring 'stages' access to 'contents'. This 
-        # allows this instance to use inherited access methods which refer to
-        # 'contents'.
-        self.contents = copy.copy(self.stages)
-        self.proxify(proxy = 'stages', attribute = 'contents')
-        # Adds 'general' section attributes from 'settings' in 'project'.
-        self.project.settings.inject(instance = self)
+        # Validates or creates a 'Settings' instance.
+        self.settings = sourdough.Settings(contents = self.settings)
+        # Validates or creates a Filer' instance.
+        self.filer = sourdough.Filer(
+            root_folder = self.filer, 
+            settings = self.settings)
+        # # Creates proxy property referring 'contents' access to 'contents'. This 
+        # # allows this instance to use inherited access methods which refer to
+        # # 'contents'.
+        # self.contents = copy.copy(self.contents)
+        # self.proxify(proxy = 'contents', attribute = 'contents')
+        # Adds 'general' section attributes from 'settings' in 'project' and 
+        # this instance.
+        self.settings.inject(instance = self)
+        self.settings.inject(instance = self.project)
+        # Creates a dictionary of available designs for Worker instances.
+        self.designs = self._initialize_designs(settings = self.settings)
         # Initializes 'contents' to regulate an instance's workflow.
-        self.contents = self._initialize_stages(stages = self.contents)
+        self.contents = self._initialize_stages(
+            stages = self.contents,
+            settings = self.settings,
+            designs = self.designs)
+        # Initializes or validates a Project instance.
+        self.project = self._initialize_project(
+            project = self.project,
+            settings = self.settings)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index = -1
         self.stage = 'initialize' 
-        # Advances through 'stages' if 'automatic' is True.
+        # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
-            self.project = self._auto_stages(project = self.project)
-      
+            self.project = self._auto_contents(project = self.project)
+            
     """ Class Methods """
-    
-    @classmethod
-    def add_factory(cls, 
+
+    @classmethod   
+    def add_project_option(cls, 
             name: str, 
-            factory: 'sourdough.core.base.FactoryBase') -> None:
-        """Adds a factory to the 'factories'.
+            option: 'sourdough.Project') -> None:
+        """Adds a project to 'project_options'.
 
         Args:
-            name (str): key to use for storing 'factory'.
-            stage (sourdough.core.base.FactoryBase): the subclass to store in 
-                the 'factories' attribute.
+            name (str): key to use for storing 'option'.
+            option (sourdough.Project): the subclass to store in the 
+                'project_options' class attribute.
 
         Raises:
-            TypeError: if 'factory' is not a FactoryBase subclass.
+            TypeError: if 'option' is not a Project subclass
             
         """
-        if issubclass(factory, sourdough.core.base.FactoryBase):
-            cls.factories[name] = factory
+        if issubclass(option, sourdough.Project):
+            cls.project_options[name] = option
+        elif isinstance(option, sourdough.Project):
+            cls.project_options[name] = option.__class__
         else:
-            raise TypeError('factory must be a sourdough FactoryBase subclass')
+            raise TypeError('option must be a Project subclass')
         return cls  
+    
+    @classmethod   
+    def add_stage_option(cls, 
+            name: str, 
+            option: 'sourdough.Stage') -> None:
+        """Adds a stage to 'stage_options'.
+
+        Args:
+            name (str): key to use for storing 'option'.
+            option (sourdough.Stage): the subclass to store in the 
+                'stage_options' class attribute.
+
+        Raises:
+            TypeError: if 'option' is not a Stage subclass
             
+        """
+        if issubclass(option, sourdough.Stage):
+            cls.stage_options[name] = option
+        elif isinstance(option, sourdough.Stage):
+            cls.stage_options[name] = option.__class__
+        else:
+            raise TypeError('option must be a Stage subclass')
+        return cls  
+
+    @classmethod
+    def add_design_option(cls, 
+            name: str, 
+            option: 'sourdough.Design') -> None:
+        """Adds a design to 'design_options'.
+
+        Args:
+            name (str): key to use for storing 'option'.
+            option (sourdough.Design): the subclass to store in the 
+                'design_options' class attribute.
+
+        Raises:
+            TypeError: if 'option' is not a Design subclass.
+            
+        """
+        if issubclass(option, sourdough.Design):
+            cls.design_options[name] = option
+        elif isinstance(option, sourdough.Design):
+            cls.designoptions[name] = option.__class__
+        else:
+            raise TypeError('option must be a Design subclass')
+        return cls  
+
     """ Public Methods """
-          
-    def add_stage_option(self, 
-            name: str, 
-            stage: 'sourdough.structure.stages.StageBase') -> None:
-        """Adds a stage to the self.factories['stage'].
-
-        Args:
-            name (str): key to use for storing 'stage'.
-            stage (sourdough.structure.stages.StageBase): the subclass to store 
-                in the 'options' class attribute of self.factories['stage'].
-
-        Raises:
-            TypeError: if 'stage' is not a StageBase subclass.
-            
-        """
-        if not hasattr(self, self.factories['stage']):
-            self.self.factories['stage'] = self.factories['stage']()
-        if issubclass(stage, sourdough.structure.stages.StageBase):
-            self.self.factories['stage'].options[name] = stage
-        else:
-            raise TypeError('stage must be a sourdough StageBase subclass')
-
-    def add_design_option(self, 
-            name: str, 
-            design: 'sourdough.structure.designs.DesignBase') -> None:
-        """Adds a design to the self.factories['design'].
-
-        Args:
-            design (DesignBase): the subclass to store in the options' class 
-                attribute of self.factories['design'].
-
-        Raises:
-            TypeError: if 'design' is not a DesignBase subclass.
-            
-        """
-        if not hasattr(self, self.factories['design']):
-            self.self.factories['design'] = self.factories['design']()
-        if isinstance(design, sourdough.structure.designs.DesignBase):
-            self.self.factories['design'].options[name] = design
-        else:
-            raise TypeError('design must be a sourdough DesignBase subclass')
-
-    def add_task_option(self, 
-            name: str, 
-            task: 'sourdough.structure.tasks.TaskBase') -> None:
-        """Adds a task to the self.factories['task'].
-
-        Args:
-            task (TaskBase): the subclass to store in the options' class 
-                attribute of self.factories['task'].
-
-        Raises:
-            TypeError: if 'task' is not a TaskBase subclass.
-            
-        """
-        if not hasattr(self, self.factories['task']):
-            self.self.factories['task'] = self.factories['task']()
-        if isinstance(task, sourdough.structure.TaskBase):
-            self.self.factories['task'].options[name] = task
-        else:
-            raise TypeError('task must be a sourdough TaskBase subclass')
                  
     def advance(self, stage: Optional[str] = None) -> None:
-        """Advances to next item in 'contents' or to 'item' argument.
+        """Advances to next item in 'contents' or to 'stage' argument.
 
         This method only needs to be called manually if 'automatic' is False.
-        Otherwise, this method is automatically called when individual item
-        methods are called via '__getattribute__'.
-
-        If this method is called at the last item, it does not raise an
-        IndexError. It simply leaves 'item' at the last item in the list.
+        Otherwise, this method is automatically called when the class is 
+        instanced.
 
         Args:
-            item(Optional[str]): name of item in 'contents'.
-                Defaults to None. If not passed, the method goes to the next
-                'item' in contents.
+            stage (Optional[str]): name of item in 'contents'. Defaults to None. 
+                If not passed, the method goes to the next item in contents.
 
         Raises:
-            ValueError: if 'item' is neither None nor in 'contents'.
+            ValueError: if 'stage' is neither None nor in 'contents'.
+            IndexError: if 'advance' is called at the last stage in 'contents'.
 
         """
-        if stage is None or stage in self.self.factories['stage'].options:
-            if stage is None:
-                try:
-                    new_stage = self.contents[self.index + 1]
-                except IndexError:
-                    new_stage = None
-            else:
-                new_stage = self.self.factories['stage'].options[new_stage]
-            if new_stage:
-                self.index += 1
-                self.previous_stage = self.stage
-                self.stage = new_stage
+        if stage is None:
+            try:
+                new_stage = self.contents[self.index + 1]
+            except IndexError:
+                raise IndexError(f'{self.name} cannot advance further')
         else:
-            raise ValueError(f'{stage} is not a recognized stage')
+            try:
+                new_stage = self.contents[stage]
+            except KeyError:
+                raise ValueError(f'{stage} is not a recognized stage')
+        self.index += 1
+        self.previous_stage = self.stage
+        self.stage = new_stage
         return self
 
     def iterate(self, project: 'sourdough.Project') -> 'sourdough.Project':
@@ -230,7 +265,7 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
         
         Returns:
             Callable: next method corresponding to those listed in 
-                self.factories['stage'].options'.
+                'stage_options'.
             
         """
         if self.index < len(self.contents):
@@ -242,52 +277,106 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
     """ Private Methods """
 
     def _initialize_stages(self, 
-            stages: List[Union[str, 'sourdough.StageBase']],
-            **kwargs) -> List['sourdough.StageBase']:
-        """Creates Stage instances, when necessary, in 'stages'
+            stages: List[Union[str, 'sourdough.Stage']],
+            **kwargs) -> List['sourdough.Stage']:
+        """Creates Stage instances, when necessary, in 'contents'
 
         Args:
-            stages (List[Union[str, StageBase]]): a list of strings
-                corresponding to keys in the 'options' class attribute of 
-                self.factories['stage'] or StageBase subclass instancces.
+            stages (List[Union[str, sourdough.Stage]]): a list of strings 
+                corresponding to keys in the 'stage_options' class attribute or 
+                Stage subclass instances.
             kwargs: any extra arguments to send to each created Stage instance.
-                These will have no effect on StageBase subclass instances 
-                already stored in the 'options' class attribute of 
-                self.factories['stage'].
+                These will have no effect on Stage subclass instances already 
+                stored in the 'stage_options' class attribute.
 
         Raises:
             KeyError: if 'stages' contains a string which does not match a key 
-                in the 'options' class attribute of self.factories['stage'].
+                in the 'stage_options' class attribute.
+            TypeError: if an item in 'stages' is neither a str nor Stage 
+                subclass.
             
         Returns:
-            List[Stage]: a list with only StageBase instances.
+            List[sourdough.Stage]: a list with only Stage subclass instances.
                   
         """       
-        new_stages = []
+        new_contents = []
         for stage in stages:
             if isinstance(stage, str):
                 try:
-                    new_stages.append(
-                        self.factories['stage'](product = stage, **kwargs))
+                    new_contents.append(self.stage_options[stage](**kwargs))
                 except KeyError:
                     KeyError(f'{stage} is not a recognized stage')
-            elif isinstance(stage, sourdough.StageBase):
-                new_stages.append(stage)
-            elif issubclass(stage, sourdough.StageBase):
-                new_stages.append(stage(**kwargs))
+            elif isinstance(stage, sourdough.Stage):
+                new_contents.append(stage)
+            elif issubclass(stage, sourdough.Stage):
+                new_contents.append(stage(**kwargs))
             else:
-                raise TypeError(f'{stage} must be a str or StageBase type')
-        return new_stages
-        
-    def _auto_stages(self, project: 'sourdough.Project') -> 'sourdough.Project':
+                raise TypeError(f'{stage} must be a str or Stage type')
+        return new_contents
+    
+    def _initialize_project(self, 
+            project: Union['sourdough.Project', str],
+            **kwargs) -> 'sourdough.Project':
+        """Creates or validates a Project or Project subclass instance.
+
+        Args:
+            project (Union[sourdough.Project, str]): either a Project instance,
+                Project subclass, Project subclass instance, or str matching
+                a key in 'project_options'.
+            kwargs: any extra arguments to send to the created Project instance.
+                These will have no effect on Project instances already stored in 
+                the 'project_options' class attribute.
+
+        Raises:
+            KeyError: if 'project' contains a string which does not match a key 
+                in the 'project_options' class attribute.
+            TypeError: if an item in 'project' is neither a str nor Project 
+                subclass or instance.
+            
+        Returns:
+            sourdough.Project: a completed Project or subclass instance.
+                  
+        """       
+        if isinstance(project, str):
+            try:
+                instance = self.project_options[project](**kwargs)
+            except KeyError:
+                KeyError(f'{project} is not a recognized project')
+        elif isinstance(project, sourdough.Project):
+            instance = project
+        elif issubclass(project, sourdough.Project):
+            instance = project(**kwargs)
+        else:
+            raise TypeError(f'{project} must be a str or Project type')
+        return instance
+   
+    def _initialize_designs(self, **kwargs) -> Dict[str, 'sourdough.Design']:
+        """Creates or validates 'design_options'.
+
+        Args:
+            kwargs: any extra arguments to send to the created Design instances.
+            
+        Returns:
+            Dict[str, sourdough.Design]: dictionary with str keys and values of
+                Design instances that are available to use.
+                  
+        """  
+        designs = {}
+        for key, value in self.design_options.items():
+            designs[key] = value(**kwargs)
+        return designs
+                        
+    def _auto_contents(self, 
+            project: 'sourdough.Project') -> 'sourdough.Project':
         """Automatically advances through and iterates stored Stage instances.
 
         Args:
-            project (Project): an instance containing settings and any data for 
+            project (sourdough.Project): an instance containing any data for 
                 the project methods to be applied to.
                 
         Returns:
-            Project: modified by the stored Stage instance's apply methods.
+            sourdough.Project: modified by the stored Stage instance's 'apply' 
+                methods.
             
         """
         for stage in self.contents:

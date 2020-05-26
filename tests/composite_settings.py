@@ -7,10 +7,14 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'project': {
-        'project_managers': ['parser', 'munger'],
+        'project_workers': ['parser', 'munger'],
         'project_design': 'chainer'},
     'parser': {
-        'parser_managers': ['divider'],
+        'parser_workers': ['divider'],
         'parser_design': 'comparative',
-        'divider_tasks': ['slice', 'dice']},
-    'divide_parameters': {'replace_strings': True}}
+        'divider_techniques': ['slice', 'dice']},
+    'munger': {
+        'munger_workers': ['searcher', 'destroyer'],
+        'searcher_techniques': ['find', 'locate'],
+        'destroyer_techniques': ['explode', 'annihilate']},
+    'divider_parameters': {'replace_strings': True}}

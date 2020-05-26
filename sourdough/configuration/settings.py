@@ -132,12 +132,33 @@ class Settings(collections.abc.MutableMapping):
                 pass
         return instance
 
-    def get_managers(self, section: str, name: str) -> List[str]:
-        """Returns a list of names of managers.
+    def get_overview(self, name: str) -> 'sourdough.Overview':
+        """Returns an Overview with 'contents' from this instance.
+
+        Args:
+            name (str): key to section to search for information to create an
+                Overview instance.
+
+        Returns:
+            sourdough.Overview: with contents derived from the configuration
+                settings in this instance.
+
+        """
+        workers = sourdough.utilities.listify(
+            self.contents[name][f'{name}_workers'])
+        overview = sourdough.Overview(name = f'{name}_overview')
+        for worker in workers:
+            overview = self._parse_worker_section(
+                name = worker, 
+                overview = overview)
+        return overview
+
+    def get_workers(self, section: str, name: str) -> List[str]:
+        """Returns a list of names of workers.
 
         Args:
             section (str): name of section of 'contents' to search.
-            name (str): prefix of key ending in '_managers'.
+            name (str): prefix of key ending in '_workers'.
 
         Returns:
             List[str]: values stored in 'contents' converted to a list.
@@ -146,14 +167,14 @@ class Settings(collections.abc.MutableMapping):
         return self._get_special(
             section = section,
             prefix = name, 
-            suffix = 'managers')
+            suffix = 'workers')
 
-    def get_tasks(self, section: str, name: str) -> List[str]:
-        """Returns a list of names of tasks.
+    def get_techniques(self, section: str, name: str) -> List[str]:
+        """Returns a list of names of techniques.
 
         Args:
             section (str): name of section of 'contents' to search.
-            name (str): prefix of key ending in '_tasks'.
+            name (str): prefix of key ending in '_techniques'.
 
         Returns:
             List[str]: values stored in 'contents' converted to a list.
@@ -162,18 +183,31 @@ class Settings(collections.abc.MutableMapping):
         return self._get_special(
             section = section,
             prefix = name, 
-            suffix = 'tasks')
+            suffix = 'techniques')
+        
+    def get_design(self, section: str, name: str) -> str:
+        """Returns name of a structural design.
 
-    def get_parameters(self, worker: str, task: str) -> Dict[str, Any]:
-        """Returns 'parameters' dictionary appropriate to 'worker' or 'task'.
+        Args:
+            section (str): name of section of 'contents' to search.
+            name (str): prefix of key ending in '_design'.
 
-        The method firsts look for a match with 'task' as a prefix (the
+        Returns:
+            str: name of 'design'.
+
+        """
+        return self.contents[section][f'{name}_design']
+        
+    def get_parameters(self, worker: str, technique: str) -> Dict[str, Any]:
+        """Returns 'parameters' dictionary appropriate to 'worker' or 'technique'.
+
+        The method firsts look for a match with 'technique' as a prefix (the
         more specific label) and then 'worker' as a prefix' if there is no match
-        for 'task'.
+        for 'technique'.
 
         Args:
             worker (str): name of 'worker' for which parameters are sought.
-            task (str): name of 'task' for which parameters are
+            technique (str): name of 'technique' for which parameters are
                 sought.
 
         Returns:
@@ -181,13 +215,13 @@ class Settings(collections.abc.MutableMapping):
 
         """
         try:
-            return self[f'{task}_parameters']
+            return self[f'{technique}_parameters']
         except KeyError:
             try:
                 return self[f'{worker}_parameters']
             except KeyError:
                 raise KeyError(
-                    f'parameters for {worker} and {task} not found')
+                    f'parameters for {worker} and {technique} not found')
 
     """ Required ABC Methods """
 
@@ -297,7 +331,7 @@ class Settings(collections.abc.MutableMapping):
             raise TypeError('contents must be a dict, Path, or str type')
 
     def _get_special(self, section: str, prefix: str, suffix: str) -> List[str]:
-        """Returns list of items in 'section' with key of f'{sprefix}_{suffix}'.
+        """Returns list of items in 'section' with key of f'{prefix}_{suffix}'.
 
         Args:
             section (str): name of section in 'contents' to search.
@@ -444,3 +478,39 @@ class Settings(collections.abc.MutableMapping):
                 or overwrite):
             setattr(instance, attribute, value)
         return instance
+
+    def _parse_worker_section(self, 
+            name: str,
+            overview: 'sourdough.Overview') -> 'sourdough.Overview':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        overview[name] = {}
+        section = self.contents[name]
+        try:
+            overview.contents[name]['workers'] = sourdough.utilities.listify(
+                section[f'{name}_workers'])
+        except KeyError:
+            overview.contents[name]['workers'] = []
+        try:
+            overview.contents[name]['design'] = section[f'{name}_design']
+        except KeyError:
+            overview.contents[name]['design'] = None
+        task_keys = [k for k in section.keys() if k.endswith('_techniques')]
+        if len(task_keys) > 0:
+            overview.contents[name]['stores_tasks'] = True
+            for task_key in task_keys:
+                task_name = task_key.replace('_techniques', '')
+                if task_name in overview.contents[name]['workers']:
+                    techniques = sourdough.utilities.listify(section[task_key])
+                    self.contents[name][task_name] = techniques
+        else:
+            overview.contents[name]['stores_tasks'] = False
+            for worker in overview.contents[name]['workers']:
+                overview = self._parse_worker_section(
+                    name = worker,
+                    overview = overview)
+        return overview

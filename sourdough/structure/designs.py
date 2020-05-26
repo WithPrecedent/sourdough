@@ -1,6 +1,6 @@
 """
 .. module:: designs
-:synopsis: customizes sourdough Employee instances
+:synopsis: customizes sourdough Worker instances
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -8,6 +8,7 @@
 
 import abc
 import dataclasses
+import itertools
 from typing import (
     Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
 
@@ -15,113 +16,167 @@ import sourdough
 
 
 @dataclasses.dataclass
-class DesignBase(abc.ABC):
-    """[summary]
+class Design(abc.ABC):
+    """Base class for structuring different Worker instances.
 
     Args:
-        sourdough {[type]} -- [description]
+        settings (sourdough.Settings): an instance which contains information
+            about how to design specific Worker instances.
         
     """
-    name: Optional[str] = None
+    settings: 'sourdough.Settings'
 
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def apply(self, *args, **kwargs) -> NotImplementedError:
+    def create(self, *args, **kwargs) -> NotImplementedError:
         """Subclasses must provide their own methods."""
         raise NotImplementedError(
             'Design subclasses must include apply methods')
 
+    """ Private Methods """
+    
+    def _convert_settings(self, 
+            section: Dict[str, Any]) -> Dict[str, List[str]]:
+        """[summary]
+
+        Args:
+            section (Dict[str, Any]): [description]
+
+        Returns:
+            Dict[str, List[str]]: [description]
+            
+        """
+        all_tasks = {}
+        for key, value in section.items():
+            if key.endswith('_tasks'):
+                name = key.replace('_tasks', '')
+                tasks = sourdough.utilities.listify(value)
+                all_tasks[name] = tasks
+        return all_tasks
+
+    def _get_task(self, 
+            task: str,
+            technique: str,
+            worker: 'sourdough.Worker') -> 'sourdough.Task':
+        """[summary]
+        """
+        # For each 'technique', it tries to find a corresponding Task and 
+        # Technique subclass in options. If one isn't found, a generic Task or 
+        # Technique is used.
+        try:
+            return worker.options[task](
+                name = task,
+                worker = worker.name,
+                technique = worker.options[technique])
+        except KeyError:
+            try:
+                return sourdough.Task(
+                    name = task,
+                    worker = worker.name,
+                    technique = worker.options[technique])
+            except KeyError:
+                try:
+                    return worker.options[task](
+                        name = task,
+                        worker = worker.name,
+                        technique = sourdough.Technique(
+                            name = technique))
+                except KeyError:
+                    return sourdough.Task(
+                        name = task,
+                        worker = worker.name,
+                        technique = sourdough.Technique(
+                            name = technique))
+      
 
 @dataclasses.dataclass
-class ComparativeDesign(DesignBase):
+class ComparativeDesign(Design):
     """[summary]
 
     Args:
         sourdough {[type]} -- [description]
         
     """
-    name: Optional[str] = None
+    settings: 'sourdough.Settings'
 
     """ Public Methods """
     
-    def apply(self, overview: 'Overview') -> 'SequenceBase':
+    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """Creates a 'SequenceBase' with a comparative structure.
 
         Returns:
             'SequenceBase': configured to specifications in 'overview'.
 
         """
-        outer_name = self.name
-        inner_name = 'employee'
-        # Creates a 'SequenceBase' instance to store other 'SequenceBase' instances.
-        outer_employee = sourdough.ChainedSequenceBase(name = outer_name)
-        # Creates list of workers from 'overview'.
-        workers = list(overview.keys())
-        # Creates 'possible' list of lists.
-        possible = list(overview.values())
-        # Creates a list of lists of the Cartesian product of 'possible'.
-        combinations = list(map(list, itertools.product(*possible)))
-        # Creates a 'inner_employee' for each combination of tasks and adds that
-        # 'inner_employee' to 'outer_employee'.
-        for i, tasks in enumerate(combinations):
-            inner_employee = sourdough.ChainedSequenceBase(
-                name = f'{inner_name}_{i}',
-                extender = False)
-            worker_tasks = tuple(zip(workers, tasks))
-            for task in worker_tasks:
-                task = self.instructions.task.load()(
-                    name = task[0],
-                    task = task[1])
-                task = self.parametizer.get(task = task)
-                inner_employee.add(contents = task)
-            outer_employee.add(contents = inner_employee)
-        return outer_employee
+        # Gets all tasks in a section of settings.
+        settings_tasks = self._convert_settings(
+            section = self.settings[worker.name])
+        # Creates list of 'tasks' from 'settings_tasks'.
+        tasks = list(settings_tasks.keys())
+        # Creates 'techniques' list of lists.
+        techniques = list(settings_tasks.values())
+        # Creates a list of lists of the Cartesian product of 'techniques'.
+        combinations = list(map(list, itertools.product(*techniques)))
+        # Iterates through each combination to create Task and Technique 
+        # instances.
+        new_tasks = []
+        for i, techniques in enumerate(combinations):
+            new_techniques = []
+            for technique in techniques:
+                instance = self._get_task(
+                    task = tasks[i], 
+                    technique = technique, 
+                    worker = worker)
+                new_techniques.append(instance)
+            new_techniques = sourdough.base.SequenceBase(
+                name = '_'.join(techniques),
+                contents = new_techniques)
+            new_tasks.append[new_techniques]
+        worker.contents = new_tasks
+        return worker
 
 
 @dataclasses.dataclass
-class ChainedDesign(DesignBase):
+class ChainedDesign(Design):
     """[summary]
 
     Args:
         sourdough {[type]} -- [description]
         
     """
-    name: Optional[str] = None
+    settings: 'sourdough.Settings'
     
     """ Public Methods """
  
-    def apply(self,
-            overview: Optional[Dict[str,str]] = None,
-            outer_name: Optional[str] = None,
-            inner_name: Optional[str] = None) -> 'SequenceBase':
-        """Drafts a outer_employee with a chained inner_employee structure.
-
-        Returns:
-            'SequenceBase': configured to spefications in 'instructions'.
+    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """
 
         """
-        if overview is None:
-            overview = self.overview
-        if outer_name is None:
-            outer_name = self.instructions.name
-        # Creates a 'SequenceBase' instance to store other 'SequenceBase' instances.
-        outer_employee = sourdough.base.SequenceBase(name = outer_name)
-        # Creates a 'inner_employee' for each worker in 'overview'.
-        for worker, tasks in self.overview.items():
-            inner_employee = sourdough.base.SequenceBase(name = worker)
-            for task in tasks:
-                task = self.instructions.task(
-                    name = worker,
-                    task = task)
-                task = self.parametizer.get(task = task)
-                inner_employee.add(contents = task)
-            outer_employee.add(contents = inner_employee)
-        return outer_employee
-    
+        # Gets all tasks in a section of settings.
+        settings_tasks = self._convert_settings(
+            section = self.settings[worker.name])
+        # Iterates through each 'settings_task' to create Task and Technique 
+        # instances.
+        new_tasks = []
+        for task, techniques in settings_tasks.items():
+            new_techniques = []
+            for technique in techniques:
+                instance = self._get_task(
+                    task = task, 
+                    technique = technique, 
+                    worker = worker)
+                new_techniques.append(instance)
+            new_techniques = sourdough.base.SequenceBase(
+                name = '_'.join(techniques),
+                contents = new_techniques)
+            new_tasks.append[new_techniques]
+        worker.contents = new_tasks
+        return worker
 
+                
 @dataclasses.dataclass
-class Design(sourdough.core.base.FactoryBase):
+class DesignFactory(sourdough.core.base.FactoryBase):
     """A factory for creating and returning DesigneBase subclass instances.
 
     Args:
@@ -132,9 +187,9 @@ class Design(sourdough.core.base.FactoryBase):
             correspond  to a key in 'products'. Defaults to None. If 'default'
             is to be used, it should be specified by a subclass, declared in an
             instance, or set via the class attribute.
-        options (Dict[str, 'DesignBase']): a dictionary of available options for 
+        options (Dict[str, 'Design']): a dictionary of available options for 
             object creation. Keys are the names of the 'product'. Values are the 
-            objects to create. Defaults to an a dictionary with the managers 
+            objects to create. Defaults to an a dictionary with the workers 
             included in sourdough.
 
     Returns:
@@ -144,6 +199,6 @@ class Design(sourdough.core.base.FactoryBase):
     """
     product: Optional[str] = None
     default: ClassVar[str] = 'chained'
-    options: ClassVar[Dict[str, 'DesignBase']] = {
+    options: ClassVar[Dict[str, 'Design']] = {
         'comparative': ComparativeDesign,
         'chained': ChainedDesign}

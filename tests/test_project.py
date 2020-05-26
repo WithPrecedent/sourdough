@@ -32,14 +32,14 @@ class Dice(sourdough.Worker):
 
 
 @dataclasses.dataclass    
-class Divider(sourdough.Manager):
+class Divider(sourdough.Worker):
 
     options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
-class Parser(sourdough.Manager):
+class Parser(sourdough.Worker):
 
     options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
         contents = {'divider': Divider})
@@ -51,17 +51,23 @@ class Munger(sourdough.Worker):
 
 
 def test_project():
+    
+    sourdough.Project.add_option(name = 'parser', option = Parser)
+    sourdough.Project.add_option(name = 'munger', option = Munger)
+    project = sourdough.Project()
+    
     settings = pathlib.Path.cwd().joinpath('tests', 'composite_settings.py')
-    sourdough.Project.add_option(name = 'parser', employee = Parser)
-    sourdough.Project.add_option(name = 'munger', employee = Munger)
-    project = sourdough.Project(settings = settings)
-    sourdough.Stage.add(key = 'distribute', option = Distributor)
+    sourdough.Director.add_stage_option(
+        name = 'distribute', 
+        option = Distributor)
     director = sourdough.Director(
-        stages = ['draft', 'edit', 'publish', 'distribute', 'apply'],
+        settings = settings,
+        contents = ['draft', 'edit', 'publish', 'distribute', 'apply'],
         project = project)
-    print('test project contents', director.project.contents)
+    print('test project overview', director.project.overview)
     # print('test parser contents', director.project['parser'].contents)
     return
 
 if __name__ == '__main__':
     test_project()
+    

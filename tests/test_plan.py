@@ -1,5 +1,5 @@
 """
-.. module:: test employee
+.. module:: test worker
 :synopsis: tests SequenceBase class
 :author: Corey Rayburn Yung
 :copyright: 2020
@@ -15,17 +15,17 @@ class NewComponent(sourdough.Component):
 class OtherComponent(sourdough.Component):
     pass
 
-def test_employee():
+def test_worker():
     new_component = NewComponent()
     other_component = OtherComponent()
     another_component = OtherComponent()
-    new_employee = sourdough.base.SequenceBase()
-    new_employee.add(new_component)
-    new_employee.add(other_component)
-    new_employee.add(another_component)
-    assert new_employee['new_component'] == new_component
-    new_employee.add([other_component, another_component])
-    assert new_employee.items == [
+    new_worker = sourdough.base.SequenceBase()
+    new_worker.add(new_component)
+    new_worker.add(other_component)
+    new_worker.add(another_component)
+    assert new_worker['new_component'] == new_component
+    new_worker.add([other_component, another_component])
+    assert new_worker.items == [
         new_component, 
         other_component, 
         another_component,
@@ -34,4 +34,4 @@ def test_employee():
 
 
 if __name__ == '__main__':
-    test_employee()
+    test_worker()

@@ -22,27 +22,28 @@ For example:
 
 from sourdough.core import utilities
 from sourdough.core.component import Component
-from sourdough.core import mixins as mixins
-from sourdough.core import base as base
-from sourdough.core import types as types
-from sourdough.core.options import Options
+from sourdough.core import mixins
+from sourdough.core import base
+from sourdough.core import types
 
 from sourdough.configuration import defaults
 from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
-from sourdough.structure.hierarchy import Employee
-from sourdough.structure.hierarchy import Manager
-from sourdough.structure.hierarchy import Worker
-from sourdough.structure.hierarchy import Task
+from sourdough.structure.options import Options
+from sourdough.structure.worker import Overview
+from sourdough.structure.worker import Worker
+from sourdough.structure.task import Technique
+from sourdough.structure.task import Task
 from sourdough.structure.project import Project
 from sourdough.structure.designs import Design
 from sourdough.structure.stages import Stage
-from sourdough.structure.director import Director
 from sourdough.structure.stages import Author
 from sourdough.structure.stages import Editor
 from sourdough.structure.stages import Publisher
 from sourdough.structure.stages import Reader
+from sourdough.structure.director import Director
+
 
 __version__ = '0.1.0'
 
@@ -58,9 +59,9 @@ __all__ = [
     'defaults',
     'Settings',
     'Filer',
-    'Task',
+    'Technique',
     'Worker',
-    'Employee',
+    'Worker',
     'Project',
     'CompositeProject',
     'CompositeDirector',

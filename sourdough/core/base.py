@@ -168,8 +168,8 @@ class MappingBase(sourdough.Component, collections.abc.MutableMapping):
 
         """
         return (
-            f'sourdough {self.__class__.__name__} '
-            f'name: {self.name} '
+            f'sourdough {self.__class__.__name__}\n'
+            f'name: {self.name}\n'
             f'contents: {self.contents.__str__()} ')   
     
 
@@ -401,6 +401,7 @@ class SequenceBase(sourdough.Component, collections.abc.MutableSequence):
             f'sourdough {self.__class__.__name__} '
             f'name: {self.name} '
             f'contents: {self.contents.__str__()} ')   
+
 
 @dataclasses.dataclass
 class FactoryBase(abc.ABC):

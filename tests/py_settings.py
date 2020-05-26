@@ -7,8 +7,8 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'project': {
-        'project_managers': ['parser', 'munger']},
+        'project_workers': ['parser', 'munger']},
     'parser': {
         'parser_workers': 'divide',
-        'divide_tasks': ['slice', 'dice']},
+        'divide_techniques': ['slice', 'dice']},
     'divide_parameters': {'replace_strings': True}}

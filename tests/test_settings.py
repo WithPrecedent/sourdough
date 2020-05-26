@@ -29,10 +29,10 @@ def test_settings():
             'analysis_format': 'csv',
             'file_encoding': 'windows-1252'},
         'project': {
-            'project_managers': ['parser', 'munger']},
+            'project_workers': ['parser', 'munger']},
         'parser': {
             'parser_workers': 'divide',
-            'divide_tasks': ['slice', 'dice']},
+            'divide_techniques': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
     ini_settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
     assert ini_settings.contents == actual_settings
@@ -40,14 +40,14 @@ def test_settings():
     assert py_settings.contents == actual_settings
     json_settings = sourdough.Settings(contents = 'tests\json_settings.json')
     assert json_settings.contents == actual_settings
-    assert ini_settings.get_managers(section = 'project') == ['parser', 'munger']
-    assert ini_settings.get_workers(manager = 'parser') == ['divide']
-    assert ini_settings.get_tasks(
-        manager = 'parser',
+    assert ini_settings.get_workers(section = 'project') == ['parser', 'munger']
+    assert ini_settings.get_workers(worker = 'parser') == ['divide']
+    assert ini_settings.get_techniques(
+        worker = 'parser',
         worker = 'divide') == ['slice', 'dice']
     assert ini_settings.get_parameters(
         worker = 'divide',
-        task = 'slice') == {'replace_strings': True}
+        technique = 'slice') == {'replace_strings': True}
     assert ini_settings['general']['seed'] == 43
     ini_settings['new_section'] = {}
     ini_settings.contents['new_section']['new_setting'] = 'value'
