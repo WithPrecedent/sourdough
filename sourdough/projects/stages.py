@@ -8,8 +8,7 @@
 
 import abc
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 from sourdough import utilities
@@ -17,20 +16,14 @@ from sourdough import utilities
  
 @dataclasses.dataclass
 class Stage(abc.ABC):
-    """Base class for Components stored by a Director.
+    """Base class for workflow steps controlled by a Manager instance.
     
-    All subclasses must have 'apply' methods. 'add' methods are optional.
+    All subclasses must have 'apply' methods. 
     
     """
     settings: 'sourdough.Settings'
-    designs: 'sourdough.Options'
     
     """ Required Subclass Methods """
-
-    def add(self, *args, **kwargs) -> NotImplementedError:
-        """Subclasses may provide their own methods."""
-        raise NotImplementedError(
-            f'{self.__class__.__name__} does not support add')
     
     @abc.abstractmethod
     def apply(self, *args, **kwargs) -> NotImplementedError:
@@ -43,82 +36,216 @@ class Author(Stage):
     """Initializes a Project instance based upon a Settings instance."""  
     
     settings: 'sourdough.Settings'
-    designs: 'sourdough.Options'
-    
-    """ Public Methods """
-
-    def add(self, 
-            project: 'sourdough.Project', 
-            worker: str, 
-            tasks: Union[List[str], str]) -> 'sourdough.Project':
-        """Adds 'tasks' to 'project' 'contents' with a 'worker' key.
-        
-        Args:
-            project (sourdough.Project): project to which 'worker' and 'tasks'
-                should be added.
-            worker (str): key to use to store 'tasks':
-            tasks (Union[List[str], str]): name(s) of task(s) to add to 
-                'project'.
-            
-        Returns:
-            sourdough.Project: with 'tasks' added at 'worker'.
-        
-        """
-        project.contents[worker] = sourdough.utilities.listify(tasks)
-        return project
-    
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
-        """Creates a rough draft of a Project instance.
-        
-        Args:
-            project (Project): a sourdough Project instance with sa Settings
-                instance which is used to create the initial configuration of
-                the sourdough project.
-                
-        Returns:
-            Project: with its 'contents' attribute populated with Worker and/or
-                Task instances.
-                
-        """
-        project.contents = self.settings.get_overview(name = project.name)
-        return project
-        
-
-@dataclasses.dataclass
-class Editor(Stage):
-
-    settings: 'sourdough.Settings'
     
     """ Public Methods """
     
-    def add(self, 
-            project: 'sourdough.Project', 
-            worker: str, 
-            tasks: Union[List[str], str]) -> 'sourdough.Project':
-        """Adds 'tasks' to 'project' 'contents' with a 'worker' key.
+    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """Returns a Worker with its 'contents' organized and instanced.
+
+        The method first determines if the contents are already finalized. If 
+        not, it creates them from 'settings'.
+        
+        Subclasses can call this method and then arrange the 'contents' of
+        'worker' based upon a specific structural design.
         
         Args:
-            project (sourdough.Project): project to which 'worker' and 'tasks'
-                should be added.
-            worker (str): key to use to store 'tasks':
-            tasks (Union[List[str], str]): name(s) of task(s) to add to 
-                'project'.
-            
+            worker (sourdough.Worker): Worker instance to organize the 
+                information in 'contents' or 'settings'.
+
         Returns:
-            sourdough.Project: with 'tasks' added at 'worker'.
-        
+            sourdough.Worker: an instance with contents fully instanced.
+                
         """
-        project.contents[worker] = sourdough.utilities.listify(tasks)
-        return project
+        worker = self._draft_existing_contents(worker = worker)
+        worker = self._draft_from_settings(worker = worker)           
+        return worker      
+
+    """ Private Methods """
+
+    def _draft_existing_contents(self, 
+            worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """
         
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
+        Args:
+            worker (sourdough.Worker): Worker instance with str, Task, or Worker
+                stored in contents.
+
+        Raises:
+            TypeError: if an item in 'contents' is not a str, Task, or Worker
+                type.
+
+        Returns:
+            sourdough.Worker: an instance with contents fully instanced.
+                
+        """
+        new_contents = []
+        for labor in worker.contents:
+            if isinstance(labor, str):
+                new_contents.append(self._draft_unknown(
+                    labor = labor, 
+                    worker = worker))
+            elif isinstance(labor, (sourdough.Worker, sourdough.Task)):
+                new_contents.append(labor)
+            else:
+                raise TypeError(
+                    f'{worker.name} contents must be str, Worker, or Task type')
+        worker.contents = new_contents
+        return worker
+    
+    def _draft_unknown(self,
+            labor: str,
+            worker: 'sourdough.Worker') -> Union[
+                'sourdough.Task', 
+                'sourdough.Worker']:
+        """[summary]
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            [type]: [description]
+        """
+        try:
+            test_instance = worker.options[labor](name = 'test only')
+        except KeyError:
+            raise KeyError(f'{labor} not found in {worker.name}')
+        if isinstance(test_instance, sourdough.Task):
+            return self._draft_task(
+                task = labor, 
+                technique = None, 
+                worker = worker)
+        else:
+            return self._draft_worker(worker = labor, manager = worker)
+
+    def _draft_from_settings(self, 
+            worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """Returns a single Worker instance created based on 'settings'.
+
+        Args:
+            worker (sourdough.Worker): Worker instance to populate its 
+                'contents' with information in 'settings'.
+
+        Returns:
+            sourdough.Worker: an worker or subclass worker with attributes 
+                derived from a section of 'settings'.
+                
+        """
+        tasks = []
+        workers = []
+        techniques = {}
+        attributes = {}
+        worker.contents = []
+        for key, value in self.settings.contents[worker.name].items():
+            if key.endswith('_design'):
+                worker.design = value
+            elif key.endswith('_workers'):
+                workers = sourdough.utilities.listify(value)
+            elif key.endswith('_tasks'):
+                tasks = sourdough.utilities.listify(value)
+            elif key.endswith('_techniques'):
+                new_key = key.replace('_techniques', '')
+                techniques[new_key] = sourdough.utilities.listify(value)
+            else:
+                attributes[key] = value
+        if tasks:
+            worker = self._draft_tasks(
+                tasks = tasks, 
+                techniques = techniques,
+                worker = worker)
+        elif workers:
+            worker = self._draft_workers(
+                workers = workers,
+                manager = worker)
+        for key, value in attributes.items():
+            setattr(worker, key, value)
+        return worker      
+
+    def _draft_workers(self,
+            workers: Sequence[str],
+            manager: 'sourdough.Worker') -> 'sourdough.Worker':
         """[summary]
 
         Returns:
-            [type] -- [description]
+            [type]: [description]
             
         """
-        return project
+        new_workers = []
+        for worker in workers:
+            new_workers.append(self._draft_worker(
+                worker = worker, 
+                manager = manager))
+        manager.contents.append(new_workers)
+        return manager
+
+    def _draft_worker(self,
+            worker: str,
+            manager: 'sourdough.Worker') -> 'sourdough.Worker':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        try:
+            new_worker = manager.options[worker](name = worker)
+        except KeyError:
+            new_worker = sourdough.Worker(name = worker)
+        return self.organize(worker = new_worker)
+                  
+    def _draft_tasks(self, 
+            worker: 'sourdough.Worker',
+            tasks: Sequence[str],
+            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Worker':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        new_tasks = []
+        for task in tasks:
+            new_techniques = []
+            for technique in techniques[task]:
+                new_techniques.append(self._draft_task(
+                    task = task,
+                    technique = technique,
+                    worker = worker.name))
+            new_tasks.append(new_techniques)
+        worker.contents.append(new_tasks)
+        return worker
+            
+    def _draft_task(self,
+            task: str,
+            technique: str,
+            worker: str,
+            options: 'sourdough.Catalog') -> 'sourdough.Task':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        try:
+            return worker.options[task](
+                name = task,
+                worker = worker,
+                technique = worker.options[technique])
+        except KeyError:
+            try:
+                return sourdough.Task(
+                    name = task,
+                    worker = worker,
+                    technique = worker.options[technique])
+            except KeyError:
+                try:
+                    return worker.options[task](
+                        name = task,
+                        worker = worker,
+                        technique = sourdough.Technique(name = technique))
+                except KeyError:
+                    return sourdough.Task(
+                        name = task,
+                        worker = worker,
+                        technique = sourdough.Technique(name = technique))
 
 
 @dataclasses.dataclass
@@ -131,14 +258,14 @@ class Publisher(Stage):
     def add(self, 
             project: 'sourdough.Project', 
             worker: str, 
-            tasks: Union[List[str], str]) -> 'sourdough.Project':
+            tasks: Union[Sequence[str], str]) -> 'sourdough.Project':
         """Adds 'tasks' to 'project' 'contents' with a 'worker' key.
         
         Args:
             project (sourdough.Project): project to which 'worker' and 'tasks'
                 should be added.
             worker (str): key to use to store 'tasks':
-            tasks (Union[List[str], str]): name(s) of task(s) to add to 
+            tasks (Union[Sequence[str], str]): name(s) of task(s) to add to 
                 'project'.
             
         Returns:
@@ -148,14 +275,152 @@ class Publisher(Stage):
         project.contents[worker] = sourdough.utilities.listify(tasks)
         return project
  
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
+    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        return project
+        worker = self._parameterize_tasks(worker = worker)
+        
+        return worker
+
+    """ Private Methods """
+    
+    def get(self, technique: sourdough.technique) -> sourdough.technique:
+        """Adds appropriate parameters to technique.
+
+        Args:
+            technique (technique): instance for parameters to be added.
+
+        Returns:
+            technique: instance ready for application.
+
+        """
+        if technique.name not in ['none', None, 'None']:
+            parameter_types = ['settings', 'selected', 'required', 'runtime']
+            # Iterates through types of 'parameter_types'.
+            for parameter_type in parameter_types:
+                technique = getattr(self, f'_get_{parameter_type}')(
+                    technique = technique)
+        return technique
+
+    """ Private Methods """
+
+    def _get_settings(self,
+            technique: sourdough.technique) -> sourdough.technique:
+        """Acquires parameters from 'Settings' instance.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        return self.settings.get_parameters(
+            worker = technique.worker,
+            technique = technique.name)
+
+    def _get_selected(self,
+            technique: sourdough.technique) -> sourdough.technique:
+        """Limits parameters to those appropriate to the technique.
+
+        If 'technique.selected' is True, the keys from 'technique.defaults' are
+        used to select the final returned parameters.
+
+        If 'technique.selected' is a list of parameter keys, then only those
+        parameters are selected for the final returned parameters.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        if technique.selected:
+            if isinstance(technique.selected, list):
+                parameters_to_use = technique.selected
+            else:
+                parameters_to_use = list(technique.default.keys())
+            new_parameters = {}
+            for key, value in technique.parameters.items():
+                if key in parameters_to_use:
+                    new_parameters[key] = value
+            technique.parameters = new_parameters
+        return technique
+
+    def _get_required(self,
+            technique: sourdough.technique) -> sourdough.technique:
+        """Adds required parameters (mandatory additions) to 'parameters'.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        try:
+            technique.parameters.update(technique.required)
+        except TypeError:
+            pass
+        return technique
+
+    def _get_search(self,
+            technique: sourdough.technique) -> sourdough.technique:
+        """Separates variables with multiple options to search parameters.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        technique.parameter_space = {}
+        new_parameters = {}
+        for parameter, values in technique.parameters.items():
+            if isinstance(values, list):
+                if any(isinstance(i, float) for i in values):
+                    technique.parameter_space.update(
+                        {parameter: uniform(values[0], values[1])})
+                elif any(isinstance(i, int) for i in values):
+                    technique.parameter_space.update(
+                        {parameter: randint(values[0], values[1])})
+            else:
+                new_parameters.update({parameter: values})
+        technique.parameters = new_parameters
+        return technique
+
+    def _get_runtime(self,
+            technique: sourdough.technique) -> sourdough.technique:
+        """Adds parameters that are determined at runtime.
+
+        The primary example of a runtime parameter throughout sourdough is the
+        addition of a random seed for a consistent, replicable state.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        try:
+            for key, value in technique.runtime.items():
+                try:
+                    technique.parameters.update(
+                        {key: getattr(self.settings['general'], value)})
+                except AttributeError:
+                    raise AttributeError(' '.join(
+                        ['no matching runtime parameter', key, 'found']))
+        except (AttributeError, TypeError):
+            pass
+        return technique
+
 
 
 @dataclasses.dataclass
@@ -163,14 +428,16 @@ class Reader(Stage):
     
     settings: 'sourdough.Settings'
     
-    def apply(self, project: 'sourdough.Project') -> 'sourdough.Project':
+    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        return project
+        worker = self._parameterize_tasks(worker = worker)
+        
+        return worker
 
 
 # @dataclasses.dataclass
@@ -356,8 +623,8 @@ class Reader(Stage):
 #     """ Public Methods """
 
 #     def apply(self,
-#             outer_worker: sourdough.base.SequenceBase,
-#             data: Union[sourdough.Dataset, sourdough.base.SequenceBase]) -> sourdough.base.SequenceBase:
+#             outer_worker: sourdough.base.Plan,
+#             data: Union[sourdough.Dataset, sourdough.base.Plan]) -> sourdough.base.Plan:
 #         """Applies 'outer_worker' instance in 'project' to 'data' or other stored outer_worker.
 
 #         Args:

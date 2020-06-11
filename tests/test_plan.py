@@ -1,6 +1,6 @@
 """
 .. module:: test worker
-:synopsis: tests SequenceBase class
+:synopsis: tests Plan class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -19,7 +19,7 @@ def test_worker():
     new_component = NewComponent()
     other_component = OtherComponent()
     another_component = OtherComponent()
-    new_worker = sourdough.base.SequenceBase()
+    new_worker = sourdough.base.Plan()
     new_worker.add(new_component)
     new_worker.add(other_component)
     new_worker.add(another_component)

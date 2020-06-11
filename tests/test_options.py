@@ -1,6 +1,6 @@
 """
-.. module:: test Options
-:synopsis: tests Options class
+.. module:: test Catalog
+:synopsis: tests Catalog class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -9,17 +9,17 @@
 import sourdough
 
 
-def test_Options():
-    Options = sourdough.Options(contents = {
+def test_Catalog():
+    Catalog = sourdough.Catalog(contents = {
         'run' : 'tired',
         'sleep': 'rested',
         'walk': 'relax'})
-    assert Options['all'] == ['tired', 'rested', 'relax']
-    assert Options['default'] == ['tired', 'rested', 'relax']
-    assert Options['sleep'] == 'rested'
-    assert Options['none'] == []
+    assert Catalog['all'] == ['tired', 'rested', 'relax']
+    assert Catalog['default'] == ['tired', 'rested', 'relax']
+    assert Catalog['sleep'] == 'rested'
+    assert Catalog['none'] == []
     return
 
 
 if __name__ == '__main__':
-    test_Options()
+    test_Catalog()

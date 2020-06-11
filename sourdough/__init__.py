@@ -12,60 +12,45 @@ access.
 
 For example:
 
-    Instead of acccesing Component via sourdough.core.base.Component,
+    Instead of acccesing Component via sourdough.structure.components.Component,
     you can just use: sourdough.Component
-
-    Rather than accessing MirrorType via sourdough.core.types.MirrorType,
-    you can just use: sourdough.types.MirrorType
     
 """
 
-from sourdough.core import utilities
-from sourdough.core.component import Component
-from sourdough.core import mixins
-from sourdough.core import base
-from sourdough.core import types
+from sourdough.structure import utilities
+from sourdough.structure.components import Component
+from sourdough.structure.components import Operator
+from sourdough.structure.components import Factory
+from sourdough.structure.components import LazyLoader
+from sourdough.structure.dictionaries import Lexicon
+from sourdough.structure.dictionaries import Catalog
+from sourdough.structure.graphs import DAGraph
+from sourdough.structure.iterables import Progression
+from sourdough.structure.iterables import Plan
+from sourdough.structure.iterables import Director
+from sourdough.structure.mixins import LibraryMixin
+from sourdough.structure.mixins import RegistryMixin
+from sourdough.structure.mixins import ProxyMixin
+from sourdough.structure.types import MirrorType
 
 from sourdough.configuration import defaults
 from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
-from sourdough.structure.options import Options
-from sourdough.structure.worker import Overview
-from sourdough.structure.worker import Worker
-from sourdough.structure.task import Technique
-from sourdough.structure.task import Task
-from sourdough.structure.project import Project
-from sourdough.structure.designs import Design
-from sourdough.structure.stages import Stage
-from sourdough.structure.stages import Author
-from sourdough.structure.stages import Editor
-from sourdough.structure.stages import Publisher
-from sourdough.structure.stages import Reader
-from sourdough.structure.director import Director
+from sourdough.projects.task import Technique
+from sourdough.projects.task import Task
+from sourdough.projects.worker import Worker
+from sourdough.projects.worker import Project
+from sourdough.projects.stages import Stage
+from sourdough.projects.stages import Author
+from sourdough.projects.stages import Editor
+from sourdough.projects.stages import Publisher
+from sourdough.projects.stages import Reader
+from sourdough.projects.manager import Manager
 
 
 __version__ = '0.1.0'
 
 __author__ = 'Corey Rayburn Yung'
 
-__all__ = [
-    'Catalog',
-    'Library',
-    'utilities',
-    'Component',
-    'Options',
-    'types',
-    'defaults',
-    'Settings',
-    'Filer',
-    'Technique',
-    'Worker',
-    'Worker',
-    'Project',
-    'CompositeProject',
-    'CompositeDirector',
-    'Stage',
-    'Director',
-    
-    ]
+__all__ = []

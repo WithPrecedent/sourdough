@@ -8,9 +8,9 @@
 
 # from .base import Component
 # from .base import Proxy
-# from .base import MappingBase
-# from .base import SequenceBase
-# from .base import FactoryBase
+# from .base import Lexicon
+# from .base import Plan
+# from .base import Factory
 
 
 # __version__ = '0.1.0'
@@ -21,6 +21,6 @@
 # __all__ = [
 #     'Component'
 #     'Proxy',
-#     'MappingBase',
-#     'SequenceBase',
-#     'FactoryBase'],
+#     'Lexicon',
+#     'Plan',
+#     'Factory'],

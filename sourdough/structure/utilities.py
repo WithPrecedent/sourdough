@@ -13,8 +13,7 @@ import pathlib
 import re
 import time
 import types
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import more_itertools
 import numpy as np
@@ -25,12 +24,12 @@ import pandas as pd
 
 def classify(
         variable: Any, 
-        options: Optional[Dict[str, Any]] = None) -> object:
+        options: Optional[Mapping[str, Any]] = None) -> object:
     """Converts 'variable' to a class, if possible.
 
     Args:
         variable (Any): variable to create a class out of.
-        options (Optional[Dict[str, Any]]): mapping containing str keys and
+        options (Optional[Mapping[str, Any]]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -53,13 +52,13 @@ def classify(
             
 def instancify(
         variable: Any, 
-        options: Optional[Dict[str, Any]] = None,
+        options: Optional[Mapping[str, Any]] = None,
         **kwargs) -> object:
     """Converts 'variable' to a class instance with 'kwargs' as parameters.
 
     Args:
         variable (Any): variable to create an instance out of.
-        options (Optional[Dict[str, Any]]): mapping containing str keys and
+        options (Optional[Mapping[str, Any]]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -79,7 +78,7 @@ def instancify(
             
 def listify(
         variable: Any,
-        default_value: Any = None) -> List[Any]:
+        default_value: Any = None) -> Sequence[Any]:
     """Returns passed variable as a list (if not already a list).
 
     Args:
@@ -91,7 +90,7 @@ def listify(
             is set to [].
 
     Returns:
-        List[Any]: a passed list, 'variable' converted to a list, or 
+        Sequence[Any]: a passed list, 'variable' converted to a list, or 
             'default_value'.
 
     """
@@ -161,7 +160,7 @@ def snakify(variable: str) -> str:
     return re.sub(r'(?<!^)(?=[A-Z])', '_', variable).lower()
 
 def stringify(
-        variable: Union[str, List],
+        variable: Union[str, Sequence],
         default_null: Optional[bool] = False,
         default_empty: Optional[bool] = False) -> str:
     """Converts one item list to a string (if not already a string).
@@ -192,24 +191,24 @@ def stringify(
             return variable
 
 def subsetify(
-    dictionary: Dict[Any, Any],
-    subset: Union[Any, List[Any]]) -> Dict[Any, Any]:
+    dictionary: Mapping[Any, Any],
+    subset: Union[Any, Sequence[Any]]) -> Mapping[Any, Any]:
     """Returns a subset of a dictionary.
 
     The returned subset is a dictionary with keys in 'subset'.
 
     Args:
-        dictionary (Dict[Any, Any]): dict to be subsetted.
-        subset (Union[Any, List[Any]]): key(s) to get key/value pairs from
+        dictionary (MutableMapping[Any, Any]): dict to be subsetted.
+        subset (Union[Any, Sequence[Any]]): key(s) to get key/value pairs from
             'dictionary'.
 
     Returns:
-        Dict[Any, Any]: with only keys in 'subset'
+        Mapping[Any, Any]: with only keys in 'subset'
 
     """
     return {key: dictionary[key] for key in listify(subset)}
 
-def typify(variable: str) -> Union[List, int, float, bool, str]:
+def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
     """Converts stingsr to appropriate, supported datatypes.
 
     The method converts strings to list (if ', ' is present), int, float,
@@ -245,8 +244,8 @@ def typify(variable: str) -> Union[List, int, float, bool, str]:
 """ Other Functions """
 
 def add_prefix(
-        iterable: Union[Dict[str, Any], List],
-        prefix: str) -> Union[Dict[str, Any], List]:
+        iterable: Union[Mapping[str, Any], Sequence],
+        prefix: str) -> Union[Mapping[str, Any], Sequence]:
     """Adds prefix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string prefix.
@@ -265,8 +264,8 @@ def add_prefix(
         return [prefix + '_' + item for item in iterable]
 
 def add_suffix(
-        iterable: Union[Dict[str, Any], List],
-        suffix: str) -> Union[Dict[str, Any], List]:
+        iterable: Union[Mapping[str, Any], Sequence],
+        suffix: str) -> Union[Mapping[str, Any], Sequence]:
     """Adds suffix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string suffix.
@@ -297,8 +296,8 @@ def datetime_string(prefix: Optional[str] = None) -> str:
     return f'{prefix}_{time_string}'
 
 def deduplicate(
-    iterable: Union[List, pd.DataFrame, pd.Series]) -> (
-        Union[List, pd.DataFrame, pd.Series]):
+    iterable: Union[Sequence, pd.DataFrame, pd.Series]) -> (
+        Union[Sequence, pd.DataFrame, pd.Series]):
     """Deduplicates list, pandas DataFrame, or pandas Series.
 
     Args:
@@ -315,7 +314,7 @@ def deduplicate(
     except TypeError:
         return iterable.drop_duplicates(inplace = True)
 
-def is_nested(dictionary: Dict[Any, Any]) -> bool:
+def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
 
     Args:

@@ -8,8 +8,7 @@
 
 import dataclasses
 import pathlib
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -34,14 +33,14 @@ class Dice(sourdough.Worker):
 @dataclasses.dataclass    
 class Divider(sourdough.Worker):
 
-    options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
 class Parser(sourdough.Worker):
 
-    options: [ClassVar[Dict[str, Any]]] = sourdough.Options(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
         contents = {'divider': Divider})
 
 
@@ -57,12 +56,12 @@ def test_project():
     project = sourdough.Project()
     
     settings = pathlib.Path.cwd().joinpath('tests', 'composite_settings.py')
-    sourdough.Director.add_stage_option(
+    sourdough.Manager.add_stage_option(
         name = 'distribute', 
         option = Distributor)
-    director = sourdough.Director(
+    director = sourdough.Manager(
         settings = settings,
-        contents = ['draft', 'edit', 'publish', 'distribute', 'apply'],
+        contents = ['draft', 'publish', 'distribute', 'apply'],
         project = project)
     print('test project overview', director.project.overview)
     # print('test parser contents', director.project['parser'].contents)

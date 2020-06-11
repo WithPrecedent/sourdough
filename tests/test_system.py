@@ -1,6 +1,6 @@
 """
 .. module:: test system
-:synopsis: tests Director class
+:synopsis: tests Manager class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join('..', 'sourdough'))
 import sourdough
 
 
-class SomeDirector(sourdough.Director):
+class SomeManager(sourdough.Manager):
 
     def some_action(self):
         pass
@@ -28,7 +28,7 @@ class SomeDirector(sourdough.Director):
 
 
 def test_system():
-    a_system = SomeDirector(
+    a_system = SomeManager(
         stages = ['some_action', 'another_action', 'final_action'])
     assert a_system.name == 'some_system'
     assert a_system.stages == ['some_action', 'another_action', 'final_action']

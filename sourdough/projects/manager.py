@@ -8,15 +8,14 @@
 
 import copy
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 import warnings
 
 import sourdough
  
  
 @dataclasses.dataclass
-class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
+class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
     """Basic project construction and management class.
 
     Args:
@@ -27,7 +26,7 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[List[Union['sourdough.Stage', str]]]): list of Stage
+        contents (Optional[Sequence[Union['sourdough.Stage', str]]]): list of Stage
             instance or strings which correspond to keys in 'stage_options'.
             Defaults to 'default', which will use the 'defaults' attribute of
             'stage_options' to select Stage instance.
@@ -47,7 +46,7 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
         automatic (Optional[bool]): whether to automatically advance 'contents'
             (True) or whether the stages must be changed manually by using the 
             'advance' or '__iter__' methods (False). Defaults to True.
-        project_options (ClassVar['sourdough.Options']): stores options for
+        project_options (ClassVar['sourdough.Catalog']): stores options for
             the 'project' attribute.
         stage_options (ClassVar['sourdough.Stages']): stores options for the 
             'contents' attribute.
@@ -57,26 +56,25 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
             
     """
     name: Optional[str] = None
-    contents: Optional[List[Union['sourdough.Stage', str]]] = dataclasses.field(
+    contents: Optional[Sequence[Union['sourdough.Stage', str]]] = dataclasses.field(
         default_factory = lambda: 'default')
-    project: Optional[Union['sourdough.Project'], str] = dataclasses.field(
+    project: Optional[Union['sourdough.Project', str]] = dataclasses.field(
         default_factory = lambda: 'default')
     settings: Optional[Union['sourdough.Settings', str]] = None
     filer: Optional[Union['sourdough.Filer', str]] = None
     automatic: Optional[bool] = True
     
-    project_options: ClassVar['sourdough.Options'] = sourdough.Options(
+    project_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
             'generic': sourdough.Project},
         defaults = 'generic')
-    stage_options: ClassVar['sourdough.Options'] = sourdough.Options(
+    stage_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
             'draft': sourdough.Author,
-            'edit': sourdough.Editor,
             'publish': sourdough.Publisher,
             'apply': sourdough.Reader},
         defaults = ['draft', 'edit', 'publish', 'apply'])
-    design_options: ClassVar['sourdough.Options'] = sourdough.Options(
+    design_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
             'chained': sourdough.structure.designs.ChainedDesign,
             'comparative': sourdough.structure.designs.ComparativeDesign},
@@ -195,6 +193,22 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
         return cls  
 
     """ Public Methods """
+    
+    def add(self, *args, **kwargs) -> None:
+        """Adds passed arguments to the 'project' attribute.
+        
+        This method delegates the addition to the current Stage instance. This
+        means that different arguments might need to be passed based upon the
+        current state of the workflow.
+        
+        Args:
+            args and kwargs: arguments to pass to the delegated method.
+
+
+        """
+        self.project = self.contents[self.index].add(
+            self.project, *args, **kwargs)
+        return self
                  
     def advance(self, stage: Optional[str] = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
@@ -277,12 +291,12 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
     """ Private Methods """
 
     def _initialize_stages(self, 
-            stages: List[Union[str, 'sourdough.Stage']],
-            **kwargs) -> List['sourdough.Stage']:
+            stages: Sequence[Union[str, 'sourdough.Stage']],
+            **kwargs) -> Sequence['sourdough.Stage']:
         """Creates Stage instances, when necessary, in 'contents'
 
         Args:
-            stages (List[Union[str, sourdough.Stage]]): a list of strings 
+            stages (MutableSequence[Union[str, sourdough.Stage]]): a list of strings 
                 corresponding to keys in the 'stage_options' class attribute or 
                 Stage subclass instances.
             kwargs: any extra arguments to send to each created Stage instance.
@@ -296,7 +310,7 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
                 subclass.
             
         Returns:
-            List[sourdough.Stage]: a list with only Stage subclass instances.
+            Sequence[sourdough.Stage]: a list with only Stage subclass instances.
                   
         """       
         new_contents = []
@@ -350,14 +364,14 @@ class Director(sourdough.base.SequenceBase, sourdough.mixins.ProxyMixin):
             raise TypeError(f'{project} must be a str or Project type')
         return instance
    
-    def _initialize_designs(self, **kwargs) -> Dict[str, 'sourdough.Design']:
+    def _initialize_designs(self, **kwargs) -> Mapping[str, 'sourdough.Design']:
         """Creates or validates 'design_options'.
 
         Args:
             kwargs: any extra arguments to send to the created Design instances.
             
         Returns:
-            Dict[str, sourdough.Design]: dictionary with str keys and values of
+            Mapping[str, sourdough.Design]: dictionary with str keys and values of
                 Design instances that are available to use.
                   
         """  

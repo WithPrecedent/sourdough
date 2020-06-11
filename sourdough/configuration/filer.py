@@ -11,8 +11,7 @@ import csv
 import dataclasses
 import datetime
 import pathlib
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -35,9 +34,9 @@ class Filer(sourdough.Component):
             classes. Defaults to None or __class__.__name__.lower().
         settings (Settings): a Settings instance with a section named 'filer'
             with file-management related settings.
-        root_folder (Optional[Union[str, Path, List[str], List[Path]]]): the
+        root_folder (Optional[Union[str, Path, Sequence[str], Sequence[Path]]]): the
             complete path from which the other paths and folders used by
-            FileDirector should be created. Defaults to None. If not passed, the
+            FileManager should be created. Defaults to None. If not passed, the
             parent folder of the parent folder of the current working directory
             is used.
         input_folder (Optional[Union[str, Path]]): the input_folder subfolder
@@ -53,8 +52,8 @@ class Filer(sourdough.Component):
     root_folder: Optional[Union[
         str,
         pathlib.Path,
-        List[str],
-        List[pathlib.Path]]] = dataclasses.field(
+        Sequence[str],
+        Sequence[pathlib.Path]]] = dataclasses.field(
             default_factory = lambda: ['..', '..'])
     input_folder: Optional[Union[str, pathlib.Path]] = dataclasses.field(
         default_factory = lambda: 'data')
@@ -192,11 +191,11 @@ class Filer(sourdough.Component):
     """ Private Methods """
 
     def _validate_path(self,
-            path: Union[str, List[str], pathlib.Path]) -> pathlib.Path:
+            path: Union[str, Sequence[str], pathlib.Path]) -> pathlib.Path:
         """Turns 'file_path' into a pathlib.Path object.
 
         Args:
-            path (Union[str, List[str], pathlib.Path]): string, Path, or list
+            path (Union[str, Sequence[str], pathlib.Path]): string, Path, or list
                 used to create final Path object.
 
         Raises:
@@ -223,11 +222,11 @@ class Filer(sourdough.Component):
         else:
             raise TypeError('path must be a str, list, or Path type')
 
-    def _get_default_file_formats(self) -> Dict[str, 'FileFormat']:
+    def _get_default_file_formats(self) -> Mapping[str, 'FileFormat']:
         """Returns supported file formats.
 
         Returns:
-            Dict: with string keys and FileFormat instances as values.
+            Mapping: with string keys and FileFormat instances as values.
 
         """
         return {
@@ -308,7 +307,7 @@ class Filer(sourdough.Component):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.Settings) -> Dict[str, Any]:
+            settings: sourdough.Settings) -> Mapping[str, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
@@ -316,7 +315,7 @@ class Filer(sourdough.Component):
                 contains default parameters for file transfers.
 
         Returns:
-            Dict: with default parameters from settings.
+            Mapping: with default parameters from settings.
 
         """
         return self.settings['files']
@@ -379,16 +378,16 @@ class Distributor(abc.ABC):
 
     def _check_required_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArgs: Dict[str, Any]) -> Dict[str, Any]:
+            passed_kwArgs: Mapping[str, Any]) -> Mapping[str, Any]:
         """Adds requited parameters if not passed.
 
         Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
-            passed_kwargs (Dict[str, Any]): kwargs passed to method.
+            passed_kwargs (MutableMapping[str, Any]): kwargs passed to method.
 
         Returns:
-            Dict[str, Any]: kwargs with only relevant parameters.
+            Mapping[str, Any]: kwargs with only relevant parameters.
 
         """
         new_kwargs = passed_kwargs
@@ -400,7 +399,7 @@ class Distributor(abc.ABC):
 
     def _check_shared_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArgs: Dict[str, Any]) -> Dict[str, Any]:
+            passed_kwArgs: Mapping[str, Any]) -> Mapping[str, Any]:
         """Selects kwargs for particular methods.
 
         If a needed argument was not passed, default values are used.
@@ -408,10 +407,10 @@ class Distributor(abc.ABC):
         Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
-            passed_kwargs (Dict[str, Any]): kwargs passed to method.
+            passed_kwargs (MutableMapping[str, Any]): kwargs passed to method.
 
         Returns:
-            Dict[str, Any]: kwargs with only relevant parameters.
+            Mapping[str, Any]: kwargs with only relevant parameters.
 
         """
         new_kwargs = passed_kwargs
@@ -446,7 +445,7 @@ class Distributor(abc.ABC):
 
     def _get_parameters(self,
             file_format: 'FileFormat',
-            **kwargs) -> Dict[str, Any]:
+            **kwargs) -> Mapping[str, Any]:
         """Creates complete parameters for a file input/output method.
 
         Args:
@@ -455,7 +454,7 @@ class Distributor(abc.ABC):
             kwArgs: additional parameters to pass to an input/output method.
 
         Returns:
-            Dict[str, Any]: parameters to be passed to an input/output method.
+            Mapping[str, Any]: parameters to be passed to an input/output method.
 
         """
         parameters = self._check_required_parameters(
@@ -623,7 +622,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.base.ImporterBase):
+class FileFormat(sourdough.base.LazyLoader):
     """File format information.
 
     Args:
@@ -644,9 +643,9 @@ class FileFormat(sourdough.base.ImporterBase):
         save_method (Optional[str]): name of export method in 'module' to
             use. If module is None, the Distributor looks for the method
             as a local attribute. Defaults to None.
-        shared_parameters (Optional[List[str]]): names of commonly used kwargs
+        shared_parameters (Optional[Sequence[str]]): names of commonly used kwargs
             for either the import or export method. Defaults to None.
-        required_parameters (Optional[Dict[str, Any]]): any required parameters
+        required_parameters (Optional[Mapping[str, Any]]): any required parameters
             that should be passed to the import or export methods. Defaults to
             None.
 
@@ -658,5 +657,5 @@ class FileFormat(sourdough.base.ImporterBase):
     extension: Optional[str] = None
     load_method: Optional[str] = None
     save_method: Optional[str] = None
-    shared_parameters: Optional[List[str]] = None
-    required_parameters: Optional[Dict[str, Any]] = None
+    shared_parameters: Optional[Sequence[str]] = None
+    required_parameters: Optional[Mapping[str, Any]] = None

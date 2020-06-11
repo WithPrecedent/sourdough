@@ -8,8 +8,7 @@
 
 import collections.abc
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Optional, Tuple, Union)
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -19,11 +18,11 @@ class MirrorType(collections.abc.MutableMapping):
     """Base class for proxy typing.
 
     Args:
-        types (Dict[str, Any]): keys are proxy names of types and values are
+        types (MutableMapping[str, Any]): keys are proxy names of types and values are
             the actual types.
 
     """
-    types: Dict[str, Any]
+    types: Mapping[str, Any]
 
     def __post_init__(self) -> None:
         """Creates 'reversed_types' from passed 'types'."""
