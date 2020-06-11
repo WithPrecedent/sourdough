@@ -1,6 +1,6 @@
 """
 .. module:: test definition
-:synopsis: tests MirrorType class
+:synopsis: tests MirrorDictionary class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -10,7 +10,7 @@ import sourdough
 
 
 def test_system():
-    some_type = sourdough.types.MirrorType(types = {'integer': 'int'})
+    some_type = sourdough.types.MirrorDictionary(types = {'integer': 'int'})
     assert some_type['integer'] == 'int'
     assert some_type['int'] == 'integer'
     some_type['floating_point'] = 'float'

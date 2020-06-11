@@ -139,12 +139,12 @@ class Author(Stage):
             if key.endswith('_design'):
                 worker.design = value
             elif key.endswith('_workers'):
-                workers = sourdough.utilities.listify(value)
+                workers = sourdough.tools.listify(value)
             elif key.endswith('_tasks'):
-                tasks = sourdough.utilities.listify(value)
+                tasks = sourdough.tools.listify(value)
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
-                techniques[new_key] = sourdough.utilities.listify(value)
+                techniques[new_key] = sourdough.tools.listify(value)
             else:
                 attributes[key] = value
         if tasks:
@@ -272,7 +272,7 @@ class Publisher(Stage):
             sourdough.Project: with 'tasks' added at 'worker'.
         
         """
-        project.contents[worker] = sourdough.utilities.listify(tasks)
+        project.contents[worker] = sourdough.tools.listify(tasks)
         return project
  
     def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
@@ -458,7 +458,7 @@ class Reader(Stage):
 #             None.
 
 #     """
-#     name: Optional[str] = None
+#     name: str = None
 #     settings: Optional[sourdough.Settings] = None
 #     instructions: Optional[Instructions] = None
 
@@ -616,7 +616,7 @@ class Reader(Stage):
 #             None.
 
 #     """
-#     name: Optional[str] = None
+#     name: str = None
 #     Settings: Optional[sourdough.Settings] = None
 #     instructions: Optional[Instructions] = None
 
@@ -794,7 +794,7 @@ class Reader(Stage):
 #             None.
 
 #     """
-#     name: Optional[str] = None
+#     name: str = None
 #     instructions: Optional[Instructions] = None
 #     Settings: Optional[sourdough.Settings] = None
 

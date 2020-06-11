@@ -55,7 +55,7 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
             a 'project'.
             
     """
-    name: Optional[str] = None
+    name: str = None
     contents: Optional[Sequence[Union['sourdough.Stage', str]]] = dataclasses.field(
         default_factory = lambda: 'default')
     project: Optional[Union['sourdough.Project', str]] = dataclasses.field(

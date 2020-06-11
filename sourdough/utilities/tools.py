@@ -1,35 +1,39 @@
 """
-.. module:: utilities
-:synopsis: general functions and decorators for sourdough
+.. module:: tools
+:synopsis: sourdough function tools
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
 """
 
-import datetime
-import functools
 import inspect
 import pathlib
 import re
-import time
-import types
 from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import more_itertools
-import numpy as np
-import pandas as pd
 
+# Tries to import numpy and pandas for functions that support those packages.
+# Neither is a required dependency and are only listed for optional support.
+try:
+    import numpy as np
+except ImportError:
+    pass
+try:
+    import pandas as pd
+except ImportError:
+    pass
 
-""" Conversion/Validation Functions """
+""" Conversion/Validation tools """
 
 def classify(
         variable: Any, 
-        options: Optional[Mapping[str, Any]] = None) -> object:
+        options: Mapping[str, Any] = None) -> object:
     """Converts 'variable' to a class, if possible.
 
     Args:
         variable (Any): variable to create a class out of.
-        options (Optional[Mapping[str, Any]]): mapping containing str keys and
+        options (Mapping[str, Any]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -241,7 +245,7 @@ def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
             else:
                 return variable
 
-""" Other Functions """
+""" Other tools """
 
 def add_prefix(
         iterable: Union[Mapping[str, Any], Sequence],
@@ -396,7 +400,7 @@ def propertify(
 
 """ Decorators """
 
-def simple_timer(process: Optional[str] = None) -> Callable:
+def timerr(process: Optional[str] = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
     Args:

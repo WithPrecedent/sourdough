@@ -32,7 +32,7 @@ class Technique(sourdough.Component):
             dictionary.
             
     """
-    name: Optional[str] = None
+    name: str = None
     algorithm: Optional[Union[str, object]] = None
     parameters: Optional[Mapping[str, Any]] = dataclasses.field(
         default_factory = dict)
@@ -91,7 +91,7 @@ class Task(sourdough.Component):
             sequence. Defaults to None.
 
     """
-    name: Optional[str] = None
+    name: str = None
     worker: Optional[str] = dataclasses.field(default_factory = lambda: '')
     technique: Optional[Union[Technique, str]] = None
 

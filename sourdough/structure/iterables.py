@@ -60,18 +60,18 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
     """
     contents: Optional[Sequence['sourdough.Component']] = dataclasses.field(
         default_factory = list)
-    name: Optional[str] = None
+    name: str = None
 
     """ Public Methods """
        
     def add(self, component: 'sourdough.Component') -> None:
-        """Appends 'component' to 'contents'.
+        """Appends 'sourdough.Component' to 'contents'.
         
         Args:
             component (sourdough.Component): Component to add to 'contents'.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute
+            TypeError: if 'sourdough.Component' does not have a name attribute
             
         """
         if hasattr(component, 'name'):
@@ -81,13 +81,13 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return self    
 
     def append(self, component: 'sourdough.Component') -> None:
-        """Appends 'component' to 'contents'.
+        """Appends 'sourdough.Component' to 'contents'.
         
         Args:
             component (sourdough.Component): Component to add to 'contents'.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute
+            TypeError: if 'sourdough.Component' does not have a name attribute
             
         """
         if hasattr(component, 'name'):
@@ -97,13 +97,13 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return self    
    
     def extend(self, component: 'sourdough.Component') -> None:
-        """Extends 'component' to 'contents'.
+        """Extends 'sourdough.Component' to 'contents'.
         
         Args:
             component (sourdough.Component): Component to add to 'contents'.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute
+            TypeError: if 'sourdough.Component' does not have a name attribute
             
         """
         if hasattr(component, 'name'):
@@ -113,14 +113,14 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return self   
     
     def insert(self, index: int, component: 'sourdough.Component') -> None:
-        """Inserts 'component' at 'index' in 'contents'.
+        """Inserts 'sourdough.Component' at 'index' in 'contents'.
 
         Args:
-            index (int): index to insert 'component' at.
+            index (int): index to insert 'sourdough.Component' at.
             component (sourdough.Component): object to be inserted.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute
+            TypeError: if 'sourdough.Component' does not have a name attribute
             
         """
         if hasattr(component, 'name'):
@@ -140,7 +140,7 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
             Plan: with only items with 'name' attributes in 'subset'.
 
         """
-        subset = sourdough.utilities.listify(subset)
+        subset = sourdough.tools.listify(subset)
         return self.__class__(
             name = self.name,
             contents = [c for c in self.contents if c.name in subset])    
@@ -313,7 +313,7 @@ class Plan(Progression):
     contents: Optional[Union[
         Sequence['sourdough.Operator'], 
         str]] = dataclasses.field(default_factory = list)
-    name: Optional[str] = None
+    name: str = None
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
 
     """ Class Methods """
@@ -427,7 +427,7 @@ class Director(Progression):
     contents: Optional[Sequence[Union[
         'sourdough.Stage', 
         str]]] = dataclasses.field(default_factory = lambda: 'default')
-    name: Optional[str] = None
+    name: str = None
     project: Optional[Union['sourdough.Project', str]] = dataclasses.field(
         default_factory = lambda: 'default')
     settings: Optional[Union['sourdough.Settings', str]] = None

@@ -17,21 +17,24 @@ For example:
     
 """
 
-from sourdough.structure import utilities
+from sourdough.utilities import tools
+from sourdough.utilities import decorators
 from sourdough.structure.components import Component
 from sourdough.structure.components import Operator
-from sourdough.structure.components import Factory
-from sourdough.structure.components import LazyLoader
 from sourdough.structure.dictionaries import Lexicon
 from sourdough.structure.dictionaries import Catalog
+from sourdough.structure.dictionaries import Library
+from sourdough.structure.dictionaries import Registry
+from sourdough.structure.dictionaries import MirrorDictionary
 from sourdough.structure.graphs import DAGraph
 from sourdough.structure.iterables import Progression
 from sourdough.structure.iterables import Plan
 from sourdough.structure.iterables import Director
+from sourdough.structure.creators import Factory
+from sourdough.structure.creators import LazyLoader
 from sourdough.structure.mixins import LibraryMixin
 from sourdough.structure.mixins import RegistryMixin
 from sourdough.structure.mixins import ProxyMixin
-from sourdough.structure.types import MirrorType
 
 from sourdough.configuration import defaults
 from sourdough.configuration.settings import Settings

@@ -19,7 +19,7 @@
 
 
 # __all__ = [
-#     'Component'
+#     'sourdough.Component'
 #     'Proxy',
 #     'Lexicon',
 #     'Plan',

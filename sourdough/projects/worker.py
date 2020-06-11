@@ -47,7 +47,7 @@ class Worker(sourdough.base.Plan):
         'Worker', 
         'sourdough.Task', 
         str]]] = dataclasses.field(default_factory = list)  
-    name: Optional[str] = None  
+    name: str = None  
     design: Optional[str] = dataclasses.field(
         default_factory = lambda: 'chained')
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
@@ -175,7 +175,7 @@ class Project(Worker):
             empty Catalog instance.
                              
     """  
-    name: Optional[str] = None
+    name: str = None
     contents: Optional[Sequence[Union[
         'sourdough.Worker', 
         'sourdough.Task', 
@@ -195,5 +195,5 @@ class Project(Worker):
         # Creates unique 'identification' based upon date and time if none 
         # exists.
         self.identification = (
-            self.identification or sourdough.utilities.datetime_string(
+            self.identification or sourdough.tools.datetime_string(
                 prefix = self.name))

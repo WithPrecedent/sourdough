@@ -47,7 +47,7 @@ class Filer(sourdough.Component):
             'root_folder'. Defaults to 'output_folder'.
 
     """
-    name: Optional[str] = None
+    name: str = None
     settings: Optional[sourdough.Settings] = None
     root_folder: Optional[Union[
         str,
@@ -89,7 +89,7 @@ class Filer(sourdough.Component):
     def load(self,
             file_path: Optional[Union[str, pathlib.Path]] = None,
             folder: Optional[Union[str, pathlib.Path]] = None,
-            file_name: Optional[str] = None,
+            file_name: str = None,
             file_format: Optional[Union[str, 'FileFormat']] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
@@ -126,7 +126,7 @@ class Filer(sourdough.Component):
             variable: Any,
             file_path: Optional[Union[str, pathlib.Path]] = None,
             folder: Optional[Union[str, pathlib.Path]] = None,
-            file_name: Optional[str] = None,
+            file_name: str = None,
             file_format: Optional[Union[str, 'FileFormat']] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
@@ -160,7 +160,7 @@ class Filer(sourdough.Component):
 
     def pathlibify(self,
             folder: str,
-            file_name: Optional[str] = None,
+            file_name: str = None,
             extension: Optional[str] = None) -> pathlib.Path:
         """Converts strings to pathlib Path object.
 
@@ -524,7 +524,7 @@ class FileLoader(Distributor):
     def transfer(self,
             file_path: Optional[Union[str, pathlib.Path]] = None,
             folder: Optional[Union[str, pathlib.Path]] = None,
-            file_name: Optional[str] = None,
+            file_name: str = None,
             file_format: Optional[Union[str, 'FileFormat']] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
@@ -585,7 +585,7 @@ class FileSaver(Distributor):
             variable: Any,
             file_path: Optional[Union[str, pathlib.Path]] = None,
             folder: Optional[Union[str, pathlib.Path]] = None,
-            file_name: Optional[str] = None,
+            file_name: str = None,
             file_format: Optional[Union[str, 'FileFormat']] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
@@ -651,7 +651,7 @@ class FileFormat(sourdough.base.LazyLoader):
 
     """
 
-    name: Optional[str] = None
+    name: str = None
     module: Optional[str] = dataclasses.field(
         default_factory = lambda: 'sourdough')
     extension: Optional[str] = None

@@ -118,7 +118,7 @@ class Settings(collections.abc.MutableMapping):
         except AttributeError:
             pass
         if other_sections:
-            sections.extend(sourdough.utilities.listify(other_sections))
+            sections.extend(sourdough.tools.listify(other_sections))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
@@ -143,7 +143,7 @@ class Settings(collections.abc.MutableMapping):
                 settings in this instance.
 
         """
-        workers = sourdough.utilities.listify(
+        workers = sourdough.tools.listify(
             self.contents[name][f'{name}_workers'])
         overview = sourdough.Overview(name = f'{name}_overview')
         for worker in workers:
@@ -205,17 +205,17 @@ class Settings(collections.abc.MutableMapping):
                 parameters['design'] = value
             elif key.endswith('_workers'):
                 worker = worker or sourdough.Worker
-                contents = sourdough.utilities.listify(value)
+                contents = sourdough.tools.listify(value)
             elif key.endswith('_tasks'):
                 worker = worker or sourdough.Worker
-                contents = sourdough.utilities.listify(value)
+                contents = sourdough.tools.listify(value)
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
-                techniques[new_key] = sourdough.utilities.listify(value)
+                techniques[new_key] = sourdough.tools.listify(value)
             else:
                 attributes[key] = value
         if techniques:
-            contents = sourdough.utilities.subsetify(
+            contents = sourdough.tools.subsetify(
                 dictionary = techniques,
                 subset = contents)
         parameters['contents'] = contents
@@ -368,7 +368,7 @@ class Settings(collections.abc.MutableMapping):
             Sequence[str]: stored in 'contents'.
 
         """
-        return sourdough.utilities.listify(
+        return sourdough.tools.listify(
             self.contents[section][f'{prefix}_{suffix}'])
 
     def _load_from_ini(self, file_path: str) -> Mapping[str, Any]:
@@ -457,11 +457,11 @@ class Settings(collections.abc.MutableMapping):
         for key, value in contents.items():
             if isinstance(value, dict):
                 inner_bundle = {
-                    inner_key: sourdough.utilities.typify(inner_value)
+                    inner_key: sourdough.tools.typify(inner_value)
                     for inner_key, inner_value in value.items()}
                 new_contents[key] = inner_bundle
             else:
-                new_contents[key] = sourdough.utilities.typify(value)
+                new_contents[key] = sourdough.tools.typify(value)
         return new_contents
 
     def _chain_defaults(self,
@@ -519,7 +519,7 @@ class Settings(collections.abc.MutableMapping):
         overview[name] = {}
         section = self.contents[name]
         try:
-            overview.contents[name]['workers'] = sourdough.utilities.listify(
+            overview.contents[name]['workers'] = sourdough.tools.listify(
                 section[f'{name}_workers'])
         except KeyError:
             overview.contents[name]['workers'] = []
@@ -533,7 +533,7 @@ class Settings(collections.abc.MutableMapping):
             for task_key in task_keys:
                 task_name = task_key.replace('_techniques', '')
                 if task_name in overview.contents[name]['workers']:
-                    techniques = sourdough.utilities.listify(section[task_key])
+                    techniques = sourdough.tools.listify(section[task_key])
                     self.contents[name][task_name] = techniques
         else:
             overview.contents[name]['stores_tasks'] = False
