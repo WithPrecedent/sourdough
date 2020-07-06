@@ -22,7 +22,7 @@ import collections
 import copy
 import dataclasses
 import itertools
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -46,12 +46,12 @@ class Edge(object):
         weight (float): a weight value assigned to this edge. Defaults to None.
 
     """
-    __slots__ = ['start', 'stop', 'directed', 'weight']
+    # __slots__ = ['start', 'stop', 'directed', 'weight']
 
     start: str
     stop: str
-    directed: Optional[bool] = False
-    weight: Optional[float] = None
+    directed: bool = False
+    weight: float = None
  
  
 @dataclasses.dataclass
@@ -59,17 +59,21 @@ class Graph(sourdough.Progression, abc.ABC):
     """Base class for sourdough graphs.
     
     Args:
-        contents (Optional[Union[Sequence['sourdough.Component'], Sequence[Tuple[str]], 
+        contents (Union[Sequence['sourdough.Component'], Sequence[Sequence[str]], 
             Mapping[str, Sequence[str]]]]): a list of contents, an adjacency list, or
             an adjacency matrix. Whatever structure is passed, it will be 
             converted to a list of contents. Defaults to an empty list.
-        name (Optional[str]): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
         edges ()
 
     
@@ -78,7 +82,7 @@ class Graph(sourdough.Progression, abc.ABC):
         default_factory = list)
     name: str = None
     edges: Union[Sequence['Edge'],
-        Sequence[Tuple[str]], 
+        Sequence[Sequence[str]], 
         Mapping[str, Sequence[str]]] = dataclasses.field(default_factory = list)
 
     """ Initialization Methods """
@@ -101,13 +105,13 @@ class Graph(sourdough.Progression, abc.ABC):
 
     @abc.abstractmethod
     def get_sorted(self,
-            graph: Optional['sourdough.Plan'] = None,
-            return_components: Optional[bool] = False) -> None:
+            graph: 'sourdough.Plan' = None,
+            return_components: bool = False) -> None:
         """Subclasses must provide their own methods."""
 
     @abc.abstractmethod
     def validate(self, 
-            graph: Optional['sourdough.Plan'] = None) -> None:
+            graph: 'sourdough.Plan' = None) -> None:
         """Subclasses must provide their own methods."""
            
     """ Public Methods """
@@ -143,7 +147,7 @@ class Graph(sourdough.Progression, abc.ABC):
           
     def add_node(self,
             name: str = None,
-            component: Optional['sourdough.Component'] = None) -> None:
+            component: 'sourdough.Component' = None) -> None:
         """Adds a node to the graph."""
         if component and not name:
             name = component.name
@@ -213,7 +217,7 @@ class Graph(sourdough.Progression, abc.ABC):
 
     def predecessors(self, 
             name: str,
-            recursive: Optional[bool] = False) -> Sequence[str]:
+            recursive: bool = False) -> Sequence[str]:
         """[summary]
 
         Args:
@@ -230,7 +234,7 @@ class Graph(sourdough.Progression, abc.ABC):
                  
     def descendants(self, 
             name: str,
-            recursive: Optional[bool] = False) -> Sequence[str]:
+            recursive: bool = False) -> Sequence[str]:
         """[summary]
 
         Args:
@@ -292,7 +296,8 @@ class Graph(sourdough.Progression, abc.ABC):
                     searched = searched))
         return sorted_queue    
     
-    def _dfs_sort(self, graph: 'sourdough.Plan') -> Sequence['sourdough.Component']:
+    def _dfs_sort(self, 
+            graph: 'sourdough.Plan') -> Sequence['sourdough.Component']:
         """[summary]
 
         Returns:
@@ -330,24 +335,28 @@ class DAGraph(Graph):
     """Base class for directed acyclic graph.
     
      Args:
-        name (Optional[str]): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[Union[Sequence['sourdough.Component'], Sequence[Tuple[str]], 
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        contents (Union[Sequence['sourdough.Component'], Sequence[Sequence[str]], 
             Mapping[str, Sequence[str]]]]): a list of contents, an adjacency list, or
             an adjacency matrix. Whatever structure is passed, it will be 
             converted to a list of contents. Defaults to an empty list.   
     
     """
     name: str = None
-    contents: Optional[Union[
+    contents: Union[
         Sequence['sourdough.Component'], 
-        Sequence[Tuple[str]], 
-        Mapping[str, Sequence[str]]]] = dataclasses.field(default_factory = list)
+        Sequence[Sequence[str]], 
+        Mapping[str, Sequence[str]]] = dataclasses.field(default_factory = list)
 
     """ Properties """
     
@@ -383,8 +392,8 @@ class DAGraph(Graph):
     """ Public Methods """
         
     def get_sorted(self, 
-            graph: Optional['sourdough.Plan'] = None,
-            return_components: Optional[bool] = False) -> Sequence[Union[
+            graph: 'sourdough.Plan' = None,
+            return_components: bool = False) -> Sequence[Union[
                 Component, 
                 'sourdough.Component']]:
         """Performs a topological sort on 'graph'.

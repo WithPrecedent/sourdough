@@ -13,7 +13,7 @@ import dataclasses
 import importlib
 import json
 import pathlib
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -52,20 +52,20 @@ class Settings(collections.abc.MutableMapping):
     matches in the first nested level.
 
     Args:
-        contents (Optional[Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
+        contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
             str file path to a file with settings, or a pathlib Path to a file
             with settings. Defaults to en empty dict.
-        infer_types (Optional[bool]): whether values in 'contents' are converted
+        infer_types (bool]): whether values in 'contents' are converted
             to other datatypes (True) or left alone (False). If 'contents' was
             imported from an .ini file, a False value will leave all values as
             strings. Defaults to True.
 
     """
-    contents: Optional[Union[
+    contents: Union[
         str,
         pathlib.Path,
-        Mapping[str, Any]]] = dataclasses.field(default_factory = dict)
-    infer_types: Optional[bool] = True
+        Mapping[str, Any]] = dataclasses.field(default_factory = dict)
+    infer_types: bool = True
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
@@ -96,15 +96,15 @@ class Settings(collections.abc.MutableMapping):
 
     def inject(self,
             instance: object,
-            other_sections: Optional[Union[Sequence[str], str]] = None,
-            overwrite: Optional[bool] = False) -> object:
+            other_sections: Union[Sequence[str], str] = None,
+            overwrite: bool = False) -> object:
         """Injects appropriate items into 'instance' from 'contents'.
 
         Args:
             instance (object): sourdough class instance to be modified.
-            other_sections (Optional[Union[Sequence[str], str]]): other section(s)
+            other_sections (Union[Sequence[str], str]]): other section(s)
                 in 'contents' to inject into 'instance'. Defaults to None.
-            overwrite (Optional[bool]): whether to overwrite a local attribute
+            overwrite (bool]): whether to overwrite a local attribute
                 in 'instance' if there are values stored in that attribute.
                 Defaults to False.
 
@@ -154,8 +154,7 @@ class Settings(collections.abc.MutableMapping):
 
     def create_project(self, 
             name: str, 
-            project: Optional['sourdough.Project'] = None) -> (
-                'sourdough.Project'):
+            project: 'sourdough.Project' = None) -> 'sourdough.Project':
         """Returns a single Worker instance created from a 'contents' section.
 
         Args:
@@ -179,7 +178,7 @@ class Settings(collections.abc.MutableMapping):
     
     def create_worker(self, 
             name: str, 
-            worker: Optional['sourdough.Worker'] = None) -> 'sourdough.Worker':
+            worker: 'sourdough.Worker' = None) -> 'sourdough.Worker':
         """Returns a single Worker instance created from a 'contents' section.
 
         Args:
@@ -491,7 +490,7 @@ class Settings(collections.abc.MutableMapping):
             instance (object): sourdough class instance to be modified.
             attribute (str): name of attribute to inject.
             value (Any): value to assign to attribute.
-            overwrite (Optional[bool]): whether to overwrite a local attribute
+            overwrite (bool]): whether to overwrite a local attribute
                 in 'instance' if there are values stored in that attribute.
                 Defaults to False.
 

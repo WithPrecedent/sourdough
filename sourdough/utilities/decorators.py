@@ -10,14 +10,14 @@ import datetime
 import functools
 import time
 import types
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 
 def timer(process: str = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
     Args:
-        process (Optional[str]): name of class or method to be used in the
+        process (str): name of class or method to be used in the
             output describing time elapsed.
 
     """

@@ -8,7 +8,7 @@
 
 import abc
 import dataclasses
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 from sourdough import utilities
@@ -445,22 +445,22 @@ class Reader(Stage):
 #     """Constructs technique with an 'algorithm' and 'parameters'.
 
 #     Args:
-#         name (Optional[str]): designates the name of the class instance used
+#         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         settings (Optional[Settings]): shared project configuration settings.
-#         instructions (Optional[Instructions]): an instance with information to
+#         settings (Settings]): shared project configuration settings.
+#         instructions (Instructions]): an instance with information to
 #             create and apply the essential components of a Stage. Defaults to
 #             None.
 
 #     """
 #     name: str = None
-#     settings: Optional[sourdough.Settings] = None
-#     instructions: Optional[Instructions] = None
+#     settings: sourdough.Settings] = None
+#     instructions: Instructions] = None
 
 #     """ Public Methods """
 
@@ -603,22 +603,22 @@ class Reader(Stage):
 #     """Finalizes technique instances with data-dependent parameters.
 
 #     Args:
-#         name (Optional[str]): designates the name of the class instance used
+#         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Optional[Settings]): shared project configuration settings.
-#         instructions (Optional[Instructions]): an instance with information to
+#         Settings (Settings]): shared project configuration settings.
+#         instructions (Instructions]): an instance with information to
 #             create and apply the essential components of a Stage. Defaults to
 #             None.
 
 #     """
 #     name: str = None
-#     Settings: Optional[sourdough.Settings] = None
-#     instructions: Optional[Instructions] = None
+#     Settings: sourdough.Settings] = None
+#     instructions: Instructions] = None
 
 #     """ Public Methods """
 
@@ -781,22 +781,22 @@ class Reader(Stage):
 #     """Base class for applying technique instances to data.
 
 #     Args:
-#         name (Optional[str]): designates the name of the class instance used
+#         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Optional[Settings]): shared project configuration settings.
-#         instructions (Optional[Instructions]): an instance with information to
+#         Settings (Settings]): shared project configuration settings.
+#         instructions (Instructions]): an instance with information to
 #             create and apply the essential components of a Stage. Defaults to
 #             None.
 
 #     """
 #     name: str = None
-#     instructions: Optional[Instructions] = None
-#     Settings: Optional[sourdough.Settings] = None
+#     instructions: Instructions] = None
+#     Settings: sourdough.Settings] = None
 
 #     def __post_init__(self) -> None:
 #         """Initializes class instance attributes."""

@@ -12,7 +12,7 @@ import copy
 import inspect
 import itertools
 import more_itertools
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -22,10 +22,10 @@ class Worker(sourdough.base.Plan):
     """Contains information and objects that are part of sourdough projects.
     
     Args:
-        contents (Optional[Sequence[Union[Worker, sourdough.Task, str]]]): stored 
+        contents (Sequence[Union[Worker, sourdough.Task, str]]]): stored 
             Worker or Task instances or strings corresponding to keys in 
             'options'. Defaults to an empty list.  
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. For example if a 
             class instance needs settings from the shared Settings instance, 
             'name' should match the appropriate section name in that Settings 
@@ -34,7 +34,7 @@ class Worker(sourdough.base.Plan):
             between sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Component is called, 'name' is set to a snake 
             case version of the class name ('__class__.__name__').
-        design (Optional[str]): the name of the structural design that should
+        design (str): the name of the structural design that should
             be used to create objects in an instance. This should correspond
             to a key in a Manager instance's 'designs' class attribute. 
             Defaults to 'chained'.
@@ -43,13 +43,12 @@ class Worker(sourdough.base.Plan):
             empty Catalog instance.
             
     """
-    contents: Optional[Sequence[Union[
+    contents: Sequence[Union[
         'Worker', 
         'sourdough.Task', 
-        str]]] = dataclasses.field(default_factory = list)  
+        str]] = dataclasses.field(default_factory = list)  
     name: str = None  
-    design: Optional[str] = dataclasses.field(
-        default_factory = lambda: 'chained')
+    design: str = dataclasses.field(default_factory = lambda: 'chained')
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
 
     """ Class Methods """
@@ -143,27 +142,27 @@ class Project(Worker):
     'add_option' method inherited from Worker.
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[Sequence[Union[sourdough.Worker, sourdough.Task, str]]]): 
+        contents (Sequence[Union[sourdough.Worker, sourdough.Task, str]]]): 
             stored Worker or Task instances or strings corresponding to keys in
             'options'. Defaults to an empty list.  
-        design (Optional[str]): the name of the structural design that should
+        design (str): the name of the structural design that should
             be used to create objects in an instance. This should correspond
             to a key in a Manager instance's 'designs' class attribute. 
             Defaults to 'chained'.
-        identification (Optional[str]): a unique identification name for a 
+        identification (str): a unique identification name for a 
             Project instance. The name is used for creating file folders
             related to the 'Project'. If not provided, a string is created from
             'name' and the date and time. This is a notable difference
             between an ordinary Worker instancce and a Project instance. Other
             Workers are not given unique identification. Defaults to None.    
-        data (Optional[Any]): a data object to apply any constructed objects to.
+        data (Any]): a data object to apply any constructed objects to.
             This need only be provided when the class is instanced for
             automatic execution. Defaults to None. If you are working on a data-
             focused Project, consider using siMpLify instead 
@@ -176,14 +175,13 @@ class Project(Worker):
                              
     """  
     name: str = None
-    contents: Optional[Sequence[Union[
+    contents: Sequence[Union[
         'sourdough.Worker', 
         'sourdough.Task', 
-        str]]] = dataclasses.field(default_factory = list) 
-    design: Optional[str] = dataclasses.field(
-        default_factory = lambda: 'chained')
-    data: Optional[Any] = None
-    identification: Optional[str] = None
+        str]] = dataclasses.field(default_factory = list) 
+    design: str = dataclasses.field(default_factory = lambda: 'chained')
+    data: Any = None
+    identification: str = None
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
 
     """ Initialization Methods """

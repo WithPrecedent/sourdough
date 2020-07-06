@@ -11,7 +11,7 @@ import csv
 import dataclasses
 import datetime
 import pathlib
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -25,7 +25,7 @@ class Filer(sourdough.Component):
     sourdough, pandas, and numpy objects.
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
@@ -34,30 +34,30 @@ class Filer(sourdough.Component):
             classes. Defaults to None or __class__.__name__.lower().
         settings (Settings): a Settings instance with a section named 'filer'
             with file-management related settings.
-        root_folder (Optional[Union[str, Path, Sequence[str], Sequence[Path]]]): the
+        root_folder (Union[str, Path, Sequence[str], Sequence[Path]]]): the
             complete path from which the other paths and folders used by
             FileManager should be created. Defaults to None. If not passed, the
             parent folder of the parent folder of the current working directory
             is used.
-        input_folder (Optional[Union[str, Path]]): the input_folder subfolder
+        input_folder (Union[str, Path]]): the input_folder subfolder
             name or a complete path if the 'input_folder' is not off of
             'root_folder'. Defaults to 'data'.
-        output_folder (Optional[Union[str, Path]]): the output_folder subfolder
+        output_folder (Union[str, Path]]): the output_folder subfolder
             name or a complete path if the 'output_folder' is not off of
             'root_folder'. Defaults to 'output_folder'.
 
     """
     name: str = None
-    settings: Optional[sourdough.Settings] = None
-    root_folder: Optional[Union[
+    settings: sourdough.Settings = None
+    root_folder: Union[
         str,
         pathlib.Path,
         Sequence[str],
-        Sequence[pathlib.Path]]] = dataclasses.field(
+        Sequence[pathlib.Path]] = dataclasses.field(
             default_factory = lambda: ['..', '..'])
-    input_folder: Optional[Union[str, pathlib.Path]] = dataclasses.field(
+    input_folder: Union[str, pathlib.Path] = dataclasses.field(
         default_factory = lambda: 'data')
-    output_folder: Optional[Union[str, pathlib.Path]] = dataclasses.field(
+    output_folder: Union[str, pathlib.Path] = dataclasses.field(
         default_factory = lambda: 'results')
 
     def __post_init__(self) -> None:
@@ -87,10 +87,10 @@ class Filer(sourdough.Component):
     """ Public Methods """
 
     def load(self,
-            file_path: Optional[Union[str, pathlib.Path]] = None,
-            folder: Optional[Union[str, pathlib.Path]] = None,
+            file_path: Union[str, pathlib.Path] = None,
+            folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Optional[Union[str, 'FileFormat']] = None,
+            file_format: Union[str, 'FileFormat'] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
@@ -98,13 +98,13 @@ class Filer(sourdough.Component):
         'file_path' is passed, 'folder' and 'file_name' are ignored.
 
         Args:
-            file_path (Optional[Union[str, Path]]): a complete file path.
+            file_path (Union[str, Path]]): a complete file path.
                 Defaults to None.
-            folder (Optional[Union[str, Path]]): a complete folder path or the
+            folder (Union[str, Path]]): a complete folder path or the
                 name of a folder stored in 'filer'. Defaults to None.
-            file_name (Optional[str]): file name without extension. Defaults to
+            file_name (str): file name without extension. Defaults to
                 None.
-            file_format (Optional[Union[str, FileFormat]]): object with
+            file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
             **kwArgs: can be passed if additional options are desired specific
@@ -124,10 +124,10 @@ class Filer(sourdough.Component):
 
     def save(self,
             variable: Any,
-            file_path: Optional[Union[str, pathlib.Path]] = None,
-            folder: Optional[Union[str, pathlib.Path]] = None,
+            file_path: Union[str, pathlib.Path] = None,
+            folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Optional[Union[str, 'FileFormat']] = None,
+            file_format: Union[str, 'FileFormat'] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -136,13 +136,13 @@ class Filer(sourdough.Component):
 
         Args:
             variable (Any): object to be save to disk.
-            file_path (Optional[Union[str, pathlib.Path]]): a complete file path.
+            file_path (Union[str, pathlib.Path]]): a complete file path.
                 Defaults to None.
-            folder (Optional[Union[str, pathlib.Path]]): a complete folder path or the
+            folder (Union[str, pathlib.Path]]): a complete folder path or the
                 name of a folder stored in 'filer'. Defaults to None.
-            file_name (Optional[str]): file name without extension. Defaults to
+            file_name (str): file name without extension. Defaults to
                 None.
-            file_format (Optional[Union[str, 'FileFormat']]): object with
+            file_format (Union[str, 'FileFormat']]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
             **kwArgs: can be passed if additional options are desired specific
@@ -161,7 +161,7 @@ class Filer(sourdough.Component):
     def pathlibify(self,
             folder: str,
             file_name: str = None,
-            extension: Optional[str] = None) -> pathlib.Path:
+            extension: str = None) -> pathlib.Path:
         """Converts strings to pathlib Path object.
 
         If 'folder' matches an attribute, the value stored in that attribute
@@ -172,8 +172,8 @@ class Filer(sourdough.Component):
 
         Args:
             folder (str): folder for file location.
-            name (Optional[str]): the name of the file.
-            extension (Optional[str]): the extension of the file.
+            name (str): the name of the file.
+            extension (str): the extension of the file.
 
         Returns:
             Path: formed from string arguments.
@@ -469,7 +469,7 @@ class Distributor(abc.ABC):
             file_path: Union[str, pathlib.Path],
             folder: Union[str, pathlib.Path],
             file_name: str,
-            file_format: Union[str, 'FileFormat']) -> Tuple[
+            file_format: Union[str, 'FileFormat']) -> Sequence[
                 pathlib.Path,
                 'FileFormat']:
         """Prepares file path related arguments for loading or saving a file.
@@ -486,7 +486,7 @@ class Distributor(abc.ABC):
                 to the pandas or python method used internally.
 
         Returns:
-            Tuple: of a completed Path instance and FileFormat instance.
+            Sequence: of a completed Path instance and FileFormat instance.
 
         """
         if file_path:
@@ -522,10 +522,10 @@ class FileLoader(Distributor):
         return self.transfer(**kwargs)
 
     def transfer(self,
-            file_path: Optional[Union[str, pathlib.Path]] = None,
-            folder: Optional[Union[str, pathlib.Path]] = None,
+            file_path: Union[str, pathlib.Path] = None,
+            folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Optional[Union[str, 'FileFormat']] = None,
+            file_format: Union[str, 'FileFormat'] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
@@ -533,13 +533,13 @@ class FileLoader(Distributor):
         file_path is passed, folder and file_name are ignored.
 
         Args:
-            file_path (Optional[Union[str, Path]]): a complete file path.
+            file_path (Union[str, Path]]): a complete file path.
                 Defaults to None.
-            folder (Optional[Union[str, Path]]): a complete folder path or the
+            folder (Union[str, Path]]): a complete folder path or the
                 name of a folder stored in 'filer'. Defaults to None.
-            file_name (Optional[str]): file name without extension. Defaults to
+            file_name (str): file name without extension. Defaults to
                 None.
-            file_format (Optional[Union[str, FileFormat]]): object with
+            file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
             **kwArgs: can be passed if additional options are desired specific
@@ -583,10 +583,10 @@ class FileSaver(Distributor):
 
     def transfer(self,
             variable: Any,
-            file_path: Optional[Union[str, pathlib.Path]] = None,
-            folder: Optional[Union[str, pathlib.Path]] = None,
+            file_path: Union[str, pathlib.Path] = None,
+            folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Optional[Union[str, 'FileFormat']] = None,
+            file_format: Union[str, 'FileFormat'] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -595,13 +595,13 @@ class FileSaver(Distributor):
 
         Args:
             variable (Any): object to be save to disk.
-            file_path (Optional[Union[str, Path]]): a complete file path.
+            file_path (Union[str, Path]]): a complete file path.
                 Defaults to None.
-            folder (Optional[Union[str, Path]]): a complete folder path or the
+            folder (Union[str, Path]]): a complete folder path or the
                 name of a folder stored in 'filer'. Defaults to None.
-            file_name (Optional[str]): file name without extension. Defaults to
+            file_name (str): file name without extension. Defaults to
                 None.
-            file_format (Optional[Union[str, FileFormat]]): object with
+            file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
             **kwArgs: can be passed if additional options are desired specific
@@ -626,7 +626,7 @@ class FileFormat(sourdough.base.LazyLoader):
     """File format information.
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
@@ -635,27 +635,27 @@ class FileFormat(sourdough.base.LazyLoader):
             classes. Defaults to None or __class__.__name__.lower().
         module (str): name of module where object to incorporate is located
             (can either be a sourdough or non-sourdough module).
-        extension (Optional[str]): actual file extension to use. Defaults to
+        extension (str): actual file extension to use. Defaults to
             None.
-        load_method (Optional[str]): name of import method in 'module' to
+        load_method (str): name of import method in 'module' to
             use. If module is None, the Distributor looks for the method
             as a local attribute. Defaults to None.
-        save_method (Optional[str]): name of export method in 'module' to
+        save_method (str): name of export method in 'module' to
             use. If module is None, the Distributor looks for the method
             as a local attribute. Defaults to None.
-        shared_parameters (Optional[Sequence[str]]): names of commonly used kwargs
+        shared_parameters (Sequence[str]]): names of commonly used kwargs
             for either the import or export method. Defaults to None.
-        required_parameters (Optional[Mapping[str, Any]]): any required parameters
+        required_parameters (Mapping[str, Any]]): any required parameters
             that should be passed to the import or export methods. Defaults to
             None.
 
     """
 
     name: str = None
-    module: Optional[str] = dataclasses.field(
+    module: str = dataclasses.field(
         default_factory = lambda: 'sourdough')
-    extension: Optional[str] = None
-    load_method: Optional[str] = None
-    save_method: Optional[str] = None
-    shared_parameters: Optional[Sequence[str]] = None
-    required_parameters: Optional[Mapping[str, Any]] = None
+    extension: str = None
+    load_method: str = None
+    save_method: str = None
+    shared_parameters: Sequence[str] = None
+    required_parameters: Mapping[str, Any] = None

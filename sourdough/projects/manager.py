@@ -8,7 +8,7 @@
 
 import copy
 import dataclasses
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import warnings
 
 import sourdough
@@ -19,31 +19,35 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
     """Basic project construction and management class.
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
-        contents (Optional[Sequence[Union['sourdough.Stage', str]]]): list of Stage
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        contents (Sequence[Union['sourdough.Stage', str]]]): list of Stage
             instance or strings which correspond to keys in 'stage_options'.
             Defaults to 'default', which will use the 'defaults' attribute of
             'stage_options' to select Stage instance.
-        project (Optional[Union['sourdough.Project'], str]): a Project instance
+        project (Union['sourdough.Project'], str]): a Project instance
             or strings which correspond to keys in 'project_options'. Defaults 
             to 'default', which will use the 'defaults' attribute of 
             'project_options' to select a Project instance.
-        settings (Optional[Union[sourdough.Settings, str]]): an instance of 
+        settings (Union[sourdough.Settings, str]]): an instance of 
             Settings or a string containing the file path where a file of a 
             supported file type with settings for an Settings instance is 
             located. Defaults to None.
-        filer (Optional[Union[sourdough.Filer, str]]): an instance of Filer or a 
+        filer (Union[sourdough.Filer, str]]): an instance of Filer or a 
             string containing the full path of where the root folder should be 
             located for file input and output. A Filer instance contains all 
             file path and import/export methods for use throughout sourdough. 
             Defaults to None.
-        automatic (Optional[bool]): whether to automatically advance 'contents'
+        automatic (bool]): whether to automatically advance 'contents'
             (True) or whether the stages must be changed manually by using the 
             'advance' or '__iter__' methods (False). Defaults to True.
         project_options (ClassVar['sourdough.Catalog']): stores options for
@@ -56,13 +60,13 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
             
     """
     name: str = None
-    contents: Optional[Sequence[Union['sourdough.Stage', str]]] = dataclasses.field(
+    contents: Sequence[Union['sourdough.Stage', str]] = dataclasses.field(
         default_factory = lambda: 'default')
-    project: Optional[Union['sourdough.Project', str]] = dataclasses.field(
+    project: Union['sourdough.Project', str] = dataclasses.field(
         default_factory = lambda: 'default')
-    settings: Optional[Union['sourdough.Settings', str]] = None
-    filer: Optional[Union['sourdough.Filer', str]] = None
-    automatic: Optional[bool] = True
+    settings: Union['sourdough.Settings', str] = None
+    filer: Union['sourdough.Filer', str] = None
+    automatic: bool = True
     
     project_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -210,7 +214,7 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
             self.project, *args, **kwargs)
         return self
                  
-    def advance(self, stage: Optional[str] = None) -> None:
+    def advance(self, stage: str = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
 
         This method only needs to be called manually if 'automatic' is False.
@@ -218,7 +222,7 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
         instanced.
 
         Args:
-            stage (Optional[str]): name of item in 'contents'. Defaults to None. 
+            stage (str): name of item in 'contents'. Defaults to None. 
                 If not passed, the method goes to the next item in contents.
 
         Raises:

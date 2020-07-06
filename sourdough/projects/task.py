@@ -7,7 +7,7 @@
 """
 
 import dataclasses
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
     
@@ -17,25 +17,24 @@ class Technique(sourdough.Component):
     """Base class for creating or modifying data objects.
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        algorithm (Optional[Union[str, object]]): name of object in 'module' to
+        algorithm (Union[str, object]]): name of object in 'module' to
             load or the process object which executes the primary method of
             a class instance. Defaults to None.
-        parameters (Optional[Mapping[str, Any]]): parameters to be attached to
+        parameters (Mapping[str, Any]]): parameters to be attached to
             'algorithm' when 'algorithm' is called. Defaults to an empty
             dictionary.
             
     """
     name: str = None
-    algorithm: Optional[Union[str, object]] = None
-    parameters: Optional[Mapping[str, Any]] = dataclasses.field(
-        default_factory = dict)
+    algorithm: Union[str, object] = None
+    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     
     """ Required Subclass Methods """
     
@@ -75,14 +74,14 @@ class Task(sourdough.Component):
     attribute is not found in the Worker instance. 
 
     Args:
-        name (Optional[str]): designates the name of the class instance used
+        name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        worker (Optional[str]): the name of the worker in a Worker instance that 
+        worker (str): the name of the worker in a Worker instance that 
             the algorithm is being performed. This attribute is generally 
             optional but can be useful for tracking and/or displaying the status 
             of iteration. It is automatically created when using a chained or 
@@ -92,8 +91,8 @@ class Task(sourdough.Component):
 
     """
     name: str = None
-    worker: Optional[str] = dataclasses.field(default_factory = lambda: '')
-    technique: Optional[Union[Technique, str]] = None
+    worker: str = dataclasses.field(default_factory = lambda: '')
+    technique: Union[Technique, str] = None
 
     """ Dunder Methods """
 

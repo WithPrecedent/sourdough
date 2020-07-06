@@ -9,7 +9,7 @@
 import inspect
 import pathlib
 import re
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import more_itertools
 
@@ -56,13 +56,13 @@ def classify(
             
 def instancify(
         variable: Any, 
-        options: Optional[Mapping[str, Any]] = None,
+        options: Mapping[str, Any] = None,
         **kwargs) -> object:
     """Converts 'variable' to a class instance with 'kwargs' as parameters.
 
     Args:
         variable (Any): variable to create an instance out of.
-        options (Optional[Mapping[str, Any]]): mapping containing str keys and
+        options (Mapping[str, Any]]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -108,7 +108,10 @@ def listify(
     elif isinstance(variable, list):
         return variable
     else:
-        return list(variable)
+        try:
+            return list(variable)
+        except TypeError:
+            return [variable]
 
 def numify(variable: str) -> Union[int, float, str]:
     """Attempts to convert 'variable' to a numeric type.
@@ -165,8 +168,8 @@ def snakify(variable: str) -> str:
 
 def stringify(
         variable: Union[str, Sequence],
-        default_null: Optional[bool] = False,
-        default_empty: Optional[bool] = False) -> str:
+        default_null: bool = False,
+        default_empty: bool = False) -> str:
     """Converts one item list to a string (if not already a string).
 
     Args:
@@ -287,7 +290,7 @@ def add_suffix(
     except TypeError:
         return [item + '_' + suffix for item in iterable]
 
-def datetime_string(prefix: Optional[str] = None) -> str:
+def datetime_string(prefix: str = None) -> str:
     """Creates a string from current date and time.
 
     Returns:
@@ -335,16 +338,16 @@ def propertify(
         instance: object,
         name: str,
         getter: Callable,
-        setter: Optional[Callable],
-        deleter: Optional[Callable]) -> object:
+        setter: Callable,
+        deleter: Callable) -> object:
     """Adds 'name' property to 'instance' at runtime.
 
     Args:
         instance (object): instance to add a property to.
         name (str): name that the new property should be given.
         getter (Callable): getter method for the new property.
-        setter (Optional[Callable]): setter method for the new property.
-        deleter (Optional[Callable]): deleter method for the new property.
+        setter (Callable]): setter method for the new property.
+        deleter (Callable]): deleter method for the new property.
 
     Returns:
         object: with new 'name' property added.
@@ -400,11 +403,11 @@ def propertify(
 
 """ Decorators """
 
-def timerr(process: Optional[str] = None) -> Callable:
+def timerr(process: str = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
     Args:
-        process (Optional[str]): name of class or method to be used in the
+        process (str): name of class or method to be used in the
             output describing time elapsed.
 
     """

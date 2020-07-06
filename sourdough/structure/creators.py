@@ -9,7 +9,7 @@
 import abc
 import dataclasses
 import importlib
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -46,7 +46,7 @@ class Factory(abc.ABC):
         """Returns an instance from 'options'.
 
         Args:
-            product (Optional[str]): name of sourdough object(s) to return. 
+            product (str): name of sourdough object(s) to return. 
                 'product' must correspond to key(s) in 'options'. Defaults to 
                 None. If not passed, the product listed in 'default' will be 
                 used.
