@@ -1,6 +1,6 @@
 """
 .. module:: iterables
-:synopsis: sourdough sequences
+:synopsis: sourdough sequences and mixins
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -20,18 +20,97 @@ import sourdough
 
 
 @dataclasses.dataclass
+class OptionsMixin(abc.ABC):
+    """Mixin which stores classes or instances in 'options'.
+
+    Args:
+        options (ClassVar[sourdough.Catalog]): the instance which stores 
+            subclass in a Catalog instance.
+            
+    Mixin Namespaces: 'options', 'create'
+
+    """
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        always_return_list = True)
+    
+    """ Public Methods """
+       
+    def add(self, 
+            component: Union[
+                'sourdough.Component',
+                Sequence['sourdough.Component'],
+                str, 
+                Sequence[str]]) -> None:
+        """Adds 'component' to 'contents'.
+        
+        Args:
+            components (Union[sourdough.Component, Sequence[
+                sourdough.Component]]): Component(s) to add to 'contents'.
+
+        Raises:
+            TypeError: if instances in 'components' are neither str type nor 
+                have a 'name' attribute.
+            
+        """
+        if hasattr(component, 'name'):
+            super().add(component = component)
+        elif isinstance(component, str):
+            print('test options', self.options)
+            print('test component in options', self.options[component])
+            super().add(component = self.options[component])
+        elif isinstance(component, Sequence):
+            for c in component:
+                self.add(component = c)
+        else:
+            raise TypeError(
+                'component must be a Component, str, or list of str')
+        return self  
+        
+    def create(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Creates instance(s) of a class(es) stored in 'options'.
+
+        Args:
+            option (str): name matching a key in 'options' for which the value
+                is sought.
+
+        Raises:
+            TypeError: if 'option' is neither a str nor Sequence type.
+            
+        Returns:
+            Any: instance of a stored class with kwargs passed as arguments.
+            
+        """
+        if isinstance(key, str):
+            try:
+                return self.options[key](**kwargs)
+            except TypeError:
+                return self.options[key]
+        elif isinstance(key, Sequence):
+            instances = []
+            for k in key:
+                try:
+                    instance = self.options[key](**kwargs)
+                except TypeError:
+                    instance = self.options[key]
+                instances.append(instance)
+            return instances
+        else:
+            raise TypeError('option must be a str or list type')
+        
+        
+@dataclasses.dataclass
 class Progression(sourdough.Component, collections.abc.MutableSequence):
     """Base class for sourdough sequenced iterables.
     
-    A Progression differs from a python list in 6 ways:
+    A Progression differs from a python list in 6 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough.
+            in sourdough. This is inherited from Component.
         2) It includes an 'add' method which allows different datatypes to
-            be passed and added to a Progression instance.
-        3) It includes a 'subsetify' method which will return a Progression or
+            be passed and added to the 'contents' of a Progression instance.
+        3) It only stores items that have a 'name' attribute or are str type.
+        4) It includes a 'subsetify' method which will return a Progression or
             Progression subclass instance with only the items with 'name'
-            attributes matching items in the 'subset' parameter.
-        4) It only stores items that have a 'name' attribute.
+            attributes matching items in the 'subset' argument.
         5) Progression has an interface of both a dict and a list, but stores a 
             list. Progression does this by taking advantage of the 'name' 
             attribute in Component instances (although any instance with a 
@@ -70,36 +149,33 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
     """ Public Methods """
        
     def add(self, 
-            items: Union[
+            component: Union[
                 'sourdough.Component',
-                str, 
-                Sequence['sourdough.Component'],
-                Sequence[str]]) -> None:
-        """Appends 'items' to 'contents'.
+                Mapping[str, 'sourdough.Component'], 
+                Sequence['sourdough.Component']]) -> None:
+        """Appends 'component' to 'contents'.
         
         Args:
-            items (Union[sourdough.Component, Sequence[sourdough.Component]]): 
-                Component(s) to add to 'contents'.
+            component (Union[sourdough.Component, Mapping[str, 
+                sourdough.Component], Sequence[sourdough.Component]]): Component 
+                instance(s) to add to 'contents'.
 
-        Raises:
-            TypeError: if instances in 'items' are neither str type nor have a 
-                name attribute.
-            
         """
         if hasattr(component, 'name'):
-            self.append(component)
+            self.append(component = component)
         else:
-            raise TypeError('component must have a name attribute')
+            self.update(components = component)
         return self    
 
     def append(self, component: 'sourdough.Component') -> None:
-        """Appends 'sourdough.Component' to 'contents'.
+        """Appends 'component' to 'contents'.
         
         Args:
-            component (sourdough.Component): Component to add to 'contents'.
+            component (sourdough.Component): Component instance to add to 
+                'contents'.
 
         Raises:
-            TypeError: if 'sourdough.Component' does not have a name attribute
+            TypeError: if 'component' does not have a name attribute.
             
         """
         if hasattr(component, 'name'):
@@ -109,15 +185,17 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return self    
    
     def extend(self, component: 'sourdough.Component') -> None:
-        """Extends 'sourdough.Component' to 'contents'.
+        """Extends 'component' to 'contents'.
         
         Args:
-            component (sourdough.Component): Component to add to 'contents'.
+            component (sourdough.Component): Component instance to add to 
+                'contents'.
 
         Raises:
-            TypeError: if 'sourdough.Component' does not have a name attribute
+            TypeError: if 'component' does not have a name attribute.
             
         """
+        print('test component in extend', component.name)
         if hasattr(component, 'name'):
             self.contents.extend(component)
         else:
@@ -125,18 +203,18 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return self   
     
     def insert(self, index: int, component: 'sourdough.Component') -> None:
-        """Inserts 'sourdough.Component' at 'index' in 'contents'.
+        """Inserts 'component' at 'index' in 'contents'.
 
         Args:
-            index (int): index to insert 'sourdough.Component' at.
+            index (int): index to insert 'component' at.
             component (sourdough.Component): object to be inserted.
 
         Raises:
-            TypeError: if 'sourdough.Component' does not have a name attribute
+            TypeError: if 'component' does not have a name attribute.
             
         """
         if hasattr(component, 'name'):
-            self.items.insert[index] = component
+            self.contents.insert[index] = component
         else:
             raise TypeError('component must have a name attribute')
         return self
@@ -157,10 +235,11 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
             name = self.name,
             contents = [c for c in self.contents if c.name in subset])    
      
-    def update(self, components: Union[
-            Mapping[str, 'sourdough.Component'], 
-            Sequence['sourdough.Component']]) -> None:
-        """Mimics the dict 'update' method.
+    def update(self, 
+            components: Union[
+                Mapping[str, 'sourdough.Component'], 
+                Sequence['sourdough.Component']]) -> None:
+        """Mimics the dict 'update' method by extending 'contents'.
         
         Args:
             components (Union[Mapping[str, sourdough.Component], Sequence[
@@ -171,15 +250,23 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
                 method.
  
         Raises:
-            TypeError: if any of 'components' does not have a name attribute               
+            TypeError: if any of 'components' do not have a name attribute or
+                if 'components is not a dict.               
         
         """
         if isinstance(components, Mapping):
-            components = list(components.values())
-        if all(hasattr(c, 'name') for c in components):
-            self.contents.extend(components)
+            for key, value in components.items():
+                if hasattr(value, 'name'):
+                    self.extend(component = value)
+                else:
+                    new_component = value
+                    new_component.name = key
+                    self.extend(component = new_component)
+        elif all(hasattr(c, 'name') for c in components):
+            self.extend(component = components)
         else:
-            raise TypeError('components must all have a name attribute')
+            raise TypeError(
+                'components must be a dict or all have a name attribute')
         return self
           
     """ Dunder Methods """
@@ -272,14 +359,14 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         """
         return len(more_itertools.collapse(self.contents))
     
-    def __add__(self, other: 'Plan') -> None:
-        """Extends 'contents' with 'other'
+    def __add__(self, other: 'Progression') -> None:
+        """Adds 'other' to 'contents' with 'add' method.
 
         Args:
-            other (Plan): another Plan instance.
+            other (Progression): another Progression instance.
 
         """
-        self.contents.extend(other)
+        self.add(component = other)
         return self
     
     def __repr__(self) -> str:
@@ -305,11 +392,11 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
 
 
 @dataclasses.dataclass
-class Plan(sourdough.OptionsMixin, Progression):
+class Plan(OptionsMixin, Progression):
     """Base class for iterables storing Operator instances.
 
     Args:
-        contents (Sequence[sourdough.Component]]): stored iterable of 
+        contents (Sequence[sourdough.Operator]]): stored iterable of 
             actions to apply in order. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -330,71 +417,41 @@ class Plan(sourdough.OptionsMixin, Progression):
         Sequence['sourdough.Operator'], 
         str] = dataclasses.field(default_factory = list)
     name: str = None
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        always_return_list = True)
 
-    """ Class Methods """
-    
-    @classmethod   
-    def add_option(cls, 
-            name: str, 
-            option: 'sourdough.Operator') -> None:
-        """Adds an operator to 'options'.
+    """ Initialization Methods """
 
-        Args:
-            name (str): key to use for storing 'option'.
-            option (sourdough.Operator): the subclass to store in the 'options' 
-                class attribute.
-
-        Raises:
-            TypeError: if 'option' is not an Operator subclass
-            
-        """
-        if issubclass(option, sourdough.Operator):
-            cls.options[name] = option
-        elif isinstance(option, sourdough.Operator):
-            cls.options[name] = option.__class__
-        else:
-            raise TypeError('option must be an Operator subclass')
-        return cls  
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        super().__post_init__()
+        # Converts str in 'contents' to classes or objects.
+        self.contents = [self.add(c) for c in self.contents]
 
     """ Public Methods """
     
     def apply(self, data: object = None) -> object:
-        """[summary]
+        """Applies stored Operator instances to 'data'.
 
         Args:
-            data (object, optional): [description]. Defaults to None.
-
-        Raises:
+            data (object): an object to be modified and/or analyzed by stored 
+                Operator instances. Defaults to None.
 
         Returns:
-            object: [description]
+            object: data, possibly with modifications made by Operataor 
+                instances.
+            If data is not passed, no object is returned.
             
         """
         if data is None:
             for operator in self.__iter__():
-                self._get_operator(operator = operator).apply()
+                operator.apply()
             return self
         else:
             for operator in self.__iter__():
-                data = self._get_operator(operator = operator).apply(
-                    data = data)
+                data = operator.apply(data = data)
             return data
 
-    """ Private Methods """
-    
-    def _get_operator(self, 
-            operator: Union['sourdough.Operator', str]) -> 'sourdough.Operator':
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        try:
-            return self.options[operator]
-        except TypeError:
-            return operator
-       
         
 # @dataclasses.dataclass
 # class Director(Progression):

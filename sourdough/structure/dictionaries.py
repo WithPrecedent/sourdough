@@ -1,6 +1,6 @@
 """
 .. module:: dictionaries
-:synopsis: sourdough dictionaries
+:synopsis: sourdough mutable mappings
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -8,7 +8,6 @@
 
 import collections.abc
 import dataclasses
-import inspect
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -21,10 +20,10 @@ class Lexicon(collections.abc.MutableMapping):
     Lexicon and its subclasses can serve as drop in replacements for dicts with 
     added features.
     
-    A Lexicon differs from a python dict in 3 ways:
+    A Lexicon differs from a python dict in 3 significant ways:
         1) It includes an 'add' method which allows different datatypes to
             be passed and added to a Lexicon instance. All of the normal 
-            dictionary methods are also available. 'add' is available to set
+            dictionary methods are also available. 'add' should be used to set
             default or more complex methods of adding elements to the stored
             dict.
         2) It includes a 'subsetify' method which will return a Lexicon or
@@ -37,8 +36,8 @@ class Lexicon(collections.abc.MutableMapping):
             Lexicon instance.
     
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to 
-            en empty dict.
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
               
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
@@ -46,28 +45,31 @@ class Lexicon(collections.abc.MutableMapping):
     """ Public Methods """
     
     def add(self, 
-            items: Union[
+            component: Union[
                 'sourdough.Component',
                 Sequence['sourdough.Component'],
                 Mapping[str, 'sourdough.Component']]) -> None:
-        """Adds 'items' to 'contents'.
+        """Adds 'component' to 'contents'.
         
         Args:
-            items (Union[sourdough.Component, Sequence[sourdough.Component],
-                Mapping[str, sourdough.Component]]): Component(s) to add to
-                'contents'.
+            component (Union[sourdough.Component, 
+                Sequence[sourdough.Component], Mapping[str, 
+                sourdough.Component]]): Component(s) to add to
+                'contents'. If 'component' is a Sequence or a Component, the 
+                key for storing 'component' is the 'name' attribute of each 
+                Component.
 
         Raises:
-            TypeError: if 'sourdough.Component' is not a Component subclass
+            TypeError: if 'component' is not a Component subclass.
             
         """
-        if isinstance(items, Mapping):
-            self.contents.update(items)
-        elif isinstance(items, Sequence):
-            for item in items:
-                self._add_item(item = item)
+        if isinstance(component, Mapping):
+            self.contents.update(component)
+        elif isinstance(component, Sequence):
+            for component in component:
+                self._add_component(component = component)
         else:
-            self._add_item(item = items)
+            self._add_component(component = component)
         return self
         
     def subsetify(self, 
@@ -154,10 +156,10 @@ class Lexicon(collections.abc.MutableMapping):
         Args:
             other (Union[sourdough.Component, Sequence[sourdough.Component],
                 Mapping[str, sourdough.Component]]): Component(s) to add to
-                'contents'.
+                'contents' using the 'add' method.
 
         """
-        self.add(contents = other)
+        self.add(items = other)
         return self
 
     def __repr__(self) -> str:
@@ -182,23 +184,23 @@ class Lexicon(collections.abc.MutableMapping):
 
     """ Private Methods """
     
-    def _add_item(self, item: 'sourdough.Component') -> None:
-        """[summary]
+    def _add_component(self, component: 'sourdough.Component') -> None:
+        """Adds a single Component to 'contents'.
 
         Args:
-            item (sourdough.Component): [description]
-
-        Returns:
-            [type]: [description]
+            component (sourdough.Component): a subclass or subclass instance of
+                Component to add to 'contents'.
             
         """
-        if inspect.isclass(item):
-            self.contents[sourdough.tools.snakify(item.__name__)] = item
-        elif hasattr(self, 'name'):
-            self.contents[item.name] = item
-        else:
-            self.contents[
-                sourdough.tools.snakify(item.__class__.__name__)] = item            
+        try:
+            self.contents[component.name] = component
+        except AttributeError:
+            try: 
+                self.contents[sourdough.tools.snakify(
+                    component.__name__)] = component
+            except AttributeError:
+                self.contents[sourdough.tools.snakify(
+                        component.__class__.__name__)] = component            
         return self    
 
 
@@ -209,7 +211,7 @@ class Catalog(Lexicon):
     A Catalog inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Catalog differs from a Lexicon in 5 ways:
+    A Catalog differs from a Lexicon in 5 significant ways:
         1) It recognizes an 'all' key which will return a list of all values
             stored in a Catalog instance.
         2) It recognizes a 'default' key which will return all values matching
@@ -225,6 +227,8 @@ class Catalog(Lexicon):
             value or a stored value in a list (if 'always_return_list' is
             True). The latter option is available to make iteration easier
             when the iterator assumes a single datatype will be returned.
+        6) It includes a 'create' method which will either instance a stored
+            class or return a stored instance.
 
     Args:
         contents (Mapping[str, Any]]): stored dictionary. Defaults to 
@@ -455,7 +459,7 @@ class MirrorDictionary(Lexicon):
     """ Private Methods """
 
     def _create_reversed(self) -> None:
-        """Creates 'reversed_contents'."""
+        """Creates 'reversed_contents' from 'contents'."""
         self.reversed_contents = {
             value: key for key, value in self.contents.items()}
         return self

@@ -26,10 +26,11 @@ from sourdough.structure.components import Component
 from sourdough.structure.components import Operator
 from sourdough.structure.components import LibraryMixin
 from sourdough.structure.components import RegistryMixin
-from sourdough.structure.components import OptionsMixin
 from sourdough.structure.components import ProxyMixin
+from sourdough.structure.iterables import OptionsMixin
 from sourdough.structure.iterables import Progression
 from sourdough.structure.iterables import Plan
+
 # from sourdough.structure.iterables import Director
 
 # from sourdough.structure.graphs import DAGraph

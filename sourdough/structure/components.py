@@ -274,53 +274,6 @@ class RegistryMixin(abc.ABC):
     #                     matches.append[item]
     #     return matches
 
- 
-@dataclasses.dataclass
-class OptionsMixin(abc.ABC):
-    """Mixin which stores classes or instances in 'options'.
-
-    Args:
-        options (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
-            
-    Mixin Namespaces: 'options', 'create'
-
-    """
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        always_return_list = True)
-    
-    """ Public Methods """
-    
-    def create(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'options'.
-
-        Args:
-            option (str): name matching a key in 'options' for which the value
-                is sought.
-
-        Raises:
-            TypeError: if 'option' is neither a str nor Sequence type.
-            
-        Returns:
-            Any: instance of a stored class with kwargs passed as arguments.
-            
-        """
-        if isinstance(key, str):
-            try:
-                return self.options[key](**kwargs)
-            except TypeError:
-                return self.options[key]
-        elif isinstance(key, Sequence):
-            instances = []
-            for k in key:
-                try:
-                    instance = self.options[key](**kwargs)
-                except TypeError:
-                    instance = self.options[key]
-                instances.append(instance)
-            return instances
-        else:
-            raise TypeError('option must be a str or list type')
     
 
 @dataclasses.dataclass
