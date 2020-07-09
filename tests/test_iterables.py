@@ -1,6 +1,6 @@
 """
 .. module:: test iterables
-:synopsis: tests core sourdough sequenced iterables
+:synopsis: tests core sourdough sequenced iterables and mixins
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -27,6 +27,7 @@ class OtherOperator(sourdough.Operator):
         data.other_value = 'something'
         return data
 
+
 @dataclasses.dataclass
 class APlan(sourdough.Plan):
     
@@ -47,19 +48,31 @@ def test_plan():
     other_operator = OtherOperator()
     another_operator = OtherOperator()
     some_data = SomeData()
+    more_data = SomeData()
+    # Tests OptionsMixin of a Plan instance.
     APlan.options.add(component = other_operator)
+    assert len(APlan.options['all']) == 2
+    assert len(APlan.options['none']) == 0
+    # Tests the 'add' method of a Plan instance.
     a_plan = APlan()
     a_plan.add('other_operator')
     a_plan.add('new')
     a_plan.add(another_operator)
     assert a_plan['new_operator'] == new_operator
     a_plan.add([other_operator, another_operator])
-    print('test contents', a_plan.contents)
     assert a_plan.contents == [
         other_operator, 
         new_operator, 
         another_operator,
-        [other_operator, another_operator]]
+        other_operator, 
+        another_operator]
+    # Tests 'apply' function of a Plan instance.
+    some_data = a_plan.apply(data = some_data)
+    assert some_data.other_value == 'something'
+    # Tests manual iteration of a Plan instance.
+    for component in a_plan:
+        more_data = component.apply(data = more_data)
+    assert more_data.other_value == 'something'
     return
 
 

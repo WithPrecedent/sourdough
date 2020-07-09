@@ -30,12 +30,12 @@ from sourdough.structure.components import ProxyMixin
 from sourdough.structure.iterables import OptionsMixin
 from sourdough.structure.iterables import Progression
 from sourdough.structure.iterables import Plan
-
+from sourdough.structure.creators import Factory
+from sourdough.structure.creators import LazyLoader
 # from sourdough.structure.iterables import Director
 
 # from sourdough.structure.graphs import DAGraph
-# from sourdough.structure.creators import Factory
-# from sourdough.structure.creators import LazyLoader
+
 
 
 # from sourdough.configuration import defaults

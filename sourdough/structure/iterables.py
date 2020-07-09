@@ -55,8 +55,6 @@ class OptionsMixin(abc.ABC):
         if hasattr(component, 'name'):
             super().add(component = component)
         elif isinstance(component, str):
-            print('test options', self.options)
-            print('test component in options', self.options[component])
             super().add(component = self.options[component])
         elif isinstance(component, Sequence):
             for c in component:
@@ -195,7 +193,6 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
             TypeError: if 'component' does not have a name attribute.
             
         """
-        print('test component in extend', component.name)
         if hasattr(component, 'name'):
             self.contents.extend(component)
         else:
@@ -239,7 +236,7 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
             components: Union[
                 Mapping[str, 'sourdough.Component'], 
                 Sequence['sourdough.Component']]) -> None:
-        """Mimics the dict 'update' method by extending 'contents'.
+        """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
             components (Union[Mapping[str, sourdough.Component], Sequence[
@@ -257,13 +254,14 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         if isinstance(components, Mapping):
             for key, value in components.items():
                 if hasattr(value, 'name'):
-                    self.extend(component = value)
+                    self.append(component = value)
                 else:
                     new_component = value
                     new_component.name = key
                     self.extend(component = new_component)
         elif all(hasattr(c, 'name') for c in components):
-            self.extend(component = components)
+            for component in components:
+                self.append(component = component)
         else:
             raise TypeError(
                 'components must be a dict or all have a name attribute')
@@ -388,7 +386,7 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
         return (
             f'sourdough {self.__class__.__name__}\n'
             f'name: {self.name}\n'
-            f'contents: {self.contents.__str__()}')   
+            f'contents: {self.contents.__str__()}') 
 
 
 @dataclasses.dataclass
