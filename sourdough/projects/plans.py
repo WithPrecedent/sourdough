@@ -1,6 +1,6 @@
 """
-.. module:: worker
-:synopsis: sourdough project workers
+.. module: plans
+:synopsis: sourdough Plan and related classes
 :publisher: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0

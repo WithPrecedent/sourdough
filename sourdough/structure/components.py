@@ -275,7 +275,6 @@ class RegistryMixin(abc.ABC):
     #     return matches
 
     
-
 @dataclasses.dataclass
 class ProxyMixin(abc.ABC):
     """Mixin which creates a proxy name for a Component subclass attribute.
