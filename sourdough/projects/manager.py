@@ -107,7 +107,7 @@ class Manager(sourdough.base.Plan, sourdough.mixins.ProxyMixin):
         # this instance.
         self.settings.inject(instance = self)
         self.settings.inject(instance = self.project)
-        # Creates a dictionary of available designs for Worker instances.
+        # Creates a dictionary of available designs for PlaceHolder instances.
         self.designs = self._initialize_designs(settings = self.settings)
         # Initializes 'contents' to regulate an instance's workflow.
         self.contents = self._initialize_stages(

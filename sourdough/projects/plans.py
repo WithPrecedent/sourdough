@@ -18,6 +18,68 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Plan(sourdough.OptionsMixin, sourdough.Progression):
+    """Base class for iterables storing Worker instances.
+
+    Args:
+        contents (Sequence[sourdough.Worker]]): stored iterable of 
+            actions to apply in order. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        options (ClassVar['sourdough.Catalog']): a sourdough dictionary of 
+            available Worker instances available to use.
+            
+    """
+    contents: Union[
+        Sequence['sourdough.Worker'], 
+        str] = dataclasses.field(default_factory = list)
+    name: str = None
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        always_return_list = True)
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        super().__post_init__()
+        # Converts str in 'contents' to classes or objects.
+        self.contents = [self.add(c) for c in self.contents]
+
+    """ Public Methods """
+    
+    def apply(self, data: object = None) -> object:
+        """Applies stored Worker instances to 'data'.
+
+        Args:
+            data (object): an object to be modified and/or analyzed by stored 
+                Worker instances. Defaults to None.
+
+        Returns:
+            object: data, possibly with modifications made by Operataor 
+                instances.
+            If data is not passed, no object is returned.
+            
+        """
+        if data is None:
+            for operator in self.__iter__():
+                operator.apply()
+            return self
+        else:
+            for operator in self.__iter__():
+                data = operator.apply(data = data)
+            return data
+        
+        
+@dataclasses.dataclass
 class PlaceHolder(sourdough.base.Plan):
     """Contains information and objects that are part of sourdough projects.
     

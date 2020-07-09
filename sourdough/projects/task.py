@@ -67,11 +67,11 @@ class Task(sourdough.Component):
     'worker' that a stored technique instance is associated with. Subclasses of
     Task can store additional methods and attributes to apply to all possible
     technique instances that could be used. This is often useful when creating
-    'comparative' Worker instances which test a variety of strategies with
+    'comparative' PlaceHolder instances which test a variety of strategies with
     similar or identical parameters and/or methods.
 
-    A Worker instance will try to return attributes from 'technique' if the
-    attribute is not found in the Worker instance. 
+    A PlaceHolder instance will try to return attributes from 'technique' if the
+    attribute is not found in the PlaceHolder instance. 
 
     Args:
         name (str): designates the name of the class instance used
@@ -81,11 +81,11 @@ class Task(sourdough.Component):
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
-        worker (str): the name of the worker in a Worker instance that 
+        worker (str): the name of the worker in a PlaceHolder instance that 
             the algorithm is being performed. This attribute is generally 
             optional but can be useful for tracking and/or displaying the status 
             of iteration. It is automatically created when using a chained or 
-            comparative Worker. Defaults to None.
+            comparative PlaceHolder. Defaults to None.
         technique (technique): technique object for this worker in a sourdough
             sequence. Defaults to None.
 

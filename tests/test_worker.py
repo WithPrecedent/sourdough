@@ -1,6 +1,6 @@
 """
-.. module:: test Worker
-:synopsis: tests Worker and related classes
+.. module:: test PlaceHolder
+:synopsis: tests PlaceHolder and related classes
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -12,7 +12,7 @@ import sourdough
 class NewInstructions(sourdough.Instructions):
     pass
 
-class NewWorker(sourdough.Worker):
+class NewPlaceHolder(sourdough.PlaceHolder):
     pass
 
 def test_worker():

@@ -23,7 +23,7 @@ from sourdough.structure.dictionaries import Lexicon
 from sourdough.structure.dictionaries import Catalog
 from sourdough.structure.dictionaries import MirrorDictionary
 from sourdough.structure.components import Component
-from sourdough.structure.components import Operator
+from sourdough.structure.components import Worker
 from sourdough.structure.components import LibraryMixin
 from sourdough.structure.components import RegistryMixin
 from sourdough.structure.components import ProxyMixin
@@ -32,19 +32,22 @@ from sourdough.structure.iterables import Progression
 from sourdough.structure.iterables import Plan
 from sourdough.structure.creators import Factory
 from sourdough.structure.creators import LazyLoader
+# from sourdough.configuration import defaults
+# from sourdough.configuration.settings import Settings
+# from sourdough.configuration.filer import Filer
+
+
 # from sourdough.structure.iterables import Director
 
 # from sourdough.structure.graphs import DAGraph
 
 
 
-# from sourdough.configuration import defaults
-# from sourdough.configuration.settings import Settings
-# from sourdough.configuration.filer import Filer
+
 
 # from sourdough.projects.task import Technique
 # from sourdough.projects.task import Task
-# from sourdough.projects.worker import Worker
+# from sourdough.projects.worker import PlaceHolder
 # from sourdough.projects.worker import Project
 # from sourdough.projects.stages import Stage
 # from sourdough.projects.stages import Author

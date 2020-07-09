@@ -1,6 +1,6 @@
 """
 .. module:: configuration
-:synopsis: project configuration made simple
+:synopsis: base class for configuring sourdough projects
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -13,6 +13,7 @@ import dataclasses
 import importlib
 import json
 import pathlib
+import toml
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -20,36 +21,29 @@ import sourdough
 
 @dataclasses.dataclass
 class Settings(collections.abc.MutableMapping):
-    """Stores a sourdough project settings.
+    """Stores sourdough project settings.
+
+
 
     To create Settings instance, a user can pass a:
         1) file path to a compatible file type;
         2) string containing a a file path to a compatible file type;
                                 or,
-        3) dictionary.
+        3) 2-level nested dict.
 
-    If 'contents' is imported from a file, 'Settings' creates a dictionary
-    and can convert the dictionary values to appropriate datatypes. Currently
-    supported file types are: .ini and .py. With .py files, users are free to
-    set any datatypes in the original python file.
+    If 'contents' is imported from a file, 'Settings' creates a dict and can 
+    convert the dict values to appropriate datatypes. 
+    
+    Currently, supported file types are: ini, json, toml, and python.
 
-    For .ini files, Settings uses python's ConfigParser. It seeks to cure
-    some of the shortcomings of the base ConfigParser including:
-        1) All values in ConfigParser are strings.
-        2) It does not automatically create a regular dictionary or compatiable
-            Mapping.
-        3) Access methods are unforgiving across the nested structure.
-        4) It uses OrderedMutableMapping (python 3.6+ dictionaries are fast and ordered).
-
-    If 'infer_types' is set to True (the default option), the dictionary values
+    If 'infer_types' is set to True (the default option), str dict values
     are automatically converted to appropriate datatypes (str, list, float,
     bool, and int are currently supported)
 
-    Because Settings uses ConfigParser for .ini files, it only allows
-    1- or 2-level settings dictionaries. The desire for accessibility and
-    simplicity dictated this limitation. Further levels of nesting are not
-    prohibited, but the forgiving '__getitem__' method will only catch for
-    matches in the first nested level.
+    Because Settings uses ConfigParser for .ini files, it only allows 2-level 
+    settings dictionaries. The desire for accessibility and simplicity dictated 
+    this limitation. Settings overcomes this limitation by using the workers,
+    steps, technqiues, and parameters structure described above.
 
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
@@ -64,8 +58,11 @@ class Settings(collections.abc.MutableMapping):
     contents: Union[
         str,
         pathlib.Path,
-        Mapping[str, Any]] = dataclasses.field(default_factory = dict)
+        Mapping[str, 
+            Mapping[str, Any]]] = dataclasses.field(default_factory = dict)
     infer_types: bool = True
+
+    """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
@@ -96,14 +93,14 @@ class Settings(collections.abc.MutableMapping):
 
     def inject(self,
             instance: object,
-            other_sections: Union[Sequence[str], str] = None,
+            additional: Union[Sequence[str], str] = None,
             overwrite: bool = False) -> object:
         """Injects appropriate items into 'instance' from 'contents'.
 
         Args:
             instance (object): sourdough class instance to be modified.
-            other_sections (Union[Sequence[str], str]]): other section(s)
-                in 'contents' to inject into 'instance'. Defaults to None.
+            additional (Union[Sequence[str], str]]): other section(s) in 
+                'contents' to inject into 'instance'. Defaults to None.
             overwrite (bool]): whether to overwrite a local attribute
                 in 'instance' if there are values stored in that attribute.
                 Defaults to False.
@@ -117,8 +114,8 @@ class Settings(collections.abc.MutableMapping):
             sections.append(instance.name)
         except AttributeError:
             pass
-        if other_sections:
-            sections.extend(sourdough.tools.listify(other_sections))
+        if additional:
+            sections.extend(sourdough.tools.listify(additional))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
@@ -131,122 +128,121 @@ class Settings(collections.abc.MutableMapping):
                 pass
         return instance
 
-    def get_overview(self, name: str) -> 'sourdough.Overview':
-        """Returns an Overview with 'contents' from this instance.
+    # def get_overview(self, name: str) -> 'sourdough.Overview':
+    #     """Returns an Overview with 'contents' from this instance.
 
-        Args:
-            name (str): key to section to search for information to create an
-                Overview instance.
+    #     Args:
+    #         name (str): key to section to search for information to create an
+    #             Overview instance.
 
-        Returns:
-            sourdough.Overview: with contents derived from the configuration
-                settings in this instance.
+    #     Returns:
+    #         sourdough.Overview: with contents derived from the configuration
+    #             settings in this instance.
 
-        """
-        workers = sourdough.tools.listify(
-            self.contents[name][f'{name}_workers'])
-        overview = sourdough.Overview(name = f'{name}_overview')
-        for worker in workers:
-            overview = self._parse_worker_section(
-                name = worker, 
-                overview = overview)
-        return overview
+    #     """
+    #     workers = sourdough.tools.listify(
+    #         self.contents[name][f'{name}_workers'])
+    #     overview = sourdough.Overview(name = f'{name}_overview')
+    #     for worker in workers:
+    #         overview = self._parse_worker_section(
+    #             name = worker, 
+    #             overview = overview)
+    #     return overview
 
-    def create_project(self, 
-            name: str, 
-            project: 'sourdough.Project' = None) -> 'sourdough.Project':
-        """Returns a single Worker instance created from a 'contents' section.
+    # def create_project(self, 
+    #         name: str, 
+    #         project: 'sourdough.Project' = None) -> 'sourdough.Project':
+    #     """Returns a single PlaceHolder instance created from a 'contents' section.
 
-        Args:
-            name (str): name of worker to create. It must correspond to a key in
-                'contents'.
-            project (sourdough.Project): Project class or subclass to store the
-                information from 'contents' in. Defaults to None. If not
-                passed, a generic Project class is used.
+    #     Args:
+    #         name (str): name of worker to create. It must correspond to a key in
+    #             'contents'.
+    #         project (sourdough.Project): Project class or subclass to store the
+    #             information from 'contents' in. Defaults to None. If not
+    #             passed, a generic Project class is used.
 
-        Returns:
-            sourdough.Project: an instance or subclass instance with attributes 
-                from a section of 'contents'
+    #     Returns:
+    #         sourdough.Project: an instance or subclass instance with attributes 
+    #             from a section of 'contents'
                 
-        """
-        project = project or sourdough.Project
-        instance = self.create_worker(name = name, worker = project)
-        new_contents = []
-        for labor in instance.contents:
-            new_contents.append(self._create_worker)
+    #     """
+    #     project = project or sourdough.Project
+    #     instance = self.create_worker(name = name, worker = project)
+    #     new_contents = []
+    #     for labor in instance.contents:
+    #         new_contents.append(self._create_worker)
             
-    
-    def create_worker(self, 
-            name: str, 
-            worker: 'sourdough.Worker' = None) -> 'sourdough.Worker':
-        """Returns a single Worker instance created from a 'contents' section.
+    # def create_worker(self, 
+    #         name: str, 
+    #         worker: 'sourdough.PlaceHolder' = None) -> 'sourdough.PlaceHolder':
+    #     """Returns a single PlaceHolder instance created from a 'contents' section.
 
-        Args:
-            name (str): name of worker to create. It must correspond to a key in
-                'contents'.
-            worker (sourdough.Worker): Worker class or subclass to store the
-                information from 'contents' in. Defaults to None. If not
-                passed, a generic Worker or Worker class is used based upon
-                whether tasks or workers are stored within the name section of
-                'contents'.
+    #     Args:
+    #         name (str): name of worker to create. It must correspond to a key in
+    #             'contents'.
+    #         worker (sourdough.PlaceHolder): PlaceHolder class or subclass to store the
+    #             information from 'contents' in. Defaults to None. If not
+    #             passed, a generic PlaceHolder or PlaceHolder class is used based upon
+    #             whether tasks or workers are stored within the name section of
+    #             'contents'.
 
-        Returns:
-            sourdough.Worker: an instance or subclass instance with attributes 
-                from a section of 'contents'
+    #     Returns:
+    #         sourdough.PlaceHolder: an instance or subclass instance with attributes 
+    #             from a section of 'contents'
                 
-        """
-        parameters = {'name': name}
-        contents = []
-        techniques = {}
-        attributes = {}
-        for key, value in self.contents[name].items():
-            if key.endswith('_design'):
-                parameters['design'] = value
-            elif key.endswith('_workers'):
-                worker = worker or sourdough.Worker
-                contents = sourdough.tools.listify(value)
-            elif key.endswith('_tasks'):
-                worker = worker or sourdough.Worker
-                contents = sourdough.tools.listify(value)
-            elif key.endswith('_techniques'):
-                new_key = key.replace('_techniques', '')
-                techniques[new_key] = sourdough.tools.listify(value)
-            else:
-                attributes[key] = value
-        if techniques:
-            contents = sourdough.tools.subsetify(
-                dictionary = techniques,
-                subset = contents)
-        parameters['contents'] = contents
-        instance = worker(**parameters)
-        for key, value in attributes.items():
-            setattr(instance, key, value)
-        return instance        
+    #     """
+    #     parameters = {'name': name}
+    #     contents = []
+    #     techniques = {}
+    #     attributes = {}
+    #     for key, value in self.contents[name].items():
+    #         if key.endswith('_design'):
+    #             parameters['design'] = value
+    #         elif key.endswith('_workers'):
+    #             worker = worker or sourdough.PlaceHolder
+    #             contents = sourdough.tools.listify(value)
+    #         elif key.endswith('_tasks'):
+    #             worker = worker or sourdough.PlaceHolder
+    #             contents = sourdough.tools.listify(value)
+    #         elif key.endswith('_techniques'):
+    #             new_key = key.replace('_techniques', '')
+    #             techniques[new_key] = sourdough.tools.listify(value)
+    #         else:
+    #             attributes[key] = value
+    #     if techniques:
+    #         contents = sourdough.tools.subsetify(
+    #             dictionary = techniques,
+    #             subset = contents)
+    #     parameters['contents'] = contents
+    #     instance = worker(**parameters)
+    #     for key, value in attributes.items():
+    #         setattr(instance, key, value)
+    #     return instance        
         
-    def get_parameters(self, worker: str, technique: str) -> Mapping[str, Any]:
-        """Returns 'parameters' dictionary appropriate to 'worker' or 'technique'.
+    # def get_parameters(self, worker: str, technique: str) -> Mapping[str, Any]:
+    #     """Returns 'parameters' dictionary appropriate to 'worker' or 'technique'.
 
-        The method firsts look for a match with 'technique' as a prefix (the
-        more specific label) and then 'worker' as a prefix' if there is no match
-        for 'technique'.
+    #     The method firsts look for a match with 'technique' as a prefix (the
+    #     more specific label) and then 'worker' as a prefix' if there is no match
+    #     for 'technique'.
 
-        Args:
-            worker (str): name of 'worker' for which parameters are sought.
-            technique (str): name of 'technique' for which parameters are
-                sought.
+    #     Args:
+    #         worker (str): name of 'worker' for which parameters are sought.
+    #         technique (str): name of 'technique' for which parameters are
+    #             sought.
 
-        Returns:
-            Mapping[str, Any]: parameters dictionary stored in 'contents'.
+    #     Returns:
+    #         Mapping[str, Any]: parameters dictionary stored in 'contents'.
 
-        """
-        try:
-            return self[f'{technique}_parameters']
-        except KeyError:
-            try:
-                return self[f'{worker}_parameters']
-            except KeyError:
-                raise KeyError(
-                    f'parameters for {worker} and {technique} not found')
+    #     """
+    #     try:
+    #         return self[f'{technique}_parameters']
+    #     except KeyError:
+    #         try:
+    #             return self[f'{worker}_parameters']
+    #         except KeyError:
+    #             raise KeyError(
+    #                 f'parameters for {worker} and {technique} not found')
 
     """ Required ABC Methods """
 
@@ -335,7 +331,7 @@ class Settings(collections.abc.MutableMapping):
         """
 
         Args:
-            contents (Union[str,pathlib.Path,MutableMapping[str, Any]]): [description]
+            contents (Union[str,pathlib.Path, Mapping[str, Any]]): [description]
 
         Raises:
             TypeError: [description]
@@ -344,7 +340,7 @@ class Settings(collections.abc.MutableMapping):
             Mapping[str, Any]: [description]
 
         """
-        if isinstance(contents, (dict, collections.abc.MutableMapping)):
+        if isinstance(contents, Mapping):
             return contents
         elif isinstance(contents, (str, pathlib.Path)):
             extension = str(pathlib.Path(contents).suffix)[1:]
@@ -439,12 +435,31 @@ class Settings(collections.abc.MutableMapping):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
 
+    def _load_from_toml(self, file_path: str) -> Mapping[str, Any]:
+        """Returns settings dictionary from a .toml file.
+
+        Args:
+            file_path (str): path to configparser-compatible .toml file.
+
+        Returns:
+            Mapping[str, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        try:
+            return toml.load(file_path)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
     def _infer_types(self,
-            contents: Mapping[str, Mapping[str, Any]]) -> Mapping[str, Mapping[str, Any]]:
+            contents: Mapping[str, Mapping[str, Any]]) -> Mapping[
+                str, Mapping[str, Any]]:
         """Converts stored values to appropriate datatypes.
 
         Args:
-            contents (MutableMapping[str, Mapping[str, Any]]): a nested contents dictionary
+            contents (Mapping[str, Mapping[str, Any]]): a nested contents dictionary
                 to review.
 
         Returns:
@@ -504,40 +519,40 @@ class Settings(collections.abc.MutableMapping):
             setattr(instance, attribute, value)
         return instance
 
-    def _parse_worker_section(self, 
-            name: str,
-            overview: 'sourdough.Overview') -> 'sourdough.Overview':
-        """[summary]
+    # def _parse_worker_section(self, 
+    #         name: str,
+    #         overview: 'sourdough.Overview') -> 'sourdough.Overview':
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
+    #     Returns:
+    #         [type]: [description]
             
-        """
-        print('test settings name', name, overview)
-        print('test settings contents', self.contents)
-        overview[name] = {}
-        section = self.contents[name]
-        try:
-            overview.contents[name]['workers'] = sourdough.tools.listify(
-                section[f'{name}_workers'])
-        except KeyError:
-            overview.contents[name]['workers'] = []
-        try:
-            overview.contents[name]['design'] = section[f'{name}_design']
-        except KeyError:
-            overview.contents[name]['design'] = None
-        task_keys = [k for k in section.keys() if k.endswith('_techniques')]
-        if len(task_keys) > 0:
-            overview.contents[name]['stores_tasks'] = True
-            for task_key in task_keys:
-                task_name = task_key.replace('_techniques', '')
-                if task_name in overview.contents[name]['workers']:
-                    techniques = sourdough.tools.listify(section[task_key])
-                    self.contents[name][task_name] = techniques
-        else:
-            overview.contents[name]['stores_tasks'] = False
-            for worker in overview.contents[name]['workers']:
-                overview = self._parse_worker_section(
-                    name = worker,
-                    overview = overview)
-        return overview
+    #     """
+    #     print('test settings name', name, overview)
+    #     print('test settings contents', self.contents)
+    #     overview[name] = {}
+    #     section = self.contents[name]
+    #     try:
+    #         overview.contents[name]['workers'] = sourdough.tools.listify(
+    #             section[f'{name}_workers'])
+    #     except KeyError:
+    #         overview.contents[name]['workers'] = []
+    #     try:
+    #         overview.contents[name]['design'] = section[f'{name}_design']
+    #     except KeyError:
+    #         overview.contents[name]['design'] = None
+    #     task_keys = [k for k in section.keys() if k.endswith('_techniques')]
+    #     if len(task_keys) > 0:
+    #         overview.contents[name]['stores_tasks'] = True
+    #         for task_key in task_keys:
+    #             task_name = task_key.replace('_techniques', '')
+    #             if task_name in overview.contents[name]['workers']:
+    #                 techniques = sourdough.tools.listify(section[task_key])
+    #                 self.contents[name][task_name] = techniques
+    #     else:
+    #         overview.contents[name]['stores_tasks'] = False
+    #         for worker in overview.contents[name]['workers']:
+    #             overview = self._parse_worker_section(
+    #                 name = worker,
+    #                 overview = overview)
+    #     return overview

@@ -73,7 +73,7 @@ class Component(abc.ABC):
 
 
 @dataclasses.dataclass
-class Operator(Component, abc.ABC):
+class Worker(Component, abc.ABC):
     """Base class for classes which apply methods to objects.
     
     All subclasses must have 'apply' methods. 

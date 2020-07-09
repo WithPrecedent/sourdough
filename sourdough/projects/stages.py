@@ -39,8 +39,8 @@ class Author(Stage):
     
     """ Public Methods """
     
-    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Returns a Worker with its 'contents' organized and instanced.
+    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+        """Returns a PlaceHolder with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
         not, it creates them from 'settings'.
@@ -49,11 +49,11 @@ class Author(Stage):
         'worker' based upon a specific structural design.
         
         Args:
-            worker (sourdough.Worker): Worker instance to organize the 
+            worker (sourdough.PlaceHolder): PlaceHolder instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.Worker: an instance with contents fully instanced.
+            sourdough.PlaceHolder: an instance with contents fully instanced.
                 
         """
         worker = self._draft_existing_contents(worker = worker)
@@ -63,19 +63,19 @@ class Author(Stage):
     """ Private Methods """
 
     def _draft_existing_contents(self, 
-            worker: 'sourdough.Worker') -> 'sourdough.Worker':
+            worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
         """
         
         Args:
-            worker (sourdough.Worker): Worker instance with str, Task, or Worker
+            worker (sourdough.PlaceHolder): PlaceHolder instance with str, Task, or PlaceHolder
                 stored in contents.
 
         Raises:
-            TypeError: if an item in 'contents' is not a str, Task, or Worker
+            TypeError: if an item in 'contents' is not a str, Task, or PlaceHolder
                 type.
 
         Returns:
-            sourdough.Worker: an instance with contents fully instanced.
+            sourdough.PlaceHolder: an instance with contents fully instanced.
                 
         """
         new_contents = []
@@ -84,19 +84,19 @@ class Author(Stage):
                 new_contents.append(self._draft_unknown(
                     labor = labor, 
                     worker = worker))
-            elif isinstance(labor, (sourdough.Worker, sourdough.Task)):
+            elif isinstance(labor, (sourdough.PlaceHolder, sourdough.Task)):
                 new_contents.append(labor)
             else:
                 raise TypeError(
-                    f'{worker.name} contents must be str, Worker, or Task type')
+                    f'{worker.name} contents must be str, PlaceHolder, or Task type')
         worker.contents = new_contents
         return worker
     
     def _draft_unknown(self,
             labor: str,
-            worker: 'sourdough.Worker') -> Union[
+            worker: 'sourdough.PlaceHolder') -> Union[
                 'sourdough.Task', 
-                'sourdough.Worker']:
+                'sourdough.PlaceHolder']:
         """[summary]
 
         Raises:
@@ -118,15 +118,15 @@ class Author(Stage):
             return self._draft_worker(worker = labor, manager = worker)
 
     def _draft_from_settings(self, 
-            worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Returns a single Worker instance created based on 'settings'.
+            worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+        """Returns a single PlaceHolder instance created based on 'settings'.
 
         Args:
-            worker (sourdough.Worker): Worker instance to populate its 
+            worker (sourdough.PlaceHolder): PlaceHolder instance to populate its 
                 'contents' with information in 'settings'.
 
         Returns:
-            sourdough.Worker: an worker or subclass worker with attributes 
+            sourdough.PlaceHolder: an worker or subclass worker with attributes 
                 derived from a section of 'settings'.
                 
         """
@@ -162,7 +162,7 @@ class Author(Stage):
 
     def _draft_workers(self,
             workers: Sequence[str],
-            manager: 'sourdough.Worker') -> 'sourdough.Worker':
+            manager: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
         """[summary]
 
         Returns:
@@ -179,7 +179,7 @@ class Author(Stage):
 
     def _draft_worker(self,
             worker: str,
-            manager: 'sourdough.Worker') -> 'sourdough.Worker':
+            manager: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
         """[summary]
 
         Returns:
@@ -189,13 +189,13 @@ class Author(Stage):
         try:
             new_worker = manager.options[worker](name = worker)
         except KeyError:
-            new_worker = sourdough.Worker(name = worker)
+            new_worker = sourdough.PlaceHolder(name = worker)
         return self.organize(worker = new_worker)
                   
     def _draft_tasks(self, 
-            worker: 'sourdough.Worker',
+            worker: 'sourdough.PlaceHolder',
             tasks: Sequence[str],
-            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Worker':
+            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.PlaceHolder':
         """[summary]
 
         Returns:
@@ -275,7 +275,7 @@ class Publisher(Stage):
         project.contents[worker] = sourdough.tools.listify(tasks)
         return project
  
-    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
         """[summary]
 
         Returns:
@@ -428,7 +428,7 @@ class Reader(Stage):
     
     settings: 'sourdough.Settings'
     
-    def apply(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
         """[summary]
 
         Returns:
