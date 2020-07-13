@@ -42,7 +42,7 @@ class Settings(collections.abc.MutableMapping):
 
     Because Settings uses ConfigParser for .ini files, it only allows 2-level 
     settings dictionaries. The desire for accessibility and simplicity dictated 
-    this limitation. Settings overcomes this limitation by using the workers,
+    this limitation. Settings overcomes this limitation by using the steps,
     steps, technqiues, and parameters structure described above.
 
     Args:
@@ -140,22 +140,22 @@ class Settings(collections.abc.MutableMapping):
     #             settings in this instance.
 
     #     """
-    #     workers = sourdough.tools.listify(
-    #         self.contents[name][f'{name}_workers'])
+    #     steps = sourdough.tools.listify(
+    #         self.contents[name][f'{name}_steps'])
     #     overview = sourdough.Overview(name = f'{name}_overview')
-    #     for worker in workers:
-    #         overview = self._parse_worker_section(
-    #             name = worker, 
+    #     for step in steps:
+    #         overview = self._parse_step_section(
+    #             name = step, 
     #             overview = overview)
     #     return overview
 
     # def create_project(self, 
     #         name: str, 
     #         project: 'sourdough.Project' = None) -> 'sourdough.Project':
-    #     """Returns a single PlaceHolder instance created from a 'contents' section.
+    #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
-    #         name (str): name of worker to create. It must correspond to a key in
+    #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
     #         project (sourdough.Project): Project class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
@@ -167,27 +167,27 @@ class Settings(collections.abc.MutableMapping):
                 
     #     """
     #     project = project or sourdough.Project
-    #     instance = self.create_worker(name = name, worker = project)
+    #     instance = self.create_step(name = name, step = project)
     #     new_contents = []
     #     for labor in instance.contents:
-    #         new_contents.append(self._create_worker)
+    #         new_contents.append(self._create_step)
             
-    # def create_worker(self, 
+    # def create_step(self, 
     #         name: str, 
-    #         worker: 'sourdough.PlaceHolder' = None) -> 'sourdough.PlaceHolder':
-    #     """Returns a single PlaceHolder instance created from a 'contents' section.
+    #         step: 'sourdough.Plan' = None) -> 'sourdough.Plan':
+    #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
-    #         name (str): name of worker to create. It must correspond to a key in
+    #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         worker (sourdough.PlaceHolder): PlaceHolder class or subclass to store the
+    #         step (sourdough.Plan): Plan class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
-    #             passed, a generic PlaceHolder or PlaceHolder class is used based upon
-    #             whether tasks or workers are stored within the name section of
+    #             passed, a generic Plan or Plan class is used based upon
+    #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.PlaceHolder: an instance or subclass instance with attributes 
+    #         sourdough.Plan: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -198,11 +198,11 @@ class Settings(collections.abc.MutableMapping):
     #     for key, value in self.contents[name].items():
     #         if key.endswith('_design'):
     #             parameters['design'] = value
-    #         elif key.endswith('_workers'):
-    #             worker = worker or sourdough.PlaceHolder
+    #         elif key.endswith('_steps'):
+    #             step = step or sourdough.Plan
     #             contents = sourdough.tools.listify(value)
-    #         elif key.endswith('_tasks'):
-    #             worker = worker or sourdough.PlaceHolder
+    #         elif key.endswith('_steps'):
+    #             step = step or sourdough.Plan
     #             contents = sourdough.tools.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')
@@ -214,20 +214,20 @@ class Settings(collections.abc.MutableMapping):
     #             dictionary = techniques,
     #             subset = contents)
     #     parameters['contents'] = contents
-    #     instance = worker(**parameters)
+    #     instance = step(**parameters)
     #     for key, value in attributes.items():
     #         setattr(instance, key, value)
     #     return instance        
         
-    # def get_parameters(self, worker: str, technique: str) -> Mapping[str, Any]:
-    #     """Returns 'parameters' dictionary appropriate to 'worker' or 'technique'.
+    # def get_parameters(self, step: str, technique: str) -> Mapping[str, Any]:
+    #     """Returns 'parameters' dictionary appropriate to 'step' or 'technique'.
 
     #     The method firsts look for a match with 'technique' as a prefix (the
-    #     more specific label) and then 'worker' as a prefix' if there is no match
+    #     more specific label) and then 'step' as a prefix' if there is no match
     #     for 'technique'.
 
     #     Args:
-    #         worker (str): name of 'worker' for which parameters are sought.
+    #         step (str): name of 'step' for which parameters are sought.
     #         technique (str): name of 'technique' for which parameters are
     #             sought.
 
@@ -239,10 +239,10 @@ class Settings(collections.abc.MutableMapping):
     #         return self[f'{technique}_parameters']
     #     except KeyError:
     #         try:
-    #             return self[f'{worker}_parameters']
+    #             return self[f'{step}_parameters']
     #         except KeyError:
     #             raise KeyError(
-    #                 f'parameters for {worker} and {technique} not found')
+    #                 f'parameters for {step} and {technique} not found')
 
     """ Required ABC Methods """
 
@@ -519,7 +519,7 @@ class Settings(collections.abc.MutableMapping):
             setattr(instance, attribute, value)
         return instance
 
-    # def _parse_worker_section(self, 
+    # def _parse_step_section(self, 
     #         name: str,
     #         overview: 'sourdough.Overview') -> 'sourdough.Overview':
     #     """[summary]
@@ -533,26 +533,26 @@ class Settings(collections.abc.MutableMapping):
     #     overview[name] = {}
     #     section = self.contents[name]
     #     try:
-    #         overview.contents[name]['workers'] = sourdough.tools.listify(
-    #             section[f'{name}_workers'])
+    #         overview.contents[name]['steps'] = sourdough.tools.listify(
+    #             section[f'{name}_steps'])
     #     except KeyError:
-    #         overview.contents[name]['workers'] = []
+    #         overview.contents[name]['steps'] = []
     #     try:
     #         overview.contents[name]['design'] = section[f'{name}_design']
     #     except KeyError:
     #         overview.contents[name]['design'] = None
-    #     task_keys = [k for k in section.keys() if k.endswith('_techniques')]
-    #     if len(task_keys) > 0:
-    #         overview.contents[name]['stores_tasks'] = True
-    #         for task_key in task_keys:
-    #             task_name = task_key.replace('_techniques', '')
-    #             if task_name in overview.contents[name]['workers']:
-    #                 techniques = sourdough.tools.listify(section[task_key])
-    #                 self.contents[name][task_name] = techniques
+    #     step_keys = [k for k in section.keys() if k.endswith('_techniques')]
+    #     if len(step_keys) > 0:
+    #         overview.contents[name]['stores_steps'] = True
+    #         for step_key in step_keys:
+    #             step_name = step_key.replace('_techniques', '')
+    #             if step_name in overview.contents[name]['steps']:
+    #                 techniques = sourdough.tools.listify(section[step_key])
+    #                 self.contents[name][step_name] = techniques
     #     else:
-    #         overview.contents[name]['stores_tasks'] = False
-    #         for worker in overview.contents[name]['workers']:
-    #             overview = self._parse_worker_section(
-    #                 name = worker,
+    #         overview.contents[name]['stores_steps'] = False
+    #         for step in overview.contents[name]['steps']:
+    #             overview = self._parse_step_section(
+    #                 name = step,
     #                 overview = overview)
     #     return overview

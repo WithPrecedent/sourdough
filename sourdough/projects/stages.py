@@ -15,7 +15,7 @@ from sourdough import utilities
 
  
 @dataclasses.dataclass
-class Stage(abc.ABC):
+class Stage(sourdough.Component):
     """Base class for workflow steps controlled by a Manager instance.
     
     All subclasses must have 'apply' methods. 
@@ -39,64 +39,64 @@ class Author(Stage):
     
     """ Public Methods """
     
-    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
-        """Returns a PlaceHolder with its 'contents' organized and instanced.
+    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+        """Returns a Plan with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
         not, it creates them from 'settings'.
         
         Subclasses can call this method and then arrange the 'contents' of
-        'worker' based upon a specific structural design.
+        'step' based upon a specific structural design.
         
         Args:
-            worker (sourdough.PlaceHolder): PlaceHolder instance to organize the 
+            step (sourdough.Plan): Plan instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.PlaceHolder: an instance with contents fully instanced.
+            sourdough.Plan: an instance with contents fully instanced.
                 
         """
-        worker = self._draft_existing_contents(worker = worker)
-        worker = self._draft_from_settings(worker = worker)           
-        return worker      
+        step = self._draft_existing_contents(step = step)
+        step = self._draft_from_settings(step = step)           
+        return step      
 
     """ Private Methods """
 
     def _draft_existing_contents(self, 
-            worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+            step: 'sourdough.Plan') -> 'sourdough.Plan':
         """
         
         Args:
-            worker (sourdough.PlaceHolder): PlaceHolder instance with str, Task, or PlaceHolder
+            step (sourdough.Plan): Plan instance with str, Step, or Plan
                 stored in contents.
 
         Raises:
-            TypeError: if an item in 'contents' is not a str, Task, or PlaceHolder
+            TypeError: if an item in 'contents' is not a str, Step, or Plan
                 type.
 
         Returns:
-            sourdough.PlaceHolder: an instance with contents fully instanced.
+            sourdough.Plan: an instance with contents fully instanced.
                 
         """
         new_contents = []
-        for labor in worker.contents:
+        for labor in step.contents:
             if isinstance(labor, str):
                 new_contents.append(self._draft_unknown(
                     labor = labor, 
-                    worker = worker))
-            elif isinstance(labor, (sourdough.PlaceHolder, sourdough.Task)):
+                    step = step))
+            elif isinstance(labor, (sourdough.Plan, sourdough.Step)):
                 new_contents.append(labor)
             else:
                 raise TypeError(
-                    f'{worker.name} contents must be str, PlaceHolder, or Task type')
-        worker.contents = new_contents
-        return worker
+                    f'{step.name} contents must be str, Plan, or Step type')
+        step.contents = new_contents
+        return step
     
     def _draft_unknown(self,
             labor: str,
-            worker: 'sourdough.PlaceHolder') -> Union[
-                'sourdough.Task', 
-                'sourdough.PlaceHolder']:
+            step: 'sourdough.Plan') -> Union[
+                'sourdough.Step', 
+                'sourdough.Plan']:
         """[summary]
 
         Raises:
@@ -106,80 +106,80 @@ class Author(Stage):
             [type]: [description]
         """
         try:
-            test_instance = worker.options[labor](name = 'test only')
+            test_instance = step.options[labor](name = 'test only')
         except KeyError:
-            raise KeyError(f'{labor} not found in {worker.name}')
-        if isinstance(test_instance, sourdough.Task):
-            return self._draft_task(
-                task = labor, 
+            raise KeyError(f'{labor} not found in {step.name}')
+        if isinstance(test_instance, sourdough.Step):
+            return self._draft_step(
+                step = labor, 
                 technique = None, 
-                worker = worker)
+                step = step)
         else:
-            return self._draft_worker(worker = labor, manager = worker)
+            return self._draft_step(step = labor, manager = step)
 
     def _draft_from_settings(self, 
-            worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
-        """Returns a single PlaceHolder instance created based on 'settings'.
+            step: 'sourdough.Plan') -> 'sourdough.Plan':
+        """Returns a single Plan instance created based on 'settings'.
 
         Args:
-            worker (sourdough.PlaceHolder): PlaceHolder instance to populate its 
+            step (sourdough.Plan): Plan instance to populate its 
                 'contents' with information in 'settings'.
 
         Returns:
-            sourdough.PlaceHolder: an worker or subclass worker with attributes 
+            sourdough.Plan: an step or subclass step with attributes 
                 derived from a section of 'settings'.
                 
         """
-        tasks = []
-        workers = []
+        steps = []
+        steps = []
         techniques = {}
         attributes = {}
-        worker.contents = []
-        for key, value in self.settings.contents[worker.name].items():
+        step.contents = []
+        for key, value in self.settings.contents[step.name].items():
             if key.endswith('_design'):
-                worker.design = value
-            elif key.endswith('_workers'):
-                workers = sourdough.tools.listify(value)
-            elif key.endswith('_tasks'):
-                tasks = sourdough.tools.listify(value)
+                step.design = value
+            elif key.endswith('_steps'):
+                steps = sourdough.tools.listify(value)
+            elif key.endswith('_steps'):
+                steps = sourdough.tools.listify(value)
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
                 techniques[new_key] = sourdough.tools.listify(value)
             else:
                 attributes[key] = value
-        if tasks:
-            worker = self._draft_tasks(
-                tasks = tasks, 
+        if steps:
+            step = self._draft_steps(
+                steps = steps, 
                 techniques = techniques,
-                worker = worker)
-        elif workers:
-            worker = self._draft_workers(
-                workers = workers,
-                manager = worker)
+                step = step)
+        elif steps:
+            step = self._draft_steps(
+                steps = steps,
+                manager = step)
         for key, value in attributes.items():
-            setattr(worker, key, value)
-        return worker      
+            setattr(step, key, value)
+        return step      
 
-    def _draft_workers(self,
-            workers: Sequence[str],
-            manager: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+    def _draft_steps(self,
+            steps: Sequence[str],
+            manager: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
             [type]: [description]
             
         """
-        new_workers = []
-        for worker in workers:
-            new_workers.append(self._draft_worker(
-                worker = worker, 
+        new_steps = []
+        for step in steps:
+            new_steps.append(self._draft_step(
+                step = step, 
                 manager = manager))
-        manager.contents.append(new_workers)
+        manager.contents.append(new_steps)
         return manager
 
-    def _draft_worker(self,
-            worker: str,
-            manager: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+    def _draft_step(self,
+            step: str,
+            manager: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
@@ -187,37 +187,37 @@ class Author(Stage):
             
         """
         try:
-            new_worker = manager.options[worker](name = worker)
+            new_step = manager.options[step](name = step)
         except KeyError:
-            new_worker = sourdough.PlaceHolder(name = worker)
-        return self.organize(worker = new_worker)
+            new_step = sourdough.Plan(name = step)
+        return self.organize(step = new_step)
                   
-    def _draft_tasks(self, 
-            worker: 'sourdough.PlaceHolder',
-            tasks: Sequence[str],
-            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.PlaceHolder':
+    def _draft_steps(self, 
+            step: 'sourdough.Plan',
+            steps: Sequence[str],
+            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Plan':
         """[summary]
 
         Returns:
             [type]: [description]
         """
-        new_tasks = []
-        for task in tasks:
+        new_steps = []
+        for step in steps:
             new_techniques = []
-            for technique in techniques[task]:
-                new_techniques.append(self._draft_task(
-                    task = task,
+            for technique in techniques[step]:
+                new_techniques.append(self._draft_step(
+                    step = step,
                     technique = technique,
-                    worker = worker.name))
-            new_tasks.append(new_techniques)
-        worker.contents.append(new_tasks)
-        return worker
+                    step = step.name))
+            new_steps.append(new_techniques)
+        step.contents.append(new_steps)
+        return step
             
-    def _draft_task(self,
-            task: str,
+    def _draft_step(self,
+            step: str,
             technique: str,
-            worker: str,
-            options: 'sourdough.Catalog') -> 'sourdough.Task':
+            step: str,
+            options: 'sourdough.Catalog') -> 'sourdough.Step':
         """[summary]
 
         Returns:
@@ -225,26 +225,26 @@ class Author(Stage):
             
         """
         try:
-            return worker.options[task](
-                name = task,
-                worker = worker,
-                technique = worker.options[technique])
+            return step.options[step](
+                name = step,
+                step = step,
+                technique = step.options[technique])
         except KeyError:
             try:
-                return sourdough.Task(
-                    name = task,
-                    worker = worker,
-                    technique = worker.options[technique])
+                return sourdough.Step(
+                    name = step,
+                    step = step,
+                    technique = step.options[technique])
             except KeyError:
                 try:
-                    return worker.options[task](
-                        name = task,
-                        worker = worker,
+                    return step.options[step](
+                        name = step,
+                        step = step,
                         technique = sourdough.Technique(name = technique))
                 except KeyError:
-                    return sourdough.Task(
-                        name = task,
-                        worker = worker,
+                    return sourdough.Step(
+                        name = step,
+                        step = step,
                         technique = sourdough.Technique(name = technique))
 
 
@@ -257,34 +257,34 @@ class Publisher(Stage):
     
     def add(self, 
             project: 'sourdough.Project', 
-            worker: str, 
-            tasks: Union[Sequence[str], str]) -> 'sourdough.Project':
-        """Adds 'tasks' to 'project' 'contents' with a 'worker' key.
+            step: str, 
+            steps: Union[Sequence[str], str]) -> 'sourdough.Project':
+        """Adds 'steps' to 'project' 'contents' with a 'step' key.
         
         Args:
-            project (sourdough.Project): project to which 'worker' and 'tasks'
+            project (sourdough.Project): project to which 'step' and 'steps'
                 should be added.
-            worker (str): key to use to store 'tasks':
-            tasks (Union[Sequence[str], str]): name(s) of task(s) to add to 
+            step (str): key to use to store 'steps':
+            steps (Union[Sequence[str], str]): name(s) of step(s) to add to 
                 'project'.
             
         Returns:
-            sourdough.Project: with 'tasks' added at 'worker'.
+            sourdough.Project: with 'steps' added at 'step'.
         
         """
-        project.contents[worker] = sourdough.tools.listify(tasks)
+        project.contents[step] = sourdough.tools.listify(steps)
         return project
  
-    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        worker = self._parameterize_tasks(worker = worker)
+        step = self._parameterize_steps(step = step)
         
-        return worker
+        return step
 
     """ Private Methods """
     
@@ -320,7 +320,7 @@ class Publisher(Stage):
 
         """
         return self.settings.get_parameters(
-            worker = technique.worker,
+            step = technique.step,
             technique = technique.name)
 
     def _get_selected(self,
@@ -428,16 +428,16 @@ class Reader(Stage):
     
     settings: 'sourdough.Settings'
     
-    def apply(self, worker: 'sourdough.PlaceHolder') -> 'sourdough.PlaceHolder':
+    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        worker = self._parameterize_tasks(worker = worker)
+        step = self._parameterize_steps(step = step)
         
-        return worker
+        return step
 
 
 # @dataclasses.dataclass
@@ -496,7 +496,7 @@ class Reader(Stage):
 
 #         """
 #         return self.settings.get_parameters(
-#             worker = technique.worker,
+#             step = technique.step,
 #             technique = technique.name)
 
 #     def _get_selected(self,
@@ -623,63 +623,63 @@ class Reader(Stage):
 #     """ Public Methods """
 
 #     def apply(self,
-#             outer_worker: sourdough.base.Plan,
+#             outer_step: sourdough.base.Plan,
 #             data: Union[sourdough.Dataset, sourdough.base.Plan]) -> sourdough.base.Plan:
-#         """Applies 'outer_worker' instance in 'project' to 'data' or other stored outer_worker.
+#         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.
 
 #         Args:
-#             outer_worker ('outer_worker'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_worker' attributes).
-#             data ([Union['Dataset', 'outer_worker']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_worker'
+#             outer_step ('outer_step'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_step' attributes).
+#             data ([Union['Dataset', 'outer_step']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_step'
 
 #         Returns:
-#             'outer_worker': with 'parameters' for each technique instance finalized
+#             'outer_step': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_worker, 'techniques'):
-#             outer_worker = self._finalize_techniques(manuscript = outer_worker, data = data)
+#         if hasattr(outer_step, 'techniques'):
+#             outer_step = self._finalize_techniques(manuscript = outer_step, data = data)
 #         else:
-#             outer_worker = self._finalize_inner_worker(outer_worker = outer_worker, data = data)
-#         return outer_worker
+#             outer_step = self._finalize_inner_step(outer_step = outer_step, data = data)
+#         return outer_step
 
 #     """ Private Methods """
 
-#     def _finalize_inner_worker(self, outer_worker: 'outer_worker', data: 'Dataset') -> 'outer_worker':
-#         """Finalizes 'inner_worker' instances in 'outer_worker'.
+#     def _finalize_inner_step(self, outer_step: 'outer_step', data: 'Dataset') -> 'outer_step':
+#         """Finalizes 'inner_step' instances in 'outer_step'.
 
 #         Args:
-#             outer_worker ('outer_worker'): instance containing 'inner_worker' with 'techniques' that
+#             outer_step ('outer_step'): instance containing 'inner_step' with 'techniques' that
 #                 have 'data_dependent' and/or 'conditional' 'parameters' to
 #                 add.
 #             data ('Dataset): instance with potential information to use to
-#                 finalize 'parameters' for 'outer_worker'.
+#                 finalize 'parameters' for 'outer_step'.
 
 #         Returns:
-#             'outer_worker': with any necessary modofications made.
+#             'outer_step': with any necessary modofications made.
 
 #         """
-#         new_inner_worker = [
-#             self._finalize_techniques(inner_worker = inner_worker, data = data)
-#             for inner_worker in outer_worker.inner_worker]
+#         new_inner_step = [
+#             self._finalize_techniques(inner_step = inner_step, data = data)
+#             for inner_step in outer_step.inner_step]
 
-#         outer_worker.inner_worker = new_inner_worker
-#         return outer_worker
+#         outer_step.inner_step = new_inner_step
+#         return outer_step
 
 #     def _finalize_techniques(self,
-#             manuscript: Union['outer_worker', 'inner_worker'],
-#             data: ['Dataset', 'outer_worker']) -> Union['outer_worker', 'inner_worker']:
+#             manuscript: Union['outer_step', 'inner_step'],
+#             data: ['Dataset', 'outer_step']) -> Union['outer_step', 'inner_step']:
 #         """Subclasses may provide their own methods to finalize 'techniques'.
 
 #         Args:
-#             manuscript (Union['outer_worker', 'inner_worker']): manuscript containing
+#             manuscript (Union['outer_step', 'inner_step']): manuscript containing
 #                 'techniques' to apply.
-#             data (['Dataset', 'outer_worker']): instance with information used to
+#             data (['Dataset', 'outer_step']): instance with information used to
 #                 finalize 'parameters' and/or 'algorithm'.
 
 #         Returns:
-#             Union['outer_worker', 'inner_worker']: with any necessary modofications made.
+#             Union['outer_step', 'inner_step']: with any necessary modofications made.
 
 #         """
 #         new_techniques = []
@@ -698,16 +698,16 @@ class Reader(Stage):
 #         return manuscript
 
 #     def _add_conditionals(self,
-#             manuscript: 'outer_worker',
+#             manuscript: 'outer_step',
 #             technique: technique,
-#             data: Union['Dataset', 'outer_worker']) -> technique:
+#             data: Union['Dataset', 'outer_step']) -> technique:
 #         """Adds any conditional parameters to a technique instance.
 
 #         Args:
-#             manuscript ('outer_worker'): outer_worker instance with algorithms to apply to 'data'.
+#             manuscript ('outer_step'): outer_step instance with algorithms to apply to 'data'.
 #             technique (technique): instance with parameters which can take
 #                 new conditional parameters.
-#             data (Union['Dataset', 'outer_worker']): a data source which might
+#             data (Union['Dataset', 'outer_step']): a data source which might
 #                 contain information for condtional parameters.
 
 #         Returns:
@@ -725,13 +725,13 @@ class Reader(Stage):
 
 #     def _add_data_dependent(self,
 #             technique: technique,
-#             data: Union['Dataset', 'outer_worker']) -> technique:
+#             data: Union['Dataset', 'outer_step']) -> technique:
 #         """Completes parameter dictionary by adding data dependent parameters.
 
 #         Args:
 #             technique (technique): instance with information about data
 #                 dependent parameters to add.
-#             data (Union['Dataset', 'outer_worker']): a data source which contains
+#             data (Union['Dataset', 'outer_step']): a data source which contains
 #                 'data_dependent' variables.
 
 #         Returns:
@@ -805,41 +805,41 @@ class Reader(Stage):
 
 #     """ Private Methods """
 
-#     def _apply_inner_worker(self,
-#             outer_worker: 'outer_worker',
-#             data: Union['Dataset', 'outer_worker']) -> 'outer_worker':
-#         """Applies 'inner_worker' in 'outer_worker' instance in 'project' to 'data'.
+#     def _apply_inner_step(self,
+#             outer_step: 'outer_step',
+#             data: Union['Dataset', 'outer_step']) -> 'outer_step':
+#         """Applies 'inner_step' in 'outer_step' instance in 'project' to 'data'.
 
 #         Args:
-#             outer_worker ('outer_worker'): instance with stored 'inner_worker' instances.
+#             outer_step ('outer_step'): instance with stored 'inner_step' instances.
 #             data ('Dataset'): primary instance used by 'project'.
 
 #         Returns:
-#             'outer_worker': with modifications made and/or 'data' incorporated.
+#             'outer_step': with modifications made and/or 'data' incorporated.
 
 #         """
-#         new_inner_worker = []
-#         for i, inner_worker in enumerate(outer_worker.inner_worker):
+#         new_inner_step = []
+#         for i, inner_step in enumerate(outer_step.inner_step):
 #             if self.verbose:
-#                 print('Applying', inner_worker.name, str(i + 1), 'to', data.name)
-#             new_inner_worker.append(self._apply_techniques(
-#                 manuscript = inner_worker,
+#                 print('Applying', inner_step.name, str(i + 1), 'to', data.name)
+#             new_inner_step.append(self._apply_techniques(
+#                 manuscript = inner_step,
 #                 data = data))
-#         outer_worker.inner_worker = new_inner_worker
-#         return outer_worker
+#         outer_step.inner_step = new_inner_step
+#         return outer_step
 
 #     def _apply_techniques(self,
-#             manuscript: Union['outer_worker', 'inner_worker'],
-#             data: Union['Dataset', 'outer_worker']) -> Union['outer_worker', 'inner_worker']:
+#             manuscript: Union['outer_step', 'inner_step'],
+#             data: Union['Dataset', 'outer_step']) -> Union['outer_step', 'inner_step']:
 #         """Applies 'techniques' in 'manuscript' to 'data'.
 
 #         Args:
-#             manuscript (Union['outer_worker', 'inner_worker']): instance with stored
+#             manuscript (Union['outer_step', 'inner_step']): instance with stored
 #                 'techniques'.
 #             data ('Dataset'): primary instance used by 'manuscript'.
 
 #         Returns:
-#             Union['outer_worker', 'inner_worker']: with modifications made and/or 'data'
+#             Union['outer_step', 'inner_step']: with modifications made and/or 'data'
 #                 incorporated.
 
 #         """
@@ -849,30 +849,30 @@ class Reader(Stage):
 #             if isinstance(data, Dataset):
 #                 data = technique.apply(data = data)
 #             else:
-#                 for inner_worker in data.inner_worker:
-#                     manuscript.inner_worker.append(technique.apply(data = inner_worker))
+#                 for inner_step in data.inner_step:
+#                     manuscript.inner_step.append(technique.apply(data = inner_step))
 #         if isinstance(data, Dataset):
 #             setattr(manuscript, 'data', data)
 #         return manuscript
 
 #     """ Core sourdough Methods """
 
-#     def apply(self, outer_worker: 'outer_worker', data: Union['Dataset', 'outer_worker']) -> 'outer_worker':
-#         """Applies 'outer_worker' instance in 'project' to 'data' or other stored outer_worker.
+#     def apply(self, outer_step: 'outer_step', data: Union['Dataset', 'outer_step']) -> 'outer_step':
+#         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.
 
 #         Args:
-#             outer_worker ('outer_worker'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_worker' attributes).
-#             data ([Union['Dataset', 'outer_worker']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_worker'
+#             outer_step ('outer_step'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_step' attributes).
+#             data ([Union['Dataset', 'outer_step']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_step'
 
 #         Returns:
-#             'outer_worker': with 'parameters' for each technique instance finalized
+#             'outer_step': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_worker, 'techniques'):
-#             outer_worker = self._apply_techniques(manuscript = outer_worker, data = data)
+#         if hasattr(outer_step, 'techniques'):
+#             outer_step = self._apply_techniques(manuscript = outer_step, data = data)
 #         else:
-#             outer_worker = self._apply_inner_worker(outer_worker = outer_worker, data = data)
-#         return outer_worker
+#             outer_step = self._apply_inner_step(outer_step = outer_step, data = data)
+#         return outer_step

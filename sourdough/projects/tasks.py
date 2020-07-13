@@ -1,131 +1,182 @@
 """
-.. module:: iterables
-:synopsis: sourdough sequences and mixins
-:author: Corey Rayburn Yung
+.. module: project
+:synopsis: sourdough Project and related classes
+:publisher: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
 """
 
 import abc
-import collections.abc
 import dataclasses
-import importlib
+import copy
 import inspect
 import itertools
 import more_itertools
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
-import warnings
 
 import sourdough
 
 
 @dataclasses.dataclass
-class OptionsMixin(abc.ABC):
-    """Mixin which stores classes or instances in 'options'.
-
+class Task(sourdough.Component, abc.ABC):
+    """Base class for applying stored methods to passed data.
+    
+    Task subclass instances are often arranged in an ordered sequence such as a
+    Progression instance. All Task subclasses must have 'apply' methods for 
+    handling data. 
+    
     Args:
-        options (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
-            
-    Mixin Namespaces: 'options', 'create'
-
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+    
     """
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        always_return_list = True)
+    name: str = None
     
-    """ Public Methods """
-       
-    def add(self, 
-            component: Union[
-                'sourdough.Component',
-                Sequence['sourdough.Component'],
-                str, 
-                Sequence[str]]) -> None:
-        """Adds 'component' to 'contents'.
-        
-        Args:
-            components (Union[sourdough.Component, Sequence[
-                sourdough.Component]]): Component(s) to add to 'contents'.
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: object = None, **kwargs) -> None:
+        """Subclasses must provide their own methods."""
+        pass
 
-        Raises:
-            TypeError: if instances in 'components' are neither str type nor 
-                have a 'name' attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            super().add(component = component)
-        elif isinstance(component, str):
-            super().add(component = self.options[component])
-        elif isinstance(component, Sequence):
-            for c in component:
-                self.add(component = c)
-        else:
-            raise TypeError(
-                'component must be a Component, str, or list of str')
-        return self  
-        
-    def create(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'options'.
 
-        Args:
-            option (str): name matching a key in 'options' for which the value
-                is sought.
-
-        Raises:
-            TypeError: if 'option' is neither a str nor Sequence type.
-            
-        Returns:
-            Any: instance of a stored class with kwargs passed as arguments.
-            
-        """
-        if isinstance(key, str):
-            try:
-                return self.options[key](**kwargs)
-            except TypeError:
-                return self.options[key]
-        elif isinstance(key, Sequence):
-            instances = []
-            for k in key:
-                try:
-                    instance = self.options[key](**kwargs)
-                except TypeError:
-                    instance = self.options[key]
-                instances.append(instance)
-            return instances
-        else:
-            raise TypeError('option must be a str or list type')
-        
-        
 @dataclasses.dataclass
-class Progression(sourdough.Component, collections.abc.MutableSequence):
-    """Base class for sourdough sequenced iterables.
-    
-    A Progression differs from a python list in 6 significant ways:
-        1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Component.
-        2) It includes an 'add' method which allows different datatypes to
-            be passed and added to the 'contents' of a Progression instance.
-        3) It only stores items that have a 'name' attribute or are str type.
-        4) It includes a 'subsetify' method which will return a Progression or
-            Progression subclass instance with only the items with 'name'
-            attributes matching items in the 'subset' argument.
-        5) Progression has an interface of both a dict and a list, but stores a 
-            list. Progression does this by taking advantage of the 'name' 
-            attribute in Component instances (although any instance with a 
-            'name' attribute is compatiable with a Progression). A 'name' acts 
-            as a key to create the facade of a dictionary with the items in the 
-            stored list serving as values. This allows for duplicate keys for 
-            storing class instances, easier iteration, and returning multiple 
-            matching items. This design comes at the expense of lookup speed. As 
-            a result, Progression should only be used if a high volumne of 
-            access calls is not anticipated. Ordinarily, the loss of lookup 
-            speed should have negligible effect on overall performance. 
-        6) Iterating Plan iterates all contained iterables by using the
-            'more_itertools.collapse' method. This orders all stored iterables 
-            in a depth-first manner.      
+class Technique(Task):
+    """Base class for creating or modifying data objects.
 
     Args:
-        contents (Sequence[sourdough.Component]]): stored iterable of 
+        algorithm (object): core object used by the 'apply' method. Defaults to 
+            None.
+        parameters (Mapping[str, Any]]): parameters to be attached to
+            'algorithm' when the 'apply' method is called. Defaults to an empty
+            dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+            
+    """
+    algorithm: object = None
+    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    
+    """ Required Subclass Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> object:
+        """Subclasses must provide their own methods."""
+        raise NotImplementedError(
+            'Technique subclasses must include apply methods')
+    
+    """ Dunder Methods """
+
+    def __repr__(self) -> str:
+        """Returns string representation of a class instance."""
+        return self.__str__()
+
+    def __str__(self) -> str:
+        """Returns string representation of a class instance."""
+        return (
+            f'sourdough {self.__class__.__name__} {self.name}\n'
+            f'step: {self.step.name}\n'
+            f'algorithm: {str(self.algorithm)}\n'
+            f'parameters: {str(self.parameters)}\n')
+        
+            
+@dataclasses.dataclass
+class Step(Task):
+    """Base class for wrapping a Technique.
+
+    A Step is a basic wrapper for a Technique that adds a 'name' for the
+    'plan' that a stored technique instance is associated with. Subclasses of
+    Step can store additional methods and attributes to apply to all possible
+    technique instances that could be used. This is often useful when creating
+    'comparative' Plan instances which test a variety of strategies with
+    similar or identical parameters and/or methods.
+
+    A Plan instance will try to return attributes from 'technique' if the
+    attribute is not found in the Plan instance. 
+
+    Args:
+        plan (str): the name of the plan in a Plan instance that 
+            the algorithm is being performed. This attribute is generally 
+            optional but can be useful for tracking and/or displaying the status 
+            of iteration. It is automatically created when using a chained or 
+            comparative Plan. Defaults to None.
+        technique (technique): technique object for this plan in a sourdough
+            sequence. Defaults to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+            
+    """
+    plan: str = dataclasses.field(default_factory = lambda: '')
+    technique: Union[Technique, str] = None
+    name: str = None
+
+    """ Dunder Methods """
+
+    def __getattr__(self, attribute: str) -> Any:
+        """Looks for 'attribute' in 'technique'.
+
+        Args:
+            attribute (str): name of attribute to return.
+
+        Returns:
+            Any: matching attribute.
+
+        Raises:
+            AttributeError: if 'attribute' is not found in 'technique'.
+
+        """
+        try:
+            return getattr(self.technique, attribute)
+        except AttributeError:
+            raise AttributeError(
+                f'{attribute} neither found in {self.name} nor \
+                    {self.technique}')
+
+    def __repr__(self) -> str:
+        """Returns string representation of a class instance."""
+        return self.__str__()
+
+    def __str__(self) -> str:
+        """Returns string representation of a class instance."""
+        return (
+            f'sourdough {self.__class__.__name__} {self.name}\n'
+            f'plan: {self.plan.name}\n'
+            f'technique: {str(self.technique)}\n')
+
+
+@dataclasses.dataclass
+class Plan(sourdough.OptionsMixin, sourdough.Progression):
+    """Base class for iterables storing Task instances.
+
+    Args:
+        contents (Sequence[Task]]): stored iterable of 
             actions to apply in order. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -135,262 +186,200 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Component is called, 'name' is set based upon
-            the '_get_name' method in Component. If that method is not 
+            the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-
+        options (ClassVar['sourdough.Catalog']): a sourdough dictionary of 
+            available Task instances available to use.
+        design (str): the name of the structural design that should
+            be used to create objects in an instance. This should correspond
+            to a key in a Manager instance's 'designs' class attribute. 
+            Defaults to 'chained'.
+            
     """
-    contents: Sequence['sourdough.Component'] = dataclasses.field(
-        default_factory = list)
+    contents: Union[
+        Sequence['Task'], 
+        str] = dataclasses.field(default_factory = list)
     name: str = None
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        always_return_list = True)
+    design: str = dataclasses.field(default_factory = lambda: 'chained')
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        super().__post_init__()
+        # Converts str in 'contents' to objects.
+        self.contents = self._validate_contents(contents = self.contents)
 
     """ Public Methods """
-       
-    def add(self, 
-            component: Union[
-                'sourdough.Component',
-                Mapping[str, 'sourdough.Component'], 
-                Sequence['sourdough.Component']]) -> None:
-        """Appends 'component' to 'contents'.
-        
-        Args:
-            component (Union[sourdough.Component, Mapping[str, 
-                sourdough.Component], Sequence[sourdough.Component]]): Component 
-                instance(s) to add to 'contents'.
-
-        """
-        if hasattr(component, 'name'):
-            self.append(component = component)
-        else:
-            self.update(components = component)
-        return self    
-
-    def append(self, component: 'sourdough.Component') -> None:
-        """Appends 'component' to 'contents'.
-        
-        Args:
-            component (sourdough.Component): Component instance to add to 
-                'contents'.
-
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            self.contents.append(component)
-        else:
-            raise TypeError('component must have a name attribute')
-        return self    
-   
-    def extend(self, component: 'sourdough.Component') -> None:
-        """Extends 'component' to 'contents'.
-        
-        Args:
-            component (sourdough.Component): Component instance to add to 
-                'contents'.
-
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            self.contents.extend(component)
-        else:
-            raise TypeError('component must have a name attribute')
-        return self   
     
-    def insert(self, index: int, component: 'sourdough.Component') -> None:
-        """Inserts 'component' at 'index' in 'contents'.
+    def apply(self, data: object = None) -> object:
+        """Applies stored Task instances to 'data'.
 
         Args:
-            index (int): index to insert 'component' at.
-            component (sourdough.Component): object to be inserted.
+            data (object): an object to be modified and/or analyzed by stored 
+                Task instances. Defaults to None.
 
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
+        Returns:
+            object: data, possibly with modifications made by Operataor 
+                instances.
+            If data is not passed, no object is returned.
             
         """
-        if hasattr(component, 'name'):
-            self.contents.insert[index] = component
+        if data is None:
+            for operator in self.__iter__():
+                operator.apply()
+            return self
         else:
-            raise TypeError('component must have a name attribute')
-        return self
- 
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Plan':
-        """Returns a subset of 'contents'.
+            for operator in self.__iter__():
+                data = operator.apply(data = data)
+            return data
+             
+    """ Properties """
+    
+    @property
+    def overview(self) -> 'Overview':
+        """Returns a string snapshot of a Plan subclass instance.
+        
+        Returns:
+            Overview: configured according to the '_get_overview' method.
+        
+        """
+        return self._get_overview() 
 
-        Args:
-            subset (Union[str, Sequence[str]]): key(s) to get Component 
-                instances with matching 'name' attributes from 'contents'.
+    @property    
+    def plans(self) -> Sequence['Plan']:
+        """
+        """
+        return [isinstance(i, Plan) for i in self._get_flattened()]
+ 
+    @property
+    def steps(self) -> Sequence['Step']:
+        """[summary]
 
         Returns:
-            Plan: with only items with 'name' attributes in 'subset'.
-
+            [type]: [description]
         """
-        subset = sourdough.tools.listify(subset)
-        return self.__class__(
-            name = self.name,
-            contents = [c for c in self.contents if c.name in subset])    
-     
-    def update(self, 
-            components: Union[
-                Mapping[str, 'sourdough.Component'], 
-                Sequence['sourdough.Component']]) -> None:
-        """Mimics the dict 'update' method by appending 'contents'.
-        
-        Args:
-            components (Union[Mapping[str, sourdough.Component], Sequence[
-                sourdough.Component]]): Component instances to add to 
-                'contents'. If a Mapping is passed, the keys are ignored and
-                the values are added to 'contents'. To mimic 'update', the
-                passed 'components' are added to 'contents' by the 'extend'
-                method.
- 
-        Raises:
-            TypeError: if any of 'components' do not have a name attribute or
-                if 'components is not a dict.               
-        
-        """
-        if isinstance(components, Mapping):
-            for key, value in components.items():
-                if hasattr(value, 'name'):
-                    self.append(component = value)
-                else:
-                    new_component = value
-                    new_component.name = key
-                    self.extend(component = new_component)
-        elif all(hasattr(c, 'name') for c in components):
-            for component in components:
-                self.append(component = component)
-        else:
-            raise TypeError(
-                'components must be a dict or all have a name attribute')
-        return self
-          
-    """ Dunder Methods """
-
-    def __getitem__(self, key: Union[str, int]) -> 'sourdough.Component':
-        """Returns value(s) for 'key' in 'contents'.
-        
-        If 'key' is a str type, this method looks for a matching 'name'
-        attribute in the stored instances.
-        
-        If 'key' is an int type, this method returns the stored component at the
-        corresponding index.
-        
-        If only one match is found, a single Component instance is returned. If
-        more are found, a Progression or Progression subclass with the matching
-        'name' attributes is returned.
-
-        Args:
-            key (Union[str, int]): name or index to search for in 'contents'.
+        return [isinstance(i, Step) for i in self._get_flattened()]
+    
+    @property    
+    def techniques(self) -> Sequence['Technique']:
+        """[summary]
 
         Returns:
-            sourdough.Component: value(s) stored in 'contents' that correspond 
-                to 'key'. If there is more than one match, the return is a
-                Progression or Progression subclass with that matching stored
-                components.
-
+            [type]: [description]
         """
-        if isinstance(key, int):
-            return self.contents[key]
-        else:
-            matches = [c for c in self.contents if c.name == key]
-            if len(matches) == 1:
-                return matches[0]
+        return [isinstance(i, Technique) for i in self._get_flattened()]
+    
+    """ Private Methods """
+    
+    def _validate_contents(self, 
+            contents: Union[Sequence['Task'], str] ) -> Sequence[
+                'Task']:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        new_contents = []
+        for step in contents:
+            if isinstance(step, str):
+                try:
+                    new_contents.append[self.options[step]]
+                except KeyError:
+                    new_contents.append[step]
             else:
-                return self.__class__(name = self.name, contents = matches)
-
-    def __setitem__(self, 
-            key: Union[str, int], 
-            value: 'sourdough.Component') -> None:
-        """Sets 'key' in 'contents' to 'value'.
-
-        Args:
-            key (Union[str, int]): if key is a string, it is ignored (since the
-                'name' attribute of the value will be acting as the key). In
-                such a case, the 'value' is added to the end of 'contents'. If
-                key is an int, 'value' is assigned at the that index number in
-                'contents'.
-            value (Any): value to be paired with 'key' in 'contents'.
-
-        """
-        if isinstance(key, int):
-            self.contents[key] = value
-        else:
-            self.contents.add(value)
-        return self
-
-    def __delitem__(self, key: Union[str, int]) -> None:
-        """Deletes item matching 'key' in 'contents'.
-
-        If 'key' is a str type, this method looks for a matching 'name'
-        attribute in the stored instances and deletes all such items. If 'key'
-        is an int type, only the item at that index is deleted.
-
-        Args:
-            key (Union[str, int]): name or index in 'contents' to delete.
-
-        """
-        if isinstance(key, int):
-            del self.contents[key]
-        else:
-            self.contents = [c for c in self.contents if c.name != key]
-        return self
-
-    def __iter__(self) -> Iterable:
-        """Returns collapsed iterable of 'contents'.
-     
-        Returns:
-            Iterable: using the itertools method which automatically iterates
-                all stored iterables within 'contents'.Any
-               
-        """
-        return iter(more_itertools.collapse(self.contents))
-
-    def __len__(self) -> int:
-        """Returns length of collapsed 'contents'.
-
-        Returns:
-            int: length of collapsed 'contents'.
-
-        """
-        return len(more_itertools.collapse(self.contents))
+                new_contents.append[step]
+        return new_contents
     
-    def __add__(self, other: 'Progression') -> None:
-        """Adds 'other' to 'contents' with 'add' method.
-
-        Args:
-            other (Progression): another Progression instance.
-
-        """
-        self.add(component = other)
-        return self
-    
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'name: {self.name}\n'
-            f'contents: {self.contents.__str__()}') 
-
-
-
+    def _get_flattened(self) -> Sequence[Union[
+            'sourdough.Plan', 
+            'sourdough.Step', 
+            'sourdough.Technique']]:
+        return more_itertools.collapse(self.contents)
         
+    def _get_overview(self) -> Mapping[str, Sequence[str]]:
+        """
+        """
+        overview = {}
+        overview['plans'] = [p.name for p in self.plans]
+        overivew['steps'] = [t.name for t in self.steps]
+        overview['techniques'] = [t.name for t in self.techniques]
+        return overview
+
+    
+@dataclasses.dataclass
+class Project(Plan):
+    """Basic sourdough project container.
+    
+    Subclasses can easily expand upon the basic design and functionality of this
+    class. Or, if the underlying structure is acceptable, you can simply add to
+    the 'options' class attribute. This can be done manually or with the 
+    'add_option' method inherited from Plan.
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        contents (Sequence[Union[sourdough.Plan, sourdough.Step, str]]]): 
+            stored Plan or Step instances or strings corresponding to keys in
+            'options'. Defaults to an empty list.  
+        design (str): the name of the structural design that should
+            be used to create objects in an instance. This should correspond
+            to a key in a Manager instance's 'designs' class attribute. 
+            Defaults to 'chained'.
+        identification (str): a unique identification name for a 
+            Project instance. The name is used for creating file folders
+            related to the 'Project'. If not provided, a string is created from
+            'name' and the date and time. This is a notable difference
+            between an ordinary Plan instancce and a Project instance. Other
+            Plans are not given unique identification. Defaults to None.    
+        data (Any]): a data object to apply any constructed objects to.
+            This need only be provided when the class is instanced for
+            automatic execution. Defaults to None. If you are working on a data-
+            focused Project, consider using siMpLify instead 
+            (https://github.com/WithPrecedent/simplify). It applies sourdough
+            in the data science context. sourdough itself treats 'data' as an
+            unknown object of any type which offers more flexibility of design.
+        options (ClassVar['sourdough.Catalog']): an instance to store possible
+            Plan and Step classes for use in the Project. Defaults to an
+            empty Catalog instance.
+                             
+    """  
+    name: str = None
+    contents: Sequence[Union[
+        'sourdough.Plan', 
+        'sourdough.Step', 
+        str]] = dataclasses.field(default_factory = list) 
+    design: str = dataclasses.field(default_factory = lambda: 'chained')
+    data: Any = None
+    identification: str = None
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls inherited initialization method.
+        super().__post_init__()
+        # Creates unique 'identification' based upon date and time if none 
+        # exists.
+        self.identification = (
+            self.identification or sourdough.tools.datetime_string(
+                prefix = self.name))
+
+  
 # @dataclasses.dataclass
 # class Director(Progression):
 #     """Base class for iterables storing Stage instances.
@@ -487,7 +476,7 @@ class Progression(sourdough.Component, collections.abc.MutableSequence):
 #         # this instance.
 #         self.settings.inject(instance = self)
 #         self.settings.inject(instance = self.project)
-#         # Creates a dictionary of available designs for PlaceHolder instances.
+#         # Creates a dictionary of available designs for Plan instances.
 #         self.designs = self._initialize_designs(settings = self.settings)
 #         # Initializes 'contents' to regulate an instance's workflow.
 #         self.contents = self._initialize_stages(

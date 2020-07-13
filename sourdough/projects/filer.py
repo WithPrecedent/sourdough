@@ -1,6 +1,6 @@
 """
 .. module:: filer
-:synopsis: file management made simple
+:synopsis: sourdough file management
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -17,21 +17,14 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Filer(sourdough.Component):
-    """Manages files and folders for sourdough projects.
+class Filer(object):
+    """File and folder manager for sourdough.
 
     Creates and stores dynamic and static file paths, properly formats files
     for import and export, and provides methods for loading and saving
     sourdough, pandas, and numpy objects.
 
     Args:
-        name (str): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between sourdough
-            classes. Defaults to None or __class__.__name__.lower().
         settings (Settings): a Settings instance with a section named 'filer'
             with file-management related settings.
         root_folder (Union[str, Path, Sequence[str], Sequence[Path]]]): the
@@ -43,11 +36,10 @@ class Filer(sourdough.Component):
             name or a complete path if the 'input_folder' is not off of
             'root_folder'. Defaults to 'data'.
         output_folder (Union[str, Path]]): the output_folder subfolder
-            name or a complete path if the 'output_folder' is not off of
+            name or a complete path if-*+ the 'output_folder' is not off of
             'root_folder'. Defaults to 'output_folder'.
 
     """
-    name: str = None
     settings: sourdough.Settings = None
     root_folder: Union[
         str,
@@ -59,18 +51,25 @@ class Filer(sourdough.Component):
         default_factory = lambda: 'data')
     output_folder: Union[str, pathlib.Path] = dataclasses.field(
         default_factory = lambda: 'results')
+    
+    """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Injects attributes from 'settings'.
-        self = self.settings.inject(instance = self, other_sections = 'files')
+        try:
+            self.settings.inject(
+                instance = self, 
+                other_sections = ['files', 'filer'])
+        except AttributeError:
+            pass
         # Validates core folder paths and writes them to disk.
-        self.root_folder = self._validate_path(path = self.root_folder)
+        self.root_folder = self.validate(path = self.root_folder)
         self._write_folder(folder = self.root_folder)
-        self.input_folder = self._validate_path(
+        self.input_folder = self.validate(
             path = [self.root_folder, self.input_folder])
         self._write_folder(folder = self.input_folder)
-        self.output_folder = self._validate_path(
+        self.output_folder = self.validate(
             path = [self.root_folder, self.output_folder])
         self._write_folder(folder = self.output_folder)
         # Sets default file formats in a dictionary of FileFormat instances.
@@ -85,7 +84,39 @@ class Filer(sourdough.Component):
         return self
 
     """ Public Methods """
+    
+    def validate(self,
+            path: Union[str, Sequence[str], pathlib.Path]) -> pathlib.Path:
+        """Turns 'file_path' into a pathlib.Path object.
 
+        Args:
+            path (Union[str, Sequence[str], pathlib.Path]): string, Path, or list
+                used to create final Path object.
+
+        Raises:
+            TypeError: if 'path' is neither a list, string, nor Path.
+
+        Returns:
+            Path: of 'path'.
+
+        """
+        if path is None:
+            path = ['..', '..']
+        if isinstance(path, list):
+            new_path = pathlib.Path()
+            for item in path:
+                new_path = new_path.joinpath(item)
+            return new_path
+        elif isinstance(path, str):
+            try:
+                return getattr(self, path)
+            except AttributeError:
+                return pathlib.Path(path)
+        elif isinstance(path, pathlib.Path):
+            return path
+        else:
+            raise TypeError('path must be a str, list, or Path type')
+        
     def load(self,
             file_path: Union[str, pathlib.Path] = None,
             folder: Union[str, pathlib.Path] = None,
@@ -116,11 +147,11 @@ class Filer(sourdough.Component):
 
         """
         return loader.transfer(
-                file_path = file_path,
-                folder = folder,
-                file_name = file_name,
-                file_format = file_format,
-                **kwargs)
+            file_path = file_path,
+            folder = folder,
+            file_name = file_name,
+            file_format = file_format,
+            **kwargs)
 
     def save(self,
             variable: Any,
@@ -189,38 +220,6 @@ class Filer(sourdough.Component):
             return pathlib.Path(folder)
 
     """ Private Methods """
-
-    def _validate_path(self,
-            path: Union[str, Sequence[str], pathlib.Path]) -> pathlib.Path:
-        """Turns 'file_path' into a pathlib.Path object.
-
-        Args:
-            path (Union[str, Sequence[str], pathlib.Path]): string, Path, or list
-                used to create final Path object.
-
-        Raises:
-            TypeError: if 'path' is neither a list, string, nor Path.
-
-        Returns:
-            Path: of 'path'.
-
-        """
-        if path is None:
-            path = ['..', '..']
-        if isinstance(path, list):
-            new_path = pathlib.Path()
-            for item in path:
-                new_path = new_path.joinpath(item)
-            return new_path
-        elif isinstance(path, str):
-            try:
-                return getattr(self, path)
-            except AttributeError:
-                return pathlib.Path(path)
-        elif isinstance(path, pathlib.Path):
-            return path
-        else:
-            raise TypeError('path must be a str, list, or Path type')
 
     def _get_default_file_formats(self) -> Mapping[str, 'FileFormat']:
         """Returns supported file formats.
@@ -659,3 +658,4 @@ class FileFormat(sourdough.base.LazyLoader):
     save_method: str = None
     shared_parameters: Sequence[str] = None
     required_parameters: Mapping[str, Any] = None
+    

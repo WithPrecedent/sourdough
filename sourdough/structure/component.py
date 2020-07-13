@@ -1,6 +1,6 @@
 """
-.. module:: components
-:synopsis: sourdough core objects and mixins
+.. module:: component
+:synopsis: sourdough Component and mixins
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -19,11 +19,12 @@ import sourdough
 
 @dataclasses.dataclass
 class Component(abc.ABC):
-    """Base class for components in sourdough.
+    """Base class for core sourdough objects.
 
     A Component maintains a 'name' attribute for internal referencing and to
-    allow the classes in 'iterables' to function. It can be used to create
-    a variety of composite data structures such as trees and graphs. 
+    allow the classes in 'iterables' to function propertly. Component instances 
+    can be used to create a variety of composite data structures such as trees 
+    and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
     collectively, with Component.
@@ -57,49 +58,26 @@ class Component(abc.ABC):
     def get_name(cls) -> str:
         """Returns 'name' of class for use throughout sourdough.
         
+        The method is a classmethod so that a 'name' can properly derived even
+        before a class is instanced. It can also be called after a subclass is
+        instanced (as is the case in '__post_init__').
+        
         This method converts the class name from CapitalCase to snake_case.
         
         If a user wishes to use an alternate naming system, a subclass should
         simply override this method. 
         
         Returns:
-            str: name of class for internal referencing.
+            str: name of class for internal referencing and some access methods.
         
         """
-        if inspect.isclass(cls):
-            return sourdough.tools.snakify(cls.__name__)
-        else:
-            return sourdough.tools.snakify(cls.__class__.__name__)
-
-
-@dataclasses.dataclass
-class Worker(Component, abc.ABC):
-    """Base class for classes which apply methods to objects.
-    
-    All subclasses must have 'apply' methods. 
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-    
-    """
-    name: str = None
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, *args, **kwargs) -> None:
-        """Subclasses must provide their own methods."""
-        pass
+        try:
+            return cls.name
+        except AttributeError:
+            if inspect.isclass(cls):
+                return sourdough.tools.snakify(cls.__name__)
+            else:
+                return sourdough.tools.snakify(cls.__class__.__name__)
 
 
 @dataclasses.dataclass
@@ -384,3 +362,81 @@ class ProxyMixin(abc.ABC):
                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
                     getattr(self, item))
         return self
+
+
+@dataclasses.dataclass
+class OptionsMixin(abc.ABC):
+    """Mixin which stores classes or instances in 'options'.
+
+    Args:
+        options (ClassVar[sourdough.Catalog]): the instance which stores 
+            subclass in a Catalog instance.
+            
+    Mixin Namespaces: 'options', 'create'
+
+    """
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        always_return_list = True)
+    
+    """ Public Methods """
+       
+    def add(self, 
+            component: Union[
+                'sourdough.Component',
+                Sequence['sourdough.Component'],
+                str, 
+                Sequence[str]]) -> None:
+        """Adds 'component' to 'contents'.
+        
+        Args:
+            components (Union[sourdough.Component, Sequence[
+                sourdough.Component]]): Component(s) to add to 'contents'.
+
+        Raises:
+            TypeError: if instances in 'components' are neither str type nor 
+                have a 'name' attribute.
+            
+        """
+        if hasattr(component, 'name'):
+            super().add(component = component)
+        elif isinstance(component, str):
+            super().add(component = self.options[component])
+        elif isinstance(component, Sequence):
+            for c in component:
+                self.add(component = c)
+        else:
+            raise TypeError(
+                'component must be a Component, str, or list of str')
+        return self  
+        
+    def create(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Creates instance(s) of a class(es) stored in 'options'.
+
+        Args:
+            option (str): name matching a key in 'options' for which the value
+                is sought.
+
+        Raises:
+            TypeError: if 'option' is neither a str nor Sequence type.
+            
+        Returns:
+            Any: instance of a stored class with kwargs passed as arguments.
+            
+        """
+        if isinstance(key, str):
+            try:
+                return self.options[key](**kwargs)
+            except TypeError:
+                return self.options[key]
+        elif isinstance(key, Sequence):
+            instances = []
+            for k in key:
+                try:
+                    instance = self.options[key](**kwargs)
+                except TypeError:
+                    instance = self.options[key]
+                instances.append(instance)
+            return instances
+        else:
+            raise TypeError('option must be a str or list type')
+        
