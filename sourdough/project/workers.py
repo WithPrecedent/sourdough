@@ -50,7 +50,7 @@ class Manager(sourdough.Progression, sourdough.ProxyMixin):
         automatic (bool]): whether to automatically advance 'contents'
             (True) or whether the stages must be changed manually by using the 
             'advance' or '__iter__' methods (False). Defaults to True.
-        project_options (ClassVar['sourdough.Catalog']): stores options for
+        project_options (ClassVar['sourdough.Corpus']): stores options for
             the 'project' attribute.
         stage_options (ClassVar['sourdough.Stages']): stores options for the 
             'contents' attribute.
@@ -68,17 +68,17 @@ class Manager(sourdough.Progression, sourdough.ProxyMixin):
     filer: Union['sourdough.Filer', str] = None
     automatic: bool = True
     
-    project_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    project_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         contents = {
             'generic': sourdough.Project},
         defaults = 'generic')
-    stage_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    stage_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         contents = {
             'draft': sourdough.Author,
             'publish': sourdough.Publisher,
             'apply': sourdough.Reader},
         defaults = ['draft', 'edit', 'publish', 'apply'])
-    design_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    design_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         contents = {
             'chained': sourdough.structure.designs.ChainedDesign,
             'comparative': sourdough.structure.designs.ComparativeDesign},

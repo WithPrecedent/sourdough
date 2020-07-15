@@ -31,7 +31,7 @@ class OtherComponent(AComponent):
 @dataclasses.dataclass
 class AnotherComponent(sourdough.OptionsMixin, sourdough.Component):
     
-    options = sourdough.Catalog(contents = {
+    options = sourdough.Corpus(contents = {
         'base': AComponent(),
         'other': OtherComponent})
  

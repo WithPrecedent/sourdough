@@ -18,39 +18,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Task(sourdough.Component, abc.ABC):
-    """Base class for applying stored methods to passed data.
-    
-    Task subclass instances are often arranged in an ordered sequence such as a
-    Progression instance. All Task subclasses must have 'apply' methods for 
-    handling data. 
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-    
-    """
-    name: str = None
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, data: object = None, **kwargs) -> None:
-        """Subclasses must provide their own methods."""
-        pass
-
-
-@dataclasses.dataclass
-class Technique(Task):
+class Technique(sourdough.Task):
     """Base class for creating or modifying data objects.
 
     Args:
@@ -99,7 +67,7 @@ class Technique(Task):
         
             
 @dataclasses.dataclass
-class Step(Task):
+class Step(sourdough.Task):
     """Base class for wrapping a Technique.
 
     A Step is a basic wrapper for a Technique that adds a 'name' for the
@@ -176,7 +144,7 @@ class Plan(sourdough.OptionsMixin, sourdough.Progression):
     """Base class for iterables storing Task instances.
 
     Args:
-        contents (Sequence[Task]]): stored iterable of 
+        contents (Sequence[sourdough.Task]]): stored iterable of 
             actions to apply in order. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -189,7 +157,7 @@ class Plan(sourdough.OptionsMixin, sourdough.Progression):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        options (ClassVar['sourdough.Catalog']): a sourdough dictionary of 
+        options (ClassVar['sourdough.Corpus']): a sourdough dictionary of 
             available Task instances available to use.
         design (str): the name of the structural design that should
             be used to create objects in an instance. This should correspond
@@ -198,10 +166,10 @@ class Plan(sourdough.OptionsMixin, sourdough.Progression):
             
     """
     contents: Union[
-        Sequence['Task'], 
+        Sequence['sourdough.Task'], 
         str] = dataclasses.field(default_factory = list)
     name: str = None
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         always_return_list = True)
     design: str = dataclasses.field(default_factory = lambda: 'chained')
 
@@ -276,8 +244,8 @@ class Plan(sourdough.OptionsMixin, sourdough.Progression):
     """ Private Methods """
     
     def _validate_contents(self, 
-            contents: Union[Sequence['Task'], str] ) -> Sequence[
-                'Task']:
+            contents: Union[Sequence['sourdough.Task'], str] ) -> Sequence[
+                'sourdough.Task']:
         """[summary]
 
         Returns:
@@ -352,9 +320,9 @@ class Project(Plan):
             (https://github.com/WithPrecedent/simplify). It applies sourdough
             in the data science context. sourdough itself treats 'data' as an
             unknown object of any type which offers more flexibility of design.
-        options (ClassVar['sourdough.Catalog']): an instance to store possible
+        options (ClassVar['sourdough.Corpus']): an instance to store possible
             Plan and Step classes for use in the Project. Defaults to an
-            empty Catalog instance.
+            empty Corpus instance.
                              
     """  
     name: str = None
@@ -365,7 +333,7 @@ class Project(Plan):
     design: str = dataclasses.field(default_factory = lambda: 'chained')
     data: Any = None
     identification: str = None
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus()
 
     """ Initialization Methods """
 
@@ -418,7 +386,7 @@ class Project(Plan):
 #         automatic (bool]): whether to automatically advance 'contents'
 #             (True) or whether the stages must be changed manually by using the 
 #             'advance' or '__iter__' methods (False). Defaults to True.
-#         project_options (ClassVar['sourdough.Catalog']): stores options for
+#         project_options (ClassVar['sourdough.Corpus']): stores options for
 #             the 'project' attribute.
 #         stage_options (ClassVar['sourdough.Stages']): stores options for the 
 #             'contents' attribute.
@@ -437,17 +405,17 @@ class Project(Plan):
 #     filer: Union['sourdough.Filer', str] = None
 #     automatic: bool = True
     
-#     project_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+#     project_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
 #         contents = {
 #             'generic': Plan},
 #         defaults = ['generic'])
-#     stage_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+#     stage_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
 #         contents = {
 #             'draft': sourdough.Author,
 #             'publish': sourdough.Publisher,
 #             'apply': sourdough.Reader},
 #         defaults = ['draft', 'edit', 'publish', 'apply'])
-#     # design_options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+#     # design_options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
 #     #     contents = {
 #     #         'chained': sourdough.structure.designs.ChainedDesign,
 #     #         'comparative': sourdough.structure.designs.ComparativeDesign},

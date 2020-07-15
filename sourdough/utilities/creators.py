@@ -26,7 +26,7 @@ class Factory(abc.ABC):
             default object(s) to instance. If 'product' is not passed, 'default' 
             is used. 'default' must correspond to key(s) in 'options'. Defaults 
             to None.
-        options (ClassVar[sourdough.Catalog]): a dictionary of available options 
+        options (ClassVar[sourdough.Corpus]): a dictionary of available options 
             for object creation. Keys are the names of the 'product'. Values are 
             the objects to create. Defaults to an empty dictionary.
 
@@ -37,7 +37,7 @@ class Factory(abc.ABC):
     """
     product: Union[str, Sequence[str]] = None
     default: ClassVar[Union[str, Sequence[str]]] = None
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         always_return_list = True)
 
     """ Initialization Methods """

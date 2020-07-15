@@ -31,7 +31,7 @@ class OtherTask(sourdough.Task):
 @dataclasses.dataclass
 class APlan(sourdough.Plan):
     
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
         contents = {'new': NewTask()},
         always_return_list = True)
   

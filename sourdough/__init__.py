@@ -22,33 +22,30 @@ from sourdough.utilities import decorators
 from sourdough.structure.dictionaries import Lexicon
 from sourdough.structure.dictionaries import Corpus
 from sourdough.structure.dictionaries import Reflector
+
 from sourdough.structure.components import Component
+from sourdough.structure.components import Task
+from sourdough.structure.components import Stage
 from sourdough.structure.components import LibraryMixin
 from sourdough.structure.components import RegistryMixin
 from sourdough.structure.components import ProxyMixin
 from sourdough.structure.components import OptionsMixin
-from sourdough.project.tasks import Task
-from sourdough.projects.tasks import Technique
-from sourdough.projects.tasks import Step
-from sourdough.projects.tasks import Plan
-from sourdough.projects.tasks import Project
-from sourdough.structure.tasks import Progression
-from sourdough.structure.creators import Factory
-from sourdough.structure.creators import LazyLoader
+from sourdough.structure.iterables import Progression
+from sourdough.project.tasks import Technique
+from sourdough.project.tasks import Step
+from sourdough.project.tasks import Plan
+from sourdough.project.tasks import Project
+
+# from sourdough.structure.creators import Factory
+# from sourdough.structure.creators import LazyLoader
+
 # from sourdough.configuration import defaults
 # from sourdough.configuration.settings import Settings
 # from sourdough.configuration.filer import Filer
 
-
-
 # from sourdough.structure.iterables import Director
 
 # from sourdough.structure.graphs import DAGraph
-
-
-
-
-
 
 # from sourdough.projects.stages import Stage
 # from sourdough.projects.stages import Author

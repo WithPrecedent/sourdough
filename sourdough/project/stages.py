@@ -11,24 +11,6 @@ import dataclasses
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
-from sourdough import utilities
-
- 
-@dataclasses.dataclass
-class Stage(sourdough.Component):
-    """Base class for workflow steps controlled by a Manager instance.
-    
-    All subclasses must have 'apply' methods. 
-    
-    """
-    settings: 'sourdough.Settings'
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, *args, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods."""
-        raise NotImplementedError('Stage subclasses must include apply methods')
 
 
 @dataclasses.dataclass
@@ -192,60 +174,60 @@ class Author(Stage):
             new_step = sourdough.Plan(name = step)
         return self.organize(step = new_step)
                   
-    def _draft_steps(self, 
-            step: 'sourdough.Plan',
-            steps: Sequence[str],
-            techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Plan':
-        """[summary]
+    # def _draft_steps(self, 
+    #         step: 'sourdough.Plan',
+    #         steps: Sequence[str],
+    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Plan':
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
-        """
-        new_steps = []
-        for step in steps:
-            new_techniques = []
-            for technique in techniques[step]:
-                new_techniques.append(self._draft_step(
-                    step = step,
-                    technique = technique,
-                    step = step.name))
-            new_steps.append(new_techniques)
-        step.contents.append(new_steps)
-        return step
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     new_steps = []
+    #     for step in steps:
+    #         new_techniques = []
+    #         for technique in techniques[step]:
+    #             new_techniques.append(self._draft_step(
+    #                 step = step,
+    #                 technique = technique,
+    #                 step = step.name))
+    #         new_steps.append(new_techniques)
+    #     step.contents.append(new_steps)
+    #     return step
             
-    def _draft_step(self,
-            step: str,
-            technique: str,
-            step: str,
-            options: 'sourdough.Catalog') -> 'sourdough.Step':
-        """[summary]
+    # def _draft_step(self,
+    #         step: str,
+    #         technique: str,
+    #         step: str,
+    #         options: 'sourdough.Corpus') -> 'sourdough.Step':
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
+    #     Returns:
+    #         [type]: [description]
             
-        """
-        try:
-            return step.options[step](
-                name = step,
-                step = step,
-                technique = step.options[technique])
-        except KeyError:
-            try:
-                return sourdough.Step(
-                    name = step,
-                    step = step,
-                    technique = step.options[technique])
-            except KeyError:
-                try:
-                    return step.options[step](
-                        name = step,
-                        step = step,
-                        technique = sourdough.Technique(name = technique))
-                except KeyError:
-                    return sourdough.Step(
-                        name = step,
-                        step = step,
-                        technique = sourdough.Technique(name = technique))
+    #     """
+    #     try:
+    #         return step.options[step](
+    #             name = step,
+    #             step = step,
+    #             technique = step.options[technique])
+    #     except KeyError:
+    #         try:
+    #             return sourdough.Step(
+    #                 name = step,
+    #                 step = step,
+    #                 technique = step.options[technique])
+    #         except KeyError:
+    #             try:
+    #                 return step.options[step](
+    #                     name = step,
+    #                     step = step,
+    #                     technique = sourdough.Technique(name = technique))
+    #             except KeyError:
+    #                 return sourdough.Step(
+    #                     name = step,
+    #                     step = step,
+    #                     technique = sourdough.Technique(name = technique))
 
 
 @dataclasses.dataclass
@@ -275,7 +257,7 @@ class Publisher(Stage):
         project.contents[step] = sourdough.tools.listify(steps)
         return project
  
-    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
@@ -428,7 +410,7 @@ class Reader(Stage):
     
     settings: 'sourdough.Settings'
     
-    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
 
         Returns:
@@ -622,7 +604,7 @@ class Reader(Stage):
 
 #     """ Public Methods """
 
-#     def apply(self,
+#     def create(self,
 #             outer_step: sourdough.base.Plan,
 #             data: Union[sourdough.Dataset, sourdough.base.Plan]) -> sourdough.base.Plan:
 #         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.

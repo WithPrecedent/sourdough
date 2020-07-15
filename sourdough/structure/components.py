@@ -1,6 +1,6 @@
 """
 .. module:: component
-:synopsis: sourdough Component and mixins
+:synopsis: sourdough Component, related classes, and mixins
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -21,10 +21,9 @@ import sourdough
 class Component(abc.ABC):
     """Base class for core sourdough objects.
 
-    A Component maintains a 'name' attribute for internal referencing and to
-    allow the classes in 'iterables' to function propertly. Component instances 
-    can be used to create a variety of composite data structures such as trees 
-    and graphs. 
+    A Component has a 'name' attribute for internal referencing and to allow 
+    sourdough iterables to function propertly. Component instances can be used 
+    to create a variety of composite data structures such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
     collectively, with Component.
@@ -81,20 +80,136 @@ class Component(abc.ABC):
 
 
 @dataclasses.dataclass
+class Task(Component, abc.ABC):
+    """Base class for applying stored methods to passed data.
+    
+    Task subclass instances are often arranged in an ordered sequence such as a
+    Progression instance. All Task subclasses must have 'apply' methods for 
+    handling data. 
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+    
+    """
+    name: str = None
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: object = None, **kwargs) -> object:
+        """Subclasses must provide their own methods."""
+        pass
+
+ 
+@dataclasses.dataclass
+class Stage(Component, abc.ABC):
+    """Base class for stages of creation of sourdough objects.
+    
+    All subclasses must have 'create' methods. 
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+    
+    """
+    name: str = None
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, task: 'Task' = None, **kwargs) -> 'Task':
+        """Subclasses must provide their own methods."""
+        pass
+    
+
+@dataclasses.dataclass
+class Anthology(collections.abc.MutableMapping, abc.ABC):
+    """Base class for sourdough dictionaries.
+
+    Lexicon subclasses can serve as drop in replacements for dicts with added
+    features.
+    
+    A Lexicon differs from a python dict in 3 significant ways:
+        1) It includes an 'add' method which allows different datatypes to
+            be passed and added to a Lexicon instance. All of the normal dict 
+            methods are also available. 'add' should be used to set default or 
+            more complex methods of adding elements to the stored dict.
+        2) It includes a 'subsetify' method which will return a Lexicon or
+            Lexicon subclass instance with only the key/value pairs matching
+            keys in the 'subset' parameter.
+        3) It allows the '+' operator to be used to join a Lexicon instance
+            with another Lexicon instance, a dict, or a Component. The '+' 
+            operator calls the Lexicon 'add' method to implement how the added 
+            item(s) is/are added to the Lexicon instance.
+    
+    All Lexicon subclasses must include a 'validate' method. Requirements for
+    that method are described in the abstractmethod itself.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+              
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Validates 'contents' or converts it to a dict.
+        self.contents = self.validate(contents = self.contents)
+        
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def validate(self, contents: Any) -> Mapping[Any, Any]:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Subclasses must provide their own methods.
+        
+        The 'contents' argument should accept any supported datatype and either
+        validate its type or convert it to a dict. This method is used to 
+        validate or convert both the passed 'contents' and by the 'add' method
+        to add new keys and values to the 'contents' attribute.
+        
+        """
+        pass
+    
+    
+@dataclasses.dataclass
 class LibraryMixin(abc.ABC):
     """Mixin which stores subclass instances in a 'library' class attribute.
 
-    In order to ensure that a subclass instance is added to the base Catalog 
+    In order to ensure that a subclass instance is added to the base Corpus 
     instance, super().__post_init__() should be called by that subclass.
 
     Args:
-        library (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
+        library (ClassVar[sourdough.Corpus]): the instance which stores 
+            subclass in a Corpus instance.
             
     Mixin Namespaces: 'library', 'borrow'
 
     """
-    library: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    library: ClassVar['sourdough.Corpus'] = sourdough.Corpus()
 
     """ Initialization Methods """
     
@@ -106,7 +221,7 @@ class LibraryMixin(abc.ABC):
         
     """ Public Methods """
     
-    def borrow(self, key: Union[str, Sequence[str]]) -> Any:
+    def borrow(self, key: Union[str, Sequence[str]]) -> object:
         """Returns a value stored in 'library'.
 
         Args:
@@ -125,8 +240,11 @@ class RegistryMixin(abc.ABC):
     """Mixin which stores subclasses in a 'registry' class attribute.
 
     Args:
-        registry (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
+        register_from_disk (bool): whether to look in the current working
+            folder and subfolders for subclasses of the Component class for 
+            which this class is a mixin. Defaults to False.
+        registry (ClassVar[sourdough.Corpus]): the instance which stores 
+            subclass in a Corpus instance.
 
     Mixin Namespaces: 'registry', 'register_from_disk', 'build', 
         'find_subclasses', '_import_from_path', '_get_subclasse'
@@ -137,7 +255,7 @@ class RegistryMixin(abc.ABC):
     
     """
     register_from_disk: bool = False
-    registry: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    registry: ClassVar['sourdough.Corpus'] = sourdough.Corpus()
     
     """ Initialization Methods """
     
@@ -252,6 +370,54 @@ class RegistryMixin(abc.ABC):
     #                     matches.append[item]
     #     return matches
 
+
+@dataclasses.dataclass
+class OptionsMixin(abc.ABC):
+    """Mixin which stores classes or instances in 'options'.
+
+    Args:
+        options (ClassVar[sourdough.Corpus]): the instance which stores 
+            subclass in a Corpus instance.
+            
+    Mixin Namespaces: 'options', 'select'
+
+    """
+    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
+        always_return_list = True)
+    
+    """ Public Methods """
+        
+    def select(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Creates instance(s) of a class(es) stored in 'options'.
+
+        Args:
+            option (str): name matching a key in 'options' for which the value
+                is sought.
+
+        Raises:
+            TypeError: if 'option' is neither a str nor Sequence type.
+            
+        Returns:
+            Any: instance of a stored class with kwargs passed as arguments.
+            
+        """
+        if isinstance(key, str):
+            try:
+                return self.options[key](**kwargs)
+            except TypeError:
+                return self.options[key]
+        elif isinstance(key, Sequence):
+            instances = []
+            for k in key:
+                try:
+                    instance = self.options[key](**kwargs)
+                except TypeError:
+                    instance = self.options[key]
+                instances.append(instance)
+            return instances
+        else:
+            raise TypeError('option must be a str or list type')
+     
     
 @dataclasses.dataclass
 class ProxyMixin(abc.ABC):
@@ -362,81 +528,4 @@ class ProxyMixin(abc.ABC):
                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
                     getattr(self, item))
         return self
-
-
-@dataclasses.dataclass
-class OptionsMixin(abc.ABC):
-    """Mixin which stores classes or instances in 'options'.
-
-    Args:
-        options (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
-            
-    Mixin Namespaces: 'options', 'create'
-
-    """
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        always_return_list = True)
-    
-    """ Public Methods """
-       
-    def add(self, 
-            component: Union[
-                'sourdough.Component',
-                Sequence['sourdough.Component'],
-                str, 
-                Sequence[str]]) -> None:
-        """Adds 'component' to 'contents'.
-        
-        Args:
-            components (Union[sourdough.Component, Sequence[
-                sourdough.Component]]): Component(s) to add to 'contents'.
-
-        Raises:
-            TypeError: if instances in 'components' are neither str type nor 
-                have a 'name' attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            super().add(component = component)
-        elif isinstance(component, str):
-            super().add(component = self.options[component])
-        elif isinstance(component, Sequence):
-            for c in component:
-                self.add(component = c)
-        else:
-            raise TypeError(
-                'component must be a Component, str, or list of str')
-        return self  
-        
-    def create(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'options'.
-
-        Args:
-            option (str): name matching a key in 'options' for which the value
-                is sought.
-
-        Raises:
-            TypeError: if 'option' is neither a str nor Sequence type.
-            
-        Returns:
-            Any: instance of a stored class with kwargs passed as arguments.
-            
-        """
-        if isinstance(key, str):
-            try:
-                return self.options[key](**kwargs)
-            except TypeError:
-                return self.options[key]
-        elif isinstance(key, Sequence):
-            instances = []
-            for k in key:
-                try:
-                    instance = self.options[key](**kwargs)
-                except TypeError:
-                    instance = self.options[key]
-                instances.append(instance)
-            return instances
-        else:
-            raise TypeError('option must be a str or list type')
-        
+   

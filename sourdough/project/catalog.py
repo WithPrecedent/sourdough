@@ -13,15 +13,15 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Catalog(sourdough.Lexicon):
+class Corpus(sourdough.Lexicon):
     """Base class for a wildcard and list-accepting dictionary.
 
-    A Catalog inherits the differences between a Lexicon and an ordinary python
+    A Corpus inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Catalog differs from a Lexicon in 5 significant ways:
+    A Corpus differs from a Lexicon in 5 significant ways:
         1) It recognizes an 'all' key which will return a list of all values
-            stored in a Catalog instance.
+            stored in a Corpus instance.
         2) It recognizes a 'default' key which will return all values matching
             keys listed in the 'defaults' attribute. 'default' can also be set
             using the 'catalog['default'] = new_default' assignment. If 
@@ -31,7 +31,7 @@ class Catalog(sourdough.Lexicon):
         4) It supports a list of keys being accessed with the matching
             values returned. For example, 'catalog[['first_key', 'second_key']]' 
             will return the values for those keys in a list.
-        5) If a single key is sought, a Catalog can either return the stored
+        5) If a single key is sought, a Corpus can either return the stored
             value or a stored value in a list (if 'always_return_list' is
             True). The latter option is available to make iteration easier
             when the iterator assumes a single datatype will be returned.
@@ -94,7 +94,7 @@ class Catalog(sourdough.Lexicon):
         except TypeError:
             return self.contents[key] 
     
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Corpus':
         """Returns a subset of 'contents'.
 
         Args:
@@ -102,7 +102,7 @@ class Catalog(sourdough.Lexicon):
                 from 'contents'.
 
         Returns:
-            Catalog: with only keys in 'subset'.
+            Corpus: with only keys in 'subset'.
 
         """
         return super().subsetify(

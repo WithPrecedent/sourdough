@@ -33,14 +33,14 @@ class Dice(sourdough.Plan):
 @dataclasses.dataclass    
 class Divider(sourdough.Plan):
 
-    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Corpus(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
 class Parser(sourdough.Plan):
 
-    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Corpus(
         contents = {'divider': Divider})
 
 

@@ -29,8 +29,8 @@ def test_dictionaries():
     assert test_keys == ['first_test', 'a_key', 'a_component', 'test_name']
     assert lexicon['a_key'] == 'a_value'
     
-    # Tests Catalog
-    catalog = sourdough.Catalog(contents = {
+    # Tests Corpus
+    catalog = sourdough.Corpus(contents = {
         'run' : 'tired',
         'sleep': 'rested',
         'walk': 'relax'})
