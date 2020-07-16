@@ -6,6 +6,7 @@
 :license: Apache-2.0
 """
 
+
 from .core import Component
 from .core import Task
 from .core import Creator
@@ -14,6 +15,7 @@ from .core import Lexicon
 from .core import Catalog
 # from .core import Reflector
 from .core import Progression
+from .settings import Settings
 from .mixins import LibraryMixin
 from .mixins import RegistryMixin
 from .mixins import ProxyMixin

@@ -32,7 +32,7 @@ You can check out the [full documentation here.]()
 
 Highlights of sourdough include:
 
-* **Configuration:** The Settings base class allows configuration options to be set using a variety of file formats (py, json, ini) or a common python dictionary. It stores a mapping (dictionary) with a common, forgiving interface that allows settings to be easy shared, injected, or passed to different project objects.
+* **Settings:** The Settings base class allows settings options to be set using a variety of file formats (py, json, ini) or a common python dictionary. It stores a mapping (dictionary) with a common, forgiving interface that allows settings to be easy shared, injected, or passed to different project objects.
 * **Workflow tracking:** The Manager base class takes a list of stages (or a dictionary of stage names and methods) and tracks whether a corresponding method has been called. This makes it easy to check the state of the project at any given moment and/or alter access methods according to the current stage of the project.
 * **File management:** The Filer base class and accompanying mixins make it easy to keep track of dynamic input and output file folders, file names, and file types. It incorporates appropriate packages to allow seamless transferring of files to and from disk and a variety of formats (csv, pickle, feather, hdf, json, excel, and png support is included).
 * **Wilcard dictionary:** The Catalog class incorporates wildcard keys such as "default", "all", and "none" which return lists of values that match the wildcard keys. However, when seeking values from simple string keys, those are returned as would be by a normal python dictionary.

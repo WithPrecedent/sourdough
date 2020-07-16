@@ -1,5 +1,5 @@
 """
-.. module:: configuration
+.. module:: settings
 :synopsis: base class for configuring sourdough projects
 :author: Corey Rayburn Yung
 :copyright: 2020
@@ -19,7 +19,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Configuration(sourdough.base.Settings):
+class Settings(sourdough.base.Settings):
     """Stores sourdough project settings.
 
 
@@ -135,7 +135,7 @@ class Configuration(sourdough.base.Settings):
     #             Overview instance.
 
     #     Returns:
-    #         sourdough.base.Overview: with contents derived from the configuration
+    #         sourdough.base.Overview: with contents derived from the settings
     #             settings in this instance.
 
     #     """

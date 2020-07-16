@@ -25,8 +25,8 @@ class Manager(sourdough.base.OptionsMixin, sourdough.base.Progression):
         1) The Manager is the public interface to Project construction and 
             application. It may store the Project instance itself as well as
             any required classes (such as those stored in the 'data' attribute).
-            This includes Configuration, Filer, and Options. They are stored in 
-            the 'configuration', 'filer', and 'options' attributes, 
+            This includes Settings, Filer, and Options. They are stored in 
+            the 'settings', 'filer', and 'options' attributes, 
             respectively.
         2) Manager only stores Creator subclass instances in 'contents'. Those 
             instances are used to assemble the parts of a Project instance.
@@ -53,10 +53,10 @@ class Manager(sourdough.base.OptionsMixin, sourdough.base.Progression):
             snake case version of the class name ('__class__.__name__').
         project (sourdough.project.Project): a Project instance for the Manager. 
             Defaults to None.
-        configuration (Union[sourdough.base.Configuration, str, pathlib.Path]]): 
-            an instance of Configuration or a str or pathlib.Path containing the 
+        settings (Union[sourdough.base.Settings, str, pathlib.Path]]): 
+            an instance of Settings or a str or pathlib.Path containing the 
             file path where a file of a supported file type with settings for a 
-            Configuration instance is located. Defaults to None.
+            Settings instance is located. Defaults to None.
         filer (Union[sourdough.base.Filer, str, pathlib.Path]]): an instance of 
             Filer or a str or pathlib.Path containing the full path of where the 
             root folder should be located for file input and output. A Filer
@@ -83,8 +83,8 @@ class Manager(sourdough.base.OptionsMixin, sourdough.base.Progression):
         str]] = dataclasses.field(default_factory = lambda: 'default')
     name: str = None
     project: 'sourdough.project.Project' = None
-    configuration: Union[
-        'sourdough.base.Configuration', 
+    settings: Union[
+        'sourdough.base.Settings', 
         str, 
         pathlib.Path] = None
     filer: Union['sourdough.base.Filer', str, pathlib.Path] = None
@@ -93,7 +93,7 @@ class Manager(sourdough.base.OptionsMixin, sourdough.base.Progression):
         contents = {
             'draft': sourdough.base.Author,
             'publish': sourdough.base.Publisher,
-            'apply': sourdough.base.Reader},
+            'apply': sourdough.base.Worker},
         defaults = ['draft', 'publish', 'apply'])
     
     """ Initialization Methods """
@@ -104,19 +104,19 @@ class Manager(sourdough.base.OptionsMixin, sourdough.base.Progression):
         super().__post_init__()
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Validates or creates a 'Configuration' instance.
-        self.configuration = sourdough.base.Configuration(
-            contents = self.configuration)
+        # Validates or creates a 'Settings' instance.
+        self.settings = sourdough.base.Settings(
+            contents = self.settings)
         # Validates or creates a Filer' instance.
         self.filer = sourdough.base.Filer(
             root_folder = self.filer, 
-            configuration = self.configuration)
-        # Adds 'general' section attributes from 'configuration'.
-        self.configuration.inject(instance = self)
+            settings = self.settings)
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
         # Initializes or validates a Project instance.
         self.project = self._initialize_project(
             project = self.project,
-            configuration = self.configuration)
+            settings = self.settings)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
         self.stage: str = 'initialize' 

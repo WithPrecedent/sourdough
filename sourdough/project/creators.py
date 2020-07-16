@@ -6,7 +6,6 @@
 :license: Apache-2.0
 """
 
-import abc
 import dataclasses
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
@@ -15,47 +14,46 @@ import sourdough
 
 @dataclasses.dataclass
 class Author(sourdough.base.Creator):
-    """Drafts a Project instance based upon a Configuration instance.
+    """Stores methods for constructing a Plan instance.
     
     Args:
-        configuration (sourdough.project.Configuration): 
+        settings (sourdough.base.Settings): 
     
     """  
-    
-    configuration: 'sourdough.project.Configuration'
+    settings: 'sourdough.base.Settings'
     
     """ Public Methods """
     
     def create(self, 
-            step: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
-        """Returns a Plan with its 'contents' organized and instanced.
+            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+        """Drafts a Plan with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
-        not, it creates them from 'configuration'.
+        not, it creates them from 'settings'.
         
         Subclasses can call this method and then arrange the 'contents' of
-        'step' based upon a specific structural design.
+        'plan' based upon a specific structural design.
         
         Args:
-            step (sourdough.project.Plan): Plan instance to organize the 
-                information in 'contents' or 'configuration'.
+            plan (sourdough.project.Plan): Plan instance to organize the 
+                information in 'contents' or 'settings'.
 
         Returns:
             sourdough.project.Plan: an instance with contents fully instanced.
                 
         """
-        step = self._draft_existing_contents(step = step)
-        step = self._draft_from_configuration(step = step)           
-        return step      
+        plan = self._draft_existing_contents(plan = plan)
+        plan = self._draft_from_settings(plan = plan)           
+        return plan      
 
     """ Private Methods """
 
     def _draft_existing_contents(self, 
-            step: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
         """
         
         Args:
-            step (sourdough.project.Plan): Plan instance with str, Step, or Plan
+            plan (sourdough.project.Plan): Plan instance with str, Step, or Plan
                 stored in contents.
 
         Raises:
@@ -67,22 +65,22 @@ class Author(sourdough.base.Creator):
                 
         """
         new_contents = []
-        for labor in step.contents:
+        for labor in plan.contents:
             if isinstance(labor, str):
                 new_contents.append(self._draft_unknown(
                     labor = labor, 
-                    step = step))
+                    plan = plan))
             elif isinstance(labor, sourdough.base.Task):
                 new_contents.append(labor)
             else:
                 raise TypeError(
-                    f'{step.name} contents must be str, Plan, or Step type')
-        step.contents = new_contents
-        return step
+                    f'{plan.name} contents must be str, Plan, or Step type')
+        plan.contents = new_contents
+        return plan
     
     def _draft_unknown(self,
             labor: str,
-            step: 'sourdough.project.Plan') -> Union[
+            plan: 'sourdough.project.Plan') -> Union[
                 'sourdough.base.Step', 
                 'sourdough.project.Plan']:
         """[summary]
@@ -94,62 +92,62 @@ class Author(sourdough.base.Creator):
             [type]: [description]
         """
         try:
-            test_instance = step.options[labor](name = 'test only')
+            test_instance = plan.options[labor](name = 'test only')
         except KeyError:
-            raise KeyError(f'{labor} not found in {step.name}')
+            raise KeyError(f'{labor} not found in {plan.name}')
         if isinstance(test_instance, sourdough.base.Step):
-            return self._draft_step(
-                step = labor, 
+            return self._draft_plan(
+                plan = labor, 
                 technique = None, 
-                step = step)
+                plan = plan)
         else:
-            return self._draft_step(step = labor, manager = step)
+            return self._draft_plan(plan = labor, manager = plan)
 
-    def _draft_from_configuration(self, 
-            step: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
-        """Returns a single Plan instance created based on 'configuration'.
+    def _draft_from_settings(self, 
+            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+        """Returns a single Plan instance created based on 'settings'.
 
         Args:
-            step (sourdough.project.Plan): Plan instance to populate its 
-                'contents' with information in 'configuration'.
+            plan (sourdough.project.Plan): Plan instance to populate its 
+                'contents' with information in 'settings'.
 
         Returns:
-            sourdough.project.Plan: an step or subclass step with attributes 
-                derived from a section of 'configuration'.
+            sourdough.project.Plan: an plan or subclass plan with attributes 
+                derived from a section of 'settings'.
                 
         """
-        steps = []
+        plans = []
         steps = []
         techniques = {}
         attributes = {}
-        step.contents = []
-        for key, value in self.configuration.contents[step.name].items():
+        plan.contents = []
+        for key, value in self.settings.contents[plan.name].items():
             if key.endswith('_design'):
-                step.design = value
-            elif key.endswith('_steps'):
-                steps = sourdough.utilities.listify(value)
-            elif key.endswith('_steps'):
+                plan.design = value
+            elif key.endswith('_plans'):
+                plans = sourdough.utilities.listify(value)
+            elif key.endswith('steps'):
                 steps = sourdough.utilities.listify(value)
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
                 techniques[new_key] = sourdough.utilities.listify(value)
             else:
                 attributes[key] = value
-        if steps:
-            step = self._draft_steps(
-                steps = steps, 
+        if plans:
+            plan = self._draft_plans(
+                plans = plans, 
                 techniques = techniques,
-                step = step)
-        elif steps:
-            step = self._draft_steps(
-                steps = steps,
-                manager = step)
+                plan = plan)
+        elif plans:
+            plan = self._draft_plans(
+                plans = plans,
+                manager = plan)
         for key, value in attributes.items():
-            setattr(step, key, value)
-        return step      
+            setattr(plan, key, value)
+        return plan      
 
-    def _draft_steps(self,
-            steps: Sequence[str],
+    def _draft_plans(self,
+            plans: Sequence[str],
             manager: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
         """[summary]
 
@@ -157,16 +155,16 @@ class Author(sourdough.base.Creator):
             [type]: [description]
             
         """
-        new_steps = []
-        for step in steps:
-            new_steps.append(self._draft_step(
-                step = step, 
+        new_plans = []
+        for plan in plans:
+            new_plans.append(self._draft_plan(
+                plan = plan, 
                 manager = manager))
-        manager.contents.append(new_steps)
+        manager.contents.append(new_plans)
         return manager
 
-    def _draft_step(self,
-            step: str,
+    def _draft_plan(self,
+            plan: str,
             manager: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
         """[summary]
 
@@ -175,36 +173,36 @@ class Author(sourdough.base.Creator):
             
         """
         try:
-            new_step = manager.options[step](name = step)
+            new_plan = manager.options[plan](name = plan)
         except KeyError:
-            new_step = sourdough.project.Plan(name = step)
-        return self.organize(step = new_step)
+            new_plan = sourdough.project.Plan(name = plan)
+        return self.organize(plan = new_plan)
                   
-    # def _draft_steps(self, 
-    #         step: 'sourdough.project.Plan',
-    #         steps: Sequence[str],
+    # def _draft_plans(self, 
+    #         plan: 'sourdough.project.Plan',
+    #         plans: Sequence[str],
     #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.project.Plan':
     #     """[summary]
 
     #     Returns:
     #         [type]: [description]
     #     """
-    #     new_steps = []
-    #     for step in steps:
+    #     new_plans = []
+    #     for plan in plans:
     #         new_techniques = []
-    #         for technique in techniques[step]:
-    #             new_techniques.append(self._draft_step(
-    #                 step = step,
+    #         for technique in techniques[plan]:
+    #             new_techniques.append(self._draft_plan(
+    #                 plan = plan,
     #                 technique = technique,
-    #                 step = step.name))
-    #         new_steps.append(new_techniques)
-    #     step.contents.append(new_steps)
-    #     return step
+    #                 plan = plan.name))
+    #         new_plans.append(new_techniques)
+    #     plan.contents.append(new_plans)
+    #     return plan
             
-    # def _draft_step(self,
-    #         step: str,
+    # def _draft_plan(self,
+    #         plan: str,
     #         technique: str,
-    #         step: str,
+    #         plan: str,
     #         options: 'sourdough.base.Catalog') -> 'sourdough.base.Step':
     #     """[summary]
 
@@ -213,66 +211,66 @@ class Author(sourdough.base.Creator):
             
     #     """
     #     try:
-    #         return step.options[step](
-    #             name = step,
-    #             step = step,
-    #             technique = step.options[technique])
+    #         return plan.options[plan](
+    #             name = plan,
+    #             plan = plan,
+    #             technique = plan.options[technique])
     #     except KeyError:
     #         try:
     #             return sourdough.base.Step(
-    #                 name = step,
-    #                 step = step,
-    #                 technique = step.options[technique])
+    #                 name = plan,
+    #                 plan = plan,
+    #                 technique = plan.options[technique])
     #         except KeyError:
     #             try:
-    #                 return step.options[step](
-    #                     name = step,
-    #                     step = step,
+    #                 return plan.options[plan](
+    #                     name = plan,
+    #                     plan = plan,
     #                     technique = sourdough.base.Technique(name = technique))
     #             except KeyError:
     #                 return sourdough.base.Step(
-    #                     name = step,
-    #                     step = step,
+    #                     name = plan,
+    #                     plan = plan,
     #                     technique = sourdough.base.Technique(name = technique))
 
 
 @dataclasses.dataclass
 class Publisher(sourdough.base.Creator):
     
-    configuration: 'sourdough.project.Configuration'
+    settings: 'sourdough.base.Settings'
 
     """ Public Methods """
     
     def add(self, 
             project: 'sourdough.project.Project', 
-            step: str, 
-            steps: Union[Sequence[str], str]) -> 'sourdough.project.Project':
-        """Adds 'steps' to 'project' 'contents' with a 'step' key.
+            plan: str, 
+            plans: Union[Sequence[str], str]) -> 'sourdough.project.Project':
+        """Adds 'plans' to 'project' 'contents' with a 'plan' key.
         
         Args:
-            project (sourdough.project.Project): project to which 'step' and 'steps'
+            project (sourdough.project.Project): project to which 'plan' and 'plans'
                 should be added.
-            step (str): key to use to store 'steps':
-            steps (Union[Sequence[str], str]): name(s) of step(s) to add to 
+            plan (str): key to use to store 'plans':
+            plans (Union[Sequence[str], str]): name(s) of plan(s) to add to 
                 'project'.
             
         Returns:
-            sourdough.project.Project: with 'steps' added at 'step'.
+            sourdough.project.Project: with 'plans' added at 'plan'.
         
         """
-        project.contents[step] = sourdough.utilities.listify(steps)
+        project.contents[plan] = sourdough.utilities.listify(plans)
         return project
  
-    def create(self, step: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def create(self, plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        step = self._parameterize_steps(step = step)
+        plan = self._parameterize_plans(plan = plan)
         
-        return step
+        return plan
 
     """ Private Methods """
     
@@ -287,7 +285,7 @@ class Publisher(sourdough.base.Creator):
 
         """
         if technique.name not in ['none', None, 'None']:
-            parameter_types = ['configuration', 'selected', 'required', 'runtime']
+            parameter_types = ['settings', 'selected', 'required', 'runtime']
             # Iterates through types of 'parameter_types'.
             for parameter_type in parameter_types:
                 technique = getattr(self, f'_get_{parameter_type}')(
@@ -296,7 +294,7 @@ class Publisher(sourdough.base.Creator):
 
     """ Private Methods """
 
-    def _get_configuration(self,
+    def _get_settings(self,
             technique: sourdough.base.technique) -> sourdough.base.technique:
         """Acquires parameters from 'Settings' instance.
 
@@ -307,8 +305,8 @@ class Publisher(sourdough.base.Creator):
             technique: instance with parameters added.
 
         """
-        return self.configuration.get_parameters(
-            step = technique.step,
+        return self.settings.get_parameters(
+            plan = technique.plan,
             technique = technique.name)
 
     def _get_selected(self,
@@ -401,7 +399,7 @@ class Publisher(sourdough.base.Creator):
             for key, value in technique.runtime.items():
                 try:
                     technique.parameters.update(
-                        {key: getattr(self.configuration['general'], value)})
+                        {key: getattr(self.settings['general'], value)})
                 except AttributeError:
                     raise AttributeError(' '.join(
                         ['no matching runtime parameter', key, 'found']))
@@ -414,18 +412,18 @@ class Publisher(sourdough.base.Creator):
 @dataclasses.dataclass
 class Reader(sourdough.base.Creator):
     
-    configuration: 'sourdough.project.Configuration'
+    settings: 'sourdough.base.Settings'
     
-    def create(self, step: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def create(self, plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        step = self._parameterize_steps(step = step)
+        plan = self._parameterize_plans(plan = plan)
         
-        return step
+        return plan
 
 
 # @dataclasses.dataclass
@@ -435,19 +433,19 @@ class Reader(sourdough.base.Creator):
 #     Args:
 #         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough.base. If the class instance
-#             needs configuration from the shared Settings instance, 'name' should
+#             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good configuration to use the same 'name' attribute
+#             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         configuration (Settings]): shared project configuration configuration.
+#         settings (Settings]): shared project settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
 
 #     """
 #     name: str = None
-#     configuration: sourdough.project.Configuration] = None
+#     settings: sourdough.base.Settings] = None
 #     instructions: Instructions] = None
 
 #     """ Public Methods """
@@ -463,7 +461,7 @@ class Reader(sourdough.base.Creator):
 
 #         """
 #         if technique.name not in ['none', None, 'None']:
-#             parameter_types = ['configuration', 'selected', 'required', 'runtime']
+#             parameter_types = ['settings', 'selected', 'required', 'runtime']
 #             # Iterates through types of 'parameter_types'.
 #             for parameter_type in parameter_types:
 #                 technique = getattr(self, f'_get_{parameter_type}')(
@@ -472,7 +470,7 @@ class Reader(sourdough.base.Creator):
 
 #     """ Private Methods """
 
-#     def _get_configuration(self,
+#     def _get_settings(self,
 #             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Acquires parameters from 'Settings' instance.
 
@@ -483,8 +481,8 @@ class Reader(sourdough.base.Creator):
 #             technique: instance with parameters added.
 
 #         """
-#         return self.configuration.get_parameters(
-#             step = technique.step,
+#         return self.settings.get_parameters(
+#             plan = technique.plan,
 #             technique = technique.name)
 
 #     def _get_selected(self,
@@ -577,7 +575,7 @@ class Reader(sourdough.base.Creator):
 #             for key, value in technique.runtime.items():
 #                 try:
 #                     technique.parameters.update(
-#                         {key: getattr(self.configuration['general'], value)})
+#                         {key: getattr(self.settings['general'], value)})
 #                 except AttributeError:
 #                     raise AttributeError(' '.join(
 #                         ['no matching runtime parameter', key, 'found']))
@@ -593,81 +591,81 @@ class Reader(sourdough.base.Creator):
 #     Args:
 #         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough.base. If the class instance
-#             needs configuration from the shared Settings instance, 'name' should
+#             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good configuration to use the same 'name' attribute
+#             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared project configuration configuration.
+#         Settings (Settings]): shared project settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
 
 #     """
 #     name: str = None
-#     Settings: sourdough.project.Configuration] = None
+#     Settings: sourdough.base.Settings] = None
 #     instructions: Instructions] = None
 
 #     """ Public Methods """
 
 #     def create(self,
-#             outer_step: sourdough.base.base.Plan,
+#             outer_plan: sourdough.base.base.Plan,
 #             data: Union[sourdough.base.Dataset, sourdough.base.base.Plan]) -> sourdough.base.base.Plan:
-#         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.
+#         """Applies 'outer_plan' instance in 'project' to 'data' or other stored outer_plan.
 
 #         Args:
-#             outer_step ('outer_step'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_step' attributes).
-#             data ([Union['Dataset', 'outer_step']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_step'
+#             outer_plan ('outer_plan'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_plan' attributes).
+#             data ([Union['Dataset', 'outer_plan']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_plan'
 
 #         Returns:
-#             'outer_step': with 'parameters' for each technique instance finalized
+#             'outer_plan': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_step, 'techniques'):
-#             outer_step = self._finalize_techniques(manuscript = outer_step, data = data)
+#         if hasattr(outer_plan, 'techniques'):
+#             outer_plan = self._finalize_techniques(manuscript = outer_plan, data = data)
 #         else:
-#             outer_step = self._finalize_inner_step(outer_step = outer_step, data = data)
-#         return outer_step
+#             outer_plan = self._finalize_inner_plan(outer_plan = outer_plan, data = data)
+#         return outer_plan
 
 #     """ Private Methods """
 
-#     def _finalize_inner_step(self, outer_step: 'outer_step', data: 'Dataset') -> 'outer_step':
-#         """Finalizes 'inner_step' instances in 'outer_step'.
+#     def _finalize_inner_plan(self, outer_plan: 'outer_plan', data: 'Dataset') -> 'outer_plan':
+#         """Finalizes 'inner_plan' instances in 'outer_plan'.
 
 #         Args:
-#             outer_step ('outer_step'): instance containing 'inner_step' with 'techniques' that
+#             outer_plan ('outer_plan'): instance containing 'inner_plan' with 'techniques' that
 #                 have 'data_dependent' and/or 'conditional' 'parameters' to
 #                 add.
 #             data ('Dataset): instance with potential information to use to
-#                 finalize 'parameters' for 'outer_step'.
+#                 finalize 'parameters' for 'outer_plan'.
 
 #         Returns:
-#             'outer_step': with any necessary modofications made.
+#             'outer_plan': with any necessary modofications made.
 
 #         """
-#         new_inner_step = [
-#             self._finalize_techniques(inner_step = inner_step, data = data)
-#             for inner_step in outer_step.inner_step]
+#         new_inner_plan = [
+#             self._finalize_techniques(inner_plan = inner_plan, data = data)
+#             for inner_plan in outer_plan.inner_plan]
 
-#         outer_step.inner_step = new_inner_step
-#         return outer_step
+#         outer_plan.inner_plan = new_inner_plan
+#         return outer_plan
 
 #     def _finalize_techniques(self,
-#             manuscript: Union['outer_step', 'inner_step'],
-#             data: ['Dataset', 'outer_step']) -> Union['outer_step', 'inner_step']:
+#             manuscript: Union['outer_plan', 'inner_plan'],
+#             data: ['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
 #         """Subclasses may provide their own methods to finalize 'techniques'.
 
 #         Args:
-#             manuscript (Union['outer_step', 'inner_step']): manuscript containing
+#             manuscript (Union['outer_plan', 'inner_plan']): manuscript containing
 #                 'techniques' to create.
-#             data (['Dataset', 'outer_step']): instance with information used to
+#             data (['Dataset', 'outer_plan']): instance with information used to
 #                 finalize 'parameters' and/or 'algorithm'.
 
 #         Returns:
-#             Union['outer_step', 'inner_step']: with any necessary modofications made.
+#             Union['outer_plan', 'inner_plan']: with any necessary modofications made.
 
 #         """
 #         new_techniques = []
@@ -686,16 +684,16 @@ class Reader(sourdough.base.Creator):
 #         return manuscript
 
 #     def _add_conditionals(self,
-#             manuscript: 'outer_step',
+#             manuscript: 'outer_plan',
 #             technique: technique,
-#             data: Union['Dataset', 'outer_step']) -> technique:
+#             data: Union['Dataset', 'outer_plan']) -> technique:
 #         """Adds any conditional parameters to a technique instance.
 
 #         Args:
-#             manuscript ('outer_step'): outer_step instance with algorithms to create to 'data'.
+#             manuscript ('outer_plan'): outer_plan instance with algorithms to create to 'data'.
 #             technique (technique): instance with parameters which can take
 #                 new conditional parameters.
-#             data (Union['Dataset', 'outer_step']): a data source which might
+#             data (Union['Dataset', 'outer_plan']): a data source which might
 #                 contain information for condtional parameters.
 
 #         Returns:
@@ -713,13 +711,13 @@ class Reader(sourdough.base.Creator):
 
 #     def _add_data_dependent(self,
 #             technique: technique,
-#             data: Union['Dataset', 'outer_step']) -> technique:
+#             data: Union['Dataset', 'outer_plan']) -> technique:
 #         """Completes parameter dictionary by adding data dependent parameters.
 
 #         Args:
 #             technique (technique): instance with information about data
 #                 dependent parameters to add.
-#             data (Union['Dataset', 'outer_step']): a data source which contains
+#             data (Union['Dataset', 'outer_plan']): a data source which contains
 #                 'data_dependent' variables.
 
 #         Returns:
@@ -771,12 +769,12 @@ class Reader(sourdough.base.Creator):
 #     Args:
 #         name (str): designates the name of the class instance used
 #             for internal referencing throughout sourdough.base. If the class instance
-#             needs configuration from the shared Settings instance, 'name' should
+#             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good configuration to use the same 'name' attribute
+#             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared project configuration configuration.
+#         Settings (Settings]): shared project settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
@@ -784,50 +782,50 @@ class Reader(sourdough.base.Creator):
 #     """
 #     name: str = None
 #     instructions: Instructions] = None
-#     Settings: sourdough.project.Configuration] = None
+#     Settings: sourdough.base.Settings] = None
 
 #     def __post_init__(self) -> None:
 #         """Initializes class instance attributes."""
-#         self = self.configuration.create(instance = self)
+#         self = self.settings.create(instance = self)
 #         return self
 
 #     """ Private Methods """
 
-#     def _create_inner_step(self,
-#             outer_step: 'outer_step',
-#             data: Union['Dataset', 'outer_step']) -> 'outer_step':
-#         """Applies 'inner_step' in 'outer_step' instance in 'project' to 'data'.
+#     def _create_inner_plan(self,
+#             outer_plan: 'outer_plan',
+#             data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
+#         """Applies 'inner_plan' in 'outer_plan' instance in 'project' to 'data'.
 
 #         Args:
-#             outer_step ('outer_step'): instance with stored 'inner_step' instances.
+#             outer_plan ('outer_plan'): instance with stored 'inner_plan' instances.
 #             data ('Dataset'): primary instance used by 'project'.
 
 #         Returns:
-#             'outer_step': with modifications made and/or 'data' incorporated.
+#             'outer_plan': with modifications made and/or 'data' incorporated.
 
 #         """
-#         new_inner_step = []
-#         for i, inner_step in enumerate(outer_step.inner_step):
+#         new_inner_plan = []
+#         for i, inner_plan in enumerate(outer_plan.inner_plan):
 #             if self.verbose:
-#                 print('Applying', inner_step.name, str(i + 1), 'to', data.name)
-#             new_inner_step.append(self._create_techniques(
-#                 manuscript = inner_step,
+#                 print('Applying', inner_plan.name, str(i + 1), 'to', data.name)
+#             new_inner_plan.append(self._create_techniques(
+#                 manuscript = inner_plan,
 #                 data = data))
-#         outer_step.inner_step = new_inner_step
-#         return outer_step
+#         outer_plan.inner_plan = new_inner_plan
+#         return outer_plan
 
 #     def _create_techniques(self,
-#             manuscript: Union['outer_step', 'inner_step'],
-#             data: Union['Dataset', 'outer_step']) -> Union['outer_step', 'inner_step']:
+#             manuscript: Union['outer_plan', 'inner_plan'],
+#             data: Union['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
 #         """Applies 'techniques' in 'manuscript' to 'data'.
 
 #         Args:
-#             manuscript (Union['outer_step', 'inner_step']): instance with stored
+#             manuscript (Union['outer_plan', 'inner_plan']): instance with stored
 #                 'techniques'.
 #             data ('Dataset'): primary instance used by 'manuscript'.
 
 #         Returns:
-#             Union['outer_step', 'inner_step']: with modifications made and/or 'data'
+#             Union['outer_plan', 'inner_plan']: with modifications made and/or 'data'
 #                 incorporated.
 
 #         """
@@ -837,30 +835,30 @@ class Reader(sourdough.base.Creator):
 #             if isinstance(data, Dataset):
 #                 data = technique.create(data = data)
 #             else:
-#                 for inner_step in data.inner_step:
-#                     manuscript.inner_step.append(technique.create(data = inner_step))
+#                 for inner_plan in data.inner_plan:
+#                     manuscript.inner_plan.append(technique.create(data = inner_plan))
 #         if isinstance(data, Dataset):
 #             setattr(manuscript, 'data', data)
 #         return manuscript
 
 #     """ Core sourdough Methods """
 
-#     def create(self, outer_step: 'outer_step', data: Union['Dataset', 'outer_step']) -> 'outer_step':
-#         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.
+#     def create(self, outer_plan: 'outer_plan', data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
+#         """Applies 'outer_plan' instance in 'project' to 'data' or other stored outer_plan.
 
 #         Args:
-#             outer_step ('outer_step'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_step' attributes).
-#             data ([Union['Dataset', 'outer_step']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_step'
+#             outer_plan ('outer_plan'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_plan' attributes).
+#             data ([Union['Dataset', 'outer_plan']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_plan'
 
 #         Returns:
-#             'outer_step': with 'parameters' for each technique instance finalized
+#             'outer_plan': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_step, 'techniques'):
-#             outer_step = self._create_techniques(manuscript = outer_step, data = data)
+#         if hasattr(outer_plan, 'techniques'):
+#             outer_plan = self._create_techniques(manuscript = outer_plan, data = data)
 #         else:
-#             outer_step = self._create_inner_step(outer_step = outer_step, data = data)
-#         return outer_step
+#             outer_plan = self._create_inner_plan(outer_plan = outer_plan, data = data)
+#         return outer_plan

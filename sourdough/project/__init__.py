@@ -6,7 +6,6 @@
 :license: Apache-2.0
 """
 
-from .configuration import Configuration
 from .filer import Filer
 from .creators import Author
 from .creators import Publisher
@@ -23,7 +22,7 @@ __version__ = '0.1.0'
 __author__ = 'Corey Rayburn Yung'
 
 __all__ = [
-    'Configuration',
+    'Settings',
     'Filer',
     'Author',
     'Publisher',

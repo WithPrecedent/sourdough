@@ -19,114 +19,8 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Corpus(sourdough.base.Lexicon):
-    """sourdough two-level nested dict replacement.
-    
-    Catalog inherits all of the differences between a Lexicon and a python dict.
-
-    A Catalog differs from a Lexicon in 3 significant ways:
-        1) Its 'add' method requirements 2 arguments ('section' and 'contents') 
-            due to the 2-level nature of the stored dict.
-        2) It does not return an error if you attempt to delete a key that is
-            not stored within 'contents'.
-        3) If you try to find a key that does not correspond to a section in 
-            'contents', a Catalog subclass instance will return the first 
-            matching key within a section (iterated in stored order), if a
-            match exists.
-    
-    The Corups 'add' method accounts for whether the 'section' passed already
-    exists and adds the passed 'contents' appropriately.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-              
-    """
-    contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
-        default_factory = dict)
-
-    """ Public Methods """
-
-    def add(self, 
-            section: str, 
-            contents: Mapping[str, Any]) -> None:
-        """Adds 'settings' to 'contents'.
-
-        Args:
-            section (str): name of section to add 'contents' to.
-            contents (Mapping[str, Any]): a dict to store in 'section'.
-
-        """
-        try:
-            self[section].update(self._validate(contents = contents))
-        except KeyError:
-            self[section] = self._validate(contents = contents)
-        return self
-    
-    """ Dunder Methods """
-
-    def __getitem__(self, key: str) -> Union[Mapping[str, Any], Any]:
-        """Returns a section of the active dictionary or key within a section.
-
-        Args:
-            key (str): the name of the dictionary key for which the value is
-                sought.
-
-        Returns:
-            Union[Mapping[str, Any], Any]: dict if 'key' matches a section in
-                the active dictionary. If 'key' matches a key within a section,
-                the value, which can be any of the supported datatypes is
-                returned.
-
-        """
-        try:
-            return self.contents[key]
-        except KeyError:
-            for section in list(self.contents.keys()):
-                try:
-                    return self.contents[section][key]
-                except KeyError:
-                    pass
-            raise KeyError(f'{key} is not found in {self.__class__.__name__}')
-
-    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
-        """Creates new key/value pair(s) in a section of the active dictionary.
-
-        Args:
-            key (str): name of a section in the active dictionary.
-            value (MutableMapping): the dictionary to be placed in that section.
-
-        Raises:
-            TypeError if 'key' isn't a str or 'value' isn't a dict.
-
-        """
-        try:
-            self.contents[key].update(value)
-        except KeyError:
-            try:
-                self.contents[key] = value
-            except TypeError:
-                raise TypeError(
-                    'key must be a str and value must be a dict type')
-        return self
-
-    def __delitem__(self, key: str) -> None:
-        """Deletes 'key' entry in 'contents'.
-
-        Args:
-            key (str): name of key in 'contents'.
-
-        """
-        try:
-            del self.contents[key]
-        except KeyError:
-            pass
-        return self
-
-
-@dataclasses.dataclass
-class Settings(sourdough.base.Corpus):
-    """Stores sourdough project settings.
+class Settings(sourdough.base.Lexicon):
+    """Loads and Stores configuration settings.
 
     To create Settings instance, a user can pass a:
         1) file path to a compatible file type;
@@ -139,13 +33,15 @@ class Settings(sourdough.base.Corpus):
     
     Currently, supported file types are: ini, json, toml, and python.
 
-    If 'infer_types' is set to True (the default option), str dict values
-    are automatically converted to appropriate datatypes (str, list, float,
-    bool, and int are currently supported)
+    If 'infer_types' is set to True (the default option), str dict values are 
+    automatically converted to appropriate datatypes (str, list, float, bool, 
+    and int are currently supported).
 
-    Because Settings uses ConfigParser for .ini files, it only allows 2-level 
-    settings dictionaries. The desire for accessibility and simplicity dictated 
-    this limitation. 
+    Because Settings uses ConfigParser for .ini files, by default it stores a 
+    2-level dict. The desire for accessibility and simplicity dictated this 
+    limitation. A greater number of levels can be stored by storing dicts in 
+    values of Settings or importing configuration options from a different
+    supported file format.
 
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
@@ -212,20 +108,18 @@ class Settings(sourdough.base.Corpus):
 
     def add(self, 
             section: str, 
-            contents: Union[
-                str,
-                pathlib.Path,
-                Mapping[str, Mapping[str, Any]]]) -> None:
+            contents: Mapping[str, Any]) -> None:
         """Adds 'settings' to 'contents'.
 
         Args:
             section (str): name of section to add 'contents' to.
-            contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, 
-                Any]]]): a dict, a str file path to a file with settings, or a 
-                pathlib Path to a file with settings.
+            contents (Mapping[str, Any]): a dict to store in 'section'.
 
         """
-        super().add(section = section, contents = contents)
+        try:
+            self[section].update(self.validate(contents = contents))
+        except KeyError:
+            self[section] = self.validate(contents = contents)
         return self
 
     def inject(self,
@@ -264,6 +158,66 @@ class Settings(sourdough.base.Corpus):
             except KeyError:
                 pass
         return instance
+
+    """ Dunder Methods """
+
+    def __getitem__(self, key: str) -> Union[Mapping[str, Any], Any]:
+        """Returns a section of the active dictionary or key within a section.
+
+        Args:
+            key (str): the name of the dictionary key for which the value is
+                sought.
+
+        Returns:
+            Union[Mapping[str, Any], Any]: dict if 'key' matches a section in
+                the active dictionary. If 'key' matches a key within a section,
+                the value, which can be any of the supported datatypes is
+                returned.
+
+        """
+        try:
+            return self.contents[key]
+        except KeyError:
+            for section in list(self.contents.keys()):
+                try:
+                    return self.contents[section][key]
+                except KeyError:
+                    pass
+            raise KeyError(f'{key} is not found in {self.__class__.__name__}')
+
+    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
+        """Creates new key/value pair(s) in a section of the active dictionary.
+
+        Args:
+            key (str): name of a section in the active dictionary.
+            value (MutableMapping): the dictionary to be placed in that section.
+
+        Raises:
+            TypeError if 'key' isn't a str or 'value' isn't a dict.
+
+        """
+        try:
+            self.contents[key].update(value)
+        except KeyError:
+            try:
+                self.contents[key] = value
+            except TypeError:
+                raise TypeError(
+                    'key must be a str and value must be a dict type')
+        return self
+
+    def __delitem__(self, key: str) -> None:
+        """Deletes 'key' entry in 'contents'.
+
+        Args:
+            key (str): name of key in 'contents'.
+
+        """
+        try:
+            del self.contents[key]
+        except KeyError:
+            pass
+        return self
 
     """ Private Methods """
 
