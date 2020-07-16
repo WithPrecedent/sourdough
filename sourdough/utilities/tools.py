@@ -403,7 +403,7 @@ def propertify(
 
 """ Decorators """
 
-def timerr(process: str = None) -> Callable:
+def timer(process: str = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 
     Args:

@@ -17,9 +17,9 @@ import sourdough
 
 @dataclasses.dataclass
 class AComponent(
-    sourdough.RegistryMixin,
-    sourdough.LibraryMixin,
-    sourdough.Component):
+    sourdough.base.RegistryMixin,
+    sourdough.base.LibraryMixin,
+    sourdough.base.Component):
     pass
 
 
@@ -29,15 +29,15 @@ class OtherComponent(AComponent):
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.OptionsMixin, sourdough.Component):
+class AnotherComponent(sourdough.base.OptionsMixin, sourdough.base.Component):
     
-    options = sourdough.Corpus(contents = {
+    options = sourdough.base.Catalog(contents = {
         'base': AComponent(),
         'other': OtherComponent})
  
 
 @dataclasses.dataclass   
-class ProxiedComponent(sourdough.ProxyMixin, sourdough.Component):
+class ProxiedComponent(sourdough.base.ProxyMixin, sourdough.base.Component):
     
     def __post_init__(self):
         super().__post_init__()

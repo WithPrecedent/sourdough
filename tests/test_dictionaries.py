@@ -8,10 +8,10 @@
 
 import sourdough
 
-class AComponent(sourdough.Component):
+class AComponent(sourdough.base.Component):
     pass
 
-class AnotherComponent(sourdough.Component):
+class AnotherComponent(sourdough.base.Component):
     pass
 
 def test_dictionaries():
@@ -20,7 +20,7 @@ def test_dictionaries():
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
     
     # Tests Lexicon
-    lexicon = sourdough.Lexicon()
+    lexicon = sourdough.base.Lexicon()
     lexicon.add(test_component)
     lexicon.add(test_mapping)
     lexicon.add(test_sequence)
@@ -29,8 +29,8 @@ def test_dictionaries():
     assert test_keys == ['first_test', 'a_key', 'a_component', 'test_name']
     assert lexicon['a_key'] == 'a_value'
     
-    # Tests Corpus
-    catalog = sourdough.Corpus(contents = {
+    # Tests Catalog
+    catalog = sourdough.base.Catalog(contents = {
         'run' : 'tired',
         'sleep': 'rested',
         'walk': 'relax'})
@@ -40,7 +40,7 @@ def test_dictionaries():
     assert catalog['none'] == []
     
     # Tests MirrorDictionary
-    mirror_dict = sourdough.MirrorDictionary(contents = {
+    mirror_dict = sourdough.base.MirrorDictionary(contents = {
         'run' : 'tired',
         'sleep': 'rested',
         'walk': 'relax'})

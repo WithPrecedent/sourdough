@@ -12,8 +12,8 @@ import sourdough
 
 
 def test_filer():
-    settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
-    filer = sourdough.Filer(settings = settings)
+    settings = sourdough.base.Settings(contents = 'tests\ini_settings.ini')
+    filer = sourdough.base.Filer(settings = settings)
     # Tests default folders.
     assert str(filer.root_folder) == '..\..'
     assert str(filer.input_folder) == '..\..\data'

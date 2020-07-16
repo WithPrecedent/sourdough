@@ -55,16 +55,16 @@ class Edge(object):
  
  
 @dataclasses.dataclass
-class Graph(sourdough.Progression, abc.ABC):
+class Graph(sourdough.base.Progression, abc.ABC):
     """Base class for sourdough graphs.
     
     Args:
-        contents (Union[Sequence['sourdough.Component'], Sequence[Sequence[str]], 
+        contents (Union[Sequence['sourdough.base.Component'], Sequence[Sequence[str]], 
             Mapping[str, Sequence[str]]]]): a list of contents, an adjacency list, or
             an adjacency matrix. Whatever structure is passed, it will be 
             converted to a list of contents. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -78,7 +78,7 @@ class Graph(sourdough.Progression, abc.ABC):
 
     
     """
-    contents: Sequence[Union['sourdough.Component', str]] = dataclasses.field(
+    contents: Sequence[Union['sourdough.base.Component', str]] = dataclasses.field(
         default_factory = list)
     name: str = None
     edges: Union[Sequence['Edge'],
@@ -105,13 +105,13 @@ class Graph(sourdough.Progression, abc.ABC):
 
     @abc.abstractmethod
     def get_sorted(self,
-            graph: 'sourdough.Plan' = None,
+            graph: 'sourdough.base.Plan' = None,
             return_components: bool = False) -> None:
         """Subclasses must provide their own methods."""
 
     @abc.abstractmethod
     def validate(self, 
-            graph: 'sourdough.Plan' = None) -> None:
+            graph: 'sourdough.base.Plan' = None) -> None:
         """Subclasses must provide their own methods."""
            
     """ Public Methods """
@@ -147,13 +147,13 @@ class Graph(sourdough.Progression, abc.ABC):
           
     def add_node(self,
             name: str = None,
-            component: 'sourdough.Component' = None) -> None:
+            component: 'sourdough.base.Component' = None) -> None:
         """Adds a node to the graph."""
         if component and not name:
             name = component.name
         elif not name:
             raise ValueError('component or name must be passed to add_node')
-        node = sourdough.Component(name = name, component = component)
+        node = sourdough.base.Component(name = name, component = component)
         self.contents.append(node)
         return self
 
@@ -263,7 +263,7 @@ class Graph(sourdough.Progression, abc.ABC):
     """ Private Methods """
     
     def _topological_sort(self, 
-            graph: 'sourdough.Plan') -> Sequence['sourdough.Component']:
+            graph: 'sourdough.base.Plan') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -277,9 +277,9 @@ class Graph(sourdough.Progression, abc.ABC):
             searched = searched)
         
     def _topological_descend(self, 
-            graph: 'sourdough.Plan', 
-            node: 'sourdough.Component',
-            searched: list[str]) -> Sequence['sourdough.Component']: 
+            graph: 'sourdough.base.Plan', 
+            node: 'sourdough.base.Component',
+            searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
 
         Returns:
@@ -297,7 +297,7 @@ class Graph(sourdough.Progression, abc.ABC):
         return sorted_queue    
     
     def _dfs_sort(self, 
-            graph: 'sourdough.Plan') -> Sequence['sourdough.Component']:
+            graph: 'sourdough.base.Plan') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -311,9 +311,9 @@ class Graph(sourdough.Progression, abc.ABC):
             searched = searched)
         
     def _dfs_descend(self, 
-            graph: 'sourdough.Plan', 
-            node: 'sourdough.Component',
-            searched: list[str]) -> Sequence['sourdough.Component']: 
+            graph: 'sourdough.base.Plan', 
+            node: 'sourdough.base.Component',
+            searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
 
         Returns:
@@ -336,7 +336,7 @@ class DAGraph(Graph):
     
      Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -346,7 +346,7 @@ class DAGraph(Graph):
             the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contents (Union[Sequence['sourdough.Component'], Sequence[Sequence[str]], 
+        contents (Union[Sequence['sourdough.base.Component'], Sequence[Sequence[str]], 
             Mapping[str, Sequence[str]]]]): a list of contents, an adjacency list, or
             an adjacency matrix. Whatever structure is passed, it will be 
             converted to a list of contents. Defaults to an empty list.   
@@ -354,14 +354,14 @@ class DAGraph(Graph):
     """
     name: str = None
     contents: Union[
-        Sequence['sourdough.Component'], 
+        Sequence['sourdough.base.Component'], 
         Sequence[Sequence[str]], 
         Mapping[str, Sequence[str]]] = dataclasses.field(default_factory = list)
 
     """ Properties """
     
     @property
-    def root(self) -> 'sourdough.Component':
+    def root(self) -> 'sourdough.base.Component':
         """[summary]
 
         Raises:
@@ -380,7 +380,7 @@ class DAGraph(Graph):
             return rootless[0]
  
     @property
-    def endpoints(self) -> Sequence['sourdough.Component']:
+    def endpoints(self) -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -392,10 +392,10 @@ class DAGraph(Graph):
     """ Public Methods """
         
     def get_sorted(self, 
-            graph: 'sourdough.Plan' = None,
+            graph: 'sourdough.base.Plan' = None,
             return_components: bool = False) -> Sequence[Union[
                 Component, 
-                'sourdough.Component']]:
+                'sourdough.base.Component']]:
         """Performs a topological sort on 'graph'.
         
         If 'graph' is not passed, the 'contents' attribute is used instead.
@@ -411,7 +411,7 @@ class DAGraph(Graph):
         else:
             return sorted_queue
 
-    def validate(self, graph: 'sourdough.Plan') -> None:
+    def validate(self, graph: 'sourdough.base.Plan') -> None:
         """
         
 

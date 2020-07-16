@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join('..', 'sourdough'))
 import sourdough
 
 
-class SomeManager(sourdough.Manager):
+class SomeManager(sourdough.base.Manager):
 
     def some_action(self):
         pass

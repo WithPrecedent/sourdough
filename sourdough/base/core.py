@@ -29,7 +29,7 @@ class Component(abc.ABC):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -54,7 +54,7 @@ class Component(abc.ABC):
 
     @classmethod
     def get_name(cls) -> str:
-        """Returns 'name' of class for use throughout sourdough.
+        """Returns 'name' of class for use throughout sourdough.base.
         
         The method is a classmethod so that a 'name' can properly derived even
         before a class is instanced. It can also be called after a subclass is
@@ -73,9 +73,9 @@ class Component(abc.ABC):
             return cls.name
         except AttributeError:
             if inspect.isclass(cls):
-                return sourdough.tools.snakify(cls.__name__)
+                return sourdough.utilities.snakify(cls.__name__)
             else:
-                return sourdough.tools.snakify(cls.__class__.__name__)
+                return sourdough.utilities.snakify(cls.__class__.__name__)
 
 
 @dataclasses.dataclass
@@ -88,7 +88,7 @@ class Task(Component, abc.ABC):
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -118,7 +118,7 @@ class Creator(Component, abc.ABC):
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -333,7 +333,7 @@ class Lexicon(collections.abc.MutableMapping, Anthology):
             Lexicon: with only keys in 'subset'.
 
         """
-        subset = sourdough.tools.listify(subset)
+        subset = sourdough.utilities.listify(subset)
         return self.__class__(
             contents = {k: self.contents[k] for k in subset},
             **kwargs)
@@ -375,110 +375,316 @@ class Lexicon(collections.abc.MutableMapping, Anthology):
 
 
 @dataclasses.dataclass
-class Corpus(sourdough.Lexicon):
-    """sourdough two-level nested dict replacement.
-    
-    Corpus inherits all of the differences between a Lexicon and a python dict.
+class Catalog(Lexicon):
+    """Base class for a wildcard and list-accepting dictionary.
 
-    A Corpus differs from a Lexicon in 3 significant ways:
-        1) Its 'add' method requirements 2 arguments ('section' and 'contents') 
-            due to the 2-level nature of the stored dict.
-        2) It does not return an error if you attempt to delete a key that is
-            not stored within 'contents'.
-        3) If you try to find a key that does not correspond to a section in 
-            'contents', a Corpus subclass instance will return the first 
-            matching key within a section (iterated in stored order), if a
-            match exists.
-    
-    The Corups 'add' method accounts for whether the 'section' passed already
-    exists and adds the passed 'contents' appropriately.
-    
+    A Catalog inherits the differences between a Lexicon and an ordinary python
+    dict.
+
+    A Catalog differs from a Lexicon in 5 significant ways:
+        1) It recognizes an 'all' key which will return a list of all values
+            stored in a Catalog instance.
+        2) It recognizes a 'default' key which will return all values matching
+            keys listed in the 'defaults' attribute. 'default' can also be set
+            using the 'catalog['default'] = new_default' assignment. If 
+            'defaults' is not passed when the instance is initialized, the 
+            initial value of 'defaults' is 'all'
+        3) It recognizes a 'none' key which will return an empty list.
+        4) It supports a list of keys being accessed with the matching
+            values returned. For example, 'catalog[['first_key', 'second_key']]' 
+            will return the values for those keys in a list.
+        5) If a single key is sought, a Catalog can either return the stored
+            value or a stored value in a list (if 'always_return_list' is
+            True). The latter option is available to make iteration easier
+            when the iterator assumes a single datatype will be returned.
+        6) It includes a 'create' method which will either instance a stored
+            class or return a stored instance.
+
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-              
+        contents (Union[sourdough.Component, Sequence[sourdough.Component], 
+            Mapping[str, sourdough.Component]]): Component(s) to validate or
+            convert to a dict. If 'contents' is a Sequence or a Component, 
+            the key for storing 'contents' is the 'name' attribute of each 
+            Component.
+        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
+            used to return items when 'default' is sought. If not passed, 
+            'default' will be set to all keys.
+        always_return_list (bool]): whether to return a list even when
+            the key passed is not a list or special access key (True) or to 
+            return a list only when a list or special acces key is used (False). 
+            Defaults to False.
+            
     """
-    contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
-        default_factory = dict)
+    contents: Union[
+        'sourdough.Component',
+        Sequence['sourdough.Component'],
+        Mapping[str, 'sourdough.Component']] = dataclasses.field(
+            default_factory = dict)    
+    defaults: Sequence[str] = dataclasses.field(default_factory = list)
+    always_return_list: bool = False
 
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Validates 'contents' or converts it to a dict.
+        super().__post_init__()
+        # Sets 'default' to all keys of 'contents', if not passed.
+        self.defaults = self.defaults or 'all'
+        
     """ Public Methods """
 
-    def add(self, 
-            section: str, 
-            contents: Mapping[str, Any]) -> None:
-        """Adds 'settings' to 'contents'.
-
+    def validate(self, 
+            contents: Union[
+                'sourdough.Component',
+                Sequence['sourdough.Component'],
+                Mapping[str, 'sourdough.Component']]) -> Mapping[
+                    str, 'sourdough.Component']:
+        """Validates 'contents' or converts 'contents' to the proper type.
+        
         Args:
-            section (str): name of section to add 'contents' to.
-            contents (Mapping[str, Any]): a dict to store in 'section'.
-
+            contents (Union[sourdough.Component, Sequence[sourdough.Component], 
+                Mapping[str, sourdough.Component]]): Component(s) to validate or
+                convert to a dict. If 'contents' is a Sequence or a Component, 
+                the key for storing 'contents' is the 'name' attribute of each 
+                Component.
+        Raises:
+            TypeError: if 'contents' is neither a Component subclass, Sequence
+                of Component subclasses, or Mapping with Components subclasses
+                as values.
+        Returns:
+            Mapping (str, sourdough.Component): a properly typed dict derived
+                from passed 'contents'.
+            
         """
-        try:
-            self[section].update(self._validate(contents = contents))
-        except KeyError:
-            self[section] = self._validate(contents = contents)
-        return self
-    
-    """ Dunder Methods """
+        if isinstance(contents, sourdough.Component):
+            return {contents.get_name(): contents}
+        elif isinstance(contents, Mapping):
+            return contents
+        elif isinstance(contents, Sequence):
+            new_contents = {}
+            for component in contents:
+                new_contents[component.get_name()] = component
+            return new_contents
+        else:
+            raise TypeError(
+                'contents must a Component or Mapping or Sequence storing'
+                'Components') 
 
-    def __getitem__(self, key: str) -> Union[Mapping[str, Any], Any]:
-        """Returns a section of the active dictionary or key within a section.
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
+        """Returns a subset of 'contents'.
 
         Args:
-            key (str): the name of the dictionary key for which the value is
-                sought.
+            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
+                from 'contents'.
 
         Returns:
-            Union[Mapping[str, Any], Any]: dict if 'key' matches a section in
-                the active dictionary. If 'key' matches a key within a section,
-                the value, which can be any of the supported datatypes is
-                returned.
+            Catalog: with only keys in 'subset'.
 
         """
-        try:
-            return self.contents[key]
-        except KeyError:
-            for section in list(self.contents.keys()):
-                try:
-                    return self.contents[section][key]
-                except KeyError:
-                    pass
-            raise KeyError(f'{key} is not found in {self.__class__.__name__}')
+        return super().subsetify(
+            contents = self.contents,
+            defaults = self.defaults,
+            always_return_list = self.always_return_list)
 
-    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
-        """Creates new key/value pair(s) in a section of the active dictionary.
+    def create(self, key: str, **kwargs) -> 'sourdough.Component':
+        """Returns an instance of a stored subclass or instance.
+        
+        This method acts as a factory for instancing stored classes or returning
+        instances.
+        
+        Args:
+            key (str): key to desired Component in 'contents'.
+            kwargs: arguments to pass to the selected Component when it is
+                instanced.
+                    
+        Returns:
+            sourdough.Component: that has been instanced with kwargs as 
+                arguments if it was a stored class. Otherwise, the instance
+                is returned as it was stored.
+            
+        """
+        try:
+            return self.contents[key](**kwargs)
+        except TypeError:
+            return self.contents[key] 
+
+    """ Dunder Methods """
+
+    def __getitem__(self, 
+            key: Union[Sequence[str], str]) -> Union[Sequence[Any], Any]:
+        """Returns value(s) for 'key' in 'contents'.
+
+        The method searches for 'all', 'default', and 'none' matching wildcard
+        options before searching for direct matches in 'contents'.
 
         Args:
-            key (str): name of a section in the active dictionary.
-            value (MutableMapping): the dictionary to be placed in that section.
+            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents'.
 
-        Raises:
-            TypeError if 'key' isn't a str or 'value' isn't a dict.
+        Returns:
+            Union[Sequence[Any], Any]: value(s) stored in 'contents'.
 
         """
-        try:
-            self.contents[key].update(value)
-        except KeyError:
+        # Returns a list of all values if the 'all' key is sought.
+        if key in ['all', ['all']]:
+            return list(self.contents.values())
+        # Returns a list of values for keys listed in 'defaults' attribute.
+        elif key in ['default', ['default'], 'defaults', ['defaults']]:
+            try:
+                return self[self.defaults]
+            except KeyError:
+                return list(
+                    {k: self.contents[k] for k in self.defaults}.values())
+        # Returns an empty list if a null value is sought.
+        elif key in ['none', ['none'], 'None', ['None']]:
+            return []
+        # Returns list of matching values if 'key' is list-like.        
+        elif isinstance(key, Sequence) and not isinstance(key, str):
+            return [self.contents[k] for k in key if k in self.contents]
+        # Returns matching value if key is a str.
+        else:
+            try:
+                if self.always_return_list:
+                    return [self.contents[key]]
+                else:
+                    return self.contents[key]
+            except KeyError:
+                raise KeyError(f'{key} is not in {self.__class__.__name__}')
+
+    def __setitem__(self,
+            key: Union[Sequence[str], str],
+            value: Union[Sequence[Any], Any]) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (Union[Sequence[str], str]): name of key(s) to set in 
+                'contents'.
+            value (Union[Sequence[Any], Any]): value(s) to be paired with 'key' 
+                in 'contents'.
+
+        """
+        if key in ['default', ['default']]:
+            self.defaults = sourdough.tools.listify(value)
+        else:
             try:
                 self.contents[key] = value
             except TypeError:
-                raise TypeError(
-                    'key must be a str and value must be a dict type')
+                self.contents.update(dict(zip(key, value)))
         return self
 
-    def __delitem__(self, key: str) -> None:
-        """Deletes 'key' entry in 'contents'.
+    def __delitem__(self, key: Union[Sequence[str], str]) -> None:
+        """Deletes 'key' in 'contents'.
 
         Args:
-            key (str): name of key in 'contents'.
+            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents' to
+                delete the key/value pair.
 
         """
-        try:
-            del self.contents[key]
-        except KeyError:
-            pass
+        self.contents = {
+            i: self.contents[i]
+            for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
 
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+        Returns:
+            str: default string representation of an instance.
+        """
+        return (
+            f'sourdough {self.__class__.__name__}\n'
+            f'contents: {self.contents.__str__()}\n'
+            f'defaults: {self.defaults.__str__()}')
+
+
+""" 
+Reflector is currently omitted from the sourdough build because I'm unsure
+if it has a significant use case. The code below should still work, but it
+isn't included in the uploaded package build. 
+"""
+
+# @dataclasses.dataclass
+# class Reflector(Lexicon):
+#     """Base class for a mirrored dictionary.
+
+#     Reflector access methods search keys and values for corresponding
+#     matched values and keys, respectively.
+
+#     Args:
+#         contents (Mapping[str, Any]]): stored dictionary. Defaults to 
+#             en empty dict.
+              
+#     """
+#     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+
+#     def __post_init__(self) -> None:
+#         """Creates 'reversed_contents' from passed 'contents'."""
+#         self._create_reversed()
+#         return self
+
+#     """ Dunder Methods """
+
+#     def __getitem__(self, key: str) -> Any:
+#         """Returns match for 'key' in 'contents' or 'reversed_contents'.
+
+#         Args:
+#             key (str): name of key to find.
+
+#         Returns:
+#             Any: value stored in 'contents' or 'reversed_contents'.
+
+#         Raises:
+#             KeyError: if 'key' is neither found in 'contents' nor 
+#                 'reversed_contents'.
+
+#         """
+#         try:
+#             return self.contents[key]
+#         except KeyError:
+#             try:
+#                 return self.reversed_contents[key]
+#             except KeyError:
+#                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
+
+#     def __setitem__(self, key: str, value: Any) -> None:
+#         """Stores arguments in 'contents' and 'reversed_contents'.
+
+#         Args:
+#             key (str): name of key to set.
+#             value (Any): value to be paired with key.
+
+#         """
+#         self.contents[key] = value
+#         self.reversed_contents[value] = key
+#         return self
+
+#     def __delitem__(self, key: str) -> None:
+#         """Deletes key in the 'contents' and 'reversed_contents' dictionaries.
+
+#         Args:
+#             key (str): name of key to delete.
+
+#         """
+#         try:
+#             value = self.contents[key]
+#             del self.contents[key]
+#             del self.reversed_contents[value]
+#         except KeyError:
+#             try:
+#                 value = self.reversed_contents[key]
+#                 del self.reversed_contents[key]
+#                 del self.contents[value]
+#             except KeyError:
+#                 pass
+#         return self
+
+#     """ Private Methods """
+
+#     def _create_reversed(self) -> None:
+#         """Creates 'reversed_contents' from 'contents'."""
+#         self.reversed_contents = {
+#             value: key for key, value in self.contents.items()}
+#         return self
+        
         
 @dataclasses.dataclass
 class Progression(collections.abc.MutableSequence, Component, Anthology):
@@ -486,7 +692,7 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
     
     A Progression differs from a python list in 6 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Component.
+            in sourdough.base. This is inherited from Component.
         2) It includes an 'add' method which allows different datatypes to
             be passed and added to the 'contents' of a Progression instance.
         3) It only stores items that have a 'name' attribute or are str type.
@@ -511,7 +717,7 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
     Args:
         contents (Sequence[Component]]): stored iterable of Component instances.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -639,7 +845,7 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
             Plan: with only items with 'name' attributes in 'subset'.
 
         """
-        subset = sourdough.tools.listify(subset)
+        subset = sourdough.utilities.listify(subset)
         return self.__class__(
             name = self.name,
             contents = [c for c in self.contents if c.name in subset])    

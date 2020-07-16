@@ -19,7 +19,113 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(sourdough.Corpus):
+class Corpus(sourdough.base.Lexicon):
+    """sourdough two-level nested dict replacement.
+    
+    Catalog inherits all of the differences between a Lexicon and a python dict.
+
+    A Catalog differs from a Lexicon in 3 significant ways:
+        1) Its 'add' method requirements 2 arguments ('section' and 'contents') 
+            due to the 2-level nature of the stored dict.
+        2) It does not return an error if you attempt to delete a key that is
+            not stored within 'contents'.
+        3) If you try to find a key that does not correspond to a section in 
+            'contents', a Catalog subclass instance will return the first 
+            matching key within a section (iterated in stored order), if a
+            match exists.
+    
+    The Corups 'add' method accounts for whether the 'section' passed already
+    exists and adds the passed 'contents' appropriately.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+              
+    """
+    contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+        default_factory = dict)
+
+    """ Public Methods """
+
+    def add(self, 
+            section: str, 
+            contents: Mapping[str, Any]) -> None:
+        """Adds 'settings' to 'contents'.
+
+        Args:
+            section (str): name of section to add 'contents' to.
+            contents (Mapping[str, Any]): a dict to store in 'section'.
+
+        """
+        try:
+            self[section].update(self._validate(contents = contents))
+        except KeyError:
+            self[section] = self._validate(contents = contents)
+        return self
+    
+    """ Dunder Methods """
+
+    def __getitem__(self, key: str) -> Union[Mapping[str, Any], Any]:
+        """Returns a section of the active dictionary or key within a section.
+
+        Args:
+            key (str): the name of the dictionary key for which the value is
+                sought.
+
+        Returns:
+            Union[Mapping[str, Any], Any]: dict if 'key' matches a section in
+                the active dictionary. If 'key' matches a key within a section,
+                the value, which can be any of the supported datatypes is
+                returned.
+
+        """
+        try:
+            return self.contents[key]
+        except KeyError:
+            for section in list(self.contents.keys()):
+                try:
+                    return self.contents[section][key]
+                except KeyError:
+                    pass
+            raise KeyError(f'{key} is not found in {self.__class__.__name__}')
+
+    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
+        """Creates new key/value pair(s) in a section of the active dictionary.
+
+        Args:
+            key (str): name of a section in the active dictionary.
+            value (MutableMapping): the dictionary to be placed in that section.
+
+        Raises:
+            TypeError if 'key' isn't a str or 'value' isn't a dict.
+
+        """
+        try:
+            self.contents[key].update(value)
+        except KeyError:
+            try:
+                self.contents[key] = value
+            except TypeError:
+                raise TypeError(
+                    'key must be a str and value must be a dict type')
+        return self
+
+    def __delitem__(self, key: str) -> None:
+        """Deletes 'key' entry in 'contents'.
+
+        Args:
+            key (str): name of key in 'contents'.
+
+        """
+        try:
+            del self.contents[key]
+        except KeyError:
+            pass
+        return self
+
+
+@dataclasses.dataclass
+class Settings(sourdough.base.Corpus):
     """Stores sourdough project settings.
 
     To create Settings instance, a user can pass a:
@@ -73,6 +179,37 @@ class Settings(sourdough.Corpus):
 
     """ Public Methods """
 
+    def validate(self, 
+            contents: Union[
+                str,
+                pathlib.Path,
+                Mapping[str, Any]]) -> Mapping[str, Any]:
+        """Validates 'contents' or converts 'contents' to the proper type.
+
+        Args:
+            contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
+                str file path to a file with settings, or a pathlib Path to a 
+                file with settings.
+
+        Raises:
+            TypeError: if 'contents' is neither a str, dict, or Path.
+
+        Returns:
+            Mapping[str, Any]: 'contents' in its proper form.
+
+        """
+        if isinstance(contents, Mapping):
+            return contents
+        elif isinstance(contents, (str, pathlib.Path)):
+            extension = str(pathlib.Path(contents).suffix)[1:]
+            load_method = getattr(self, f'_load_from_{extension}')
+            return load_method(file_path = contents)
+        elif contents is None:
+            return {}
+        else:
+            raise TypeError(
+                'contents must be None or a dict, Path, or str type')
+
     def add(self, 
             section: str, 
             contents: Union[
@@ -115,7 +252,7 @@ class Settings(sourdough.Corpus):
         except AttributeError:
             pass
         if additional:
-            sections.extend(sourdough.tools.listify(additional))
+            sections.extend(sourdough.utilities.listify(additional))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
@@ -127,37 +264,6 @@ class Settings(sourdough.Corpus):
             except KeyError:
                 pass
         return instance
-
-    def validate(self, 
-            contents: Union[
-                str,
-                pathlib.Path,
-                Mapping[str, Any]]) -> Mapping[str, Any]:
-        """Validates 'contents' or converts 'contents' to the proper type.
-
-        Args:
-            contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
-                str file path to a file with settings, or a pathlib Path to a 
-                file with settings.
-
-        Raises:
-            TypeError: if 'contents' is neither a str, dict, or Path.
-
-        Returns:
-            Mapping[str, Any]: 'contents' in its proper form.
-
-        """
-        if isinstance(contents, Mapping):
-            return contents
-        elif isinstance(contents, (str, pathlib.Path)):
-            extension = str(pathlib.Path(contents).suffix)[1:]
-            load_method = getattr(self, f'_load_from_{extension}')
-            return load_method(file_path = contents)
-        elif contents is None:
-            return {}
-        else:
-            raise TypeError(
-                'contents must be None or a dict, Path, or str type')
 
     """ Private Methods """
 
@@ -266,11 +372,11 @@ class Settings(sourdough.Corpus):
         for key, value in contents.items():
             if isinstance(value, dict):
                 inner_bundle = {
-                    inner_key: sourdough.tools.typify(inner_value)
+                    inner_key: sourdough.utilities.typify(inner_value)
                     for inner_key, inner_value in value.items()}
                 new_contents[key] = inner_bundle
             else:
-                new_contents[key] = sourdough.tools.typify(value)
+                new_contents[key] = sourdough.utilities.typify(value)
         return new_contents
 
     def _add_defaults(self,
@@ -287,7 +393,7 @@ class Settings(sourdough.Corpus):
             Mapping[str, Mapping[str, Any]]: with stored defaults added.
 
         """
-        new_contents = sourdough.defaults.settings
+        new_contents = sourdough.base.defaults.settings
         new_contents.update(contents)
         return new_contents
 

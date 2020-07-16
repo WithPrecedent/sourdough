@@ -17,11 +17,11 @@ import sourdough
 class Author(Stage):
     """Initializes a Project instance based upon a Settings instance."""  
     
-    settings: 'sourdough.Settings'
+    settings: 'sourdough.base.Settings'
     
     """ Public Methods """
     
-    def apply(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+    def apply(self, step: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """Returns a Plan with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
@@ -31,11 +31,11 @@ class Author(Stage):
         'step' based upon a specific structural design.
         
         Args:
-            step (sourdough.Plan): Plan instance to organize the 
+            step (sourdough.base.Plan): Plan instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.Plan: an instance with contents fully instanced.
+            sourdough.base.Plan: an instance with contents fully instanced.
                 
         """
         step = self._draft_existing_contents(step = step)
@@ -45,11 +45,11 @@ class Author(Stage):
     """ Private Methods """
 
     def _draft_existing_contents(self, 
-            step: 'sourdough.Plan') -> 'sourdough.Plan':
+            step: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """
         
         Args:
-            step (sourdough.Plan): Plan instance with str, Step, or Plan
+            step (sourdough.base.Plan): Plan instance with str, Step, or Plan
                 stored in contents.
 
         Raises:
@@ -57,7 +57,7 @@ class Author(Stage):
                 type.
 
         Returns:
-            sourdough.Plan: an instance with contents fully instanced.
+            sourdough.base.Plan: an instance with contents fully instanced.
                 
         """
         new_contents = []
@@ -66,7 +66,7 @@ class Author(Stage):
                 new_contents.append(self._draft_unknown(
                     labor = labor, 
                     step = step))
-            elif isinstance(labor, (sourdough.Plan, sourdough.Step)):
+            elif isinstance(labor, (sourdough.base.Plan, sourdough.base.Step)):
                 new_contents.append(labor)
             else:
                 raise TypeError(
@@ -76,9 +76,9 @@ class Author(Stage):
     
     def _draft_unknown(self,
             labor: str,
-            step: 'sourdough.Plan') -> Union[
-                'sourdough.Step', 
-                'sourdough.Plan']:
+            step: 'sourdough.base.Plan') -> Union[
+                'sourdough.base.Step', 
+                'sourdough.base.Plan']:
         """[summary]
 
         Raises:
@@ -91,7 +91,7 @@ class Author(Stage):
             test_instance = step.options[labor](name = 'test only')
         except KeyError:
             raise KeyError(f'{labor} not found in {step.name}')
-        if isinstance(test_instance, sourdough.Step):
+        if isinstance(test_instance, sourdough.base.Step):
             return self._draft_step(
                 step = labor, 
                 technique = None, 
@@ -100,15 +100,15 @@ class Author(Stage):
             return self._draft_step(step = labor, manager = step)
 
     def _draft_from_settings(self, 
-            step: 'sourdough.Plan') -> 'sourdough.Plan':
+            step: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """Returns a single Plan instance created based on 'settings'.
 
         Args:
-            step (sourdough.Plan): Plan instance to populate its 
+            step (sourdough.base.Plan): Plan instance to populate its 
                 'contents' with information in 'settings'.
 
         Returns:
-            sourdough.Plan: an step or subclass step with attributes 
+            sourdough.base.Plan: an step or subclass step with attributes 
                 derived from a section of 'settings'.
                 
         """
@@ -121,12 +121,12 @@ class Author(Stage):
             if key.endswith('_design'):
                 step.design = value
             elif key.endswith('_steps'):
-                steps = sourdough.tools.listify(value)
+                steps = sourdough.utilities.listify(value)
             elif key.endswith('_steps'):
-                steps = sourdough.tools.listify(value)
+                steps = sourdough.utilities.listify(value)
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
-                techniques[new_key] = sourdough.tools.listify(value)
+                techniques[new_key] = sourdough.utilities.listify(value)
             else:
                 attributes[key] = value
         if steps:
@@ -144,7 +144,7 @@ class Author(Stage):
 
     def _draft_steps(self,
             steps: Sequence[str],
-            manager: 'sourdough.Plan') -> 'sourdough.Plan':
+            manager: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """[summary]
 
         Returns:
@@ -161,7 +161,7 @@ class Author(Stage):
 
     def _draft_step(self,
             step: str,
-            manager: 'sourdough.Plan') -> 'sourdough.Plan':
+            manager: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """[summary]
 
         Returns:
@@ -171,13 +171,13 @@ class Author(Stage):
         try:
             new_step = manager.options[step](name = step)
         except KeyError:
-            new_step = sourdough.Plan(name = step)
+            new_step = sourdough.base.Plan(name = step)
         return self.organize(step = new_step)
                   
     # def _draft_steps(self, 
-    #         step: 'sourdough.Plan',
+    #         step: 'sourdough.base.Plan',
     #         steps: Sequence[str],
-    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Plan':
+    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.base.Plan':
     #     """[summary]
 
     #     Returns:
@@ -199,7 +199,7 @@ class Author(Stage):
     #         step: str,
     #         technique: str,
     #         step: str,
-    #         options: 'sourdough.Corpus') -> 'sourdough.Step':
+    #         options: 'sourdough.base.Catalog') -> 'sourdough.base.Step':
     #     """[summary]
 
     #     Returns:
@@ -213,7 +213,7 @@ class Author(Stage):
     #             technique = step.options[technique])
     #     except KeyError:
     #         try:
-    #             return sourdough.Step(
+    #             return sourdough.base.Step(
     #                 name = step,
     #                 step = step,
     #                 technique = step.options[technique])
@@ -222,42 +222,42 @@ class Author(Stage):
     #                 return step.options[step](
     #                     name = step,
     #                     step = step,
-    #                     technique = sourdough.Technique(name = technique))
+    #                     technique = sourdough.base.Technique(name = technique))
     #             except KeyError:
-    #                 return sourdough.Step(
+    #                 return sourdough.base.Step(
     #                     name = step,
     #                     step = step,
-    #                     technique = sourdough.Technique(name = technique))
+    #                     technique = sourdough.base.Technique(name = technique))
 
 
 @dataclasses.dataclass
 class Publisher(Stage):
     
-    settings: 'sourdough.Settings'
+    settings: 'sourdough.base.Settings'
 
     """ Public Methods """
     
     def add(self, 
-            project: 'sourdough.Project', 
+            project: 'sourdough.project', 
             step: str, 
-            steps: Union[Sequence[str], str]) -> 'sourdough.Project':
+            steps: Union[Sequence[str], str]) -> 'sourdough.project':
         """Adds 'steps' to 'project' 'contents' with a 'step' key.
         
         Args:
-            project (sourdough.Project): project to which 'step' and 'steps'
+            project (sourdough.project): project to which 'step' and 'steps'
                 should be added.
             step (str): key to use to store 'steps':
             steps (Union[Sequence[str], str]): name(s) of step(s) to add to 
                 'project'.
             
         Returns:
-            sourdough.Project: with 'steps' added at 'step'.
+            sourdough.project: with 'steps' added at 'step'.
         
         """
-        project.contents[step] = sourdough.tools.listify(steps)
+        project.contents[step] = sourdough.utilities.listify(steps)
         return project
  
-    def create(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, step: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """[summary]
 
         Returns:
@@ -270,7 +270,7 @@ class Publisher(Stage):
 
     """ Private Methods """
     
-    def get(self, technique: sourdough.technique) -> sourdough.technique:
+    def get(self, technique: sourdough.base.technique) -> sourdough.base.technique:
         """Adds appropriate parameters to technique.
 
         Args:
@@ -291,7 +291,7 @@ class Publisher(Stage):
     """ Private Methods """
 
     def _get_settings(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: sourdough.base.technique) -> sourdough.base.technique:
         """Acquires parameters from 'Settings' instance.
 
         Args:
@@ -306,7 +306,7 @@ class Publisher(Stage):
             technique = technique.name)
 
     def _get_selected(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: sourdough.base.technique) -> sourdough.base.technique:
         """Limits parameters to those appropriate to the technique.
 
         If 'technique.selected' is True, the keys from 'technique.defaults' are
@@ -335,7 +335,7 @@ class Publisher(Stage):
         return technique
 
     def _get_required(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: sourdough.base.technique) -> sourdough.base.technique:
         """Adds required parameters (mandatory additions) to 'parameters'.
 
         Args:
@@ -352,7 +352,7 @@ class Publisher(Stage):
         return technique
 
     def _get_search(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: sourdough.base.technique) -> sourdough.base.technique:
         """Separates variables with multiple options to search parameters.
 
         Args:
@@ -378,7 +378,7 @@ class Publisher(Stage):
         return technique
 
     def _get_runtime(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: sourdough.base.technique) -> sourdough.base.technique:
         """Adds parameters that are determined at runtime.
 
         The primary example of a runtime parameter throughout sourdough is the
@@ -408,9 +408,9 @@ class Publisher(Stage):
 @dataclasses.dataclass
 class Reader(Stage):
     
-    settings: 'sourdough.Settings'
+    settings: 'sourdough.base.Settings'
     
-    def create(self, step: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, step: 'sourdough.base.Plan') -> 'sourdough.base.Plan':
         """[summary]
 
         Returns:
@@ -423,12 +423,12 @@ class Reader(Stage):
 
 
 # @dataclasses.dataclass
-# class Parametizer(sourdough.Component):
+# class Parametizer(sourdough.base.Component):
 #     """Constructs technique with an 'algorithm' and 'parameters'.
 
 #     Args:
 #         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
+#             for internal referencing throughout sourdough.base. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
@@ -441,12 +441,12 @@ class Reader(Stage):
 
 #     """
 #     name: str = None
-#     settings: sourdough.Settings] = None
+#     settings: sourdough.base.Settings] = None
 #     instructions: Instructions] = None
 
 #     """ Public Methods """
 
-#     def get(self, technique: sourdough.technique) -> sourdough.technique:
+#     def get(self, technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Adds appropriate parameters to technique.
 
 #         Args:
@@ -467,7 +467,7 @@ class Reader(Stage):
 #     """ Private Methods """
 
 #     def _get_settings(self,
-#             technique: sourdough.technique) -> sourdough.technique:
+#             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Acquires parameters from 'Settings' instance.
 
 #         Args:
@@ -482,7 +482,7 @@ class Reader(Stage):
 #             technique = technique.name)
 
 #     def _get_selected(self,
-#             technique: sourdough.technique) -> sourdough.technique:
+#             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Limits parameters to those appropriate to the technique.
 
 #         If 'technique.selected' is True, the keys from 'technique.defaults' are
@@ -511,7 +511,7 @@ class Reader(Stage):
 #         return technique
 
 #     def _get_required(self,
-#             technique: sourdough.technique) -> sourdough.technique:
+#             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Adds required parameters (mandatory additions) to 'parameters'.
 
 #         Args:
@@ -528,7 +528,7 @@ class Reader(Stage):
 #         return technique
 
 #     def _get_search(self,
-#             technique: sourdough.technique) -> sourdough.technique:
+#             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Separates variables with multiple options to search parameters.
 
 #         Args:
@@ -554,7 +554,7 @@ class Reader(Stage):
 #         return technique
 
 #     def _get_runtime(self,
-#             technique: sourdough.technique) -> sourdough.technique:
+#             technique: sourdough.base.technique) -> sourdough.base.technique:
 #         """Adds parameters that are determined at runtime.
 
 #         The primary example of a runtime parameter throughout sourdough is the
@@ -581,12 +581,12 @@ class Reader(Stage):
 
 
 # @dataclasses.dataclass
-# class Finisher(sourdough.Technique):
+# class Finisher(sourdough.base.Technique):
 #     """Finalizes technique instances with data-dependent parameters.
 
 #     Args:
 #         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
+#             for internal referencing throughout sourdough.base. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
@@ -599,14 +599,14 @@ class Reader(Stage):
 
 #     """
 #     name: str = None
-#     Settings: sourdough.Settings] = None
+#     Settings: sourdough.base.Settings] = None
 #     instructions: Instructions] = None
 
 #     """ Public Methods """
 
 #     def create(self,
-#             outer_step: sourdough.base.Plan,
-#             data: Union[sourdough.Dataset, sourdough.base.Plan]) -> sourdough.base.Plan:
+#             outer_step: sourdough.base.base.Plan,
+#             data: Union[sourdough.base.Dataset, sourdough.base.base.Plan]) -> sourdough.base.base.Plan:
 #         """Applies 'outer_step' instance in 'project' to 'data' or other stored outer_step.
 
 #         Args:
@@ -759,12 +759,12 @@ class Reader(Stage):
 
 
 # @dataclasses.dataclass
-# class Scholar(sourdough.Technique):
+# class Scholar(sourdough.base.Technique):
 #     """Base class for applying technique instances to data.
 
 #     Args:
 #         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
+#             for internal referencing throughout sourdough.base. If the class instance
 #             needs settings from the shared Settings instance, 'name' should
 #             match the appropriate section name in that Settings instance. When
 #             subclassing, it is a good settings to use the same 'name' attribute
@@ -778,7 +778,7 @@ class Reader(Stage):
 #     """
 #     name: str = None
 #     instructions: Instructions] = None
-#     Settings: sourdough.Settings] = None
+#     Settings: sourdough.base.Settings] = None
 
 #     def __post_init__(self) -> None:
 #         """Initializes class instance attributes."""

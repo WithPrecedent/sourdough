@@ -9,10 +9,10 @@
 import sourdough
 
 
-class NewInstructions(sourdough.Instructions):
+class NewInstructions(sourdough.base.Instructions):
     pass
 
-class NewPlan(sourdough.Plan):
+class NewPlan(sourdough.base.Plan):
     pass
 
 def test_step():

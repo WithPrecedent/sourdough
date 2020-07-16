@@ -13,7 +13,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class NewTask(sourdough.Task):
+class NewTask(sourdough.base.Task):
     
     def apply(self, data: object) -> object:
         data.new_value = 7
@@ -21,7 +21,7 @@ class NewTask(sourdough.Task):
         
 
 @dataclasses.dataclass
-class OtherTask(sourdough.Task):
+class OtherTask(sourdough.base.Task):
     
     def apply(self, data: object) -> object:
         data.other_value = 'something'
@@ -29,9 +29,9 @@ class OtherTask(sourdough.Task):
 
 
 @dataclasses.dataclass
-class APlan(sourdough.Plan):
+class APlan(sourdough.base.Plan):
     
-    options: ClassVar['sourdough.Corpus'] = sourdough.Corpus(
+    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
         contents = {'new': NewTask()},
         always_return_list = True)
   

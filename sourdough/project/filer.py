@@ -18,7 +18,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Filer(object):
-    """File and folder manager for sourdough.
+    """File and folder manager for sourdough.base.
 
     Creates and stores dynamic and static file paths, properly formats files
     for import and export, and provides methods for loading and saving
@@ -40,7 +40,7 @@ class Filer(object):
             'root_folder'. Defaults to 'output_folder'.
 
     """
-    settings: sourdough.Settings = None
+    settings: sourdough.base.Settings = None
     root_folder: Union[
         str,
         pathlib.Path,
@@ -306,7 +306,7 @@ class Filer(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.Settings) -> Mapping[str, Any]:
+            settings: sourdough.base.Settings) -> Mapping[str, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
@@ -506,7 +506,7 @@ class Distributor(abc.ABC):
 
 @dataclasses.dataclass
 class FileLoader(Distributor):
-    """Manages file importing for sourdough.
+    """Manages file importing for sourdough.base.
 
     Args:
         filer (Filer): related Filer instance.
@@ -564,7 +564,7 @@ class FileLoader(Distributor):
 
 @dataclasses.dataclass
 class FileSaver(Distributor):
-    """Manages file exporting for sourdough.
+    """Manages file exporting for sourdough.base.
 
     Args:
         filer (Filer): related Filer instance.
@@ -621,12 +621,12 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.base.LazyLoader):
+class FileFormat(sourdough.base.base.LazyLoader):
     """File format information.
 
     Args:
         name (str): designates the name of the class instance used
-            for internal referencing throughout sourdough. If the class instance
+            for internal referencing throughout sourdough.base. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute

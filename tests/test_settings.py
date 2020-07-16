@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join('..', 'src', 'sourdough'))
 import sourdough
 
 
-class Divide(sourdough.Component):
+class Divide(sourdough.base.Component):
     pass
 
 
@@ -34,11 +34,11 @@ def test_settings():
             'parser_steps': 'divide',
             'divide_techniques': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
-    ini_settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
+    ini_settings = sourdough.base.Settings(contents = 'tests\ini_settings.ini')
     assert ini_settings.contents == actual_settings
-    py_settings = sourdough.Settings(contents = 'tests\py_settings.py')
+    py_settings = sourdough.base.Settings(contents = 'tests\py_settings.py')
     assert py_settings.contents == actual_settings
-    json_settings = sourdough.Settings(contents = 'tests\json_settings.json')
+    json_settings = sourdough.base.Settings(contents = 'tests\json_settings.json')
     assert json_settings.contents == actual_settings
     assert ini_settings.get_steps(section = 'project') == ['parser', 'munger']
     assert ini_settings.get_steps(step = 'parser') == ['divide']

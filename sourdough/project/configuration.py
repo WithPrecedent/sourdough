@@ -7,7 +7,6 @@
 """
 
 import collections
-import collections.abc
 import configparser
 import dataclasses
 import importlib
@@ -20,7 +19,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(collections.abc.MutableMapping):
+class Configuration(sourdough.base.Settings):
     """Stores sourdough project settings.
 
 
@@ -115,7 +114,7 @@ class Settings(collections.abc.MutableMapping):
         except AttributeError:
             pass
         if additional:
-            sections.extend(sourdough.tools.listify(additional))
+            sections.extend(sourdough.utilities.listify(additional))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
@@ -128,7 +127,7 @@ class Settings(collections.abc.MutableMapping):
                 pass
         return instance
 
-    # def get_overview(self, name: str) -> 'sourdough.Overview':
+    # def get_overview(self, name: str) -> 'sourdough.base.Overview':
     #     """Returns an Overview with 'contents' from this instance.
 
     #     Args:
@@ -136,13 +135,13 @@ class Settings(collections.abc.MutableMapping):
     #             Overview instance.
 
     #     Returns:
-    #         sourdough.Overview: with contents derived from the configuration
+    #         sourdough.base.Overview: with contents derived from the configuration
     #             settings in this instance.
 
     #     """
-    #     steps = sourdough.tools.listify(
+    #     steps = sourdough.utilities.listify(
     #         self.contents[name][f'{name}_steps'])
-    #     overview = sourdough.Overview(name = f'{name}_overview')
+    #     overview = sourdough.base.Overview(name = f'{name}_overview')
     #     for step in steps:
     #         overview = self._parse_step_section(
     #             name = step, 
@@ -151,22 +150,22 @@ class Settings(collections.abc.MutableMapping):
 
     # def create_project(self, 
     #         name: str, 
-    #         project: 'sourdough.Project' = None) -> 'sourdough.Project':
+    #         project: 'sourdough.project' = None) -> 'sourdough.project':
     #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         project (sourdough.Project): Project class or subclass to store the
+    #         project (sourdough.project): Project class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Project class is used.
 
     #     Returns:
-    #         sourdough.Project: an instance or subclass instance with attributes 
+    #         sourdough.project: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
-    #     project = project or sourdough.Project
+    #     project = project or sourdough.project
     #     instance = self.create_step(name = name, step = project)
     #     new_contents = []
     #     for labor in instance.contents:
@@ -174,20 +173,20 @@ class Settings(collections.abc.MutableMapping):
             
     # def create_step(self, 
     #         name: str, 
-    #         step: 'sourdough.Plan' = None) -> 'sourdough.Plan':
+    #         step: 'sourdough.base.Plan' = None) -> 'sourdough.base.Plan':
     #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.Plan): Plan class or subclass to store the
+    #         step (sourdough.base.Plan): Plan class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Plan or Plan class is used based upon
     #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.Plan: an instance or subclass instance with attributes 
+    #         sourdough.base.Plan: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -199,18 +198,18 @@ class Settings(collections.abc.MutableMapping):
     #         if key.endswith('_design'):
     #             parameters['design'] = value
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.Plan
-    #             contents = sourdough.tools.listify(value)
+    #             step = step or sourdough.base.Plan
+    #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.Plan
-    #             contents = sourdough.tools.listify(value)
+    #             step = step or sourdough.base.Plan
+    #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')
-    #             techniques[new_key] = sourdough.tools.listify(value)
+    #             techniques[new_key] = sourdough.utilities.listify(value)
     #         else:
     #             attributes[key] = value
     #     if techniques:
-    #         contents = sourdough.tools.subsetify(
+    #         contents = sourdough.utilities.subsetify(
     #             dictionary = techniques,
     #             subset = contents)
     #     parameters['contents'] = contents
@@ -363,7 +362,7 @@ class Settings(collections.abc.MutableMapping):
             Sequence[str]: stored in 'contents'.
 
         """
-        return sourdough.tools.listify(
+        return sourdough.utilities.listify(
             self.contents[section][f'{prefix}_{suffix}'])
 
     def _load_from_ini(self, file_path: str) -> Mapping[str, Any]:
@@ -471,11 +470,11 @@ class Settings(collections.abc.MutableMapping):
         for key, value in contents.items():
             if isinstance(value, dict):
                 inner_bundle = {
-                    inner_key: sourdough.tools.typify(inner_value)
+                    inner_key: sourdough.utilities.typify(inner_value)
                     for inner_key, inner_value in value.items()}
                 new_contents[key] = inner_bundle
             else:
-                new_contents[key] = sourdough.tools.typify(value)
+                new_contents[key] = sourdough.utilities.typify(value)
         return new_contents
 
     def _chain_defaults(self,
@@ -492,7 +491,7 @@ class Settings(collections.abc.MutableMapping):
                 dictionary to 'contents'.
 
         """
-        return collections.ChainMap(contents, sourdough.defaults.settings)
+        return collections.ChainMap(contents, sourdough.base.defaults.settings)
 
     def _inject(self,
             instance: object,
@@ -521,7 +520,7 @@ class Settings(collections.abc.MutableMapping):
 
     # def _parse_step_section(self, 
     #         name: str,
-    #         overview: 'sourdough.Overview') -> 'sourdough.Overview':
+    #         overview: 'sourdough.base.Overview') -> 'sourdough.base.Overview':
     #     """[summary]
 
     #     Returns:
@@ -533,7 +532,7 @@ class Settings(collections.abc.MutableMapping):
     #     overview[name] = {}
     #     section = self.contents[name]
     #     try:
-    #         overview.contents[name]['steps'] = sourdough.tools.listify(
+    #         overview.contents[name]['steps'] = sourdough.utilities.listify(
     #             section[f'{name}_steps'])
     #     except KeyError:
     #         overview.contents[name]['steps'] = []
@@ -547,7 +546,7 @@ class Settings(collections.abc.MutableMapping):
     #         for step_key in step_keys:
     #             step_name = step_key.replace('_techniques', '')
     #             if step_name in overview.contents[name]['steps']:
-    #                 techniques = sourdough.tools.listify(section[step_key])
+    #                 techniques = sourdough.utilities.listify(section[step_key])
     #                 self.contents[name][step_name] = techniques
     #     else:
     #         overview.contents[name]['stores_steps'] = False
