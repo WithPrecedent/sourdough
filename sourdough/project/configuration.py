@@ -150,22 +150,22 @@ class Configuration(sourdough.base.Settings):
 
     # def create_project(self, 
     #         name: str, 
-    #         project: 'sourdough.project' = None) -> 'sourdough.project':
+    #         project: 'sourdough.project.Project' = None) -> 'sourdough.project.Project':
     #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         project (sourdough.project): Project class or subclass to store the
+    #         project (sourdough.project.Project): Project class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Project class is used.
 
     #     Returns:
-    #         sourdough.project: an instance or subclass instance with attributes 
+    #         sourdough.project.Project: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
-    #     project = project or sourdough.project
+    #     project = project or sourdough.project.Project
     #     instance = self.create_step(name = name, step = project)
     #     new_contents = []
     #     for labor in instance.contents:
@@ -173,20 +173,20 @@ class Configuration(sourdough.base.Settings):
             
     # def create_step(self, 
     #         name: str, 
-    #         step: 'sourdough.base.Plan' = None) -> 'sourdough.base.Plan':
+    #         step: 'sourdough.project.Plan' = None) -> 'sourdough.project.Plan':
     #     """Returns a single Plan instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.base.Plan): Plan class or subclass to store the
+    #         step (sourdough.project.Plan): Plan class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Plan or Plan class is used based upon
     #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.base.Plan: an instance or subclass instance with attributes 
+    #         sourdough.project.Plan: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -198,10 +198,10 @@ class Configuration(sourdough.base.Settings):
     #         if key.endswith('_design'):
     #             parameters['design'] = value
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.base.Plan
+    #             step = step or sourdough.project.Plan
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.base.Plan
+    #             step = step or sourdough.project.Plan
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')

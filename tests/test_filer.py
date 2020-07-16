@@ -12,7 +12,7 @@ import sourdough
 
 
 def test_filer():
-    settings = sourdough.base.Settings(contents = 'tests\ini_settings.ini')
+    settings = sourdough.project.Configuration(contents = 'tests\ini_settings.ini')
     filer = sourdough.base.Filer(settings = settings)
     # Tests default folders.
     assert str(filer.root_folder) == '..\..'

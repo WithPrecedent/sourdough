@@ -105,13 +105,13 @@ class Graph(sourdough.base.Progression, abc.ABC):
 
     @abc.abstractmethod
     def get_sorted(self,
-            graph: 'sourdough.base.Plan' = None,
+            graph: 'sourdough.project.Plan' = None,
             return_components: bool = False) -> None:
         """Subclasses must provide their own methods."""
 
     @abc.abstractmethod
     def validate(self, 
-            graph: 'sourdough.base.Plan' = None) -> None:
+            graph: 'sourdough.project.Plan' = None) -> None:
         """Subclasses must provide their own methods."""
            
     """ Public Methods """
@@ -263,7 +263,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
     """ Private Methods """
     
     def _topological_sort(self, 
-            graph: 'sourdough.base.Plan') -> Sequence['sourdough.base.Component']:
+            graph: 'sourdough.project.Plan') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -277,7 +277,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
             searched = searched)
         
     def _topological_descend(self, 
-            graph: 'sourdough.base.Plan', 
+            graph: 'sourdough.project.Plan', 
             node: 'sourdough.base.Component',
             searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
@@ -297,7 +297,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
         return sorted_queue    
     
     def _dfs_sort(self, 
-            graph: 'sourdough.base.Plan') -> Sequence['sourdough.base.Component']:
+            graph: 'sourdough.project.Plan') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -311,7 +311,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
             searched = searched)
         
     def _dfs_descend(self, 
-            graph: 'sourdough.base.Plan', 
+            graph: 'sourdough.project.Plan', 
             node: 'sourdough.base.Component',
             searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
@@ -392,7 +392,7 @@ class DAGraph(Graph):
     """ Public Methods """
         
     def get_sorted(self, 
-            graph: 'sourdough.base.Plan' = None,
+            graph: 'sourdough.project.Plan' = None,
             return_components: bool = False) -> Sequence[Union[
                 Component, 
                 'sourdough.base.Component']]:
@@ -411,7 +411,7 @@ class DAGraph(Graph):
         else:
             return sorted_queue
 
-    def validate(self, graph: 'sourdough.base.Plan') -> None:
+    def validate(self, graph: 'sourdough.project.Plan') -> None:
         """
         
 

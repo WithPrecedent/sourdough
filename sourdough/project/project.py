@@ -18,7 +18,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(Task):
+class Technique(sourdough.base.Task):
     """Base class for creating or modifying data objects.
 
     Args:
@@ -80,7 +80,7 @@ class Technique(Task):
         
             
 @dataclasses.dataclass
-class Step(Task):
+class Step(sourdough.base.Task):
     """Base class for wrapping a Technique.
 
     A Step is a basic wrapper for a Technique that adds a 'name' for the
@@ -174,7 +174,7 @@ class Step(Task):
 
 
 @dataclasses.dataclass
-class Plan(sourdough.base.OptionsMixin, sourdough.base.Progression):
+class Plan(sourdough.base.Task, sourdough.base.Progression):
     """Base class for iterables storing Task and other Plan subclass instances.
 
     Plan inherits all of the differences between a Progression and a python 
@@ -304,7 +304,7 @@ class Plan(sourdough.base.OptionsMixin, sourdough.base.Progression):
     """ Private Methods """
     
     def _get_flattened(self) -> Sequence[Union[
-            'sourdough.base.Plan', 
+            'sourdough.project.Plan', 
             'sourdough.base.Step', 
             'sourdough.base.Technique']]:
         return more_itertools.collapse(self.contents)
@@ -340,7 +340,7 @@ class Project(Plan):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contents (Sequence[Union[sourdough.base.Plan, sourdough.base.Step, str]]]): 
+        contents (Sequence[Union[sourdough.project.Plan, sourdough.base.Step, str]]]): 
             stored Plan or Step instances or strings corresponding to keys in
             'options'. Defaults to an empty list.  
         design (str): the name of the structural design that should
@@ -367,7 +367,7 @@ class Project(Plan):
     """  
     name: str = None
     contents: Sequence[Union[
-        'sourdough.base.Plan', 
+        'sourdough.project.Plan', 
         'sourdough.base.Step', 
         str]] = dataclasses.field(default_factory = list) 
     design: str = dataclasses.field(default_factory = lambda: 'chained')

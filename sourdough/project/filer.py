@@ -40,7 +40,7 @@ class Filer(object):
             'root_folder'. Defaults to 'output_folder'.
 
     """
-    settings: sourdough.base.Settings = None
+    settings: sourdough.project.Configuration = None
     root_folder: Union[
         str,
         pathlib.Path,
@@ -306,7 +306,7 @@ class Filer(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.base.Settings) -> Mapping[str, Any]:
+            settings: sourdough.project.Configuration) -> Mapping[str, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
