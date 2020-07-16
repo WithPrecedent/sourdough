@@ -19,18 +19,22 @@ For example:
 
 from sourdough.utilities import tools
 from sourdough.utilities import decorators
-from sourdough.structure.dictionaries import Lexicon
-from sourdough.structure.dictionaries import Corpus
-from sourdough.structure.dictionaries import Reflector
 
-from sourdough.structure.components import Component
-from sourdough.structure.components import Task
-from sourdough.structure.components import Stage
-from sourdough.structure.components import LibraryMixin
-from sourdough.structure.components import RegistryMixin
-from sourdough.structure.components import ProxyMixin
-from sourdough.structure.components import OptionsMixin
-from sourdough.structure.iterables import Progression
+from sourdough.structure.base import Component
+from sourdough.structure.base import Task
+from sourdough.structure.base import Stage
+from sourdough.structure.base import Anthology
+from sourdough.structure.base import Lexicon
+from sourdough.structure.base import Corpus
+from sourdough.structure.base import Progression
+from sourdough.structure.mixins import LibraryMixin
+from sourdough.structure.mixins import RegistryMixin
+from sourdough.structure.mixins import ProxyMixin
+from sourdough.structure.mixins import OptionsMixin
+
+from sourdough.structure.iterables import Corpus
+from sourdough.structure.iterables import Reflector
+
 from sourdough.project.tasks import Technique
 from sourdough.project.tasks import Step
 from sourdough.project.tasks import Plan
