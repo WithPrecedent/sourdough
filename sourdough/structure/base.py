@@ -301,20 +301,16 @@ class Lexicon(collections.abc.MutableMapping, Anthology):
                 compatible with an instance.
         
         """
-        if not isinstance(contents, Mapping):
-            raise TypeError('contents must be a dict type')
-        else:
+        if isinstance(contents, Mapping):
             return contents
+        else:
+            raise TypeError('contents must be a dict type')
      
-    def add(self, contents: Any) -> None:
+    def add(self, contents: Mapping[Any, Any], **kwargs) -> None:
         """Adds 'contents' to the 'contents' attribute.
         
         Args:
-            component (Union[Component, 
-                Sequence[Component], Mapping[str, 
-                Component]]): Component(s) to add to
-                'contents'. If 'component' is a Sequence or a Component, the 
-                key for storing 'component' is the 'name' attribute of each 
+            contents (Mapping[Any, Any]): items to add to 'contents' attribute.
                 Component.
 
         """
@@ -573,8 +569,8 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
         
         Args:
             contents (Union[Component, Mapping[str, Component], 
-                Sequence[Component]]): Component instance(s) to add to 
-                'contents'.
+                Sequence[Component]]): Component instance(s) to add to the
+                'contents' attribute.
 
         """
         contents = self.validate(contents = contents)
