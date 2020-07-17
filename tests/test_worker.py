@@ -12,7 +12,7 @@ import sourdough
 class NewInstructions(sourdough.base.Instructions):
     pass
 
-class NewWorker(sourdough.project.Worker):
+class NewWorker(sourdough.manager.Worker):
     pass
 
 def test_step():

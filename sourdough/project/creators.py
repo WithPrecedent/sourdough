@@ -25,7 +25,7 @@ class Author(sourdough.base.Creator):
     """ Public Methods """
     
     def create(self, 
-            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+            Worker: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """Drafts a Worker with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
@@ -35,11 +35,11 @@ class Author(sourdough.base.Creator):
         'Worker' based upon a specific structural design.
         
         Args:
-            Worker (sourdough.project.Worker): worker instance to organize the 
+            Worker (sourdough.manager.Worker): worker instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.project.Worker: an instance with contents fully instanced.
+            sourdough.manager.Worker: an instance with contents fully instanced.
                 
         """
         Worker = self._create_from_settings(worker = Worker)
@@ -49,15 +49,15 @@ class Author(sourdough.base.Creator):
     """ Private Methods """
 
     def _draft_from_settings(self, 
-            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+            Worker: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """Returns a single worker instance created based on 'settings'.
 
         Args:
-            Worker (sourdough.project.Worker): worker instance to populate its 
+            Worker (sourdough.manager.Worker): worker instance to populate its 
                 'contents' with information in 'settings'.
 
         Returns:
-            sourdough.project.Worker: an Worker or subclass Worker with attributes 
+            sourdough.manager.Worker: an Worker or subclass Worker with attributes 
                 derived from a section of 'settings'.
                 
         """
@@ -86,17 +86,17 @@ class Author(sourdough.base.Creator):
         elif Workers:
             Worker = self._draft_Workers(
                 Workers = Workers,
-                manager = Worker)
+                project = Worker)
         for key, value in attributes.items():
             setattr(Worker, key, value)
         return Worker      
     
     def _initialize_Worker_contents(self, 
-            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+            Worker: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """
         
         Args:
-            Worker (sourdough.project.Worker): worker instance with str, Step, or Worker
+            Worker (sourdough.manager.Worker): worker instance with str, Step, or Worker
                 stored in contents.
 
         Raises:
@@ -104,7 +104,7 @@ class Author(sourdough.base.Creator):
                 type.
 
         Returns:
-            sourdough.project.Worker: an instance with contents fully instanced.
+            sourdough.manager.Worker: an instance with contents fully instanced.
                 
         """
         new_contents = []
@@ -113,9 +113,9 @@ class Author(sourdough.base.Creator):
                 new_contents.append(self._draft_unknown(
                     task = task, 
                     Worker = Worker))
-            elif isinstance(task, sourdough.project.Worker):
+            elif isinstance(task, sourdough.manager.Worker):
                 self.create(worker = task)
-            elif isinstance(task, sourdough.project.Task):
+            elif isinstance(task, sourdough.manager.Task):
                 new_contents.append(task)
             else:
                 raise TypeError(
@@ -125,9 +125,9 @@ class Author(sourdough.base.Creator):
     
     def _draft_unknown(self,
             task: str,
-            Worker: 'sourdough.project.Worker') -> Union[
+            Worker: 'sourdough.manager.Worker') -> Union[
                 'sourdough.base.Step', 
-                'sourdough.project.Worker']:
+                'sourdough.manager.Worker']:
         """[summary]
 
         Raises:
@@ -146,11 +146,11 @@ class Author(sourdough.base.Creator):
                 technique = None, 
                 Worker = Worker)
         else:
-            return self._draft_Worker(worker = task, manager = Worker)
+            return self._draft_Worker(worker = task, project = Worker)
 
     def _draft_Workers(self,
             Workers: Sequence[str],
-            manager: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+            project: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """[summary]
 
         Returns:
@@ -161,13 +161,13 @@ class Author(sourdough.base.Creator):
         for worker in Workers:
             new_Workers.append(self._draft_Worker(
                 Worker = Worker, 
-                manager = manager))
-        manager.contents.append(new_Workers)
-        return manager
+                project = project))
+        project.contents.append(new_Workers)
+        return project
 
     def _draft_Worker(self,
             Worker: str,
-            manager: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+            project: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """[summary]
 
         Returns:
@@ -175,15 +175,15 @@ class Author(sourdough.base.Creator):
             
         """
         try:
-            new_Worker = manager.options[Worker](name = Worker)
+            new_Worker = project.options[Worker](name = Worker)
         except KeyError:
-            new_Worker = sourdough.project.Worker(name = Worker)
+            new_Worker = sourdough.manager.Worker(name = Worker)
         return self.organize(worker = new_Worker)
                   
     # def _draft_Workers(self, 
-    #         Worker: 'sourdough.project.Worker',
+    #         Worker: 'sourdough.manager.Worker',
     #         Workers: Sequence[str],
-    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.project.Worker':
+    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.manager.Worker':
     #     """[summary]
 
     #     Returns:
@@ -244,26 +244,26 @@ class Publisher(sourdough.base.Creator):
     """ Public Methods """
     
     def add(self, 
-            project: 'sourdough.project.Project', 
+            manager: 'sourdough.manager.Manager', 
             Worker: str, 
-            Workers: Union[Sequence[str], str]) -> 'sourdough.project.Project':
-        """Adds 'Workers' to 'project' 'contents' with a 'Worker' key.
+            Workers: Union[Sequence[str], str]) -> 'sourdough.manager.Manager':
+        """Adds 'Workers' to 'manager' 'contents' with a 'Worker' key.
         
         Args:
-            project (sourdough.project.Project): project to which 'Worker' and 'Workers'
+            manager (sourdough.manager.Manager): manager to which 'Worker' and 'Workers'
                 should be added.
             Worker (str): key to use to store 'Workers':
             Workers (Union[Sequence[str], str]): name(s) of Worker(s) to add to 
-                'project'.
+                'manager'.
             
         Returns:
-            sourdough.project.Project: with 'Workers' added at 'Worker'.
+            sourdough.manager.Manager: with 'Workers' added at 'Worker'.
         
         """
-        project.contents[Worker] = sourdough.utilities.listify(Workers)
-        return project
+        manager.contents[Worker] = sourdough.utilities.listify(Workers)
+        return manager
  
-    def create(self, Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+    def create(self, Worker: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """[summary]
 
         Returns:
@@ -416,7 +416,7 @@ class Reader(sourdough.base.Creator):
     
     settings: 'sourdough.base.Settings'
     
-    def create(self, Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+    def create(self, Worker: 'sourdough.manager.Worker') -> 'sourdough.manager.Worker':
         """[summary]
 
         Returns:
@@ -440,7 +440,7 @@ class Reader(sourdough.base.Creator):
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         settings (Settings]): shared project settings settings.
+#         settings (Settings]): shared manager settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
@@ -598,7 +598,7 @@ class Reader(sourdough.base.Creator):
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared project settings settings.
+#         Settings (Settings]): shared manager settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
@@ -613,7 +613,7 @@ class Reader(sourdough.base.Creator):
 #     def create(self,
 #             outer_Worker: sourdough.base.base.Worker,
 #             data: Union[sourdough.base.Dataset, sourdough.base.base.Worker]) -> sourdough.base.base.Worker:
-#         """Applies 'outer_Worker' instance in 'project' to 'data' or other stored outer_Worker.
+#         """Applies 'outer_Worker' instance in 'manager' to 'data' or other stored outer_Worker.
 
 #         Args:
 #             outer_Worker ('outer_Worker'): instance with stored technique instances (either
@@ -776,7 +776,7 @@ class Reader(sourdough.base.Creator):
 #             subclassing, it is a good settings to use the same 'name' attribute
 #             as the base class for effective coordination between sourdough
 #             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared project settings settings.
+#         Settings (Settings]): shared manager settings settings.
 #         instructions (Instructions]): an instance with information to
 #             create and create the essential components of a sourdough.base.Creator. Defaults to
 #             None.
@@ -796,11 +796,11 @@ class Reader(sourdough.base.Creator):
 #     def _create_inner_Worker(self,
 #             outer_Worker: 'outer_Worker',
 #             data: Union['Dataset', 'outer_Worker']) -> 'outer_Worker':
-#         """Applies 'inner_Worker' in 'outer_Worker' instance in 'project' to 'data'.
+#         """Applies 'inner_Worker' in 'outer_Worker' instance in 'manager' to 'data'.
 
 #         Args:
 #             outer_Worker ('outer_Worker'): instance with stored 'inner_Worker' instances.
-#             data ('Dataset'): primary instance used by 'project'.
+#             data ('Dataset'): primary instance used by 'manager'.
 
 #         Returns:
 #             'outer_Worker': with modifications made and/or 'data' incorporated.
@@ -846,7 +846,7 @@ class Reader(sourdough.base.Creator):
 #     """ Core sourdough Methods """
 
 #     def create(self, outer_Worker: 'outer_Worker', data: Union['Dataset', 'outer_Worker']) -> 'outer_Worker':
-#         """Applies 'outer_Worker' instance in 'project' to 'data' or other stored outer_Worker.
+#         """Applies 'outer_Worker' instance in 'manager' to 'data' or other stored outer_Worker.
 
 #         Args:
 #             outer_Worker ('outer_Worker'): instance with stored technique instances (either

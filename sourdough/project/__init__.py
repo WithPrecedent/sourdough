@@ -1,6 +1,6 @@
 """
-.. module: project
-:synopsis: sourdough project classes
+.. module: manager
+:synopsis: sourdough manager classes
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -10,11 +10,11 @@ from .filer import Filer
 from .creators import Author
 from .creators import Publisher
 from .creators import Reader
-from .manager import Manager
-from .project import Technique
-from .project import Step
-from .project import Worker
 from .project import Project
+from .workers import Technique
+from .workers import Step
+from .workers import Worker
+from .workers import Manager
 
 
 __version__ = '0.1.0'
@@ -27,8 +27,8 @@ __all__ = [
     'Author',
     'Publisher',
     'Reader',
-    'Manager',
+    'Project',
     'Technique',
     'Step',
     'Worker',
-    'Project']
+    'Manager']

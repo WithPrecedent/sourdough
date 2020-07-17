@@ -1,6 +1,6 @@
 """
-.. module:: project test
-:synopsis: tests Project class
+.. module:: manager test
+:synopsis: tests Manager class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -16,57 +16,57 @@ import sourdough
 @dataclasses.dataclass
 class Distributor(sourdough.base.Stage):
     
-    def apply(self, project: 'sourdough.project.Project') -> 'sourdough.project.Project':
-        return project
+    def apply(self, manager: 'sourdough.manager.Manager') -> 'sourdough.manager.Manager':
+        return manager
    
 
 @dataclasses.dataclass
-class Slice(sourdough.project.Worker):
+class Slice(sourdough.manager.Worker):
     pass
 
 
 @dataclasses.dataclass
-class Dice(sourdough.project.Worker):
+class Dice(sourdough.manager.Worker):
     pass
 
 
 @dataclasses.dataclass    
-class Divider(sourdough.project.Worker):
+class Divider(sourdough.manager.Worker):
 
     options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
-class Parser(sourdough.project.Worker):
+class Parser(sourdough.manager.Worker):
 
     options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
         contents = {'divider': Divider})
 
 
 @dataclasses.dataclass
-class Munger(sourdough.project.Worker):
+class Munger(sourdough.manager.Worker):
     pass
 
 
-def test_project():
+def test_manager():
     
-    sourdough.project.Project.add_option(name = 'parser', option = Parser)
-    sourdough.project.Project.add_option(name = 'munger', option = Munger)
-    project = sourdough.project.Project()
+    sourdough.manager.Manager.add_option(name = 'parser', option = Parser)
+    sourdough.manager.Manager.add_option(name = 'munger', option = Munger)
+    manager = sourdough.manager.Manager()
     
     settings = pathlib.Path.cwd().joinpath('tests', 'composite_settings.py')
-    sourdough.base.Manager.add_stage_option(
+    sourdough.base.Project.add_stage_option(
         name = 'distribute', 
         option = Distributor)
-    director = sourdough.base.Manager(
+    director = sourdough.base.Project(
         settings = settings,
         contents = ['draft', 'publish', 'distribute', 'apply'],
-        project = project)
-    print('test project overview', director.project.overview)
-    # print('test parser contents', director.project['parser'].contents)
+        manager = manager)
+    print('test manager overview', director.manager.overview)
+    # print('test parser contents', director.manager['parser'].contents)
     return
 
 if __name__ == '__main__':
-    test_project()
+    test_manager()
     

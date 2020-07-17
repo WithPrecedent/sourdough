@@ -28,8 +28,8 @@ def test_settings():
             'final_format': 'csv',
             'analysis_format': 'csv',
             'file_encoding': 'windows-1252'},
-        'project': {
-            'project_steps': ['parser', 'munger']},
+        'manager': {
+            'manager_steps': ['parser', 'munger']},
         'parser': {
             'parser_steps': 'divide',
             'divide_techniques': ['slice', 'dice']},
@@ -40,7 +40,7 @@ def test_settings():
     assert py_settings.contents == actual_settings
     json_settings = sourdough.base.Settings(contents = 'tests\json_settings.json')
     assert json_settings.contents == actual_settings
-    assert ini_settings.get_steps(section = 'project') == ['parser', 'munger']
+    assert ini_settings.get_steps(section = 'manager') == ['parser', 'munger']
     assert ini_settings.get_steps(step = 'parser') == ['divide']
     assert ini_settings.get_techniques(
         step = 'parser',

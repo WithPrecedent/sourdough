@@ -29,7 +29,7 @@ class OtherTask(sourdough.base.Task):
 
 
 @dataclasses.dataclass
-class AWorker(sourdough.project.Worker):
+class AWorker(sourdough.manager.Worker):
     
     options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
         contents = {'new': NewTask()},

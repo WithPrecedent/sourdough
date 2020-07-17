@@ -1,334 +1,45 @@
 """
-.. module: project
-:synopsis: sourdough Project and related classes
+.. module:: project
+:synopsis: sourdough workflow controller
 :publisher: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
 """
 
-import abc
 import dataclasses
-import copy
-import inspect
-import itertools
-import more_itertools
+import pathlib
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+import warnings
 
 import sourdough
-
-
-@dataclasses.dataclass
-class Technique(sourdough.base.Task):
-    """Base class for creating or modifying data objects.
-
-    Args:
-        algorithm (object): core object used by the 'apply' method. Defaults to 
-            None.
-        parameters (Mapping[str, Any]]): parameters to be attached to
-            'algorithm' when the 'apply' method is called. Defaults to an empty
-            dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-            
-    """
-    algorithm: object = None
-    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'algorithm' with 'parameters'.
-        
-        Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'algorithm'. If data is not
-                passed, nothing is returned.        
-        
-        
-        """
-        if data is None:
-            self.algorithm(**parameters, **kwargs)
-            return self
-        else:
-            return self.algorithm(data, **parameters, **kwargs)
-        
-    """ Dunder Methods """
-
-    def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            f'algorithm: {str(self.algorithm)}\n'
-            f'parameters: {str(self.parameters)}\n')
-        
-            
-@dataclasses.dataclass
-class Step(sourdough.base.Task):
-    """Base class for wrapping a Technique.
-
-    A Step is a basic wrapper for a Technique that adds a 'name' for the
-    'Worker' that a stored technique instance is associated with. Subclasses of
-    Step can store additional methods and attributes to apply to all possible
-    technique instances that could be used. This is often useful when creating
-    'comparative' worker instances which test a variety of strategies with
-    similar or identical parameters and/or methods.
-
-    A worker instance will try to return attributes from 'technique' if the
-    attribute is not found in the worker instance. 
-
-    Args:
-        Worker (str): the name of the worker in a worker instance that 
-            the algorithm is being performed. This attribute is generally 
-            optional but can be useful for tracking and/or displaying the status 
-            of iteration. It is automatically created when using a chained or 
-            comparative Worker. Defaults to None.
-        technique (technique): technique object for this worker in a sourdough
-            sequence. Defaults to None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-            
-    """
-    # Worker: str = dataclasses.field(default_factory = lambda: '')
-    technique: Union[Technique, str] = None
-    name: str = None
-
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'algorithm' with 'parameters'.
-        
-        Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'algorithm'. If data is not
-                passed, nothing is returned.        
-        
-        
-        """
-        if data is None:
-            self.technique(data = data, **kwargs)
-            return self
-        else:
-            return self.technique(data = data, **kwargs)
-
-    """ Dunder Methods """
-
-    def __getattr__(self, attribute: str) -> Any:
-        """Looks for 'attribute' in 'technique'.
-
-        Args:
-            attribute (str): name of attribute to return.
-
-        Returns:
-            Any: matching attribute.
-
-        Raises:
-            AttributeError: if 'attribute' is not found in 'technique'.
-
-        """
-        try:
-            return getattr(self.technique, attribute)
-        except AttributeError:
-            raise AttributeError(
-                f'{attribute} neither found in {self.name} nor \
-                    {self.technique}')
-
-    def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            # f'Worker: {self.Worker.name}\n'
-            f'technique: {str(self.technique)}\n')
-
-
-@dataclasses.dataclass
-class Worker(sourdough.base.Task, sourdough.base.Progression):
-    """Base class for iterables storing Task and other Worker subclass instances.
-
-    worker inherits all of the differences between a Progression and a python 
-    list.
-    
-    A Worker differs from a Progression in 3 significant ways:
-        1) It has a 'design' attribute which indicates how the contained 
-            iterable should be ordered. 
-        2)
-        
-    Args:
-        contents (Sequence[Task]]): stored iterable of actions to apply in 
-            order. Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        options (ClassVar['sourdough.base.Catalog']): a sourdough dictionary of 
-            available Task instances available to use.
-        design (str): the name of the structural design that should be used to 
-            create objects in an instance. This should correspond to a key in a 
-            Manager instance's 'designs' class attribute. Defaults to 'chained'.
-            
-    """
-    contents: Union[
-        Sequence['Task'], 
-        str] = dataclasses.field(default_factory = list)
-    name: str = None
-    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
-        always_return_list = True)
-    design: str = dataclasses.field(default_factory = lambda: 'chained')
-
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        super().__post_init__()
-        # Converts str in 'contents' to objects.
-        self.contents = self.validate(contents = self.contents)
-
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Union[Sequence['Task'], str] ) -> Sequence[
-                'Task']:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        new_contents = []
-        for step in contents:
-            if isinstance(step, str):
-                try:
-                    new_contents.append[self.options[step]]
-                except KeyError:
-                    new_contents.append[step]
-            else:
-                new_contents.append[step]
-        return new_contents
-        
-    def apply(self, data: object = None) -> object:
-        """Applies stored Task instances to 'data'.
-
-        Args:
-            data (object): an object to be modified and/or analyzed by stored 
-                Task instances. Defaults to None.
-
-        Returns:
-            object: data, possibly with modifications made by Operataor 
-                instances. If data is not passed, no object is returned.
-            
-        """
-        if data is None:
-            for operator in self.__iter__():
-                operator.apply()
-            return self
-        else:
-            for operator in self.__iter__():
-                data = operator.apply(data = data)
-            return data
-             
-    """ Properties """
-    
-    @property
-    def overview(self) -> 'Overview':
-        """Returns a string snapshot of a Worker subclass instance.
-        
-        Returns:
-            Overview: configured according to the '_get_overview' method.
-        
-        """
-        return self._get_overview() 
-
-    @property    
-    def Workers(self) -> Sequence['Worker']:
-        """
-        """
-        return [isinstance(i, Worker) for i in self._get_flattened()]
  
-    @property
-    def steps(self) -> Sequence['Step']:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        return [isinstance(i, Step) for i in self._get_flattened()]
-    
-    @property    
-    def techniques(self) -> Sequence['Technique']:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        return [isinstance(i, Technique) for i in self._get_flattened()]
-    
-    """ Private Methods """
-    
-    def _get_flattened(self) -> Sequence[Union[
-            'sourdough.project.Worker', 
-            'sourdough.base.Step', 
-            'sourdough.base.Technique']]:
-        return more_itertools.collapse(self.contents)
-        
-    def _get_overview(self) -> Mapping[str, Sequence[str]]:
-        """
-        """
-        overview = {}
-        overview['Workers'] = [p.name for p in self.Workers]
-        overivew['steps'] = [t.name for t in self.steps]
-        overview['techniques'] = [t.name for t in self.techniques]
-        return overview
-
-    
+ 
 @dataclasses.dataclass
-class Project(Worker):
-    """Top-level sourdough project iterable.
+class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
+    """Constructs, organizes, and stores Workers for a sourdough project.
     
-    Subclasses can easily expand upon the basic design and functionality of this
-    class. Or, if the underlying structure is acceptable, you can simply add to
-    the 'options' class attribute. This can be done manually or with the 
-    'add_option' method inherited from Worker.
+    A Project inherits all of the differences between a Progression and a python
+    list.
 
+    A Project differs from a Progression in 5 significant ways:
+        1) The Project is the public interface to Manager construction and 
+            application. It may store the Manager instance itself as well as
+            any required classes (such as those stored in the 'data' attribute).
+            This includes Settings, Filer, and Options. They are stored in 
+            the 'settings', 'filer', and 'options' attributes, 
+            respectively.
+        2) Project only stores Creator subclass instances in 'contents'. Those 
+            instances are used to assemble the parts of a Manager instance.
+        3) Project includes an 'automatic' attribute which can be set to perform
+            all of its methods if all of the necessary arguments are passed.
+        4) It has an OptionsMixin, which contains a Catalog instance storing
+            Default Creator instances which can be used.
+        
     Args:
+        contents (Sequence[Union[sourdough.base.Creator, str]]]): list of 
+            Creator subclass instances or strings which correspond to keys in 
+            'options'. Defaults to 'default', which will use the 'defaults' 
+            attribute of 'options' to select Creator instances.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough.base. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -337,52 +48,218 @@ class Project(Worker):
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contents (Sequence[Union[sourdough.project.Worker, sourdough.base.Step, str]]]): 
-            stored Worker or Step instances or strings corresponding to keys in
-            'options'. Defaults to an empty list.  
-        design (str): the name of the structural design that should
-            be used to create objects in an instance. This should correspond
-            to a key in a Manager instance's 'designs' class attribute. 
-            Defaults to 'chained'.
-        identification (str): a unique identification name for a 
-            Project instance. The name is used for creating file folders
-            related to the 'Project'. If not provided, a string is created from
-            'name' and the date and time. This is a notable difference
-            between an ordinary worker instancce and a Project instance. Other
-            Workers are not given unique identification. Defaults to None.    
-        data (Any]): a data object to apply any constructed objects to.
-            This need only be provided when the class is instanced for
-            automatic execution. Defaults to None. If you are working on a data-
-            focused Project, consider using siMpLify instead 
-            (https://github.com/WithPrecedent/simplify). It applies sourdough
-            in the data science context. sourdough itself treats 'data' as an
-            unknown object of any type which offers more flexibility of design.
-        options (ClassVar['sourdough.base.Catalog']): an instance to store possible
-            Worker and Step classes for use in the Project. Defaults to an
-            empty Catalog instance.
-                             
-    """  
-    name: str = None
+        manager (sourdough.manager.Manager): a Manager instance for the Project. 
+            Defaults to None.
+        settings (Union[sourdough.base.Settings, str, pathlib.Path]]): 
+            an instance of Settings or a str or pathlib.Path containing the 
+            file path where a file of a supported file type with settings for a 
+            Settings instance is located. Defaults to None.
+        filer (Union[sourdough.base.Filer, str, pathlib.Path]]): an instance of 
+            Filer or a str or pathlib.Path containing the full path of where the 
+            root folder should be located for file input and output. A Filer
+            instance contains all file path and import/export methods for use 
+            throughout sourdough. Defaults to None.
+        automatic (bool): whether to automatically advance 'contents' (True) or 
+            whether the contents must be changed manually by using the 'advance' 
+            or '__iter__' methods (False). Defaults to True.
+        options (ClassVar[sourdough.base.Catalog]): a class attribute storing
+            default Creator classes which can be used in manager construction
+            and application. 
+    
+    Attributes:
+        index (int): the current index of the iterator in the instance. It is
+            set to -1 in the '__post_init__' method.
+        stage (str): name of the last stage that has been implemented. It is set
+            to 'initialize' in the '__post_init__' method.
+        previous_stage (str): name of the previous stage to the last stage that
+            has been implemented. It is set by the 'advance' method.
+            
+    """
     contents: Sequence[Union[
-        'sourdough.project.Worker', 
-        'sourdough.base.Step', 
-        str]] = dataclasses.field(default_factory = list) 
-    design: str = dataclasses.field(default_factory = lambda: 'chained')
-    data: Any = None
-    identification: str = None
-    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog()
-
+        'sourdough.base.Creator', 
+        str]] = dataclasses.field(default_factory = lambda: 'default')
+    name: str = None
+    manager: 'sourdough.manager.Manager' = None
+    settings: Union[
+        'sourdough.base.Settings', 
+        str, 
+        pathlib.Path] = None
+    filer: Union['sourdough.base.Filer', str, pathlib.Path] = None
+    automatic: bool = True
+    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
+        contents = {
+            'draft': sourdough.base.Author,
+            'publish': sourdough.base.Publisher,
+            'apply': sourdough.base.Worker},
+        defaults = ['draft', 'publish', 'apply'])
+    
     """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Calls inherited initialization method.
         super().__post_init__()
-        # Creates unique 'identification' based upon date and time if none 
-        # exists.
-        self.identification = (
-            self.identification or sourdough.utilities.datetime_string(
-                prefix = self.name))
+        # Removes various python warnings from console output.
+        warnings.filterwarnings('ignore')
+        # Validates or creates a 'Settings' instance.
+        self.settings = sourdough.base.Settings(
+            contents = self.settings)
+        # Validates or creates a Filer' instance.
+        self.filer = sourdough.base.Filer(
+            root_folder = self.filer, 
+            settings = self.settings)
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
+        # Initializes or validates a Manager instance.
+        self.manager = self._initialize_manager(
+            manager = self.manager,
+            settings = self.settings)
+        # Sets current 'stage' and 'index' for that 'stage'.
+        self.index: int = -1
+        self.stage: str = 'initialize' 
+        # Advances through 'contents' if 'automatic' is True.
+        if self.automatic:
+            self.manager = self._auto_contents(manager = self.manager)
+
+    """ Public Methods """
+
+    def validate(self, 
+            contents: Sequence[Union['sourdough.base.Creator', str]],
+            **kwargs) -> Sequence['sourdough.base.Creator']:
+        """Creates Creator instances, when necessary, in 'contents'
+
+        Args:
+            contents (Sequence[Union[sourdough.base.Creator, str]]]): list of 
+                Creator subclass instances or strings which correspond to keys 
+                in 'options'. 
+            kwargs: any extra arguments to send to each created Creator 
+                instance. These will have no effect on Creator subclass 
+                instances already stored in the 'options' class attribute.
+
+        Raises:
+            KeyError: if 'contents' contains a string which does not match a key 
+                in the 'options' class attribute.
+            TypeError: if an item in 'contents' is neither a str nor Creator 
+                subclass.
+            
+        Returns:
+            Sequence[sourdough.base.Creator]: a list with only Creator subclass 
+                instances.
+                  
+        """       
+        new_contents = []
+        for stage in contents:
+            if isinstance(stage, str):
+                try:
+                    new_contents.append(self.options[stage](**kwargs))
+                except KeyError:
+                    KeyError(f'{stage} is not a recognized stage')
+            elif isinstance(stage, sourdough.base.Creator):
+                new_contents.append(stage)
+            elif issubclass(stage, sourdough.base.Creator):
+                new_contents.append(stage(**kwargs))
+            else:
+                raise TypeError(f'{stage} must be a str or Creator type')
+        return new_contents
+                 
+    def advance(self, stage: str = None) -> None:
+        """Advances to next item in 'contents' or to 'stage' argument.
+
+        This method only needs to be called manually if 'automatic' is False.
+        Otherwise, this method is automatically called when the class is 
+        instanced.
+
+        Args:
+            stage (str): name of item in 'contents'. Defaults to None. 
+                If not passed, the method goes to the next item in contents.
+
+        Raises:
+            ValueError: if 'stage' is neither None nor in 'contents'.
+            IndexError: if 'advance' is called at the last stage in 'contents'.
+
+        """
+        if stage is None:
+            try:
+                new_stage = self.contents[self.index + 1]
+            except IndexError:
+                raise IndexError(f'{self.name} cannot advance further')
+        else:
+            try:
+                new_stage = self.contents[stage]
+            except KeyError:
+                raise ValueError(f'{stage} is not a recognized stage')
+        self.index += 1
+        self.previous_stage: str = self.stage
+        self.stage = new_stage
+        return self
+
+    def iterate(self, 
+            manager: 'sourdough.manager.Manager') -> (
+                'sourdough.manager.Manager'):
+        """Advances to next stage and applies that stage to 'manager'.
+
+        Args:
+            manager (sourdough.manager.Manager): instance to apply the next 
+                stage's methods to.
+                
+        Raises:
+            IndexError: if this instance is already at the last stage.
+
+        Returns:
+            sourdough.manager.Manager: with the last stage applied.
+            
+        """
+        if self.index == len(self.contents) - 1:
+            raise IndexError(
+                f'{self.name} is at the last stage and cannot further iterate')
+        else:
+            self.advance()
+            self.contents[self.index].create(manager = manager)
+        return manager
+            
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of methods of 'contents'.
+        
+        Returns:
+            Iterable: 'create' methods of 'contents'.
+            
+        """
+        return iter([getattr(s, 'create') for s in self.contents])
+
+    def __next__(self) -> Callable:
+        """Returns next method after method matching 'item'.
+        
+        Returns:
+            Callable: next method corresponding to those listed in 'options'.
+            
+        """
+        if self.index < len(self.contents):
+            self.advance()
+            return getattr(self.contents[self.index], 'create')
+        else:
+            raise StopIteration()
+     
+    """ Private Methods """
+                        
+    def _auto_contents(self, 
+            manager: 'sourdough.manager.Manager') -> (
+                'sourdough.manager.Manager'):
+        """Automatically advances through and iterates stored Creator instances.
+
+        Args:
+            manager (sourdough.manager.Manager): an instance containing any data 
+                for the manager methods to be applied to.
+                
+        Returns:
+            sourdough.manager.Manager: modified by the stored Creator instance's 
+                'create' methods.
+            
+        """
+        for stage in self.contents:
+            self.iterate(manager = manager)
+        return manager

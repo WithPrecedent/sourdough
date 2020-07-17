@@ -6,9 +6,9 @@ settings = {
         'final_format': 'csv',
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
-    'project': {
-        'project_steps': ['parser', 'munger'],
-        'project_design': 'chainer'},
+    'manager': {
+        'manager_steps': ['parser', 'munger'],
+        'manager_design': 'chainer'},
     'parser': {
         'parser_steps': ['divider'],
         'parser_design': 'comparative',

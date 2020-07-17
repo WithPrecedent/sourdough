@@ -1,6 +1,6 @@
 """
 .. module:: settings
-:synopsis: base class for configuring sourdough projects
+:synopsis: base class for configuring sourdough managers
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -20,7 +20,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Settings(sourdough.base.Settings):
-    """Stores sourdough project settings.
+    """Stores sourdough manager settings.
 
 
 
@@ -148,45 +148,45 @@ class Settings(sourdough.base.Settings):
     #             overview = overview)
     #     return overview
 
-    # def create_project(self, 
+    # def create_manager(self, 
     #         name: str, 
-    #         project: 'sourdough.project.Project' = None) -> 'sourdough.project.Project':
+    #         manager: 'sourdough.manager.Manager' = None) -> 'sourdough.manager.Manager':
     #     """Returns a single worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         project (sourdough.project.Project): Project class or subclass to store the
+    #         manager (sourdough.manager.Manager): Manager class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
-    #             passed, a generic Project class is used.
+    #             passed, a generic Manager class is used.
 
     #     Returns:
-    #         sourdough.project.Project: an instance or subclass instance with attributes 
+    #         sourdough.manager.Manager: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
-    #     project = project or sourdough.project.Project
-    #     instance = self.create_step(name = name, step = project)
+    #     manager = manager or sourdough.manager.Manager
+    #     instance = self.create_step(name = name, step = manager)
     #     new_contents = []
     #     for labor in instance.contents:
     #         new_contents.append(self._create_step)
             
     # def create_step(self, 
     #         name: str, 
-    #         step: 'sourdough.project.Worker' = None) -> 'sourdough.project.Worker':
+    #         step: 'sourdough.manager.Worker' = None) -> 'sourdough.manager.Worker':
     #     """Returns a single worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.project.Worker): Worker class or subclass to store the
+    #         step (sourdough.manager.Worker): Worker class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Worker or Worker class is used based upon
     #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.project.Worker: an instance or subclass instance with attributes 
+    #         sourdough.manager.Worker: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -198,10 +198,10 @@ class Settings(sourdough.base.Settings):
     #         if key.endswith('_design'):
     #             parameters['design'] = value
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.project.Worker
+    #             step = step or sourdough.manager.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.project.Worker
+    #             step = step or sourdough.manager.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')

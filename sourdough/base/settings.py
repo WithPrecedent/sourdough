@@ -1,6 +1,6 @@
 """
 .. module:: settings
-:synopsis: base class for configuring sourdough projects
+:synopsis: base class for configuring sourdough managers
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0

@@ -25,10 +25,10 @@ class LibraryMixin(abc.ABC):
     instance, super().__post_init__() should be called by that subclass.
 
     Args:
-        library (ClassVar[sourdough.base.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
+        library (ClassVar[sourdough.base.Catalog]): dictionary which stores 
+            subclass instances.
             
-    Mixin Namespaces: 'library', 'borrow'
+    Mixin Namespaces: 'library', 'borrow'.
 
     """
     library: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog()
@@ -37,8 +37,12 @@ class LibraryMixin(abc.ABC):
     
     def __post_init__(self):
         """Registers an instance with 'library'."""
-        super().__post_init__()
-        # Adds instance to the 'library' class variable.
+        # Calls initialization method of other inherited classes.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Adds this instance to the 'library' class variable.
         self.library[self.name] = self
         
     """ Public Methods """
@@ -76,7 +80,7 @@ class RegistryMixin(abc.ABC):
             importlib.util.module_from_spec returns None.
     
     """
-    register_from_disk: bool = False
+    # register_from_disk: bool = False
     registry: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog()
     
     """ Initialization Methods """
@@ -209,33 +213,45 @@ class OptionsMixin(abc.ABC):
     
     """ Public Methods """
         
-    def select(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+    def select(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
+            object, Sequence[object]]:
         """Creates instance(s) of a class(es) stored in 'options'.
 
         Args:
-            option (str): name matching a key in 'options' for which the value
+            key (str): name matching a key in 'options' for which the value
                 is sought.
 
         Raises:
             TypeError: if 'option' is neither a str nor Sequence type.
             
         Returns:
-            Any: instance of a stored class with kwargs passed as arguments.
+            Union[object, Sequence[object]]: instance(s) of a stored value(s).
             
         """
-        if isinstance(key, str):
+        def _select_item(single_key: str) -> object:
+            """Nested function to return a single value in 'options'.
+        
+            A nested function is used to avoid cluttering the namespace of a
+            an object using the OptionsMixin.
+            
+            Args:
+                single_key (str): name of key for value to be returned.
+                
+            Returns:
+                object: instance of a stored value.
+            
+            """
             try:
                 return self.options[key](**kwargs)
             except TypeError:
                 return self.options[key]
+            
+        if isinstance(key, str):
+            return _select_item(single_key = key)
         elif isinstance(key, Sequence):
             instances = []
             for k in key:
-                try:
-                    instance = self.options[key](**kwargs)
-                except TypeError:
-                    instance = self.options[key]
-                instances.append(instance)
+                instances.append(_select_item(single_key = k))
             return instances
         else:
             raise TypeError('option must be a str or list type')

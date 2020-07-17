@@ -8,7 +8,7 @@
 
 """ 
 sourdough graphs are still a work in progress. They are not used by the default
-projects structure, but are made available here for users to subclass as they
+managers structure, but are made available here for users to subclass as they
 wish.
 
 Each node/vertex in a sourdough Graph should be a Component subclass instance
@@ -105,13 +105,13 @@ class Graph(sourdough.base.Progression, abc.ABC):
 
     @abc.abstractmethod
     def get_sorted(self,
-            graph: 'sourdough.project.Worker' = None,
+            graph: 'sourdough.manager.Worker' = None,
             return_components: bool = False) -> None:
         """Subclasses must provide their own methods."""
 
     @abc.abstractmethod
     def validate(self, 
-            graph: 'sourdough.project.Worker' = None) -> None:
+            graph: 'sourdough.manager.Worker' = None) -> None:
         """Subclasses must provide their own methods."""
            
     """ Public Methods """
@@ -263,7 +263,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
     """ Private Methods """
     
     def _topological_sort(self, 
-            graph: 'sourdough.project.Worker') -> Sequence['sourdough.base.Component']:
+            graph: 'sourdough.manager.Worker') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -277,7 +277,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
             searched = searched)
         
     def _topological_descend(self, 
-            graph: 'sourdough.project.Worker', 
+            graph: 'sourdough.manager.Worker', 
             node: 'sourdough.base.Component',
             searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
@@ -297,7 +297,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
         return sorted_queue    
     
     def _dfs_sort(self, 
-            graph: 'sourdough.project.Worker') -> Sequence['sourdough.base.Component']:
+            graph: 'sourdough.manager.Worker') -> Sequence['sourdough.base.Component']:
         """[summary]
 
         Returns:
@@ -311,7 +311,7 @@ class Graph(sourdough.base.Progression, abc.ABC):
             searched = searched)
         
     def _dfs_descend(self, 
-            graph: 'sourdough.project.Worker', 
+            graph: 'sourdough.manager.Worker', 
             node: 'sourdough.base.Component',
             searched: list[str]) -> Sequence['sourdough.base.Component']: 
         """[summary]
@@ -392,7 +392,7 @@ class DAGraph(Graph):
     """ Public Methods """
         
     def get_sorted(self, 
-            graph: 'sourdough.project.Worker' = None,
+            graph: 'sourdough.manager.Worker' = None,
             return_components: bool = False) -> Sequence[Union[
                 Component, 
                 'sourdough.base.Component']]:
@@ -411,7 +411,7 @@ class DAGraph(Graph):
         else:
             return sorted_queue
 
-    def validate(self, graph: 'sourdough.project.Worker') -> None:
+    def validate(self, graph: 'sourdough.manager.Worker') -> None:
         """
         
 

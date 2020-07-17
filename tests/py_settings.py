@@ -6,8 +6,8 @@ settings = {
         'final_format': 'csv',
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
-    'project': {
-        'project_steps': ['parser', 'munger']},
+    'manager': {
+        'manager_steps': ['parser', 'munger']},
     'parser': {
         'parser_steps': 'divide',
         'divide_techniques': ['slice', 'dice']},

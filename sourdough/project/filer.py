@@ -18,7 +18,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Filer(object):
-    """File and folder manager for sourdough.base.
+    """File and folder project for sourdough.base.
 
     Creates and stores dynamic and static file paths, properly formats files
     for import and export, and provides methods for loading and saving
@@ -29,7 +29,7 @@ class Filer(object):
             with file-management related settings.
         root_folder (Union[str, Path, Sequence[str], Sequence[Path]]]): the
             complete path from which the other paths and folders used by
-            FileManager should be created. Defaults to None. If not passed, the
+            FileProject should be created. Defaults to None. If not passed, the
             parent folder of the parent folder of the current working directory
             is used.
         input_folder (Union[str, Path]]): the input_folder subfolder

@@ -1,6 +1,6 @@
 """
 .. module:: sourdough
-:synopsis: get a head start on python projects
+:synopsis: get a head start on python managers
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -19,7 +19,7 @@ For example:
 
 from sourdough import utilities
 from sourdough import base
-from sourdough import project
+from sourdough import manager
 
 
 __version__ = '0.1.0'
@@ -29,4 +29,4 @@ __author__ = 'Corey Rayburn Yung'
 __all__ = [
     'utilities',
     'base',
-    'project']
+    'manager']
