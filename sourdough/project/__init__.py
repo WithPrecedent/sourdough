@@ -13,7 +13,7 @@ from .creators import Reader
 from .manager import Manager
 from .project import Technique
 from .project import Step
-from .project import Plan
+from .project import Worker
 from .project import Project
 
 
@@ -30,5 +30,5 @@ __all__ = [
     'Manager',
     'Technique',
     'Step',
-    'Plan',
+    'Worker',
     'Project']

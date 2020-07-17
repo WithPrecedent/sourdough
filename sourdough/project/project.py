@@ -84,22 +84,22 @@ class Step(sourdough.base.Task):
     """Base class for wrapping a Technique.
 
     A Step is a basic wrapper for a Technique that adds a 'name' for the
-    'plan' that a stored technique instance is associated with. Subclasses of
+    'Worker' that a stored technique instance is associated with. Subclasses of
     Step can store additional methods and attributes to apply to all possible
     technique instances that could be used. This is often useful when creating
-    'comparative' Plan instances which test a variety of strategies with
+    'comparative' worker instances which test a variety of strategies with
     similar or identical parameters and/or methods.
 
-    A Plan instance will try to return attributes from 'technique' if the
-    attribute is not found in the Plan instance. 
+    A worker instance will try to return attributes from 'technique' if the
+    attribute is not found in the worker instance. 
 
     Args:
-        plan (str): the name of the plan in a Plan instance that 
+        Worker (str): the name of the worker in a worker instance that 
             the algorithm is being performed. This attribute is generally 
             optional but can be useful for tracking and/or displaying the status 
             of iteration. It is automatically created when using a chained or 
-            comparative Plan. Defaults to None.
-        technique (technique): technique object for this plan in a sourdough
+            comparative Worker. Defaults to None.
+        technique (technique): technique object for this worker in a sourdough
             sequence. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough.base. For example if a 
@@ -114,7 +114,7 @@ class Step(sourdough.base.Task):
             snake case version of the class name ('__class__.__name__').
             
     """
-    # plan: str = dataclasses.field(default_factory = lambda: '')
+    # Worker: str = dataclasses.field(default_factory = lambda: '')
     technique: Union[Technique, str] = None
     name: str = None
 
@@ -169,18 +169,18 @@ class Step(sourdough.base.Task):
         """Returns string representation of a class instance."""
         return (
             f'sourdough {self.__class__.__name__} {self.name}\n'
-            # f'plan: {self.plan.name}\n'
+            # f'Worker: {self.Worker.name}\n'
             f'technique: {str(self.technique)}\n')
 
 
 @dataclasses.dataclass
-class Plan(sourdough.base.Task, sourdough.base.Progression):
-    """Base class for iterables storing Task and other Plan subclass instances.
+class Worker(sourdough.base.Task, sourdough.base.Progression):
+    """Base class for iterables storing Task and other Worker subclass instances.
 
-    Plan inherits all of the differences between a Progression and a python 
+    worker inherits all of the differences between a Progression and a python 
     list.
     
-    A Plan differs from a Progression in 3 significant ways:
+    A Worker differs from a Progression in 3 significant ways:
         1) It has a 'design' attribute which indicates how the contained 
             iterable should be ordered. 
         2)
@@ -269,7 +269,7 @@ class Plan(sourdough.base.Task, sourdough.base.Progression):
     
     @property
     def overview(self) -> 'Overview':
-        """Returns a string snapshot of a Plan subclass instance.
+        """Returns a string snapshot of a Worker subclass instance.
         
         Returns:
             Overview: configured according to the '_get_overview' method.
@@ -278,10 +278,10 @@ class Plan(sourdough.base.Task, sourdough.base.Progression):
         return self._get_overview() 
 
     @property    
-    def plans(self) -> Sequence['Plan']:
+    def Workers(self) -> Sequence['Worker']:
         """
         """
-        return [isinstance(i, Plan) for i in self._get_flattened()]
+        return [isinstance(i, Worker) for i in self._get_flattened()]
  
     @property
     def steps(self) -> Sequence['Step']:
@@ -304,7 +304,7 @@ class Plan(sourdough.base.Task, sourdough.base.Progression):
     """ Private Methods """
     
     def _get_flattened(self) -> Sequence[Union[
-            'sourdough.project.Plan', 
+            'sourdough.project.Worker', 
             'sourdough.base.Step', 
             'sourdough.base.Technique']]:
         return more_itertools.collapse(self.contents)
@@ -313,20 +313,20 @@ class Plan(sourdough.base.Task, sourdough.base.Progression):
         """
         """
         overview = {}
-        overview['plans'] = [p.name for p in self.plans]
+        overview['Workers'] = [p.name for p in self.Workers]
         overivew['steps'] = [t.name for t in self.steps]
         overview['techniques'] = [t.name for t in self.techniques]
         return overview
 
     
 @dataclasses.dataclass
-class Project(Plan):
+class Project(Worker):
     """Top-level sourdough project iterable.
     
     Subclasses can easily expand upon the basic design and functionality of this
     class. Or, if the underlying structure is acceptable, you can simply add to
     the 'options' class attribute. This can be done manually or with the 
-    'add_option' method inherited from Plan.
+    'add_option' method inherited from Worker.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -340,8 +340,8 @@ class Project(Plan):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contents (Sequence[Union[sourdough.project.Plan, sourdough.base.Step, str]]]): 
-            stored Plan or Step instances or strings corresponding to keys in
+        contents (Sequence[Union[sourdough.project.Worker, sourdough.base.Step, str]]]): 
+            stored Worker or Step instances or strings corresponding to keys in
             'options'. Defaults to an empty list.  
         design (str): the name of the structural design that should
             be used to create objects in an instance. This should correspond
@@ -351,8 +351,8 @@ class Project(Plan):
             Project instance. The name is used for creating file folders
             related to the 'Project'. If not provided, a string is created from
             'name' and the date and time. This is a notable difference
-            between an ordinary Plan instancce and a Project instance. Other
-            Plans are not given unique identification. Defaults to None.    
+            between an ordinary worker instancce and a Project instance. Other
+            Workers are not given unique identification. Defaults to None.    
         data (Any]): a data object to apply any constructed objects to.
             This need only be provided when the class is instanced for
             automatic execution. Defaults to None. If you are working on a data-
@@ -361,13 +361,13 @@ class Project(Plan):
             in the data science context. sourdough itself treats 'data' as an
             unknown object of any type which offers more flexibility of design.
         options (ClassVar['sourdough.base.Catalog']): an instance to store possible
-            Plan and Step classes for use in the Project. Defaults to an
+            Worker and Step classes for use in the Project. Defaults to an
             empty Catalog instance.
                              
     """  
     name: str = None
     contents: Sequence[Union[
-        'sourdough.project.Plan', 
+        'sourdough.project.Worker', 
         'sourdough.base.Step', 
         str]] = dataclasses.field(default_factory = list) 
     design: str = dataclasses.field(default_factory = lambda: 'chained')

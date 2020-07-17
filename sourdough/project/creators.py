@@ -14,7 +14,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Author(sourdough.base.Creator):
-    """Stores methods for constructing a Plan instance.
+    """Stores methods for constructing a worker instance.
     
     Args:
         settings (sourdough.base.Settings): 
@@ -25,64 +25,109 @@ class Author(sourdough.base.Creator):
     """ Public Methods """
     
     def create(self, 
-            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
-        """Drafts a Plan with its 'contents' organized and instanced.
+            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+        """Drafts a Worker with its 'contents' organized and instanced.
 
         The method first determines if the contents are already finalized. If 
         not, it creates them from 'settings'.
         
         Subclasses can call this method and then arrange the 'contents' of
-        'plan' based upon a specific structural design.
+        'Worker' based upon a specific structural design.
         
         Args:
-            plan (sourdough.project.Plan): Plan instance to organize the 
+            Worker (sourdough.project.Worker): worker instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.project.Plan: an instance with contents fully instanced.
+            sourdough.project.Worker: an instance with contents fully instanced.
                 
         """
-        plan = self._draft_existing_contents(plan = plan)
-        plan = self._draft_from_settings(plan = plan)           
-        return plan      
+        Worker = self._create_from_settings(worker = Worker)
+        Worker = self._initialize_Worker_contents(worker = Worker)
+        return Worker      
 
     """ Private Methods """
 
-    def _draft_existing_contents(self, 
-            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def _draft_from_settings(self, 
+            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
+        """Returns a single worker instance created based on 'settings'.
+
+        Args:
+            Worker (sourdough.project.Worker): worker instance to populate its 
+                'contents' with information in 'settings'.
+
+        Returns:
+            sourdough.project.Worker: an Worker or subclass Worker with attributes 
+                derived from a section of 'settings'.
+                
+        """
+        Workers = []
+        steps = []
+        techniques = {}
+        attributes = {}
+        Worker.contents = []
+        for key, value in Worker.settings[Worker.name].items():
+            if key.endswith('_design'):
+                Worker.design = value
+            elif key.endswith('_Workers'):
+                Workers = sourdough.utilities.listify(value)
+            elif key.endswith('_steps'):
+                steps = sourdough.utilities.listify(value)
+            elif key.endswith('_techniques'):
+                new_key = key.replace('_techniques', '')
+                techniques[new_key] = sourdough.utilities.listify(value)
+            else:
+                attributes[key] = value
+        if Workers:
+            Worker = self._draft_Workers(
+                Workers = Workers, 
+                techniques = techniques,
+                Worker = Worker)
+        elif Workers:
+            Worker = self._draft_Workers(
+                Workers = Workers,
+                manager = Worker)
+        for key, value in attributes.items():
+            setattr(Worker, key, value)
+        return Worker      
+    
+    def _initialize_Worker_contents(self, 
+            Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
         """
         
         Args:
-            plan (sourdough.project.Plan): Plan instance with str, Step, or Plan
+            Worker (sourdough.project.Worker): worker instance with str, Step, or Worker
                 stored in contents.
 
         Raises:
-            TypeError: if an item in 'contents' is not a str, Step, or Plan
+            TypeError: if an item in 'contents' is not a str, Step, or Worker
                 type.
 
         Returns:
-            sourdough.project.Plan: an instance with contents fully instanced.
+            sourdough.project.Worker: an instance with contents fully instanced.
                 
         """
         new_contents = []
-        for labor in plan.contents:
-            if isinstance(labor, str):
+        for task in Worker.contents:
+            if isinstance(task, str):
                 new_contents.append(self._draft_unknown(
-                    labor = labor, 
-                    plan = plan))
-            elif isinstance(labor, sourdough.base.Task):
-                new_contents.append(labor)
+                    task = task, 
+                    Worker = Worker))
+            elif isinstance(task, sourdough.project.Worker):
+                self.create(worker = task)
+            elif isinstance(task, sourdough.project.Task):
+                new_contents.append(task)
             else:
                 raise TypeError(
-                    f'{plan.name} contents must be str, Plan, or Step type')
-        plan.contents = new_contents
-        return plan
+                    f'{Worker.name} contents must be str, Worker, or Step type')
+        Worker.contents = new_contents
+        return Worker
     
     def _draft_unknown(self,
-            labor: str,
-            plan: 'sourdough.project.Plan') -> Union[
+            task: str,
+            Worker: 'sourdough.project.Worker') -> Union[
                 'sourdough.base.Step', 
-                'sourdough.project.Plan']:
+                'sourdough.project.Worker']:
         """[summary]
 
         Raises:
@@ -92,80 +137,37 @@ class Author(sourdough.base.Creator):
             [type]: [description]
         """
         try:
-            test_instance = plan.options[labor](name = 'test only')
+            test_instance = Worker.options[task](name = 'test only')
         except KeyError:
-            raise KeyError(f'{labor} not found in {plan.name}')
+            raise KeyError(f'{task} not found in {Worker.name}')
         if isinstance(test_instance, sourdough.base.Step):
-            return self._draft_plan(
-                plan = labor, 
+            return self._draft_Worker(
+                Worker = task, 
                 technique = None, 
-                plan = plan)
+                Worker = Worker)
         else:
-            return self._draft_plan(plan = labor, manager = plan)
+            return self._draft_Worker(worker = task, manager = Worker)
 
-    def _draft_from_settings(self, 
-            plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
-        """Returns a single Plan instance created based on 'settings'.
-
-        Args:
-            plan (sourdough.project.Plan): Plan instance to populate its 
-                'contents' with information in 'settings'.
-
-        Returns:
-            sourdough.project.Plan: an plan or subclass plan with attributes 
-                derived from a section of 'settings'.
-                
-        """
-        plans = []
-        steps = []
-        techniques = {}
-        attributes = {}
-        plan.contents = []
-        for key, value in self.settings.contents[plan.name].items():
-            if key.endswith('_design'):
-                plan.design = value
-            elif key.endswith('_plans'):
-                plans = sourdough.utilities.listify(value)
-            elif key.endswith('steps'):
-                steps = sourdough.utilities.listify(value)
-            elif key.endswith('_techniques'):
-                new_key = key.replace('_techniques', '')
-                techniques[new_key] = sourdough.utilities.listify(value)
-            else:
-                attributes[key] = value
-        if plans:
-            plan = self._draft_plans(
-                plans = plans, 
-                techniques = techniques,
-                plan = plan)
-        elif plans:
-            plan = self._draft_plans(
-                plans = plans,
-                manager = plan)
-        for key, value in attributes.items():
-            setattr(plan, key, value)
-        return plan      
-
-    def _draft_plans(self,
-            plans: Sequence[str],
-            manager: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def _draft_Workers(self,
+            Workers: Sequence[str],
+            manager: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
         """[summary]
 
         Returns:
             [type]: [description]
             
         """
-        new_plans = []
-        for plan in plans:
-            new_plans.append(self._draft_plan(
-                plan = plan, 
+        new_Workers = []
+        for worker in Workers:
+            new_Workers.append(self._draft_Worker(
+                Worker = Worker, 
                 manager = manager))
-        manager.contents.append(new_plans)
+        manager.contents.append(new_Workers)
         return manager
 
-    def _draft_plan(self,
-            plan: str,
-            manager: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def _draft_Worker(self,
+            Worker: str,
+            manager: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
         """[summary]
 
         Returns:
@@ -173,36 +175,36 @@ class Author(sourdough.base.Creator):
             
         """
         try:
-            new_plan = manager.options[plan](name = plan)
+            new_Worker = manager.options[Worker](name = Worker)
         except KeyError:
-            new_plan = sourdough.project.Plan(name = plan)
-        return self.organize(plan = new_plan)
+            new_Worker = sourdough.project.Worker(name = Worker)
+        return self.organize(worker = new_Worker)
                   
-    # def _draft_plans(self, 
-    #         plan: 'sourdough.project.Plan',
-    #         plans: Sequence[str],
-    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.project.Plan':
+    # def _draft_Workers(self, 
+    #         Worker: 'sourdough.project.Worker',
+    #         Workers: Sequence[str],
+    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.project.Worker':
     #     """[summary]
 
     #     Returns:
     #         [type]: [description]
     #     """
-    #     new_plans = []
-    #     for plan in plans:
+    #     new_Workers = []
+    #     for worker in Workers:
     #         new_techniques = []
-    #         for technique in techniques[plan]:
-    #             new_techniques.append(self._draft_plan(
-    #                 plan = plan,
+    #         for technique in techniques[Worker]:
+    #             new_techniques.append(self._draft_Worker(
+    #                 Worker = Worker,
     #                 technique = technique,
-    #                 plan = plan.name))
-    #         new_plans.append(new_techniques)
-    #     plan.contents.append(new_plans)
-    #     return plan
+    #                 Worker = Worker.name))
+    #         new_Workers.append(new_techniques)
+    #     Worker.contents.append(new_Workers)
+    #     return Worker
             
-    # def _draft_plan(self,
-    #         plan: str,
+    # def _draft_Worker(self,
+    #         Worker: str,
     #         technique: str,
-    #         plan: str,
+    #         Worker: str,
     #         options: 'sourdough.base.Catalog') -> 'sourdough.base.Step':
     #     """[summary]
 
@@ -211,26 +213,26 @@ class Author(sourdough.base.Creator):
             
     #     """
     #     try:
-    #         return plan.options[plan](
-    #             name = plan,
-    #             plan = plan,
-    #             technique = plan.options[technique])
+    #         return Worker.options[Worker](
+    #             name = Worker,
+    #             Worker = Worker,
+    #             technique = Worker.options[technique])
     #     except KeyError:
     #         try:
     #             return sourdough.base.Step(
-    #                 name = plan,
-    #                 plan = plan,
-    #                 technique = plan.options[technique])
+    #                 name = Worker,
+    #                 Worker = Worker,
+    #                 technique = Worker.options[technique])
     #         except KeyError:
     #             try:
-    #                 return plan.options[plan](
-    #                     name = plan,
-    #                     plan = plan,
+    #                 return Worker.options[Worker](
+    #                     name = Worker,
+    #                     Worker = Worker,
     #                     technique = sourdough.base.Technique(name = technique))
     #             except KeyError:
     #                 return sourdough.base.Step(
-    #                     name = plan,
-    #                     plan = plan,
+    #                     name = Worker,
+    #                     Worker = Worker,
     #                     technique = sourdough.base.Technique(name = technique))
 
 
@@ -243,34 +245,34 @@ class Publisher(sourdough.base.Creator):
     
     def add(self, 
             project: 'sourdough.project.Project', 
-            plan: str, 
-            plans: Union[Sequence[str], str]) -> 'sourdough.project.Project':
-        """Adds 'plans' to 'project' 'contents' with a 'plan' key.
+            Worker: str, 
+            Workers: Union[Sequence[str], str]) -> 'sourdough.project.Project':
+        """Adds 'Workers' to 'project' 'contents' with a 'Worker' key.
         
         Args:
-            project (sourdough.project.Project): project to which 'plan' and 'plans'
+            project (sourdough.project.Project): project to which 'Worker' and 'Workers'
                 should be added.
-            plan (str): key to use to store 'plans':
-            plans (Union[Sequence[str], str]): name(s) of plan(s) to add to 
+            Worker (str): key to use to store 'Workers':
+            Workers (Union[Sequence[str], str]): name(s) of Worker(s) to add to 
                 'project'.
             
         Returns:
-            sourdough.project.Project: with 'plans' added at 'plan'.
+            sourdough.project.Project: with 'Workers' added at 'Worker'.
         
         """
-        project.contents[plan] = sourdough.utilities.listify(plans)
+        project.contents[Worker] = sourdough.utilities.listify(Workers)
         return project
  
-    def create(self, plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def create(self, Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        plan = self._parameterize_plans(plan = plan)
+        Worker = self._parameterize_Workers(worker = Worker)
         
-        return plan
+        return Worker
 
     """ Private Methods """
     
@@ -306,7 +308,7 @@ class Publisher(sourdough.base.Creator):
 
         """
         return self.settings.get_parameters(
-            plan = technique.plan,
+            Worker = technique.Worker,
             technique = technique.name)
 
     def _get_selected(self,
@@ -414,16 +416,16 @@ class Reader(sourdough.base.Creator):
     
     settings: 'sourdough.base.Settings'
     
-    def create(self, plan: 'sourdough.project.Plan') -> 'sourdough.project.Plan':
+    def create(self, Worker: 'sourdough.project.Worker') -> 'sourdough.project.Worker':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        plan = self._parameterize_plans(plan = plan)
+        Worker = self._parameterize_Workers(worker = Worker)
         
-        return plan
+        return Worker
 
 
 # @dataclasses.dataclass
@@ -482,7 +484,7 @@ class Reader(sourdough.base.Creator):
 
 #         """
 #         return self.settings.get_parameters(
-#             plan = technique.plan,
+#             Worker = technique.Worker,
 #             technique = technique.name)
 
 #     def _get_selected(self,
@@ -609,63 +611,63 @@ class Reader(sourdough.base.Creator):
 #     """ Public Methods """
 
 #     def create(self,
-#             outer_plan: sourdough.base.base.Plan,
-#             data: Union[sourdough.base.Dataset, sourdough.base.base.Plan]) -> sourdough.base.base.Plan:
-#         """Applies 'outer_plan' instance in 'project' to 'data' or other stored outer_plan.
+#             outer_Worker: sourdough.base.base.Worker,
+#             data: Union[sourdough.base.Dataset, sourdough.base.base.Worker]) -> sourdough.base.base.Worker:
+#         """Applies 'outer_Worker' instance in 'project' to 'data' or other stored outer_Worker.
 
 #         Args:
-#             outer_plan ('outer_plan'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_plan' attributes).
-#             data ([Union['Dataset', 'outer_plan']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_plan'
+#             outer_Worker ('outer_Worker'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_Worker' attributes).
+#             data ([Union['Dataset', 'outer_Worker']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_Worker'
 
 #         Returns:
-#             'outer_plan': with 'parameters' for each technique instance finalized
+#             'outer_Worker': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_plan, 'techniques'):
-#             outer_plan = self._finalize_techniques(manuscript = outer_plan, data = data)
+#         if hasattr(outer_Worker, 'techniques'):
+#             outer_Worker = self._finalize_techniques(manuscript = outer_Worker, data = data)
 #         else:
-#             outer_plan = self._finalize_inner_plan(outer_plan = outer_plan, data = data)
-#         return outer_plan
+#             outer_Worker = self._finalize_inner_Worker(outer_Worker = outer_Worker, data = data)
+#         return outer_Worker
 
 #     """ Private Methods """
 
-#     def _finalize_inner_plan(self, outer_plan: 'outer_plan', data: 'Dataset') -> 'outer_plan':
-#         """Finalizes 'inner_plan' instances in 'outer_plan'.
+#     def _finalize_inner_Worker(self, outer_Worker: 'outer_Worker', data: 'Dataset') -> 'outer_Worker':
+#         """Finalizes 'inner_Worker' instances in 'outer_Worker'.
 
 #         Args:
-#             outer_plan ('outer_plan'): instance containing 'inner_plan' with 'techniques' that
+#             outer_Worker ('outer_Worker'): instance containing 'inner_Worker' with 'techniques' that
 #                 have 'data_dependent' and/or 'conditional' 'parameters' to
 #                 add.
 #             data ('Dataset): instance with potential information to use to
-#                 finalize 'parameters' for 'outer_plan'.
+#                 finalize 'parameters' for 'outer_Worker'.
 
 #         Returns:
-#             'outer_plan': with any necessary modofications made.
+#             'outer_Worker': with any necessary modofications made.
 
 #         """
-#         new_inner_plan = [
-#             self._finalize_techniques(inner_plan = inner_plan, data = data)
-#             for inner_plan in outer_plan.inner_plan]
+#         new_inner_Worker = [
+#             self._finalize_techniques(inner_Worker = inner_Worker, data = data)
+#             for inner_worker in outer_Worker.inner_Worker]
 
-#         outer_plan.inner_plan = new_inner_plan
-#         return outer_plan
+#         outer_Worker.inner_Worker = new_inner_Worker
+#         return outer_Worker
 
 #     def _finalize_techniques(self,
-#             manuscript: Union['outer_plan', 'inner_plan'],
-#             data: ['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
+#             manuscript: Union['outer_Worker', 'inner_Worker'],
+#             data: ['Dataset', 'outer_Worker']) -> Union['outer_Worker', 'inner_Worker']:
 #         """Subclasses may provide their own methods to finalize 'techniques'.
 
 #         Args:
-#             manuscript (Union['outer_plan', 'inner_plan']): manuscript containing
+#             manuscript (Union['outer_Worker', 'inner_Worker']): manuscript containing
 #                 'techniques' to create.
-#             data (['Dataset', 'outer_plan']): instance with information used to
+#             data (['Dataset', 'outer_Worker']): instance with information used to
 #                 finalize 'parameters' and/or 'algorithm'.
 
 #         Returns:
-#             Union['outer_plan', 'inner_plan']: with any necessary modofications made.
+#             Union['outer_Worker', 'inner_Worker']: with any necessary modofications made.
 
 #         """
 #         new_techniques = []
@@ -684,16 +686,16 @@ class Reader(sourdough.base.Creator):
 #         return manuscript
 
 #     def _add_conditionals(self,
-#             manuscript: 'outer_plan',
+#             manuscript: 'outer_Worker',
 #             technique: technique,
-#             data: Union['Dataset', 'outer_plan']) -> technique:
+#             data: Union['Dataset', 'outer_Worker']) -> technique:
 #         """Adds any conditional parameters to a technique instance.
 
 #         Args:
-#             manuscript ('outer_plan'): outer_plan instance with algorithms to create to 'data'.
+#             manuscript ('outer_Worker'): outer_worker instance with algorithms to create to 'data'.
 #             technique (technique): instance with parameters which can take
 #                 new conditional parameters.
-#             data (Union['Dataset', 'outer_plan']): a data source which might
+#             data (Union['Dataset', 'outer_Worker']): a data source which might
 #                 contain information for condtional parameters.
 
 #         Returns:
@@ -711,13 +713,13 @@ class Reader(sourdough.base.Creator):
 
 #     def _add_data_dependent(self,
 #             technique: technique,
-#             data: Union['Dataset', 'outer_plan']) -> technique:
+#             data: Union['Dataset', 'outer_Worker']) -> technique:
 #         """Completes parameter dictionary by adding data dependent parameters.
 
 #         Args:
 #             technique (technique): instance with information about data
 #                 dependent parameters to add.
-#             data (Union['Dataset', 'outer_plan']): a data source which contains
+#             data (Union['Dataset', 'outer_Worker']): a data source which contains
 #                 'data_dependent' variables.
 
 #         Returns:
@@ -791,41 +793,41 @@ class Reader(sourdough.base.Creator):
 
 #     """ Private Methods """
 
-#     def _create_inner_plan(self,
-#             outer_plan: 'outer_plan',
-#             data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
-#         """Applies 'inner_plan' in 'outer_plan' instance in 'project' to 'data'.
+#     def _create_inner_Worker(self,
+#             outer_Worker: 'outer_Worker',
+#             data: Union['Dataset', 'outer_Worker']) -> 'outer_Worker':
+#         """Applies 'inner_Worker' in 'outer_Worker' instance in 'project' to 'data'.
 
 #         Args:
-#             outer_plan ('outer_plan'): instance with stored 'inner_plan' instances.
+#             outer_Worker ('outer_Worker'): instance with stored 'inner_Worker' instances.
 #             data ('Dataset'): primary instance used by 'project'.
 
 #         Returns:
-#             'outer_plan': with modifications made and/or 'data' incorporated.
+#             'outer_Worker': with modifications made and/or 'data' incorporated.
 
 #         """
-#         new_inner_plan = []
-#         for i, inner_plan in enumerate(outer_plan.inner_plan):
+#         new_inner_Worker = []
+#         for i, inner_worker in enumerate(outer_Worker.inner_Worker):
 #             if self.verbose:
-#                 print('Applying', inner_plan.name, str(i + 1), 'to', data.name)
-#             new_inner_plan.append(self._create_techniques(
-#                 manuscript = inner_plan,
+#                 print('Applying', inner_Worker.name, str(i + 1), 'to', data.name)
+#             new_inner_Worker.append(self._create_techniques(
+#                 manuscript = inner_Worker,
 #                 data = data))
-#         outer_plan.inner_plan = new_inner_plan
-#         return outer_plan
+#         outer_Worker.inner_Worker = new_inner_Worker
+#         return outer_Worker
 
 #     def _create_techniques(self,
-#             manuscript: Union['outer_plan', 'inner_plan'],
-#             data: Union['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
+#             manuscript: Union['outer_Worker', 'inner_Worker'],
+#             data: Union['Dataset', 'outer_Worker']) -> Union['outer_Worker', 'inner_Worker']:
 #         """Applies 'techniques' in 'manuscript' to 'data'.
 
 #         Args:
-#             manuscript (Union['outer_plan', 'inner_plan']): instance with stored
+#             manuscript (Union['outer_Worker', 'inner_Worker']): instance with stored
 #                 'techniques'.
 #             data ('Dataset'): primary instance used by 'manuscript'.
 
 #         Returns:
-#             Union['outer_plan', 'inner_plan']: with modifications made and/or 'data'
+#             Union['outer_Worker', 'inner_Worker']: with modifications made and/or 'data'
 #                 incorporated.
 
 #         """
@@ -835,30 +837,30 @@ class Reader(sourdough.base.Creator):
 #             if isinstance(data, Dataset):
 #                 data = technique.create(data = data)
 #             else:
-#                 for inner_plan in data.inner_plan:
-#                     manuscript.inner_plan.append(technique.create(data = inner_plan))
+#                 for inner_worker in data.inner_Worker:
+#                     manuscript.inner_Worker.append(technique.create(data = inner_Worker))
 #         if isinstance(data, Dataset):
 #             setattr(manuscript, 'data', data)
 #         return manuscript
 
 #     """ Core sourdough Methods """
 
-#     def create(self, outer_plan: 'outer_plan', data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
-#         """Applies 'outer_plan' instance in 'project' to 'data' or other stored outer_plan.
+#     def create(self, outer_Worker: 'outer_Worker', data: Union['Dataset', 'outer_Worker']) -> 'outer_Worker':
+#         """Applies 'outer_Worker' instance in 'project' to 'data' or other stored outer_Worker.
 
 #         Args:
-#             outer_plan ('outer_plan'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_plan' attributes).
-#             data ([Union['Dataset', 'outer_plan']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_plan'
+#             outer_Worker ('outer_Worker'): instance with stored technique instances (either
+#                 stored in the 'techniques' or 'inner_Worker' attributes).
+#             data ([Union['Dataset', 'outer_Worker']): a data source with information to
+#                 finalize 'parameters' for each technique instance in 'outer_Worker'
 
 #         Returns:
-#             'outer_plan': with 'parameters' for each technique instance finalized
+#             'outer_Worker': with 'parameters' for each technique instance finalized
 #                 and connected to 'algorithm'.
 
 #         """
-#         if hasattr(outer_plan, 'techniques'):
-#             outer_plan = self._create_techniques(manuscript = outer_plan, data = data)
+#         if hasattr(outer_Worker, 'techniques'):
+#             outer_Worker = self._create_techniques(manuscript = outer_Worker, data = data)
 #         else:
-#             outer_plan = self._create_inner_plan(outer_plan = outer_plan, data = data)
-#         return outer_plan
+#             outer_Worker = self._create_inner_Worker(outer_Worker = outer_Worker, data = data)
+#         return outer_Worker

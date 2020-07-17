@@ -151,7 +151,7 @@ class Settings(sourdough.base.Settings):
     # def create_project(self, 
     #         name: str, 
     #         project: 'sourdough.project.Project' = None) -> 'sourdough.project.Project':
-    #     """Returns a single Plan instance created from a 'contents' section.
+    #     """Returns a single worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
@@ -173,20 +173,20 @@ class Settings(sourdough.base.Settings):
             
     # def create_step(self, 
     #         name: str, 
-    #         step: 'sourdough.project.Plan' = None) -> 'sourdough.project.Plan':
-    #     """Returns a single Plan instance created from a 'contents' section.
+    #         step: 'sourdough.project.Worker' = None) -> 'sourdough.project.Worker':
+    #     """Returns a single worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.project.Plan): Plan class or subclass to store the
+    #         step (sourdough.project.Worker): Worker class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
-    #             passed, a generic Plan or Plan class is used based upon
+    #             passed, a generic Worker or Worker class is used based upon
     #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.project.Plan: an instance or subclass instance with attributes 
+    #         sourdough.project.Worker: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -198,10 +198,10 @@ class Settings(sourdough.base.Settings):
     #         if key.endswith('_design'):
     #             parameters['design'] = value
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.project.Plan
+    #             step = step or sourdough.project.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.project.Plan
+    #             step = step or sourdough.project.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')

@@ -834,7 +834,7 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
             raise TypeError('component must have a name attribute')
         return self
  
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Plan':
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Worker':
         """Returns a subset of 'contents'.
 
         Args:
@@ -842,7 +842,7 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
                 instances with matching 'name' attributes from 'contents'.
 
         Returns:
-            Plan: with only items with 'name' attributes in 'subset'.
+            Worker: with only items with 'name' attributes in 'subset'.
 
         """
         subset = sourdough.utilities.listify(subset)

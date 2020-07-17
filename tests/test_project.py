@@ -21,31 +21,31 @@ class Distributor(sourdough.base.Stage):
    
 
 @dataclasses.dataclass
-class Slice(sourdough.project.Plan):
+class Slice(sourdough.project.Worker):
     pass
 
 
 @dataclasses.dataclass
-class Dice(sourdough.project.Plan):
+class Dice(sourdough.project.Worker):
     pass
 
 
 @dataclasses.dataclass    
-class Divider(sourdough.project.Plan):
+class Divider(sourdough.project.Worker):
 
     options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
-class Parser(sourdough.project.Plan):
+class Parser(sourdough.project.Worker):
 
     options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
         contents = {'divider': Divider})
 
 
 @dataclasses.dataclass
-class Munger(sourdough.project.Plan):
+class Munger(sourdough.project.Worker):
     pass
 
 
