@@ -83,7 +83,7 @@ class Task(Component, abc.ABC):
     """Base class for applying stored methods to passed data.
     
     Task subclass instances are often arranged in an ordered sequence such as a
-    Progression instance. All Task subclasses must have 'apply' methods for 
+    Progression instance. All Task subclasses must have 'perform' methods for 
     handling data. 
     
     Args:
@@ -105,7 +105,7 @@ class Task(Component, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def apply(self, data: object = None, **kwargs) -> object:
+    def perform(self, data: object = None, **kwargs) -> object:
         """Subclasses must provide their own methods."""
         pass
 
@@ -142,113 +142,10 @@ class Creator(Component, abc.ABC):
         
         """
         pass
-    
-
-@dataclasses.dataclass
-class Anthology(abc.ABC):
-    """Base class for sourdough iterables.
-    
-    All Anthology subclasses must include 'validate' and 'add' methods. 
-    Requirements for those methods are described in the respective 
-    abstractmethods.
-    
-    Args:
-        contents (Iterable): stored iterable. Defaults to None.
-              
-    """
-    contents: Iterable = None 
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Validates 'contents' or converts it to appropriate iterable.
-        self.contents = self.validate(contents = self.contents)
-        
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def validate(self, contents: Any, **kwargs) -> Iterable:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Subclasses must provide their own methods.
-        
-        The 'contents' argument should accept any supported datatype and either
-        validate its type or convert it to an iterable. This method is used to 
-        validate or convert both the passed 'contents' and by the 'add' method
-        to add new keys and values to the 'contents' attribute.
-        
-        """
-        pass
-    
-    @abc.abstractmethod
-    def add(self, contents: Any, **kwargs) -> None:
-        """Adds 'contents' to the 'contents' attribute.
-        
-        Subclasses must provide their own methods.
-        
-        This method should first call 'validate' to convert or 'validate' the
-        passed argument. It should then use the appropraite default mechanism
-        for adding 'contents' argument to the 'contents' attribute.
-        
-        """
-        contents = self.validate(contents = contents)
-        # Subclasses should add code for incorporating 'contents' argument here.
-        return self  
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: of 'contents'.
-
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            int: length of 'contents'.
-
-        """
-        return len(self.contents)
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(other)
-        return self
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-    
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'contents: {self.contents.__str__()}')     
 
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, Anthology):
+class Lexicon(collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
 
     Lexicon subclasses can serve as drop in replacements for dicts with added
@@ -280,6 +177,13 @@ class Lexicon(collections.abc.MutableMapping, Anthology):
               
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+      
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Validates 'contents' or converts it to appropriate iterable.
+        self.contents = self.validate(contents = self.contents)  
         
     """ Public Methods """
     
@@ -372,6 +276,54 @@ class Lexicon(collections.abc.MutableMapping, Anthology):
         """
         del self.contents[key]
         return self
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents'.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+    def __repr__(self) -> str:
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return (
+            f'sourdough {self.__class__.__name__}\n'
+            f'contents: {self.contents.__str__()}')     
 
 
 @dataclasses.dataclass
@@ -687,7 +639,7 @@ isn't included in the uploaded package build.
         
         
 @dataclasses.dataclass
-class Progression(collections.abc.MutableSequence, Component, Anthology):
+class Progression(Component, collections.abc.MutableSequence):
     """Base class for sourdough sequenced iterables.
     
     A Progression differs from a python list in 6 significant ways:
@@ -975,6 +927,25 @@ class Progression(collections.abc.MutableSequence, Component, Anthology):
         """
         return len(more_itertools.collapse(self.contents))
 
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents'.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+    def __repr__(self) -> str:
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
     def __str__(self) -> str:
         """Returns default string representation of an instance.
 

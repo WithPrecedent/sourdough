@@ -10,7 +10,6 @@
 from .core import Component
 from .core import Task
 from .core import Creator
-from .core import Anthology
 from .core import Lexicon
 from .core import Catalog
 # from .core import Reflector
@@ -30,7 +29,6 @@ __all__ = [
     'Component',
     'Task',
     'Creator',
-    'Anthology',
     'Lexicon',
     'Catalog',
     # 'Reflector',

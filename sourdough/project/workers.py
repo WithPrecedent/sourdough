@@ -1,6 +1,6 @@
 """
-.. module: manager
-:synopsis: sourdough Manager and related classes
+.. module: workers
+:synopsis: sourdough project composite iterables
 :publisher: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -8,169 +8,12 @@
 
 import abc
 import dataclasses
-import copy
 import inspect
 import itertools
 import more_itertools
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
-
-
-@dataclasses.dataclass
-class Technique(sourdough.base.Task):
-    """Base class for creating or modifying data objects.
-
-    Args:
-        algorithm (object): core object used by the 'apply' method. Defaults to 
-            None.
-        parameters (Mapping[str, Any]]): parameters to be attached to
-            'algorithm' when the 'apply' method is called. Defaults to an empty
-            dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-            
-    """
-    algorithm: object = None
-    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'algorithm' with 'parameters'.
-        
-        Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'algorithm'. If data is not
-                passed, nothing is returned.        
-        
-        
-        """
-        if data is None:
-            self.algorithm(**parameters, **kwargs)
-            return self
-        else:
-            return self.algorithm(data, **parameters, **kwargs)
-        
-    """ Dunder Methods """
-
-    def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            f'algorithm: {str(self.algorithm)}\n'
-            f'parameters: {str(self.parameters)}\n')
-        
-            
-@dataclasses.dataclass
-class Step(sourdough.base.Task):
-    """Base class for wrapping a Technique.
-
-    A Step is a basic wrapper for a Technique that adds a 'name' for the
-    'Worker' that a stored technique instance is associated with. Subclasses of
-    Step can store additional methods and attributes to apply to all possible
-    technique instances that could be used. This is often useful when creating
-    'comparative' worker instances which test a variety of strategies with
-    similar or identical parameters and/or methods.
-
-    A Worker instance will try to return attributes from 'technique' if the
-    attribute is not found in the worker instance. 
-
-    Args:
-        worker (str): the name of the worker in a Worker instance that 
-            the algorithm is being performed. This attribute is generally 
-            optional but can be useful for tracking and/or displaying the status 
-            of iteration. It is automatically created when using a chained or 
-            comparative Worker. Defaults to None.
-        technique (Technique): technique object for this worker in a sourdough
-            sequence. Defaults to None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-            
-    """
-    # Worker: str = dataclasses.field(default_factory = lambda: '')
-    technique: Union[Technique, str] = None
-    name: str = None
-
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'algorithm' with 'parameters'.
-        
-        Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'algorithm'. If data is not
-                passed, nothing is returned.        
-        
-        
-        """
-        if data is None:
-            self.technique(data = data, **kwargs)
-            return self
-        else:
-            return self.technique(data = data, **kwargs)
-
-    """ Dunder Methods """
-
-    def __getattr__(self, attribute: str) -> Any:
-        """Looks for 'attribute' in 'technique'.
-
-        Args:
-            attribute (str): name of attribute to return.
-
-        Returns:
-            Any: matching attribute.
-
-        Raises:
-            AttributeError: if 'attribute' is not found in 'technique'.
-
-        """
-        try:
-            return getattr(self.technique, attribute)
-        except AttributeError:
-            raise AttributeError(
-                f'{attribute} neither found in {self.name} nor \
-                    {self.technique}')
-
-    def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
-        return self.__str__()
-
-    def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            # f'Worker: {self.Worker.name}\n'
-            f'technique: {str(self.technique)}\n')
 
 
 @dataclasses.dataclass
@@ -244,7 +87,7 @@ class Worker(sourdough.base.Task, sourdough.base.Progression):
                 new_contents.append[step]
         return new_contents
         
-    def apply(self, data: object = None) -> object:
+    def perform(self, data: object = None) -> object:
         """Applies stored Task instances to 'data'.
 
         Args:
@@ -257,22 +100,23 @@ class Worker(sourdough.base.Task, sourdough.base.Progression):
             
         """
         if data is None:
-            for operator in self.__iter__():
-                operator.apply()
+            for task in self.__iter__():
+                task.perform()
             return self
         else:
-            for operator in self.__iter__():
-                data = operator.apply(data = data)
+            for task in self.__iter__():
+                data = task.perform(data = data)
             return data
              
     """ Properties """
     
     @property
-    def overview(self) -> 'Overview':
+    def overview(self) -> Mapping[str, List[str]]:
         """Returns a string snapshot of a Worker subclass instance.
         
         Returns:
-            Overview: configured according to the '_get_overview' method.
+            Mapping[str, List[str]]: configured according to the '_get_overview' 
+                method.
         
         """
         return self._get_overview() 
