@@ -1,11 +1,14 @@
 """
-.. module:: project
-:synopsis: sourdough workflow controller
-:publisher: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
-"""
+project: interface for sourdough projects
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+Contents:
+    Project (OptionsMixin, Progression): iterable which contains the needed
+        information and data for constructing and executing tree objects.
+
+"""
 import dataclasses
 import pathlib
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -15,33 +18,34 @@ import sourdough
  
  
 @dataclasses.dataclass
-class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
-    """Constructs, organizes, and stores Workers for a sourdough project.
+class Project(sourdough.OptionsMixin, sourdough.Progression):
+    """Constructs, organizes, and stores tree Workers and Tasks.
     
     A Project inherits all of the differences between a Progression and a python
     list.
 
     A Project differs from a Progression in 5 significant ways:
-        1) The Project is the public interface to Manager construction and 
-            application. It may store the Manager instance itself as well as
-            any required classes (such as those stored in the 'data' attribute).
-            This includes Settings, Filer, and Options. They are stored in 
-            the 'settings', 'filer', and 'options' attributes, 
-            respectively.
-        2) Project only stores Creator subclass instances in 'contents'. Those 
-            instances are used to assemble the parts of a Manager instance.
+        1) The Project is the public interface to Worker/Manager construction 
+            and application. It may store the Worker/Manager instance(s) as well 
+            as any required classes (such as those stored in the 'data' 
+            attribute). This includes Settings and Filer, stored in the 
+            'settings' and 'filer' attributes, respectively.
+        2) Project stores Creator subclass instances in 'contents'. Those 
+            instances are used to assemble and apply the parts of Worker/Manager 
+            instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
         4) It has an OptionsMixin, which contains a Catalog instance storing
-            Default Creator instances which can be used.
+            default Creator instances in 'options'.
+        5)
         
     Args:
-        contents (Sequence[Union[sourdough.base.Creator, str]]]): list of 
+        contents (Sequence[Union[sourdough.Creator, str]]]): list of 
             Creator subclass instances or strings which correspond to keys in 
             'options'. Defaults to 'default', which will use the 'defaults' 
             attribute of 'options' to select Creator instances.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
+            internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -51,21 +55,24 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
             the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        manager (sourdough.manager.Manager): a Manager instance for the Project. 
-            Defaults to None.
-        settings (Union[sourdough.base.Settings, str, pathlib.Path]]): 
+        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
             an instance of Settings or a str or pathlib.Path containing the 
             file path where a file of a supported file type with settings for a 
             Settings instance is located. Defaults to None.
-        filer (Union[sourdough.base.Filer, str, pathlib.Path]]): an instance of 
+        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
             Filer or a str or pathlib.Path containing the full path of where the 
             root folder should be located for file input and output. A Filer
             instance contains all file path and import/export methods for use 
             throughout sourdough. Defaults to None.
+        managers (Union[Sequence[sourdough.Manager], sourdough.Manager]): 
+            Manager instance(s) to form the tree object of the project. If
+            you are using a Settings instance to list which Manager instance(s) 
+            should be used or if you manually want to add Manager instance(s),
+            this argument should not be passed. Defaults to an empty list.
         automatic (bool): whether to automatically advance 'contents' (True) or 
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
-        options (ClassVar[sourdough.base.Catalog]): a class attribute storing
+        options (ClassVar[sourdough.Catalog]): a class attribute storing
             default Creator classes which can be used in manager construction
             and application. 
     
@@ -79,21 +86,18 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
             
     """
     contents: Sequence[Union[
-        'sourdough.base.Creator', 
+        'sourdough.Creator', 
         str]] = dataclasses.field(default_factory = lambda: 'default')
     name: str = None
-    manager: 'sourdough.manager.Manager' = None
-    settings: Union[
-        'sourdough.base.Settings', 
-        str, 
-        pathlib.Path] = None
-    filer: Union['sourdough.base.Filer', str, pathlib.Path] = None
+    settings: Union['sourdough.Settings', str, pathlib.Path] = None
+    filer: Union['sourdough.Filer', str, pathlib.Path] = None
+    manager: 'sourdough.Manager' = None
     automatic: bool = True
-    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'draft': sourdough.base.Author,
-            'publish': sourdough.base.Publisher,
-            'apply': sourdough.base.Worker},
+            'draft': sourdough.Author,
+            'publish': sourdough.Publisher,
+            'apply': sourdough.Worker},
         defaults = ['draft', 'publish', 'apply'])
     
     """ Initialization Methods """
@@ -105,10 +109,10 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Validates or creates a 'Settings' instance.
-        self.settings = sourdough.base.Settings(
+        self.settings = sourdough.Settings(
             contents = self.settings)
         # Validates or creates a Filer' instance.
-        self.filer = sourdough.base.Filer(
+        self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
         # Adds 'general' section attributes from 'settings'.
@@ -127,12 +131,12 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
     """ Public Methods """
 
     def validate(self, 
-            contents: Sequence[Union['sourdough.base.Creator', str]],
-            **kwargs) -> Sequence['sourdough.base.Creator']:
+            contents: Sequence[Union['sourdough.Creator', str]],
+            **kwargs) -> Sequence['sourdough.Creator']:
         """Creates Creator instances, when necessary, in 'contents'
 
         Args:
-            contents (Sequence[Union[sourdough.base.Creator, str]]]): list of 
+            contents (Sequence[Union[sourdough.Creator, str]]]): list of 
                 Creator subclass instances or strings which correspond to keys 
                 in 'options'. 
             kwargs: any extra arguments to send to each created Creator 
@@ -146,7 +150,7 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
                 subclass.
             
         Returns:
-            Sequence[sourdough.base.Creator]: a list with only Creator subclass 
+            Sequence[sourdough.Creator]: a list with only Creator subclass 
                 instances.
                   
         """       
@@ -157,9 +161,9 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
                     new_contents.append(self.options[stage](**kwargs))
                 except KeyError:
                     KeyError(f'{stage} is not a recognized stage')
-            elif isinstance(stage, sourdough.base.Creator):
+            elif isinstance(stage, sourdough.Creator):
                 new_contents.append(stage)
-            elif issubclass(stage, sourdough.base.Creator):
+            elif issubclass(stage, sourdough.Creator):
                 new_contents.append(stage(**kwargs))
             else:
                 raise TypeError(f'{stage} must be a str or Creator type')
@@ -197,19 +201,19 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
         return self
 
     def iterate(self, 
-            manager: 'sourdough.manager.Manager') -> (
-                'sourdough.manager.Manager'):
+            manager: 'sourdough.Manager') -> (
+                'sourdough.Manager'):
         """Advances to next stage and applies that stage to 'manager'.
 
         Args:
-            manager (sourdough.manager.Manager): instance to apply the next 
+            manager (sourdough.Manager): instance to apply the next 
                 stage's methods to.
                 
         Raises:
             IndexError: if this instance is already at the last stage.
 
         Returns:
-            sourdough.manager.Manager: with the last stage applied.
+            sourdough.Manager: with the last stage applied.
             
         """
         if self.index == len(self.contents) - 1:
@@ -247,16 +251,16 @@ class Project(sourdough.base.OptionsMixin, sourdough.base.Progression):
     """ Private Methods """
                         
     def _auto_contents(self, 
-            manager: 'sourdough.manager.Manager') -> (
-                'sourdough.manager.Manager'):
+            manager: 'sourdough.Manager') -> (
+                'sourdough.Manager'):
         """Automatically advances through and iterates stored Creator instances.
 
         Args:
-            manager (sourdough.manager.Manager): an instance containing any data 
+            manager (sourdough.Manager): an instance containing any data 
                 for the manager methods to be applied to.
                 
         Returns:
-            sourdough.manager.Manager: modified by the stored Creator instance's 
+            sourdough.Manager: modified by the stored Creator instance's 
                 'create' methods.
             
         """

@@ -1,11 +1,14 @@
 """
-.. module:: settings
-:synopsis: base class for configuring sourdough managers
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
-"""
+settings: loads and/or stores configuration options for sourdough and projects
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+Contents:
+    Settings (Lexicon): stores configuration settings after either loading them
+        from disk or by the passed arguments.
+
+"""
 import collections
 import configparser
 import dataclasses
@@ -19,7 +22,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(sourdough.base.Lexicon):
+class Settings(sourdough.Lexicon):
     """Loads and Stores configuration settings.
 
     To create Settings instance, a user can pass a:
@@ -347,7 +350,7 @@ class Settings(sourdough.base.Lexicon):
             Mapping[str, Mapping[str, Any]]: with stored defaults added.
 
         """
-        new_contents = sourdough.base.defaults.settings
+        new_contents = sourdough.defaults.settings
         new_contents.update(contents)
         return new_contents
 

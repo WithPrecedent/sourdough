@@ -1,7 +1,7 @@
 # sourdough
 
 ![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)
-[![Build Status](https://img.shields.io/travis/with_precedent/sourdough.base.svg)](https://travis-ci.org/with_precedent/sourdough)
+[![Build Status](https://img.shields.io/travis/with_precedent/sourdough.svg)](https://travis-ci.org/with_precedent/sourdough)
 
 <em>"Sourdough is complicated and alive; it's fickle and mysterious; it's impossible and it's beautiful."</em> - [Sophie Lucido Johnson](https://www.bonappetit.com/story/sourdough-starter-love-letter)
 

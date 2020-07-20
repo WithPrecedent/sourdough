@@ -1,11 +1,23 @@
 """
-.. module:: mixins
-:synopsis: sourdough mixins
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
-"""
+mixins: sourdough mixins
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+Contents:
+    LibraryMixin: mixin for automatically storing subclass instances in a
+        'library' class attribute.
+    RegistryMixin: mixin for automatically storing subclasses in a 'registry'
+        class attribute.
+    OptionsMixin: mixin for storing strategies or options in an 'options'
+        class attribute.
+    ProxyMixin: mixin which creates a python property which refers to another
+        attribute by using the 'proxify' method.
+    LoaderMixin: lazy loader mixin which uses a 'load' method to look for str
+        names of objects stored in attributes in the 'module' and 
+        'default_module' attributes.
+
+"""
 import abc
 import dataclasses
 import importlib
@@ -25,13 +37,13 @@ class LibraryMixin(abc.ABC):
     instance, super().__post_init__() should be called by that subclass.
 
     Args:
-        library (ClassVar[sourdough.base.Catalog]): dictionary which stores 
+        library (ClassVar[sourdough.Catalog]): dictionary which stores 
             subclass instances.
             
-    Mixin Namespaces: 'library', 'borrow'.
+    Namespaces: 'library', 'borrow'.
 
     """
-    library: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog()
+    library: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -69,10 +81,10 @@ class RegistryMixin(abc.ABC):
         register_from_disk (bool): whether to look in the current working
             folder and subfolders for subclasses of the Component class for 
             which this class is a mixin. Defaults to False.
-        registry (ClassVar[sourdough.base.Catalog]): the instance which stores 
+        registry (ClassVar[sourdough.Catalog]): the instance which stores 
             subclass in a Catalog instance.
 
-    Mixin Namespaces: 'registry', 'register_from_disk', 'build', 
+    Namespaces: 'registry', 'register_from_disk', 'build', 
         'find_subclasses', '_import_from_path', '_get_subclasse'
         
     To Do:
@@ -81,7 +93,7 @@ class RegistryMixin(abc.ABC):
     
     """
     # register_from_disk: bool = False
-    registry: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog()
+    registry: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
     
     """ Initialization Methods """
     
@@ -173,7 +185,7 @@ class RegistryMixin(abc.ABC):
     #     return module_spec.loader.exec_module(module)
     
     # def _get_subclasses(self, 
-    #         module: object) -> Sequence['sourdough.base.Component']:
+    #         module: object) -> Sequence['sourdough.Component']:
     #     """Returns a list of subclasses in 'module'.
         
     #     Args:
@@ -187,7 +199,7 @@ class RegistryMixin(abc.ABC):
     #     matches = []
     #     for item in pyclbr.readmodule(module):
     #         # Adds direct subclasses.
-    #         if inspect.issubclass(item, sourdough.base.Component):
+    #         if inspect.issubclass(item, sourdough.Component):
     #             matches.append[item]
     #         else:
     #             # Adds subclasses of other subclasses.
@@ -202,13 +214,13 @@ class OptionsMixin(abc.ABC):
     """Mixin which stores classes or instances in 'options'.
 
     Args:
-        options (ClassVar[sourdough.base.Catalog]): the instance which stores 
+        options (ClassVar[sourdough.Catalog]): the instance which stores 
             subclass in a Catalog instance.
             
-    Mixin Namespaces: 'options', 'select'
+    Namespaces: 'options', 'select'
 
     """
-    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         always_return_list = True)
     
     """ Public Methods """
@@ -269,7 +281,7 @@ class ProxyMixin(abc.ABC):
     Only one proxy should be created per class. Otherwise, the created proxy
     properties will all point to the same attribute.
 
-    Mixin Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
+    Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
         '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
         the proxy property set by the user with the 'proxify' method.
        
@@ -366,4 +378,70 @@ class ProxyMixin(abc.ABC):
                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
                     getattr(self, item))
         return self
-   
+
+
+@dataclasses.dataclass
+class LoaderMixin(abc.ABC):
+    """Mixin for lazy loading of python modules and objects.
+
+    Args:
+        module (str): name of module where object to use is located (can either 
+            be a sourdough or non-sourdough module). Defaults to 'sourdough'.
+        default_module (str): a backup name of module where object to use is 
+            located (can either be a sourdough or non-sourdough module).
+            Defaults to 'sourdough'.
+
+    Namespaces: 'module', 'default_module', 'load'
+
+    """
+    module: str = dataclasses.field(default_factory = lambda: 'sourdough')
+    default_module: str = dataclasses.field(
+        default_factory = lambda: 'sourdough')
+
+    """ Public Methods """
+
+    def load(self, attribute: str) -> object:
+        """Returns object named in 'attribute'.
+
+        If 'attribute' is not a str, it is assumed to have already been loaded
+        and is returned as is.
+
+        The method searches both 'module' and 'default_module' for the named
+        'attribute'. It also checks to see if the 'attribute' is directly
+        loadable from the module or if it is the name of a local attribute that
+        has a value of a loadable object in the module.
+
+        Args:
+            attribute (str): name of attribute to load from 'module' or
+                'default_module'.
+
+        Returns:
+            object: from 'module' or 'default_module'.
+
+        """
+        # If 'attribute' is a string, attempts to load from 'module' or, if not
+        # found there, 'default_module'.
+        if isinstance(getattr(self, attribute), str):
+            try:
+                return getattr(importlib.import_module(self.module), attribute)
+            except (ImportError, AttributeError):
+                try:
+                    return getattr(
+                        importlib.import_module(self.module),
+                        getattr(self, attribute))
+                except (ImportError, AttributeError):
+                    try:
+                        return getattr(
+                            importlib.import_module(self.module), attribute)
+                    except (ImportError, AttributeError):
+                        try:
+                            return getattr(
+                                importlib.import_module(self.default_module),
+                                getattr(self, attribute))
+                        except (ImportError, AttributeError):
+                            raise ImportError(
+                                f'{attribute} is neither in \
+                                {self.module} nor {self.default_module}')
+        # If 'attribute' is not a string, it is returned as is.
+        else:
+            return getattr(self, attribute)

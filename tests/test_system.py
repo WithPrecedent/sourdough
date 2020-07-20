@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join('..', 'sourdough'))
 import sourdough
 
 
-class SomeProject(sourdough.base.Project):
+class SomeProject(sourdough):
 
     def some_action(self):
         pass

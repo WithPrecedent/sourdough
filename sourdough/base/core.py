@@ -1,9 +1,20 @@
 """
-.. module:: base
-:synopsis: sourdough base classes
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
+core: sourdough core base classes
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+Contents:
+    Component: abstract base class for tree objects.
+    Task (Component): abstract base class for storing action methods. Subclasses
+        must have a 'perform' method.
+    Creator: abstract base class for constructing Task and Component instances.
+        Subclasses must have a 'create' method.
+    Lexicon: sourdough drop-in replacement for dict.
+    Catalog (Lexicon): list and wildcard accepting dict replacement.
+    Progression: iterable for Task and Component instances with dict and list 
+        interfaces.
+
 """
 
 import abc
@@ -18,18 +29,18 @@ import sourdough
 
 @dataclasses.dataclass
 class Component(abc.ABC):
-    """Base class for core sourdough objects.
+    """Base class for tree sourdough objects.
 
     A Component has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of composite data structures such as trees and graphs. 
+    to create a variety of tree data structures such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
     collectively, with Component.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
+            internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -54,7 +65,7 @@ class Component(abc.ABC):
 
     @classmethod
     def get_name(cls) -> str:
-        """Returns 'name' of class for use throughout sourdough.base.
+        """Returns 'name' of class for use throughout sourdough.
         
         The method is a classmethod so that a 'name' can properly derived even
         before a class is instanced. It can also be called after a subclass is
@@ -88,7 +99,7 @@ class Task(Component, abc.ABC):
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
+            internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
@@ -111,26 +122,12 @@ class Task(Component, abc.ABC):
 
  
 @dataclasses.dataclass
-class Creator(Component, abc.ABC):
+class Creator(abc.ABC):
     """Base class for stages of creation of sourdough objects.
     
     All subclasses must have 'create' methods. 
     
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-    
     """
-    name: str = None
     
     """ Required Subclass Methods """
     
@@ -644,7 +641,7 @@ class Progression(Component, collections.abc.MutableSequence):
     
     A Progression differs from a python list in 6 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough.base. This is inherited from Component.
+            in sourdough. This is inherited from Component.
         2) It includes an 'add' method which allows different datatypes to
             be passed and added to the 'contents' of a Progression instance.
         3) It only stores items that have a 'name' attribute or are str type.
@@ -669,7 +666,7 @@ class Progression(Component, collections.abc.MutableSequence):
     Args:
         contents (Sequence[Component]]): stored iterable of Component instances.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough.base. For example if a 
+            internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 

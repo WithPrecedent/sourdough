@@ -19,7 +19,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(sourdough.base.Settings):
+class Settings(sourdough.Settings):
     """Stores sourdough manager settings.
 
 
@@ -127,7 +127,7 @@ class Settings(sourdough.base.Settings):
                 pass
         return instance
 
-    # def get_overview(self, name: str) -> 'sourdough.base.Overview':
+    # def get_overview(self, name: str) -> 'sourdough.Overview':
     #     """Returns an Overview with 'contents' from this instance.
 
     #     Args:
@@ -135,13 +135,13 @@ class Settings(sourdough.base.Settings):
     #             Overview instance.
 
     #     Returns:
-    #         sourdough.base.Overview: with contents derived from the settings
+    #         sourdough.Overview: with contents derived from the settings
     #             settings in this instance.
 
     #     """
     #     steps = sourdough.utilities.listify(
     #         self.contents[name][f'{name}_steps'])
-    #     overview = sourdough.base.Overview(name = f'{name}_overview')
+    #     overview = sourdough.Overview(name = f'{name}_overview')
     #     for step in steps:
     #         overview = self._parse_step_section(
     #             name = step, 
@@ -150,22 +150,22 @@ class Settings(sourdough.base.Settings):
 
     # def create_manager(self, 
     #         name: str, 
-    #         manager: 'sourdough.manager.Manager' = None) -> 'sourdough.manager.Manager':
-    #     """Returns a single worker instance created from a 'contents' section.
+    #         manager: 'sourdough.Manager' = None) -> 'sourdough.Manager':
+    #     """Returns a single Worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         manager (sourdough.manager.Manager): Manager class or subclass to store the
+    #         manager (sourdough.Manager): Manager class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Manager class is used.
 
     #     Returns:
-    #         sourdough.manager.Manager: an instance or subclass instance with attributes 
+    #         sourdough.Manager: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
-    #     manager = manager or sourdough.manager.Manager
+    #     manager = manager or sourdough.Manager
     #     instance = self.create_step(name = name, step = manager)
     #     new_contents = []
     #     for labor in instance.contents:
@@ -173,20 +173,20 @@ class Settings(sourdough.base.Settings):
             
     # def create_step(self, 
     #         name: str, 
-    #         step: 'sourdough.manager.Worker' = None) -> 'sourdough.manager.Worker':
-    #     """Returns a single worker instance created from a 'contents' section.
+    #         step: 'sourdough.Worker' = None) -> 'sourdough.Worker':
+    #     """Returns a single Worker instance created from a 'contents' section.
 
     #     Args:
     #         name (str): name of step to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.manager.Worker): Worker class or subclass to store the
+    #         step (sourdough.Worker): Worker class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Worker or Worker class is used based upon
     #             whether steps or steps are stored within the name section of
     #             'contents'.
 
     #     Returns:
-    #         sourdough.manager.Worker: an instance or subclass instance with attributes 
+    #         sourdough.Worker: an instance or subclass instance with attributes 
     #             from a section of 'contents'
                 
     #     """
@@ -198,10 +198,10 @@ class Settings(sourdough.base.Settings):
     #         if key.endswith('_design'):
     #             parameters['design'] = value
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.manager.Worker
+    #             step = step or sourdough.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_steps'):
-    #             step = step or sourdough.manager.Worker
+    #             step = step or sourdough.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')
@@ -491,7 +491,7 @@ class Settings(sourdough.base.Settings):
                 dictionary to 'contents'.
 
         """
-        return collections.ChainMap(contents, sourdough.base.defaults.settings)
+        return collections.ChainMap(contents, sourdough.defaults.settings)
 
     def _inject(self,
             instance: object,
@@ -520,7 +520,7 @@ class Settings(sourdough.base.Settings):
 
     # def _parse_step_section(self, 
     #         name: str,
-    #         overview: 'sourdough.base.Overview') -> 'sourdough.base.Overview':
+    #         overview: 'sourdough.Overview') -> 'sourdough.Overview':
     #     """[summary]
 
     #     Returns:

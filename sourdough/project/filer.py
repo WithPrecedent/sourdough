@@ -1,9 +1,12 @@
 """
-.. module:: filer
-:synopsis: sourdough file management
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
+filer: sourdough file management classes
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+Contents:
+    Filer: interface for sourdough file management classes and methods.
+
 """
 
 import abc
@@ -18,7 +21,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Filer(object):
-    """File and folder project for sourdough.base.
+    """File and folder project for sourdough.
 
     Creates and stores dynamic and static file paths, properly formats files
     for import and export, and provides methods for loading and saving
@@ -40,7 +43,7 @@ class Filer(object):
             'root_folder'. Defaults to 'output_folder'.
 
     """
-    settings: sourdough.base.Settings = None
+    settings: sourdough.Settings = None
     root_folder: Union[
         str,
         pathlib.Path,
@@ -306,7 +309,7 @@ class Filer(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.base.Settings) -> Mapping[str, Any]:
+            settings: sourdough.Settings) -> Mapping[str, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
@@ -506,7 +509,7 @@ class Distributor(abc.ABC):
 
 @dataclasses.dataclass
 class FileLoader(Distributor):
-    """Manages file importing for sourdough.base.
+    """Manages file importing for sourdough.
 
     Args:
         filer (Filer): related Filer instance.
@@ -564,7 +567,7 @@ class FileLoader(Distributor):
 
 @dataclasses.dataclass
 class FileSaver(Distributor):
-    """Manages file exporting for sourdough.base.
+    """Manages file exporting for sourdough.
 
     Args:
         filer (Filer): related Filer instance.
@@ -621,12 +624,12 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.base.base.LazyLoader):
+class FileFormat(sourdough.base.LazyLoader):
     """File format information.
 
     Args:
         name (str): designates the name of the class instance used
-            for internal referencing throughout sourdough.base. If the class instance
+            for internal referencing throughout sourdough. If the class instance
             needs settings from the shared Settings instance, 'name' should
             match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute

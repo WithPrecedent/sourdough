@@ -14,52 +14,52 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Distributor(sourdough.base.Stage):
+class Distributor(sourdough.Stage):
     
-    def apply(self, manager: 'sourdough.manager.Manager') -> 'sourdough.manager.Manager':
+    def apply(self, manager: 'sourdough.Manager') -> 'sourdough.Manager':
         return manager
    
 
 @dataclasses.dataclass
-class Slice(sourdough.manager.Worker):
+class Slice(sourdough.Worker):
     pass
 
 
 @dataclasses.dataclass
-class Dice(sourdough.manager.Worker):
+class Dice(sourdough.Worker):
     pass
 
 
 @dataclasses.dataclass    
-class Divider(sourdough.manager.Worker):
+class Divider(sourdough.Worker):
 
-    options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
         contents = {'slice': Slice, 'dice': Dice})
 
 
 @dataclasses.dataclass      
-class Parser(sourdough.manager.Worker):
+class Parser(sourdough.Worker):
 
-    options: [ClassVar[Mapping[str, Any]]] = sourdough.base.Catalog(
+    options: [ClassVar[Mapping[str, Any]]] = sourdough.Catalog(
         contents = {'divider': Divider})
 
 
 @dataclasses.dataclass
-class Munger(sourdough.manager.Worker):
+class Munger(sourdough.Worker):
     pass
 
 
 def test_manager():
     
-    sourdough.manager.Manager.add_option(name = 'parser', option = Parser)
-    sourdough.manager.Manager.add_option(name = 'munger', option = Munger)
-    manager = sourdough.manager.Manager()
+    sourdough.Manager.add_option(name = 'parser', option = Parser)
+    sourdough.Manager.add_option(name = 'munger', option = Munger)
+    manager = sourdough.Manager()
     
-    settings = pathlib.Path.cwd().joinpath('tests', 'composite_settings.py')
-    sourdough.base.Project.add_stage_option(
+    settings = pathlib.Path.cwd().joinpath('tests', 'tree_settings.py')
+    sourdough.add_stage_option(
         name = 'distribute', 
         option = Distributor)
-    director = sourdough.base.Project(
+    director = sourdough(
         settings = settings,
         contents = ['draft', 'publish', 'distribute', 'apply'],
         manager = manager)

@@ -13,7 +13,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class NewTask(sourdough.base.Task):
+class NewTask(sourdough.Task):
     
     def apply(self, data: object) -> object:
         data.new_value = 7
@@ -21,7 +21,7 @@ class NewTask(sourdough.base.Task):
         
 
 @dataclasses.dataclass
-class OtherTask(sourdough.base.Task):
+class OtherTask(sourdough.Task):
     
     def apply(self, data: object) -> object:
         data.other_value = 'something'
@@ -29,9 +29,9 @@ class OtherTask(sourdough.base.Task):
 
 
 @dataclasses.dataclass
-class AWorker(sourdough.manager.Worker):
+class AWorker(sourdough.Worker):
     
-    options: ClassVar['sourdough.base.Catalog'] = sourdough.base.Catalog(
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {'new': NewTask()},
         always_return_list = True)
   
@@ -49,11 +49,11 @@ def test_Worker():
     another_operator = OtherTask()
     some_data = SomeData()
     more_data = SomeData()
-    # Tests OptionsMixin of a worker instance.
+    # Tests OptionsMixin of a Worker instance.
     AWorker.options.add(component = other_operator)
     assert len(AWorker.options['all']) == 2
     assert len(AWorker.options['none']) == 0
-    # Tests the 'add' method of a worker instance.
+    # Tests the 'add' method of a Worker instance.
     a_Worker = AWorker()
     a_Worker.add('other_operator')
     a_Worker.add('new')
@@ -66,10 +66,10 @@ def test_Worker():
         another_operator,
         other_operator, 
         another_operator]
-    # Tests 'apply' function of a worker instance.
+    # Tests 'apply' function of a Worker instance.
     some_data = a_Worker.apply(data = some_data)
     assert some_data.other_value == 'something'
-    # Tests manual iteration of a worker instance.
+    # Tests manual iteration of a Worker instance.
     for component in a_Worker:
         more_data = component.apply(data = more_data)
     assert more_data.other_value == 'something'
