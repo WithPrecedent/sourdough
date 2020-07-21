@@ -22,11 +22,11 @@ from sourdough import utilities
 
 # Core base class imports
 from sourdough.base.core import Component
-from sourdough.base.core import Task
+from sourdough.base.core import Action
 from sourdough.base.core import Creator
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
-from sourdough.base.core import Progression
+from sourdough.base.core import Plan
 from sourdough.base.settings import Settings
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
@@ -38,10 +38,10 @@ from sourdough.project.filer import Filer
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
 from sourdough.project.creators import Reader
-from sourdough.project.tree import Technique
-from sourdough.project.tree import Step
-from sourdough.project.tree import Worker
-from sourdough.project.tree import Manager
+from sourdough.project.actions import Technique
+from sourdough.project.actions import Task
+from sourdough.project.workers import Worker
+from sourdough.project.workers import Manager
 from sourdough.project.project import Project
 
 
@@ -52,11 +52,11 @@ __author__ = 'Corey Rayburn Yung'
 __all__ = [
     'utilities',
     'Component',
-    'Task',
+    'Action',
     'Creator',
     'Lexicon',
     'Catalog',
-    'Progression',
+    'Plan',
     'LibraryMixin',
     'RegistryMixin',
     'ProxyMixin',
@@ -67,6 +67,6 @@ __all__ = [
     'Reader',
     'Project',
     'Technique',
-    'Step',
+    'Task',
     'Worker',
     'Manager']

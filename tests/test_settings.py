@@ -29,9 +29,9 @@ def test_settings():
             'analysis_format': 'csv',
             'file_encoding': 'windows-1252'},
         'manager': {
-            'manager_steps': ['parser', 'munger']},
+            'manager_tasks': ['parser', 'munger']},
         'parser': {
-            'parser_steps': 'divide',
+            'parser_tasks': 'divide',
             'divide_techniques': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
     ini_settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
@@ -40,13 +40,13 @@ def test_settings():
     assert py_settings.contents == actual_settings
     json_settings = sourdough.Settings(contents = 'tests\json_settings.json')
     assert json_settings.contents == actual_settings
-    assert ini_settings.get_steps(section = 'manager') == ['parser', 'munger']
-    assert ini_settings.get_steps(step = 'parser') == ['divide']
+    assert ini_settings.get_tasks(section = 'manager') == ['parser', 'munger']
+    assert ini_settings.get_tasks(task = 'parser') == ['divide']
     assert ini_settings.get_techniques(
-        step = 'parser',
-        step = 'divide') == ['slice', 'dice']
+        task = 'parser',
+        task = 'divide') == ['slice', 'dice']
     assert ini_settings.get_parameters(
-        step = 'divide',
+        task = 'divide',
         technique = 'slice') == {'replace_strings': True}
     assert ini_settings['general']['seed'] == 43
     ini_settings['new_section'] = {}

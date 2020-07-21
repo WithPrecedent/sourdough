@@ -6,15 +6,15 @@ settings = {
         'final_format': 'csv',
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
-    'manager': {
-        'manager_steps': ['parser', 'munger'],
-        'manager_design': 'chainer'},
+    'cool_project': {
+        'cool_project_plan': ['parser', 'munger'],
+        'manager_design': 'chained'},
     'parser': {
-        'parser_steps': ['divider'],
+        'parser_tasks': ['divider'],
         'parser_design': 'comparative',
         'divider_techniques': ['slice', 'dice']},
     'munger': {
-        'munger_steps': ['searcher', 'destroyer'],
+        'munger_tasks': ['searcher', 'destroyer'],
         'searcher_techniques': ['find', 'locate'],
         'destroyer_techniques': ['explode', 'annihilate']},
     'divider_parameters': {'replace_strings': True}}

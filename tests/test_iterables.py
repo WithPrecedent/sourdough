@@ -13,7 +13,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class NewTask(sourdough.Task):
+class NewAction(sourdough.Action):
     
     def apply(self, data: object) -> object:
         data.new_value = 7
@@ -21,7 +21,7 @@ class NewTask(sourdough.Task):
         
 
 @dataclasses.dataclass
-class OtherTask(sourdough.Task):
+class OtherAction(sourdough.Action):
     
     def apply(self, data: object) -> object:
         data.other_value = 'something'
@@ -32,7 +32,7 @@ class OtherTask(sourdough.Task):
 class AWorker(sourdough.Worker):
     
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        contents = {'new': NewTask()},
+        contents = {'new': NewAction()},
         always_return_list = True)
   
 
@@ -44,9 +44,9 @@ class SomeData(object):
     
 
 def test_Worker():
-    new_operator = NewTask()
-    other_operator = OtherTask()
-    another_operator = OtherTask()
+    new_operator = NewAction()
+    other_operator = OtherAction()
+    another_operator = OtherAction()
     some_data = SomeData()
     more_data = SomeData()
     # Tests OptionsMixin of a Worker instance.

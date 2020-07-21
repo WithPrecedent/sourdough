@@ -41,8 +41,8 @@ class Settings(sourdough.Settings):
 
     Because Settings uses ConfigParser for .ini files, it only allows 2-level 
     settings dictionaries. The desire for accessibility and simplicity dictated 
-    this limitation. Settings overcomes this limitation by using the steps,
-    steps, technqiues, and parameters structure described above.
+    this limitation. Settings overcomes this limitation by using the tasks,
+    tasks, technqiues, and parameters structure described above.
 
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
@@ -139,12 +139,12 @@ class Settings(sourdough.Settings):
     #             settings in this instance.
 
     #     """
-    #     steps = sourdough.utilities.listify(
-    #         self.contents[name][f'{name}_steps'])
+    #     tasks = sourdough.utilities.listify(
+    #         self.contents[name][f'{name}_tasks'])
     #     overview = sourdough.Overview(name = f'{name}_overview')
-    #     for step in steps:
-    #         overview = self._parse_step_section(
-    #             name = step, 
+    #     for task in tasks:
+    #         overview = self._parse_task_section(
+    #             name = task, 
     #             overview = overview)
     #     return overview
 
@@ -154,7 +154,7 @@ class Settings(sourdough.Settings):
     #     """Returns a single Worker instance created from a 'contents' section.
 
     #     Args:
-    #         name (str): name of step to create. It must correspond to a key in
+    #         name (str): name of task to create. It must correspond to a key in
     #             'contents'.
     #         manager (sourdough.Manager): Manager class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
@@ -166,23 +166,23 @@ class Settings(sourdough.Settings):
                 
     #     """
     #     manager = manager or sourdough.Manager
-    #     instance = self.create_step(name = name, step = manager)
+    #     instance = self.create_task(name = name, task = manager)
     #     new_contents = []
     #     for labor in instance.contents:
-    #         new_contents.append(self._create_step)
+    #         new_contents.append(self._create_task)
             
-    # def create_step(self, 
+    # def create_task(self, 
     #         name: str, 
-    #         step: 'sourdough.Worker' = None) -> 'sourdough.Worker':
+    #         task: 'sourdough.Worker' = None) -> 'sourdough.Worker':
     #     """Returns a single Worker instance created from a 'contents' section.
 
     #     Args:
-    #         name (str): name of step to create. It must correspond to a key in
+    #         name (str): name of task to create. It must correspond to a key in
     #             'contents'.
-    #         step (sourdough.Worker): Worker class or subclass to store the
+    #         task (sourdough.Worker): Worker class or subclass to store the
     #             information from 'contents' in. Defaults to None. If not
     #             passed, a generic Worker or Worker class is used based upon
-    #             whether steps or steps are stored within the name section of
+    #             whether tasks or tasks are stored within the name section of
     #             'contents'.
 
     #     Returns:
@@ -197,11 +197,11 @@ class Settings(sourdough.Settings):
     #     for key, value in self.contents[name].items():
     #         if key.endswith('_design'):
     #             parameters['design'] = value
-    #         elif key.endswith('_steps'):
-    #             step = step or sourdough.Worker
+    #         elif key.endswith('_tasks'):
+    #             task = task or sourdough.Worker
     #             contents = sourdough.utilities.listify(value)
-    #         elif key.endswith('_steps'):
-    #             step = step or sourdough.Worker
+    #         elif key.endswith('_tasks'):
+    #             task = task or sourdough.Worker
     #             contents = sourdough.utilities.listify(value)
     #         elif key.endswith('_techniques'):
     #             new_key = key.replace('_techniques', '')
@@ -213,20 +213,20 @@ class Settings(sourdough.Settings):
     #             dictionary = techniques,
     #             subset = contents)
     #     parameters['contents'] = contents
-    #     instance = step(**parameters)
+    #     instance = task(**parameters)
     #     for key, value in attributes.items():
     #         setattr(instance, key, value)
     #     return instance        
         
-    # def get_parameters(self, step: str, technique: str) -> Mapping[str, Any]:
-    #     """Returns 'parameters' dictionary appropriate to 'step' or 'technique'.
+    # def get_parameters(self, task: str, technique: str) -> Mapping[str, Any]:
+    #     """Returns 'parameters' dictionary appropriate to 'task' or 'technique'.
 
     #     The method firsts look for a match with 'technique' as a prefix (the
-    #     more specific label) and then 'step' as a prefix' if there is no match
+    #     more specific label) and then 'task' as a prefix' if there is no match
     #     for 'technique'.
 
     #     Args:
-    #         step (str): name of 'step' for which parameters are sought.
+    #         task (str): name of 'task' for which parameters are sought.
     #         technique (str): name of 'technique' for which parameters are
     #             sought.
 
@@ -238,10 +238,10 @@ class Settings(sourdough.Settings):
     #         return self[f'{technique}_parameters']
     #     except KeyError:
     #         try:
-    #             return self[f'{step}_parameters']
+    #             return self[f'{task}_parameters']
     #         except KeyError:
     #             raise KeyError(
-    #                 f'parameters for {step} and {technique} not found')
+    #                 f'parameters for {task} and {technique} not found')
 
     """ Required ABC Methods """
 
@@ -518,7 +518,7 @@ class Settings(sourdough.Settings):
             setattr(instance, attribute, value)
         return instance
 
-    # def _parse_step_section(self, 
+    # def _parse_task_section(self, 
     #         name: str,
     #         overview: 'sourdough.Overview') -> 'sourdough.Overview':
     #     """[summary]
@@ -532,26 +532,26 @@ class Settings(sourdough.Settings):
     #     overview[name] = {}
     #     section = self.contents[name]
     #     try:
-    #         overview.contents[name]['steps'] = sourdough.utilities.listify(
-    #             section[f'{name}_steps'])
+    #         overview.contents[name]['tasks'] = sourdough.utilities.listify(
+    #             section[f'{name}_tasks'])
     #     except KeyError:
-    #         overview.contents[name]['steps'] = []
+    #         overview.contents[name]['tasks'] = []
     #     try:
     #         overview.contents[name]['design'] = section[f'{name}_design']
     #     except KeyError:
     #         overview.contents[name]['design'] = None
-    #     step_keys = [k for k in section.keys() if k.endswith('_techniques')]
-    #     if len(step_keys) > 0:
-    #         overview.contents[name]['stores_steps'] = True
-    #         for step_key in step_keys:
-    #             step_name = step_key.replace('_techniques', '')
-    #             if step_name in overview.contents[name]['steps']:
-    #                 techniques = sourdough.utilities.listify(section[step_key])
-    #                 self.contents[name][step_name] = techniques
+    #     task_keys = [k for k in section.keys() if k.endswith('_techniques')]
+    #     if len(task_keys) > 0:
+    #         overview.contents[name]['stores_tasks'] = True
+    #         for task_key in task_keys:
+    #             task_name = task_key.replace('_techniques', '')
+    #             if task_name in overview.contents[name]['tasks']:
+    #                 techniques = sourdough.utilities.listify(section[task_key])
+    #                 self.contents[name][task_name] = techniques
     #     else:
-    #         overview.contents[name]['stores_steps'] = False
-    #         for step in overview.contents[name]['steps']:
-    #             overview = self._parse_step_section(
-    #                 name = step,
+    #         overview.contents[name]['stores_tasks'] = False
+    #         for task in overview.contents[name]['tasks']:
+    #             overview = self._parse_task_section(
+    #                 name = task,
     #                 overview = overview)
     #     return overview

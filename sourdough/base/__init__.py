@@ -8,12 +8,12 @@
 
 
 # from .core import Component
-# from .core import Task
+# from .core import Action
 # from .core import Creator
 # from .core import Lexicon
 # from .core import Catalog
 # # from .core import Reflector
-# from .core import Progression
+# from .core import Plan
 # from .settings import Settings
 # from .mixins import LibraryMixin
 # from .mixins import RegistryMixin
@@ -27,12 +27,12 @@ __author__ = 'Corey Rayburn Yung'
 
 # __all__ = [
 #     'Component',
-#     'Task',
+#     'Action',
 #     'Creator',
 #     'Lexicon',
 #     'Catalog',
 #     # 'Reflector',
-#     'Progression',
+#     'Plan',
 #     'LibraryMixin',
 #     'RegistryMixin',
 #     'ProxyMixin',

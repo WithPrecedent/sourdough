@@ -5,15 +5,16 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Component: abstract base class for tree objects.
-    Task (Component): abstract base class for storing action methods. Subclasses
-        must have a 'perform' method.
-    Creator: abstract base class for constructing Task and Component instances.
-        Subclasses must have a 'create' method.
-    Lexicon: sourdough drop-in replacement for dict.
+    Component: abstract base class for composite objects.
+    Action (Component): abstract base class for storing action methods. 
+        Subclasses must have a 'perform' method.
+    Plan (Component): iterable containing Action and Component instances 
+        with dict and list interfaces and methods.
+    Creator: abstract base class for constructing Action, Component, and
+        Plan instances. Subclasses must have a 'create' method.
+    Lexicon: sourdough drop-in replacement for dict with additional 
+        functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement.
-    Progression: iterable for Task and Component instances with dict and list 
-        interfaces.
 
 """
 
@@ -29,7 +30,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Component(abc.ABC):
-    """Base class for tree sourdough objects.
+    """Base class for composite sourdough objects.
 
     A Component has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Component instances can be used 
@@ -90,12 +91,11 @@ class Component(abc.ABC):
 
 
 @dataclasses.dataclass
-class Task(Component, abc.ABC):
+class Action(Component, abc.ABC):
     """Base class for applying stored methods to passed data.
     
-    Task subclass instances are often arranged in an ordered sequence such as a
-    Progression instance. All Task subclasses must have 'perform' methods for 
-    handling data. 
+    All Action subclasses must have 'perform' methods. Acceptance and return of 
+    a data argument by the 'perform' method is optional.
     
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -120,12 +120,336 @@ class Task(Component, abc.ABC):
         """Subclasses must provide their own methods."""
         pass
 
+        
+@dataclasses.dataclass
+class Plan(Component, collections.abc.MutableSequence):
+    """Base class for sourdough sequenced iterables.
+    
+    A Plan differs from a python list in 6 significant ways:
+        1) It includes a 'name' attribute which is used for internal referencing
+            in sourdough. This is inherited from Component.
+        2) It includes an 'add' method which allows different datatypes to
+            be passed and added to the 'contents' of a Plan instance.
+        3) It only stores items that have a 'name' attribute or are str type.
+        4) It includes a 'subsetify' method which will return a Plan or
+            Plan subclass instance with only the items with 'name'
+            attributes matching items in the 'subset' argument.
+        5) Plan has an interface of both a dict and a list, but stores a 
+            list. Plan does this by taking advantage of the 'name' 
+            attribute in Component instances (although any instance with a 
+            'name' attribute is compatiable with a Plan). A 'name' acts 
+            as a key to create the facade of a dictionary with the items in the 
+            stored list serving as values. This allows for duplicate keys for 
+            storing class instances, easier iteration, and returning multiple 
+            matching items. This design comes at the expense of lookup speed. As 
+            a result, Plan should only be used if a high volumne of 
+            access calls is not anticipated. Ordinarily, the loss of lookup 
+            speed should have negligible effect on overall performance. 
+        6) Iterating Plan iterates all contained iterables by using the
+            'more_itertools.collapse' method. This orders all stored iterables 
+            in a depth-first manner.      
+
+    Args:
+        contents (Sequence[Component]]): stored list of Component instances.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+
+    """
+    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    name: str = None
+
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Union[
+                'Component',
+                Mapping[str, 'Component'], 
+                Sequence['Component']]) -> Sequence['Component']:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Args:
+            contents (Union[Component, Mapping[str, Component], 
+                Sequence[Component]]): items to validate or convert to a list of
+                Component instances.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Sequence[Component]: validated or converted argument that is 
+                compatible with an instance.
+        
+        """
+        if (isinstance(contents, Sequence) 
+                and all(isinstance(c, Component) for c in contents)):
+            return contents
+        elif (isinstance(contents, Mapping)
+                and all(isinstance(c, Component) for c in contents.values())):
+            return list(contents.values())
+        elif isinstance(contents, Component):
+            return [contents]
+        else:
+            raise TypeError('contents must be a list of Components, dict with' 
+                            'Component values, or Component type')
+
+    def add(self, 
+            contents: Union[
+                'Component',
+                Mapping[str, 'Component'], 
+                Sequence['Component']]) -> None:
+        """Appends 'contents' argument to 'contents' attribute.
+        
+        Args:
+            contents (Union[Component, Mapping[str, Component], 
+                Sequence[Component]]): Component instance(s) to add to the
+                'contents' attribute.
+
+        """
+        contents = self.validate(contents = contents)
+        self.append(contents = contents)
+        return self    
+
+    def append(self, component: 'Component') -> None:
+        """Appends 'component' to 'contents'.
+        
+        Args:
+            component (Component): Component instance to add to 
+                'contents'.
+
+        Raises:
+            TypeError: if 'component' does not have a name attribute.
+            
+        """
+        if hasattr(component, 'name'):
+            self.contents.append(component)
+        else:
+            raise TypeError('component must have a name attribute')
+        return self    
+   
+    def extend(self, component: 'Component') -> None:
+        """Extends 'component' to 'contents'.
+        
+        Args:
+            component (Component): Component instance to add to 
+                'contents'.
+
+        Raises:
+            TypeError: if 'component' does not have a name attribute.
+            
+        """
+        if hasattr(component, 'name'):
+            self.contents.extend(component)
+        else:
+            raise TypeError('component must have a name attribute')
+        return self   
+    
+    def insert(self, index: int, component: 'Component') -> None:
+        """Inserts 'component' at 'index' in 'contents'.
+
+        Args:
+            index (int): index to insert 'component' at.
+            component (Component): object to be inserted.
+
+        Raises:
+            TypeError: if 'component' does not have a name attribute.
+            
+        """
+        if hasattr(component, 'name'):
+            self.contents.insert[index] = component
+        else:
+            raise TypeError('component must have a name attribute')
+        return self
+ 
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Plan':
+        """Returns a subset of 'contents'.
+
+        Args:
+            subset (Union[str, Sequence[str]]): key(s) to get Component 
+                instances with matching 'name' attributes from 'contents'.
+
+        Returns:
+            Worker: with only items with 'name' attributes in 'subset'.
+
+        """
+        subset = sourdough.utilities.listify(subset)
+        return self.__class__(
+            name = self.name,
+            contents = [c for c in self.contents if c.name in subset])    
+     
+    def update(self, 
+            components: Union[
+                Mapping[str, 'Component'], 
+                Sequence['Component']]) -> None:
+        """Mimics the dict 'update' method by appending 'contents'.
+        
+        Args:
+            components (Union[Mapping[str, Component], Sequence[
+                Component]]): Component instances to add to 
+                'contents'. If a Mapping is passed, the keys are ignored and
+                the values are added to 'contents'. To mimic 'update', the
+                passed 'components' are added to 'contents' by the 'extend'
+                method.
+ 
+        Raises:
+            TypeError: if any of 'components' do not have a name attribute or
+                if 'components is not a dict.               
+        
+        """
+        if isinstance(components, Mapping):
+            for key, value in components.items():
+                if hasattr(value, 'name'):
+                    self.append(component = value)
+                else:
+                    new_component = value
+                    new_component.name = key
+                    self.extend(component = new_component)
+        elif all(hasattr(c, 'name') for c in components):
+            for component in components:
+                self.append(component = component)
+        else:
+            raise TypeError(
+                'components must be a dict or all have a name attribute')
+        return self
+          
+    """ Dunder Methods """
+
+    def __getitem__(self, key: Union[str, int]) -> 'Component':
+        """Returns value(s) for 'key' in 'contents'.
+        
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances.
+        
+        If 'key' is an int type, this method returns the stored component at the
+        corresponding index.
+        
+        If only one match is found, a single Component instance is returned. If
+        more are found, a Plan or Plan subclass with the matching
+        'name' attributes is returned.
+
+        Args:
+            key (Union[str, int]): name or index to search for in 'contents'.
+
+        Returns:
+            Component: value(s) stored in 'contents' that correspond 
+                to 'key'. If there is more than one match, the return is a
+                Plan or Plan subclass with that matching stored
+                components.
+
+        """
+        if isinstance(key, int):
+            return self.contents[key]
+        else:
+            matches = [c for c in self.contents if c.name == key]
+            if len(matches) == 1:
+                return matches[0]
+            else:
+                return self.__class__(name = self.name, contents = matches)
+
+    def __setitem__(self, 
+            key: Union[str, int], 
+            value: 'Component') -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (Union[str, int]): if key is a string, it is ignored (since the
+                'name' attribute of the value will be acting as the key). In
+                such a case, the 'value' is added to the end of 'contents'. If
+                key is an int, 'value' is assigned at the that index number in
+                'contents'.
+            value (Any): value to be paired with 'key' in 'contents'.
+
+        """
+        if isinstance(key, int):
+            self.contents[key] = value
+        else:
+            self.contents.add(value)
+        return self
+
+    def __delitem__(self, key: Union[str, int]) -> None:
+        """Deletes item matching 'key' in 'contents'.
+
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances and deletes all such items. If 'key'
+        is an int type, only the item at that index is deleted.
+
+        Args:
+            key (Union[str, int]): name or index in 'contents' to delete.
+
+        """
+        if isinstance(key, int):
+            del self.contents[key]
+        else:
+            self.contents = [c for c in self.contents if c.name != key]
+        return self
+
+    def __iter__(self) -> Iterable:
+        """Returns collapsed iterable of 'contents'.
+     
+        Returns:
+            Iterable: using the itertools method which automatically iterates
+                all stored iterables within 'contents'.Any
+               
+        """
+        return iter(more_itertools.collapse(self.contents))
+
+    def __len__(self) -> int:
+        """Returns length of collapsed 'contents'.
+
+        Returns:
+            int: length of collapsed 'contents'.
+
+        """
+        return len(more_itertools.collapse(self.contents))
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents'.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+    def __repr__(self) -> str:
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return (
+            f'sourdough {self.__class__.__name__}\n'
+            f'name: {self.name}\n'
+            f'contents: {self.contents.__str__()}') 
+
  
 @dataclasses.dataclass
 class Creator(abc.ABC):
     """Base class for stages of creation of sourdough objects.
     
     All subclasses must have 'create' methods. 
+    
+    Creators often have a 'settings' parameter to acquire information about
+    object construction. However, that parameter is not required.
     
     """
     
@@ -153,13 +477,13 @@ class Lexicon(collections.abc.MutableMapping):
             be passed and added to a Lexicon instance. All of the normal dict 
             methods are also available. 'add' should be used to set default or 
             more complex methods of adding elements to the stored dict.
-        2) It uses a 'validate' method to validate or convert all passed 
-            'contents' arguments. It will convert all supported datatypes to 
+        2) It uses a 'validate' method to validate or convert the passed 
+            'contents' argument. It will convert all supported datatypes to 
             a dict. The 'validate' method is automatically called when a
             Lexicon is instanced and when the 'add' method is called.
         3) It includes a 'subsetify' method which will return a Lexicon or
             Lexicon subclass instance with only the key/value pairs matching
-            keys in the 'subset' parameter.
+            keys in the 'subset' argument.
         4) It allows the '+' operator to be used to join a Lexicon instance
             with another Lexicon instance, a dict, or a Component. The '+' 
             operator calls the Lexicon 'add' method to implement how the added 
@@ -185,7 +509,7 @@ class Lexicon(collections.abc.MutableMapping):
     """ Public Methods """
     
     def validate(self, contents: Any) -> Mapping[Any, Any]:
-        """Validates 'contents' or converts 'contents' to proper type.
+        """Validates 'contents' or converts 'contents' to a dict.
         
         This method simply confirms that 'contents' is a Mapping. Subclasses
         should overwrite this method to support more datatypes and implement
@@ -293,7 +617,7 @@ class Lexicon(collections.abc.MutableMapping):
         return len(self.contents)
 
     def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents'.
+        """Combines argument with 'contents' using the 'add' method.
 
         Args:
             other (Any): item to add to 'contents' using the 'add' method.
@@ -324,7 +648,7 @@ class Lexicon(collections.abc.MutableMapping):
 
 
 @dataclasses.dataclass
-class Catalog(Lexicon):
+class Catalog(Creator, Lexicon):
     """Base class for a wildcard and list-accepting dictionary.
 
     A Catalog inherits the differences between a Lexicon and an ordinary python
@@ -341,7 +665,8 @@ class Catalog(Lexicon):
         3) It recognizes a 'none' key which will return an empty list.
         4) It supports a list of keys being accessed with the matching
             values returned. For example, 'catalog[['first_key', 'second_key']]' 
-            will return the values for those keys in a list.
+            will return the values for those keys in a list ['first_value',
+            'second_value'].
         5) If a single key is sought, a Catalog can either return the stored
             value or a stored value in a list (if 'always_return_list' is
             True). The latter option is available to make iteration easier
@@ -389,7 +714,7 @@ class Catalog(Lexicon):
                 Sequence['sourdough.Component'],
                 Mapping[str, 'sourdough.Component']]) -> Mapping[
                     str, 'sourdough.Component']:
-        """Validates 'contents' or converts 'contents' to the proper type.
+        """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
             contents (Union[sourdough.Component, Sequence[sourdough.Component], 
@@ -397,10 +722,12 @@ class Catalog(Lexicon):
                 convert to a dict. If 'contents' is a Sequence or a Component, 
                 the key for storing 'contents' is the 'name' attribute of each 
                 Component.
+                
         Raises:
             TypeError: if 'contents' is neither a Component subclass, Sequence
                 of Component subclasses, or Mapping with Components subclasses
                 as values.
+                
         Returns:
             Mapping (str, sourdough.Component): a properly typed dict derived
                 from passed 'contents'.
@@ -408,9 +735,11 @@ class Catalog(Lexicon):
         """
         if isinstance(contents, sourdough.Component):
             return {contents.get_name(): contents}
-        elif isinstance(contents, Mapping):
+        elif (isinstance(contents, Mapping) 
+                and all(isinstance(v, Component) for v in contents.values())):
             return contents
-        elif isinstance(contents, Sequence):
+        elif (isinstance(contents, Sequence)
+                and all(isinstance(i, Component) for i in contents)):
             new_contents = {}
             for component in contents:
                 new_contents[component.get_name()] = component
@@ -431,9 +760,10 @@ class Catalog(Lexicon):
             Catalog: with only keys in 'subset'.
 
         """
+        new_defaults = [i for i in self.defaults if i in subset] 
         return super().subsetify(
             contents = self.contents,
-            defaults = self.defaults,
+            defaults = new_defaults,
             always_return_list = self.always_return_list)
 
     def create(self, key: str, **kwargs) -> 'sourdough.Component':
@@ -634,323 +964,3 @@ isn't included in the uploaded package build.
 #             value: key for key, value in self.contents.items()}
 #         return self
         
-        
-@dataclasses.dataclass
-class Progression(Component, collections.abc.MutableSequence):
-    """Base class for sourdough sequenced iterables.
-    
-    A Progression differs from a python list in 6 significant ways:
-        1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Component.
-        2) It includes an 'add' method which allows different datatypes to
-            be passed and added to the 'contents' of a Progression instance.
-        3) It only stores items that have a 'name' attribute or are str type.
-        4) It includes a 'subsetify' method which will return a Progression or
-            Progression subclass instance with only the items with 'name'
-            attributes matching items in the 'subset' argument.
-        5) Progression has an interface of both a dict and a list, but stores a 
-            list. Progression does this by taking advantage of the 'name' 
-            attribute in Component instances (although any instance with a 
-            'name' attribute is compatiable with a Progression). A 'name' acts 
-            as a key to create the facade of a dictionary with the items in the 
-            stored list serving as values. This allows for duplicate keys for 
-            storing class instances, easier iteration, and returning multiple 
-            matching items. This design comes at the expense of lookup speed. As 
-            a result, Progression should only be used if a high volumne of 
-            access calls is not anticipated. Ordinarily, the loss of lookup 
-            speed should have negligible effect on overall performance. 
-        6) Iterating Progression iterates all contained iterables by using the
-            'more_itertools.collapse' method. This orders all stored iterables 
-            in a depth-first manner.      
-
-    Args:
-        contents (Sequence[Component]]): stored iterable of Component instances.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the '_get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-
-    """
-    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
-    name: str = None
-
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Union[
-                'Component',
-                Mapping[str, 'Component'], 
-                Sequence['Component']]) -> Sequence['Component']:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents (Union[Component, Mapping[str, Component], 
-                Sequence[Component]]): items to validate or convert to a list of
-                Component instances.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Sequence[Component]: validated or converted argument that is 
-                compatible with an instance.
-        
-        """
-        if (isinstance(contents, Sequence) 
-                and all(isinstance(c, Component) for c in contents)):
-            return contents
-        elif (isinstance(contents, Mapping)
-                and all(isinstance(c, Component) for c in contents.values())):
-            return list(contents.values())
-        elif isinstance(contents, Component):
-            return [contents]
-        else:
-            raise TypeError('contents must be a list of Components, dict with' 
-                            'Component values, or Component type')
-
-    def add(self, 
-            contents: Union[
-                'Component',
-                Mapping[str, 'Component'], 
-                Sequence['Component']]) -> None:
-        """Appends 'contents' argument to 'contents' attribute.
-        
-        Args:
-            contents (Union[Component, Mapping[str, Component], 
-                Sequence[Component]]): Component instance(s) to add to the
-                'contents' attribute.
-
-        """
-        contents = self.validate(contents = contents)
-        self.append(contents = contents)
-        return self    
-
-    def append(self, component: 'Component') -> None:
-        """Appends 'component' to 'contents'.
-        
-        Args:
-            component (Component): Component instance to add to 
-                'contents'.
-
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            self.contents.append(component)
-        else:
-            raise TypeError('component must have a name attribute')
-        return self    
-   
-    def extend(self, component: 'Component') -> None:
-        """Extends 'component' to 'contents'.
-        
-        Args:
-            component (Component): Component instance to add to 
-                'contents'.
-
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            self.contents.extend(component)
-        else:
-            raise TypeError('component must have a name attribute')
-        return self   
-    
-    def insert(self, index: int, component: 'Component') -> None:
-        """Inserts 'component' at 'index' in 'contents'.
-
-        Args:
-            index (int): index to insert 'component' at.
-            component (Component): object to be inserted.
-
-        Raises:
-            TypeError: if 'component' does not have a name attribute.
-            
-        """
-        if hasattr(component, 'name'):
-            self.contents.insert[index] = component
-        else:
-            raise TypeError('component must have a name attribute')
-        return self
- 
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Worker':
-        """Returns a subset of 'contents'.
-
-        Args:
-            subset (Union[str, Sequence[str]]): key(s) to get Component 
-                instances with matching 'name' attributes from 'contents'.
-
-        Returns:
-            Worker: with only items with 'name' attributes in 'subset'.
-
-        """
-        subset = sourdough.utilities.listify(subset)
-        return self.__class__(
-            name = self.name,
-            contents = [c for c in self.contents if c.name in subset])    
-     
-    def update(self, 
-            components: Union[
-                Mapping[str, 'Component'], 
-                Sequence['Component']]) -> None:
-        """Mimics the dict 'update' method by appending 'contents'.
-        
-        Args:
-            components (Union[Mapping[str, Component], Sequence[
-                Component]]): Component instances to add to 
-                'contents'. If a Mapping is passed, the keys are ignored and
-                the values are added to 'contents'. To mimic 'update', the
-                passed 'components' are added to 'contents' by the 'extend'
-                method.
- 
-        Raises:
-            TypeError: if any of 'components' do not have a name attribute or
-                if 'components is not a dict.               
-        
-        """
-        if isinstance(components, Mapping):
-            for key, value in components.items():
-                if hasattr(value, 'name'):
-                    self.append(component = value)
-                else:
-                    new_component = value
-                    new_component.name = key
-                    self.extend(component = new_component)
-        elif all(hasattr(c, 'name') for c in components):
-            for component in components:
-                self.append(component = component)
-        else:
-            raise TypeError(
-                'components must be a dict or all have a name attribute')
-        return self
-          
-    """ Dunder Methods """
-
-    def __getitem__(self, key: Union[str, int]) -> 'Component':
-        """Returns value(s) for 'key' in 'contents'.
-        
-        If 'key' is a str type, this method looks for a matching 'name'
-        attribute in the stored instances.
-        
-        If 'key' is an int type, this method returns the stored component at the
-        corresponding index.
-        
-        If only one match is found, a single Component instance is returned. If
-        more are found, a Progression or Progression subclass with the matching
-        'name' attributes is returned.
-
-        Args:
-            key (Union[str, int]): name or index to search for in 'contents'.
-
-        Returns:
-            Component: value(s) stored in 'contents' that correspond 
-                to 'key'. If there is more than one match, the return is a
-                Progression or Progression subclass with that matching stored
-                components.
-
-        """
-        if isinstance(key, int):
-            return self.contents[key]
-        else:
-            matches = [c for c in self.contents if c.name == key]
-            if len(matches) == 1:
-                return matches[0]
-            else:
-                return self.__class__(name = self.name, contents = matches)
-
-    def __setitem__(self, 
-            key: Union[str, int], 
-            value: 'Component') -> None:
-        """Sets 'key' in 'contents' to 'value'.
-
-        Args:
-            key (Union[str, int]): if key is a string, it is ignored (since the
-                'name' attribute of the value will be acting as the key). In
-                such a case, the 'value' is added to the end of 'contents'. If
-                key is an int, 'value' is assigned at the that index number in
-                'contents'.
-            value (Any): value to be paired with 'key' in 'contents'.
-
-        """
-        if isinstance(key, int):
-            self.contents[key] = value
-        else:
-            self.contents.add(value)
-        return self
-
-    def __delitem__(self, key: Union[str, int]) -> None:
-        """Deletes item matching 'key' in 'contents'.
-
-        If 'key' is a str type, this method looks for a matching 'name'
-        attribute in the stored instances and deletes all such items. If 'key'
-        is an int type, only the item at that index is deleted.
-
-        Args:
-            key (Union[str, int]): name or index in 'contents' to delete.
-
-        """
-        if isinstance(key, int):
-            del self.contents[key]
-        else:
-            self.contents = [c for c in self.contents if c.name != key]
-        return self
-
-    def __iter__(self) -> Iterable:
-        """Returns collapsed iterable of 'contents'.
-     
-        Returns:
-            Iterable: using the itertools method which automatically iterates
-                all stored iterables within 'contents'.Any
-               
-        """
-        return iter(more_itertools.collapse(self.contents))
-
-    def __len__(self) -> int:
-        """Returns length of collapsed 'contents'.
-
-        Returns:
-            int: length of collapsed 'contents'.
-
-        """
-        return len(more_itertools.collapse(self.contents))
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(other)
-        return self
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-    
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'name: {self.name}\n'
-            f'contents: {self.contents.__str__()}') 

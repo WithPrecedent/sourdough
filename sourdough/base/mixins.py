@@ -21,9 +21,9 @@ Contents:
 import abc
 import dataclasses
 import importlib
-import inspect
-import pathlib
-import pyclbr
+# import inspect
+# import pathlib
+# import pyclbr
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough

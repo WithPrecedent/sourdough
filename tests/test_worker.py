@@ -15,10 +15,10 @@ class NewInstructions(sourdough.Instructions):
 class NewWorker(sourdough.Worker):
     pass
 
-def test_step():
+def test_task():
 
     return
 
 
 if __name__ == '__main__':
-    test_step()
+    test_task()

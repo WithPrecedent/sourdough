@@ -12,7 +12,7 @@
 # from .creators import Reader
 # from .project import Project
 # from .Workers import Technique
-# from .Workers import Step
+# from .Workers import Task
 # from .Workers import Worker
 # from .Workers import Manager
 
@@ -29,6 +29,6 @@ __author__ = 'Corey Rayburn Yung'
 #     'Reader',
 #     'Project',
 #     'Technique',
-#     'Step',
+#     'sourdough.Task',
 #     'Worker',
 #     'Manager']

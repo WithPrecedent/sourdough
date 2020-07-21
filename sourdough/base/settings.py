@@ -9,7 +9,6 @@ Contents:
         from disk or by the passed arguments.
 
 """
-import collections
 import configparser
 import dataclasses
 import importlib

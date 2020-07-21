@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (OptionsMixin, Progression): iterable which contains the needed
+    Project (OptionsMixin, Plan): iterable which contains the needed
         information and data for constructing and executing tree objects.
 
 """
@@ -18,20 +18,20 @@ import sourdough
  
  
 @dataclasses.dataclass
-class Project(sourdough.OptionsMixin, sourdough.Progression):
-    """Constructs, organizes, and stores tree Workers and Tasks.
+class Project(sourdough.OptionsMixin, sourdough.Plan):
+    """Constructs, organizes, and stores tree Workers and Actions.
     
-    A Project inherits all of the differences between a Progression and a python
+    A Project inherits all of the differences between a Plan and a python
     list.
 
-    A Project differs from a Progression in 5 significant ways:
-        1) The Project is the public interface to Worker/Manager construction 
-            and application. It may store the Worker/Manager instance(s) as well 
-            as any required classes (such as those stored in the 'data' 
+    A Project differs from a Plan in 5 significant ways:
+        1) The Project is the public interface to composite object construction 
+            and application. It may store the composite object instance(s) as 
+            well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
         2) Project stores Creator subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Worker/Manager 
+            instances are used to assemble and apply the parts of Worker/Component 
             instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
@@ -64,19 +64,18 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
             root folder should be located for file input and output. A Filer
             instance contains all file path and import/export methods for use 
             throughout sourdough. Defaults to None.
-        managers (Union[Sequence[sourdough.Manager], sourdough.Manager]): 
-            Manager instance(s) to form the tree object of the project. If
-            you are using a Settings instance to list which Manager instance(s) 
-            should be used or if you manually want to add Manager instance(s),
-            this argument should not be passed. Defaults to an empty list.
+        structure (str): type of structure for the project's composite object.
+            Defaults to 'tree'.
         automatic (bool): whether to automatically advance 'contents' (True) or 
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
         options (ClassVar[sourdough.Catalog]): a class attribute storing
-            default Creator classes which can be used in manager construction
+            default Creator classes which can be used in placeholder construction
             and application. 
     
     Attributes:
+        placeholder (sourdough.Component): the iterable composite object created by 
+            Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
         stage (str): name of the last stage that has been implemented. It is set
@@ -91,7 +90,7 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
     name: str = None
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    manager: 'sourdough.Manager' = None
+    structure: str = dataclasses.field(default_factory = 'tree')
     automatic: bool = True
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -117,16 +116,16 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
             settings = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
-        # Initializes or validates a Manager instance.
-        self.manager = self._initialize_manager(
-            manager = self.manager,
+        # Initializes or validates a composite Component instance.
+        self.placeholder = self._initialize_placeholder(
+            placeholder = self.placeholder,
             settings = self.settings)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
         self.stage: str = 'initialize' 
         # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
-            self.manager = self._auto_contents(manager = self.manager)
+            self.placeholder = self._auto_contents(placeholder = self.placeholder)
 
     """ Public Methods """
 
@@ -200,20 +199,18 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
         self.stage = new_stage
         return self
 
-    def iterate(self, 
-            manager: 'sourdough.Manager') -> (
-                'sourdough.Manager'):
-        """Advances to next stage and applies that stage to 'manager'.
+    def iterate(self, placeholder: 'sourdough.Component') -> 'sourdough.Component':
+        """Advances to next stage and applies that stage to 'placeholder'.
 
         Args:
-            manager (sourdough.Manager): instance to apply the next 
+            placeholder (sourdough.Component): instance to apply the next 
                 stage's methods to.
                 
         Raises:
             IndexError: if this instance is already at the last stage.
 
         Returns:
-            sourdough.Manager: with the last stage applied.
+            sourdough.Component: with the last stage applied.
             
         """
         if self.index == len(self.contents) - 1:
@@ -221,8 +218,8 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
                 f'{self.name} is at the last stage and cannot further iterate')
         else:
             self.advance()
-            self.contents[self.index].create(manager = manager)
-        return manager
+            self.contents[self.index].create(placeholder = placeholder)
+        return placeholder
             
     """ Dunder Methods """
     
@@ -251,19 +248,18 @@ class Project(sourdough.OptionsMixin, sourdough.Progression):
     """ Private Methods """
                         
     def _auto_contents(self, 
-            manager: 'sourdough.Manager') -> (
-                'sourdough.Manager'):
+            placeholder: 'sourdough.Component') -> 'sourdough.Component':
         """Automatically advances through and iterates stored Creator instances.
 
         Args:
-            manager (sourdough.Manager): an instance containing any data 
-                for the manager methods to be applied to.
+            placeholder (sourdough.Component): an instance containing any data 
+                for the placeholder methods to be applied to.
                 
         Returns:
-            sourdough.Manager: modified by the stored Creator instance's 
+            sourdough.Component: modified by the stored Creator instance's 
                 'create' methods.
             
         """
         for stage in self.contents:
-            self.iterate(manager = manager)
-        return manager
+            self.iterate(placeholder = placeholder)
+        return placeholder
