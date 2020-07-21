@@ -16,6 +16,22 @@ import warnings
 
 import sourdough
  
+
+@dataclasses.dataclass
+class Tree(object):
+    
+    root: sourdough.Manager
+    component: sourdough.Plan
+    wrapper: sourdough.Task
+    base: sourdough.Technique
+
+@dataclasses.dataclass
+class Graph(object):
+    
+    component: sourdough.Node
+    wrapper: sourdough.Task
+    base: sourdough.Technique    
+
  
 @dataclasses.dataclass
 class Project(sourdough.OptionsMixin, sourdough.Plan):
@@ -70,12 +86,10 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
         options (ClassVar[sourdough.Catalog]): a class attribute storing
-            default Creator classes which can be used in placeholder construction
-            and application. 
+            composite structure options.
     
     Attributes:
-        placeholder (sourdough.Component): the iterable composite object created by 
-            Project.
+        plan (sourdough.Plan): the iterable composite object created by Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
         stage (str): name of the last stage that has been implemented. It is set
@@ -84,9 +98,9 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             has been implemented. It is set by the 'advance' method.
             
     """
-    contents: Sequence[Union[
-        'sourdough.Creator', 
-        str]] = dataclasses.field(default_factory = lambda: 'default')
+    contents: Sequence['sourdough.Creator'] = dataclasses.field(
+        default_factory = lambda: [
+            sourdough.Author, sourdough.Publisher, sourdough.Reader])
     name: str = None
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
@@ -94,10 +108,8 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     automatic: bool = True
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'draft': sourdough.Author,
-            'publish': sourdough.Publisher,
-            'apply': sourdough.Worker},
-        defaults = ['draft', 'publish', 'apply'])
+            'tree': sourdough.Tree, 
+            'graph': sourdough.Graph})
     
     """ Initialization Methods """
 
@@ -117,15 +129,13 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         # Initializes or validates a composite Component instance.
-        self.placeholder = self._initialize_placeholder(
-            placeholder = self.placeholder,
-            settings = self.settings)
+        self.plan = self._initialize_plan(settings = self.settings)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
         self.stage: str = 'initialize' 
         # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
-            self.placeholder = self._auto_contents(placeholder = self.placeholder)
+            self.plan = self._auto_contents(plan = self.plan)
 
     """ Public Methods """
 
@@ -199,18 +209,18 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         self.stage = new_stage
         return self
 
-    def iterate(self, placeholder: 'sourdough.Component') -> 'sourdough.Component':
-        """Advances to next stage and applies that stage to 'placeholder'.
+    def iterate(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+        """Advances to next stage and applies that stage to 'plan'.
 
         Args:
-            placeholder (sourdough.Component): instance to apply the next 
-                stage's methods to.
+            plan (sourdough.Plan): instance to apply the next stage's methods 
+                to.
                 
         Raises:
             IndexError: if this instance is already at the last stage.
 
         Returns:
-            sourdough.Component: with the last stage applied.
+            sourdough.Plan: with the last stage applied.
             
         """
         if self.index == len(self.contents) - 1:
@@ -218,8 +228,8 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
                 f'{self.name} is at the last stage and cannot further iterate')
         else:
             self.advance()
-            self.contents[self.index].create(placeholder = placeholder)
-        return placeholder
+            self.contents[self.index].create(plan = plan)
+        return plan
             
     """ Dunder Methods """
     
@@ -247,19 +257,18 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
      
     """ Private Methods """
                         
-    def _auto_contents(self, 
-            placeholder: 'sourdough.Component') -> 'sourdough.Component':
+    def _auto_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """Automatically advances through and iterates stored Creator instances.
 
         Args:
-            placeholder (sourdough.Component): an instance containing any data 
-                for the placeholder methods to be applied to.
+            plan (sourdough.Plan): an instance containing any data for the plan 
+                methods to be applied to.
                 
         Returns:
-            sourdough.Component: modified by the stored Creator instance's 
+            sourdough.Plan: modified by the stored Creator instance's 
                 'create' methods.
             
         """
         for stage in self.contents:
-            self.iterate(placeholder = placeholder)
-        return placeholder
+            self.iterate(plan = plan)
+        return plan
