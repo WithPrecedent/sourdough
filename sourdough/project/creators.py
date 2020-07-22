@@ -42,12 +42,60 @@ class Author(sourdough.Creator):
             sourdough.Plan: an instance with contents fully instanced.
                 
         """
-        plan = self._initialize_plan_contents(plan = plan)
+        plan = self._initialize_contents(plan = plan)
         plan = self._create_from_settings(plan = plan)
         return plan      
 
-    """ Private Methods """
+    """ Private Methods """ 
+    
+    def _initialize_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+        """Converts str in 'plan.contents' to sourdough objects.
+        
+        Args:
+            plan (sourdough.Plan): Plan instance with str or Component 
+                subclasses or subclass instances stored in 'contents'.
 
+        Returns:
+            sourdough.Plan: an instance with contents fully instanced.
+                
+        """
+        new_contents = []
+        try:
+            for component in plan.contents:
+                if isinstance(component, str):
+                    try:
+                        component = self.project.options[component]
+                    except KeyError:
+                        raise KeyError(
+                            f'{component} not found in {self.project.name}')
+                new_contents.append(self._create_unknown(component = component))
+            plan.contents = new_contents
+        except TypeError:
+            plan.contents = []
+        return plan
+            
+    def _create_unknown(self, 
+            component: 'sourdough.Component',
+            **kwargs) -> 'sourdough.Component':
+        """Creates appropriate Component
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            [type]: [description]
+        """
+
+        if isinstance(component, sourdough.Plan):
+            return self.create(plan = component)
+        elif isinstance(component, sourdough.Component):
+            return component
+        elif issubclass(component, Component):
+            return component(**kwargs)
+        else:
+            raise TypeError(
+                f'{component} must be a Component subclass or instance')
+        
     def _create_from_settings(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """Returns a single Plan instance created based on 'project.settings'.
 
@@ -62,14 +110,17 @@ class Author(sourdough.Creator):
         """
         attributes = {}
         for key, value in self.project.settings[plan.name].items():
-            if key.endswith('_design'):
-                plan.design = value
+            if key.endswith('_structure'):
+                plan.structure = value
             elif key.endswith('_plan'):
                 for item in sourdough.utilities.listify(value):
                     plan.append(self.create(plan = item))
             elif key.endswith('_tasks'):
-                plan.extend(self._create_tasks(
-                    tasks = sourdough.utilities.listify(value)))
+                for item in sourdough.utilities.listify(value):
+                    
+                    plan.append(self._create_task(
+                        task = item, 
+                        settings = self.project.settings[plan.name]))
             elif key.endswith('_techniques'):
                 new_key = key.replace('_techniques', '')
                 plan.extend(self._create_techniques(
@@ -80,151 +131,6 @@ class Author(sourdough.Creator):
         for key, value in attributes.items():
             setattr(plan, key, value)
         return plan      
-    
-    def _initialize_plan_contents(self, 
-            plan: 'sourdough.Plan') -> 'sourdough.Plan':
-        """
-        
-        Args:
-            plan (sourdough.Plan): Plan instance with str or Action 
-                subclass.
-
-        Raises:
-            TypeError: if an item in 'contents' is not a str or Action subclass.
-
-        Returns:
-            sourdough.Plan: an instance with contents fully instanced.
-                
-        """
-        new_contents = []
-        try:
-            for component in plan.contents:
-                if isinstance(component, str):
-                    new_contents.append(
-                        self._draft_unknown(component = component))
-                elif isinstance(component, sourdough.Plan):
-                    self.create(plan = component)
-                elif isinstance(component, sourdough.Action):
-                    new_contents.append(component)
-                else:
-                    raise TypeError(
-                        f'{plan.name} contents must be str or Action subclass')
-            plan.contents = new_contents
-        except TypeError:
-            plan.contents = []
-        return plan
-    
-    def _draft_unknown(self,
-            action: str,
-            plan: 'sourdough.Plan') -> Union[
-                'sourdough.Task', 
-                'sourdough.Plan']:
-        """[summary]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            [type]: [description]
-        """
-        try:
-            test_instance = plan.options[action](name = 'test only')
-        except KeyError:
-            raise KeyError(f'{action} not found in {plan.name}')
-        if isinstance(test_instance, sourdough.Task):
-            return self._draft_plan(
-                plan = action, 
-                technique = None, 
-                plan = plan)
-        else:
-            return self._draft_plan(plan = action, project = plan)
-
-    def _draft_plans(self,
-            plans: Sequence[str],
-            project: 'sourdough.Plan') -> 'sourdough.Plan':
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        new_plans = []
-        for plan in plans:
-            new_plans.append(self._draft_plan(
-                plan = plan, 
-                project = project))
-        project.contents.append(new_plans)
-        return project
-
-    def _draft_plan(self,
-            plan: str,
-            project: 'sourdough.Plan') -> 'sourdough.Plan':
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        try:
-            new_plan = project.options[plan](name = plan)
-        except KeyError:
-            new_plan = sourdough.Plan(name = plan)
-        return self.organize(plan = new_plan)
-                  
-    # def _draft_plans(self, 
-    #         plan: 'sourdough.Plan',
-    #         plans: Sequence[str],
-    #         techniques: Mapping[str, Sequence[str]]) -> 'sourdough.Plan':
-    #     """[summary]
-
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     new_plans = []
-    #     for plan in plans:
-    #         new_techniques = []
-    #         for technique in techniques[plan]:
-    #             new_techniques.append(self._draft_plan(
-    #                 plan = plan,
-    #                 technique = technique,
-    #                 plan = plan.name))
-    #         new_plans.append(new_techniques)
-    #     plan.contents.append(new_plans)
-    #     return plan
-            
-    # def _draft_plan(self,
-    #         plan: str,
-    #         technique: str,
-    #         plan: str,
-    #         options: 'sourdough.Catalog') -> 'sourdough.Task':
-    #     """[summary]
-
-    #     Returns:
-    #         [type]: [description]
-            
-    #     """
-    #     try:
-    #         return plan.options[plan](
-    #             name = plan,
-    #             plan = plan,
-    #             technique = plan.options[technique])
-    #     except KeyError:
-    #         try:
-    #             return sourdough.Task(
-    #                 name = plan,
-    #                 plan = plan,
-    #                 technique = plan.options[technique])
-    #         except KeyError:
-    #             try:
-    #                 return plan.options[plan](
-    #                     name = plan,
-    #                     plan = plan,
-    #                     technique = sourdough.Technique(name = technique))
-    #             except KeyError:
-    #                 return sourdough.Task(
-    #                     name = plan,
-    #                     plan = plan,
-    #                     technique = sourdough.Technique(name = technique))
 
 
 @dataclasses.dataclass

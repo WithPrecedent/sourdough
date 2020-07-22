@@ -38,10 +38,9 @@ from sourdough.project.filer import Filer
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
 from sourdough.project.creators import Reader
-from sourdough.project.actions import Technique
-from sourdough.project.actions import Task
-from sourdough.project.workers import Worker
-from sourdough.project.workers import Manager
+from sourdough.project.structures import Structure
+from sourdough.project.structures import Graph
+from sourdough.project.structures import Tree
 from sourdough.project.project import Project
 
 
@@ -64,9 +63,8 @@ __all__ = [
     'Filer',
     'Author',
     'Publisher',
-    'Reader',
-    'Project',
-    'Technique',
-    'Task',
-    'Worker',
-    'Manager']
+    'Reader',  
+    'Structure',
+    'Graph',
+    'Tree'
+    'Project']

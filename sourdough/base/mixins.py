@@ -391,20 +391,18 @@ class LoaderMixin(abc.ABC):
             located (can either be a sourdough or non-sourdough module).
             Defaults to 'sourdough'.
 
-    Namespaces: 'module', 'default_module', 'load'
+    Namespaces: 'modules', '_loaded', 'load'
 
     """
-    module: str = dataclasses.field(default_factory = lambda: 'sourdough')
-    default_module: str = dataclasses.field(
-        default_factory = lambda: 'sourdough')
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: list)
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict())
 
     """ Public Methods """
 
     def load(self, attribute: str) -> object:
         """Returns object named in 'attribute'.
-
-        If 'attribute' is not a str, it is assumed to have already been loaded
-        and is returned as is.
 
         The method searches both 'module' and 'default_module' for the named
         'attribute'. It also checks to see if the 'attribute' is directly
@@ -419,29 +417,23 @@ class LoaderMixin(abc.ABC):
             object: from 'module' or 'default_module'.
 
         """
-        # If 'attribute' is a string, attempts to load from 'module' or, if not
-        # found there, 'default_module'.
-        if isinstance(getattr(self, attribute), str):
-            try:
-                return getattr(importlib.import_module(self.module), attribute)
-            except (ImportError, AttributeError):
-                try:
-                    return getattr(
-                        importlib.import_module(self.module),
-                        getattr(self, attribute))
-                except (ImportError, AttributeError):
-                    try:
-                        return getattr(
-                            importlib.import_module(self.module), attribute)
-                    except (ImportError, AttributeError):
-                        try:
-                            return getattr(
-                                importlib.import_module(self.default_module),
-                                getattr(self, attribute))
-                        except (ImportError, AttributeError):
-                            raise ImportError(
-                                f'{attribute} is neither in \
-                                {self.module} nor {self.default_module}')
-        # If 'attribute' is not a string, it is returned as is.
+        try:
+            key = getattr(self, attribute)
+        except AttributeError:
+            key = attribute
+        if key in self._loaded:
+            thing = self._loaded[key]
         else:
-            return getattr(self, attribute)
+            thing = None
+            for module in self.modules:
+                try:
+                    thing = getattr(
+                        importlib.import_module(module), getattr(self, key))
+                    break
+                except (ImportError, AttributeError):
+                    pass
+            if thing is None:
+                raise ImportError(f'{attribute} is not in {self.modules}')
+            else:
+                self._loaded[key] = thing
+        return thing

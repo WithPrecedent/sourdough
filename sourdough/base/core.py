@@ -167,6 +167,13 @@ class Plan(Component, collections.abc.MutableSequence):
     contents: Sequence['Component'] = dataclasses.field(default_factory = list)
     name: str = None
 
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Validates 'contents' or converts it to appropriate iterable.
+        self.contents = self.validate(contents = self.contents)  
+
     """ Public Methods """
     
     def validate(self, 

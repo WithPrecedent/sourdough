@@ -59,7 +59,7 @@ class Graph(sourdough.Plan, abc.ABC):
     """Base class for sourdough graphs.
     
     Args:
-        contents (Union[Sequence['sourdough.Component'], Sequence[Sequence[str]], 
+        contents (Union[Sequence[sourdough.Component], Sequence[Sequence[str]], 
             Mapping[str, Sequence[str]]]]): a list of contents, an adjacency list, or
             an adjacency matrix. Whatever structure is passed, it will be 
             converted to a list of contents. Defaults to an empty list.

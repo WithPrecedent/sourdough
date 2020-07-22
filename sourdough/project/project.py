@@ -15,22 +15,6 @@ from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import warnings
 
 import sourdough
- 
-
-@dataclasses.dataclass
-class Tree(object):
-    
-    root: sourdough.Manager
-    component: sourdough.Plan
-    wrapper: sourdough.Task
-    base: sourdough.Technique
-
-@dataclasses.dataclass
-class Graph(object):
-    
-    component: sourdough.Node
-    wrapper: sourdough.Task
-    base: sourdough.Technique    
 
  
 @dataclasses.dataclass
@@ -47,7 +31,7 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
         2) Project stores Creator subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Worker/Component 
+            instances are used to assemble and apply the parts of Plan 
             instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
@@ -85,8 +69,10 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         automatic (bool): whether to automatically advance 'contents' (True) or 
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
+        structures (ClassVar[sourdough.Catalog]): a class attribute storing
+            composite structure options.            
         options (ClassVar[sourdough.Catalog]): a class attribute storing
-            composite structure options.
+            components of a composite structure.
     
     Attributes:
         plan (sourdough.Plan): the iterable composite object created by Project.
@@ -104,12 +90,14 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     name: str = None
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    structure: str = dataclasses.field(default_factory = 'tree')
+    structure: str = dataclasses.field(default_factory = 'chained')
     automatic: bool = True
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'tree': sourdough.Tree, 
+            'chained': sourdough.Chained, 
+            'comparative': sourdough.Comparative,
             'graph': sourdough.Graph})
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()    
     
     """ Initialization Methods """
 
@@ -120,16 +108,17 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Validates or creates a 'Settings' instance.
-        self.settings = sourdough.Settings(
-            contents = self.settings)
+        self.settings = sourdough.Settings(contents = self.settings)
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
         # Validates or creates a Filer' instance.
         self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
-        # Adds 'general' section attributes from 'settings'.
-        self.settings.inject(instance = self)
-        # Initializes or validates a composite Component instance.
-        self.plan = self._initialize_plan(settings = self.settings)
+        # Initializes or validates a composite Plan instance.
+        self.plan = self.structures[self.structure](name = self.name)
+        # Initializes Creator instances stored in 'contents'.
+        self.contents = self._initialize_creators(contents = self.contents)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
         self.stage: str = 'initialize' 
@@ -140,43 +129,24 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     """ Public Methods """
 
     def validate(self, 
-            contents: Sequence[Union['sourdough.Creator', str]],
-            **kwargs) -> Sequence['sourdough.Creator']:
-        """Creates Creator instances, when necessary, in 'contents'
+            contents: 'sourdough.Creator') -> Sequence['sourdough.Creator']:
+        """Validates that all 'contents' are Creator subclass instances.
 
         Args:
-            contents (Sequence[Union[sourdough.Creator, str]]]): list of 
-                Creator subclass instances or strings which correspond to keys 
-                in 'options'. 
-            kwargs: any extra arguments to send to each created Creator 
-                instance. These will have no effect on Creator subclass 
-                instances already stored in the 'options' class attribute.
+            contents (sourdough.Creator): list of Creator subclass instances.
 
         Raises:
-            KeyError: if 'contents' contains a string which does not match a key 
-                in the 'options' class attribute.
-            TypeError: if an item in 'contents' is neither a str nor Creator 
-                subclass.
+            TypeError: if an item in 'contents' is not a Creator subclass 
+                instance.
             
         Returns:
-            Sequence[sourdough.Creator]: a list with only Creator subclass 
-                instances.
+            Sequence[sourdough.Creator]: a list with Creator subclass instances.
                   
-        """       
-        new_contents = []
-        for stage in contents:
-            if isinstance(stage, str):
-                try:
-                    new_contents.append(self.options[stage](**kwargs))
-                except KeyError:
-                    KeyError(f'{stage} is not a recognized stage')
-            elif isinstance(stage, sourdough.Creator):
-                new_contents.append(stage)
-            elif issubclass(stage, sourdough.Creator):
-                new_contents.append(stage(**kwargs))
-            else:
-                raise TypeError(f'{stage} must be a str or Creator type')
-        return new_contents
+        """
+        if all(isinstance(c, sourdough.Creator) for c in contents):
+            return contents
+        else:       
+            raise TypeError(f'{stage} must be a str or Creator type')
                  
     def advance(self, stage: str = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
@@ -256,7 +226,30 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             raise StopIteration()
      
     """ Private Methods """
-                        
+
+    def _initialize_creators(self, 
+            contents: Sequence['sourdough.Creator']) -> Sequence[
+                'sourdough.Creator']:
+        """Instances each Creator in 'contents'.
+        
+        Args:
+            contents (Sequence[sourdough.Creator]): list of Creator classes.
+        
+        Returns:
+            Sequence[sourdough.Creator]: list of Creator classes.
+        
+        """
+        new_contents = []
+        for creator in contents:
+            try:
+                new_contents.append(creator(project = self))
+            except TypeError:
+                if isinstance(creator, sourdough.Creator):
+                    new_contents.append(creator)
+                else:
+                    raise TypeError(f'{creator} is not a Creator type')
+        return new_contents   
+                     
     def _auto_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """Automatically advances through and iterates stored Creator instances.
 
