@@ -42,123 +42,48 @@ class Author(sourdough.Creator):
             sourdough.Plan: an instance with contents fully instanced.
                 
         """
-        plan = self._initialize_contents(plan = plan)
-        plan = self._create_from_settings(plan = plan)
-        return plan      
-
-    """ Private Methods """ 
-    
-    def _initialize_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
-        """Converts str in 'plan.contents' to sourdough objects.
-        
-        Args:
-            plan (sourdough.Plan): Plan instance with str or Component 
-                subclasses or subclass instances stored in 'contents'.
-
-        Returns:
-            sourdough.Plan: an instance with contents fully instanced.
-                
-        """
-        new_contents = []
-        try:
-            for component in plan.contents:
-                if isinstance(component, str):
-                    try:
-                        component = self.project.options[component]
-                    except KeyError:
-                        raise KeyError(
-                            f'{component} not found in {self.project.name}')
-                new_contents.append(self._create_unknown(component = component))
-            plan.contents = new_contents
-        except TypeError:
-            plan.contents = []
-        return plan
-            
-    def _create_unknown(self, 
-            component: 'sourdough.Component',
-            **kwargs) -> 'sourdough.Component':
-        """Creates appropriate Component
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            [type]: [description]
-        """
-
-        if isinstance(component, sourdough.Plan):
-            return self.create(plan = component)
-        elif isinstance(component, sourdough.Component):
-            return component
-        elif issubclass(component, Component):
-            return component(**kwargs)
-        else:
-            raise TypeError(
-                f'{component} must be a Component subclass or instance')
-        
-    def _create_from_settings(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
-        """Returns a single Plan instance created based on 'project.settings'.
-
-        Args:
-            plan (sourdough.Plan): Plan instance to populate its 'contents' with 
-                information in 'settings'.
-
-        Returns:
-            sourdough.Plan: n plan or subclass plan with attributes derived from 
-                a section of 'settings'.
-                
-        """
         attributes = {}
+        # Finds and sets the 'structure' of 'plan'.
+        design = self.project.settings[plan.name][f'{plan.name}_structure']
+        plan.structure = self.project.structures[design]()
+        # Iterates through appropriate settings to create 'contents' of 'plan'.
         for key, value in self.project.settings[plan.name].items():
-            if key.endswith('_structure'):
-                plan.structure = value
-            elif key.endswith('_plan'):
+            # Finds settings that have suffixes matching keys in the 
+            # 'components' of 'structure' of 'plan'.
+            if any(key.endswith(s) for s in plan.structure.components.keys()):
                 for item in sourdough.utilities.listify(value):
-                    plan.append(self.create(plan = item))
-            elif key.endswith('_tasks'):
-                for item in sourdough.utilities.listify(value):
-                    
-                    plan.append(self._create_task(
-                        task = item, 
-                        settings = self.project.settings[plan.name]))
-            elif key.endswith('_techniques'):
-                new_key = key.replace('_techniques', '')
-                plan.extend(self._create_techniques(
-                    techniques = sourdough.utilities.listify(value)))
-            else:
+                    # Checks if special prebuilt instance exists.
+                    try:
+                        thing = self.project.options[item]
+                    # Otherwise uses the appropriate generic type.
+                    except KeyError:
+                        suffix = key.split('_')[:-1]
+                        thing = plan.structure.components[suffix](name = item)
+                    # Recursively calls the 'create' method if the 'thing' 
+                    # created is a Plan type.
+                    if isinstance(thing, sourdough.Plan):
+                        thing = self.create(plan = thing)
+                    plan.add(thing)
+            # Stores other settings in 'attributes'.        
+            elif not key.endswith('_structure'):
                 attributes[key] = value
         # Adds an extra settings as attributes to plan.
         for key, value in attributes.items():
             setattr(plan, key, value)
-        return plan      
+        return plan          
 
 
 @dataclasses.dataclass
 class Publisher(sourdough.Creator):
+    """Finalizes a composite object from user settings.
     
+    Args:
+        project (sourdough.Project): the related Project instance.
+    
+    """    
     project: 'sourdough.Project'  
 
     """ Public Methods """
-    
-    def add(self, 
-            manager: 'sourdough.Manager', 
-            plan: str, 
-            plans: Union[Sequence[str], str]) -> 'sourdough.Manager':
-        """Adds 'plans' to 'manager' 'contents' with a 'plan' key.
-        
-        Args:
-            manager (sourdough.Manager): manager to which 'plan' and 'plans'
-                should be added.
-            plan (str): key to use to store 'plans':
-            plans (Union[Sequence[str], str]): name(s) of plan(s) to add to 
-                'manager'.
-            
-        Returns:
-            sourdough.Manager: with 'plans' added at 'plan'.
-        
-        """
-        manager.contents[plan] = sourdough.utilities.listify(plans)
-        return manager
  
     def create(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]
@@ -167,7 +92,7 @@ class Publisher(sourdough.Creator):
             [type] -- [description]
             
         """
-        plan = self._parameterize_plans(plan = plan)
+        
         
         return plan
 
@@ -305,7 +230,6 @@ class Publisher(sourdough.Creator):
         except (AttributeError, TypeError):
             pass
         return technique
-
 
 
 @dataclasses.dataclass

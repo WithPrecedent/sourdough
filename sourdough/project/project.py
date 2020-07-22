@@ -94,9 +94,11 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     automatic: bool = True
     structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'chained': sourdough.Chained, 
-            'comparative': sourdough.Comparative,
-            'graph': sourdough.Graph})
+            'chained': sourdough.project.stuctures.Chained, 
+            'comparative': sourdough.project.stuctures.Comparative,
+            'cycle': sourdough.project.stuctures.Cycle,
+            'directed': sourdough.project.stuctures.DirectedGraph,
+            'flat': sourdough.project.stuctures.Flat})
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()    
     
     """ Initialization Methods """

@@ -7,7 +7,7 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_plan': ['parser', 'munger'],
+        'cool_project_workers': ['parser', 'munger'],
         'manager_structure': 'chained'},
     'parser': {
         'parser_tasks': ['divider'],

@@ -248,7 +248,7 @@ class Manager(Worker):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        design (str): the name of the structural design that should
+        structure (str): the name of the structural design that should
             be used to create objects in an instance. This should correspond
             to a key in a Project instance's 'designs' class attribute. 
             Defaults to 'chained'.
@@ -271,7 +271,7 @@ class Manager(Worker):
         'sourdough.Action', 
         str]] = dataclasses.field(default_factory = list) 
     name: str = None
-    design: str = dataclasses.field(default_factory = lambda: 'chained')
+    structure: str = dataclasses.field(default_factory = lambda: 'chained')
     identification: str = None
     data: Any = None
 

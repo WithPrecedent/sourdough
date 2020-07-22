@@ -21,36 +21,28 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Structure(sourdough.LoaderMixin, collections.abc.Iterator, abc.ABC):
+class Structure(sourdough.LoaderMixin, collections.abc.Iterable):
     """Contains default types for composite structures to be loaded.
     
     Args:  
         modules (str): name of module where object to use is located (can either 
             be a sourdough or non-sourdough module). Defaults to 'sourdough'.
-            
+         
     """
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = lambda: list)
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: dict)
+    iterable: Union[str, Callable] = iter  
     _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict)  
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def design(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':  
-        """Subclasses must provide their own methods."""
-        pass
+        default_factory = lambda: dict)
 
-    @abc.abstractmethod
-    def iterable(self, **kwargs) -> Iterable:  
-        """Subclasses must provide their own methods."""
-        pass
+    def __iter__(self) -> Iterable:
+        return self.iterable(self.contents)
 
 
 @dataclasses.dataclass
-class Tree(Structure, abc.ABC):
+class TreeStructure(Structure, abc.ABC):
     
     modules: str = dataclasses.field(
         default_factory = lambda: [
@@ -58,7 +50,7 @@ class Tree(Structure, abc.ABC):
             'sourdough.project.actions'])
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: {
-            'root': 'Manager'
+            'root': 'Manager',
             'workers': 'Worker',
             'tasks': 'Task',
             'techniques': 'Technique'})
@@ -67,68 +59,35 @@ class Tree(Structure, abc.ABC):
         
 
 @dataclasses.dataclass
-class Chained(Tree):
+class Chained(TreeStructure):
     """Contains default types for composite structures
     
             
     """      
+    iterator: Union[str, Callable] = iter
     
-    """ Public Methods """
-    
-    def design(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':  
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        return plan    
-
-    def iterable(self) -> Iterable:
-        return iter(self.contents)
-    
-    
-    
+      
 @dataclasses.dataclass
-class Comparative(Tree):
+class Comparative(TreeStructure):
     """Contains default types for composite structures
     
             
     """    
-
-    """ Public Methods """
-    
-    def design(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':  
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        return plan    
+    iterator: Union[str, Callable] = itertools.product
+      
 
 @dataclasses.dataclass
-class Collapsed(Structure):
+class Flat(TreeStructure):
     """Contains default types for composite structures
     
             
     """    
-    def iterable(self) -> Iterable:
-        return more_itertools.collapse(self.contents) 
+    
+    iterator: Union[str, Callable] = more_itertools.collapse
 
 
 @dataclasses.dataclass
-class Repeater(Structure):
-    """Contains default types for composite structures
-    
-            
-    """    
-    def iterable(self) -> Iterable:
-        return itertools.tee(self.contents, count = 2)
-    
- 
-@dataclasses.dataclass
-class Cycle(Structure):
+class GraphStructure(Structure, abc.ABC):
     """Contains default types for composite structures
     
             
@@ -147,49 +106,23 @@ class Cycle(Structure):
     _loaded: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: dict())  
 
-    def iterable(self) -> Iterable:
-        return itertools.cycle(self.contents)   
-
 
 @dataclasses.dataclass
-class Graph(Structure, abc.ABC):
-    """Contains default types for composite structures
-    
-            
-    """    
-    modules: str = dataclasses.field(
-        default_factory = lambda: [
-            'sourdough.project.graphs',
-            'sourdough.project.actions'])
-    components: Mapping[str, str] = dataclasses.field(
-        default_factory = lambda: {
-            'root': 'Node'
-            'node': 'Node',
-            'edges': 'Edge',
-            'task': 'Task',
-            'techniques': 'Technique'})
-    _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict()) 
-    
-    """ Public Methods """
-    
-    def design(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':  
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        return plan   
-
-
-@dataclasses.dataclass
-class DirectedGraph(Structure, abc.ABC):
+class DirectedGraph(GraphStructure):
     """Contains default types for composite structures
     
             
     """   
+    iterator: Union[str, Callable] = 'iterable'
     
     def iterable(self) -> Iterable:
         return self
 
+ 
+@dataclasses.dataclass
+class Cycle(Structure):
+    """Contains default types for composite structures
+    
+            
+    """    
+    iterator: Union[str, Callable] = itertools.cycle
