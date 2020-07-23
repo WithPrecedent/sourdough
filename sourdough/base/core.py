@@ -23,6 +23,7 @@ import collections.abc
 import dataclasses
 import inspect
 import more_itertools
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -81,14 +82,35 @@ class Component(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        try:
+        if inspect.isclass(cls):
+            return sourdough.utilities.snakify(cls.__name__)
+        elif isinstance(cls, cls.__class__):
             return cls.name
-        except AttributeError:
-            if inspect.isclass(cls):
-                return sourdough.utilities.snakify(cls.__name__)
-            else:
-                return sourdough.utilities.snakify(cls.__class__.__name__)
+        else:
+            return sourdough.utilities.snakify(cls.__class__.__name__)
 
+    """ Dunder Methods """
+
+    def __repr__(self) -> str:
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}''') 
+        
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
@@ -443,10 +465,10 @@ class Plan(Component, collections.abc.MutableSequence):
             str: default string representation of an instance.
 
         """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'name: {self.name}\n'
-            f'contents: {self.contents.__str__()}') 
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            contents: {self.contents.__str__()}''') 
 
  
 @dataclasses.dataclass
@@ -649,9 +671,9 @@ class Lexicon(collections.abc.MutableMapping):
             str: default string representation of an instance.
 
         """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'contents: {self.contents.__str__()}')     
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            contents: {self.contents.__str__()}''')     
 
 
 @dataclasses.dataclass
@@ -753,7 +775,7 @@ class Catalog(Creator, Lexicon):
             return new_contents
         else:
             raise TypeError(
-                'contents must a Component or Mapping or Sequence storing'
+                'contents must a Component or Mapping or Sequence storing '
                 'Components') 
 
     def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
@@ -873,13 +895,15 @@ class Catalog(Creator, Lexicon):
 
     def __str__(self) -> str:
         """Returns default string representation of an instance.
+        
         Returns:
             str: default string representation of an instance.
+            
         """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'contents: {self.contents.__str__()}\n'
-            f'defaults: {self.defaults.__str__()}')
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            contents: {self.contents.__str__()}
+            defaults: {self.defaults.__str__()}''')
 
 
 """ 

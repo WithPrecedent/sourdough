@@ -20,7 +20,7 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Structure(sourdough.LoaderMixin, abc.ABC):
+class Structure(sourdough.LoaderMixin, sourdough.Component):
     """Contains default types for composite structures to be loaded.
     
     Args:  
@@ -28,6 +28,7 @@ class Structure(sourdough.LoaderMixin, abc.ABC):
             be a sourdough or non-sourdough module). Defaults to 'sourdough'.
          
     """
+    name: str = None
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = lambda: list)
     components: Mapping[str, str] = dataclasses.field(
@@ -93,7 +94,7 @@ class GraphStructure(Structure, abc.ABC):
             'sourdough.project.actions'])
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: {
-            'root': 'Node'
+            'root': 'Node',
             'node': 'Node',
             'edges': 'Edge',
             'task': 'Task',

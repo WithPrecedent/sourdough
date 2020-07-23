@@ -1,16 +1,11 @@
 """
-.. module:: test components
-:synopsis: tests Component, its subclasses, and its mixins
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
+test_components: unit tests for Component and mixins
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 
 import dataclasses
-import os
-import pathlib
-
-os.chdir(pathlib.Path(pathlib.Path.cwd() / 'sourdough'))
 
 import sourdough
 
@@ -33,10 +28,10 @@ class AnotherComponent(sourdough.OptionsMixin, sourdough.Component):
     
     options = sourdough.Catalog(contents = {
         'base': AComponent(),
-        'other': OtherComponent})
+        'other': OtherComponent()})
  
 
-@dataclasses.dataclass   
+@dataclasses.dataclass
 class ProxiedComponent(sourdough.ProxyMixin, sourdough.Component):
     
     def __post_init__(self):
@@ -48,7 +43,7 @@ class ProxiedComponent(sourdough.ProxyMixin, sourdough.Component):
 def test_components():
     # Tests Component, RegistryMixin, and LibraryMixin
     a_component = AComponent()
-    other_component = OtherComponent(register_from_disk = True)
+    other_component = OtherComponent()
     assert 'other_component' in AComponent.registry
     assert 'other_component' in a_component.registry
     assert 'other_component' in AComponent.library
@@ -60,9 +55,9 @@ def test_components():
     
     # Tests OptionsMixin
     another_component = AnotherComponent()
-    base_instance = another_component.create(key = 'base')
-    other_instance = another_component.create(key = 'other', name = 'a_test')
-    assert other_instance.name == 'a_test'
+    base_instance = another_component.select(key = 'base')
+    other_instance = another_component.select(key = 'other')
+    assert other_instance.name == 'other_component'
     
     # Tests ProxyMixin
     # proxied_component = ProxiedComponent()

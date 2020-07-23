@@ -8,6 +8,7 @@
 
 import abc
 import dataclasses
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -98,9 +99,9 @@ class Factory(abc.ABC):
             str: default representation of a class instance.
 
         """
-        return (
-            f'sourdough {self.__class__.__name__}\n'
-            f'product: {self.product}\n'
-            f'default: {self.default}\n'
-            f'options: {str(self.options)}') 
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            product: {self.product}
+            default: {self.default}
+            options: {str(self.options)}''') 
         

@@ -12,6 +12,7 @@ Contents:
 
 import abc
 import dataclasses
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -79,10 +80,10 @@ class Technique(sourdough.Action):
 
     def __str__(self) -> str:
         """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            f'algorithm: {str(self.algorithm)}\n'
-            f'parameters: {str(self.parameters)}\n')
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__} {self.name}
+            algorithm: {str(self.algorithm)}
+            parameters: {str(self.parameters)}''')
         
             
 @dataclasses.dataclass
@@ -170,6 +171,6 @@ class Task(sourdough.Action, abc.ABC):
 
     def __str__(self) -> str:
         """Returns string representation of a class instance."""
-        return (
-            f'sourdough {self.__class__.__name__} {self.name}\n'
-            f'technique: {str(self.technique)}\n')
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__} {self.name}
+            technique: {str(self.technique)}''')

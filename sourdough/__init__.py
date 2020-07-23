@@ -35,7 +35,9 @@ from sourdough.base.mixins import OptionsMixin
 from sourdough.base.mixins import LoaderMixin
 
 # Imports for sourdough projects
-from sourdough.project.filer import Filer
+# from sourdough.project.filer import Filer
+from sourdough.project import defaults
+from sourdough.project import structures
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
 from sourdough.project.creators import Reader
@@ -61,6 +63,8 @@ __all__ = [
     'OptionsMixin',
     'LoaderMixin',
     'Filer',
+    'defaults',
+    'structures',
     'Author',
     'Publisher',
     'Reader',  

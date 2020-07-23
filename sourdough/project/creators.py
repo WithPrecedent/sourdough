@@ -58,7 +58,8 @@ class Author(sourdough.Creator):
                     # Otherwise uses the appropriate generic type.
                     except KeyError:
                         suffix = key.split('_')[:-1]
-                        thing = plan.structure.components[suffix](name = item)
+                        name = plan.structure.components[suffix]
+                        thing = plan.stucture.load(name)(name = item)
                     # Recursively calls the 'create' method if the 'thing' 
                     # created is a Plan type.
                     if isinstance(thing, sourdough.Plan):
