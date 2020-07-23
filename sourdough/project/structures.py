@@ -10,7 +10,6 @@ Contents:
 
 """
 import abc
-import collections.abc
 import dataclasses
 import itertools
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -21,7 +20,7 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Structure(sourdough.LoaderMixin, collections.abc.Iterable):
+class Structure(sourdough.LoaderMixin, abc.ABC):
     """Contains default types for composite structures to be loaded.
     
     Args:  
@@ -33,12 +32,9 @@ class Structure(sourdough.LoaderMixin, collections.abc.Iterable):
         default_factory = lambda: list)
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: dict)
-    iterable: Union[str, Callable] = iter  
+    iterator: Union[str, Callable] = iter  
     _loaded: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: dict)
-
-    def __iter__(self) -> Iterable:
-        return self.iterable(self.contents)
 
 
 @dataclasses.dataclass
@@ -82,7 +78,6 @@ class Flat(TreeStructure):
     
             
     """    
-    
     iterator: Union[str, Callable] = more_itertools.collapse
 
 
@@ -114,9 +109,6 @@ class DirectedGraph(GraphStructure):
             
     """   
     iterator: Union[str, Callable] = 'iterable'
-    
-    def iterable(self) -> Iterable:
-        return self
 
  
 @dataclasses.dataclass
@@ -126,3 +118,4 @@ class Cycle(Structure):
             
     """    
     iterator: Union[str, Callable] = itertools.cycle
+    

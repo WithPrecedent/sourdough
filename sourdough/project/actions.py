@@ -46,6 +46,10 @@ class Technique(sourdough.Action):
     algorithm: object = None
     parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
+    selected: Sequence[str] = None
+    required: Mapping[str, str] = None
+    runtime: Mapping[str, str] = None
+    data_dependent: Mapping[str, str] = None
     
     """ Public Methods """
     

@@ -92,21 +92,27 @@ class Publisher(sourdough.Creator):
             [type] -- [description]
             
         """
-        
-        
+        plan.apply(tool = self._set_parameters)
         return plan
 
     """ Private Methods """
+
+    def _set_parameters(self, 
+            component: 'sourdough.Component') -> 'sourdough.Component':
+        """
+        
+        """
+        if isinstance(component, sourdough.Technique):
+            return self._set_technique_parameters(technique = component)
+        elif isinstance(component, sourdough.Task):
+            return self._set_task_parameters(task = component)
+        else:
+            return component
     
-    def get(self, technique: sourdough.technique) -> sourdough.technique:
-        """Adds appropriate parameters to technique.
-
-        Args:
-            technique (technique): instance for parameters to be added.
-
-        Returns:
-            technique: instance ready for application.
-
+    def _set_technique_parameters(self, 
+            technique: 'sourdough.Technique') -> 'sourdough.Technique':
+        """
+        
         """
         if technique.name not in ['none', None, 'None']:
             parameter_types = ['settings', 'selected', 'required', 'runtime']
@@ -115,12 +121,28 @@ class Publisher(sourdough.Creator):
                 technique = getattr(self, f'_get_{parameter_type}')(
                     technique = technique)
         return technique
-
-    """ Private Methods """
-
+    
+    def _set_task_parameters(self, task: 'sourdough.Task') -> 'sourdough.Task':
+        """
+        
+        """
+        if task.technique.name not in ['none', None, 'None']:
+            task = self._get_settings(technique = task)
+            try:
+                task._set_conditional_parameters()
+            except AttributeError:
+                pass
+            task.technique = self._set_technique_parameters(
+                technique = task.technique)
+        return task  
+            
     def _get_settings(self,
-            technique: sourdough.technique) -> sourdough.technique:
-        """Acquires parameters from 'Settings' instance.
+            technique: Union[
+                'sourdough.Technique', 
+                'sourdough.Task']) -> Union[
+                    'sourdough.Technique', 
+                    'sourdough.Task']:
+        """Acquires parameters from 'settings' of 'project'.
 
         Args:
             technique (technique): an instance for parameters to be added to.
@@ -129,41 +151,34 @@ class Publisher(sourdough.Creator):
             technique: instance with parameters added.
 
         """
-        return self.project.settings.get_parameters(
-            plan = technique.plan,
-            technique = technique.name)
+        key = f'{technique.name}_parameters'
+        try: 
+            technique.parameters.update(self.project.settings[key])
+        except KeyError:
+            pass
+        return technique
 
     def _get_selected(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: 'sourdough.Technique') -> 'sourdough.Technique':
         """Limits parameters to those appropriate to the technique.
 
-        If 'technique.selected' is True, the keys from 'technique.defaults' are
-        used to select the final returned parameters.
-
-        If 'technique.selected' is a list of parameter keys, then only those
-        parameters are selected for the final returned parameters.
-
         Args:
-            technique (technique): an instance for parameters to be added to.
+            technique (technique): an instance for parameters to be selected.
 
         Returns:
-            technique: instance with parameters added.
+            technique: instance with parameters selected.
 
         """
         if technique.selected:
-            if isinstance(technique.selected, list):
-                parameters_to_use = technique.selected
-            else:
-                parameters_to_use = list(technique.default.keys())
             new_parameters = {}
             for key, value in technique.parameters.items():
-                if key in parameters_to_use:
+                if key in technique.selected:
                     new_parameters[key] = value
             technique.parameters = new_parameters
         return technique
 
     def _get_required(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: 'sourdough.Technique') -> 'sourdough.Technique':
         """Adds required parameters (mandatory additions) to 'parameters'.
 
         Args:
@@ -179,34 +194,8 @@ class Publisher(sourdough.Creator):
             pass
         return technique
 
-    def _get_search(self,
-            technique: sourdough.technique) -> sourdough.technique:
-        """Separates variables with multiple options to search parameters.
-
-        Args:
-            technique (technique): an instance for parameters to be added to.
-
-        Returns:
-            technique: instance with parameters added.
-
-        """
-        technique.parameter_space = {}
-        new_parameters = {}
-        for parameter, values in technique.parameters.items():
-            if isinstance(values, list):
-                if any(isinstance(i, float) for i in values):
-                    technique.parameter_space.update(
-                        {parameter: uniform(values[0], values[1])})
-                elif any(isinstance(i, int) for i in values):
-                    technique.parameter_space.update(
-                        {parameter: randint(values[0], values[1])})
-            else:
-                new_parameters.update({parameter: values})
-        technique.parameters = new_parameters
-        return technique
-
     def _get_runtime(self,
-            technique: sourdough.technique) -> sourdough.technique:
+            technique: 'sourdough.Technique') -> 'sourdough.Technique':
         """Adds parameters that are determined at runtime.
 
         The primary example of a runtime parameter throughout sourdough is the
@@ -244,444 +233,52 @@ class Reader(sourdough.Creator):
             [type] -- [description]
             
         """
-        plan = self._parameterize_plans(plan = plan)
-        
+        plan.apply(tool = self._add_data_dependent)
+        if self.project.data is None:
+            plan.perform()
+        else:
+            self.project.data = plan.perform(data = self.project.data)
         return plan
 
-
-# @dataclasses.dataclass
-# class Parametizer(sourdough.Component):
-#     """Constructs technique with an 'algorithm' and 'parameters'.
-
-#     Args:
-#         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
-#             needs settings from the shared Settings instance, 'name' should
-#             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good settings to use the same 'name' attribute
-#             as the base class for effective coordination between sourdough
-#             classes. Defaults to None or __class__.__name__.lower().
-#         settings (Settings]): shared manager settings settings.
-#         instructions (Instructions]): an instance with information to
-#             create and create the essential components of a sourdough.Creator. Defaults to
-#             None.
-
-#     """
-#     name: str = None
-#     settings: sourdough.Settings] = None
-#     instructions: Instructions] = None
-
-#     """ Public Methods """
-
-#     def get(self, technique: sourdough.technique) -> sourdough.technique:
-#         """Adds appropriate parameters to technique.
-
-#         Args:
-#             technique (technique): instance for parameters to be added.
-
-#         Returns:
-#             technique: instance ready for application.
-
-#         """
-#         if technique.name not in ['none', None, 'None']:
-#             parameter_types = ['settings', 'selected', 'required', 'runtime']
-#             # Iterates through types of 'parameter_types'.
-#             for parameter_type in parameter_types:
-#                 technique = getattr(self, f'_get_{parameter_type}')(
-#                     technique = technique)
-#         return technique
-
-#     """ Private Methods """
-
-#     def _get_settings(self,
-#             technique: sourdough.technique) -> sourdough.technique:
-#         """Acquires parameters from 'Settings' instance.
-
-#         Args:
-#             technique (technique): an instance for parameters to be added to.
-
-#         Returns:
-#             technique: instance with parameters added.
-
-#         """
-#         return self.project.settings.get_parameters(
-#             plan = technique.plan,
-#             technique = technique.name)
-
-#     def _get_selected(self,
-#             technique: sourdough.technique) -> sourdough.technique:
-#         """Limits parameters to those appropriate to the technique.
-
-#         If 'technique.selected' is True, the keys from 'technique.defaults' are
-#         used to select the final returned parameters.
-
-#         If 'technique.selected' is a list of parameter keys, then only those
-#         parameters are selected for the final returned parameters.
-
-#         Args:
-#             technique (technique): an instance for parameters to be added to.
-
-#         Returns:
-#             technique: instance with parameters added.
-
-#         """
-#         if technique.selected:
-#             if isinstance(technique.selected, list):
-#                 parameters_to_use = technique.selected
-#             else:
-#                 parameters_to_use = list(technique.default.keys())
-#             new_parameters = {}
-#             for key, value in technique.parameters.items():
-#                 if key in parameters_to_use:
-#                     new_parameters[key] = value
-#             technique.parameters = new_parameters
-#         return technique
-
-#     def _get_required(self,
-#             technique: sourdough.technique) -> sourdough.technique:
-#         """Adds required parameters (mandatory additions) to 'parameters'.
-
-#         Args:
-#             technique (technique): an instance for parameters to be added to.
-
-#         Returns:
-#             technique: instance with parameters added.
-
-#         """
-#         try:
-#             technique.parameters.update(technique.required)
-#         except TypeError:
-#             pass
-#         return technique
-
-#     def _get_search(self,
-#             technique: sourdough.technique) -> sourdough.technique:
-#         """Separates variables with multiple options to search parameters.
-
-#         Args:
-#             technique (technique): an instance for parameters to be added to.
-
-#         Returns:
-#             technique: instance with parameters added.
-
-#         """
-#         technique.parameter_space = {}
-#         new_parameters = {}
-#         for parameter, values in technique.parameters.items():
-#             if isinstance(values, list):
-#                 if any(isinstance(i, float) for i in values):
-#                     technique.parameter_space.update(
-#                         {parameter: uniform(values[0], values[1])})
-#                 elif any(isinstance(i, int) for i in values):
-#                     technique.parameter_space.update(
-#                         {parameter: randint(values[0], values[1])})
-#             else:
-#                 new_parameters.update({parameter: values})
-#         technique.parameters = new_parameters
-#         return technique
-
-#     def _get_runtime(self,
-#             technique: sourdough.technique) -> sourdough.technique:
-#         """Adds parameters that are determined at runtime.
-
-#         The primary example of a runtime parameter throughout sourdough is the
-#         addition of a random seed for a consistent, replicable state.
-
-#         Args:
-#             technique (technique): an instance for parameters to be added to.
-
-#         Returns:
-#             technique: instance with parameters added.
-
-#         """
-#         try:
-#             for key, value in technique.runtime.items():
-#                 try:
-#                     technique.parameters.update(
-#                         {key: getattr(self.project.settings['general'], value)})
-#                 except AttributeError:
-#                     raise AttributeError(' '.join(
-#                         ['no matching runtime parameter', key, 'found']))
-#         except (AttributeError, TypeError):
-#             pass
-#         return technique
-
-
-# @dataclasses.dataclass
-# class Finisher(sourdough.Technique):
-#     """Finalizes technique instances with data-dependent parameters.
-
-#     Args:
-#         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
-#             needs settings from the shared Settings instance, 'name' should
-#             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good settings to use the same 'name' attribute
-#             as the base class for effective coordination between sourdough
-#             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared manager settings settings.
-#         instructions (Instructions]): an instance with information to
-#             create and create the essential components of a sourdough.Creator. Defaults to
-#             None.
-
-#     """
-#     name: str = None
-#     Settings: sourdough.Settings] = None
-#     instructions: Instructions] = None
-
-#     """ Public Methods """
-
-#     def create(self,
-#             outer_plan: sourdough.base.plan,
-#             data: Union[sourdough.Dataset, sourdough.base.plan]) -> sourdough.base.plan:
-#         """Applies 'outer_plan' instance in 'manager' to 'data' or other stored outer_plan.
-
-#         Args:
-#             outer_plan ('outer_plan'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_plan' attributes).
-#             data ([Union['Dataset', 'outer_plan']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_plan'
-
-#         Returns:
-#             'outer_plan': with 'parameters' for each technique instance finalized
-#                 and connected to 'algorithm'.
-
-#         """
-#         if hasattr(outer_plan, 'techniques'):
-#             outer_plan = self._finalize_techniques(manuscript = outer_plan, data = data)
-#         else:
-#             outer_plan = self._finalize_inner_plan(outer_plan = outer_plan, data = data)
-#         return outer_plan
-
-#     """ Private Methods """
-
-#     def _finalize_inner_plan(self, outer_plan: 'outer_plan', data: 'Dataset') -> 'outer_plan':
-#         """Finalizes 'inner_plan' instances in 'outer_plan'.
-
-#         Args:
-#             outer_plan ('outer_plan'): instance containing 'inner_plan' with 'techniques' that
-#                 have 'data_dependent' and/or 'conditional' 'parameters' to
-#                 add.
-#             data ('Dataset): instance with potential information to use to
-#                 finalize 'parameters' for 'outer_plan'.
-
-#         Returns:
-#             'outer_plan': with any necessary modofications made.
-
-#         """
-#         new_inner_plan = [
-#             self._finalize_techniques(inner_plan = inner_plan, data = data)
-#             for inner_plan in outer_plan.inner_plan]
-
-#         outer_plan.inner_plan = new_inner_plan
-#         return outer_plan
-
-#     def _finalize_techniques(self,
-#             manuscript: Union['outer_plan', 'inner_plan'],
-#             data: ['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
-#         """Subclasses may provide their own methods to finalize 'techniques'.
-
-#         Args:
-#             manuscript (Union['outer_plan', 'inner_plan']): manuscript containing
-#                 'techniques' to create.
-#             data (['Dataset', 'outer_plan']): instance with information used to
-#                 finalize 'parameters' and/or 'algorithm'.
-
-#         Returns:
-#             Union['outer_plan', 'inner_plan']: with any necessary modofications made.
-
-#         """
-#         new_techniques = []
-#         for technique in manuscript.techniques:
-#             if technique.name not in ['none']:
-#                 new_technique = self._add_conditionals(
-#                     manuscript = manuscript,
-#                     technique = technique,
-#                     data = data)
-#                 new_technique = self._add_data_dependent(
-#                     technique = technique,
-#                     data = data)
-#                 new_techniques.append(self._add_parameters_to_algorithm(
-#                     technique = technique))
-#         manuscript.techniques = new_techniques
-#         return manuscript
-
-#     def _add_conditionals(self,
-#             manuscript: 'outer_plan',
-#             technique: technique,
-#             data: Union['Dataset', 'outer_plan']) -> technique:
-#         """Adds any conditional parameters to a technique instance.
-
-#         Args:
-#             manuscript ('outer_plan'): outer_Plan instance with algorithms to create to 'data'.
-#             technique (technique): instance with parameters which can take
-#                 new conditional parameters.
-#             data (Union['Dataset', 'outer_plan']): a data source which might
-#                 contain information for condtional parameters.
-
-#         Returns:
-#             technique: instance with any conditional parameters added.
-
-#         """
-#         try:
-#             if technique is not None:
-#                 return getattr(manuscript, '_'.join(
-#                     ['_add', technique.name, 'conditionals']))(
-#                         technique = technique,
-#                         data = data)
-#         except AttributeError:
-#             return technique
-
-#     def _add_data_dependent(self,
-#             technique: technique,
-#             data: Union['Dataset', 'outer_plan']) -> technique:
-#         """Completes parameter dictionary by adding data dependent parameters.
-
-#         Args:
-#             technique (technique): instance with information about data
-#                 dependent parameters to add.
-#             data (Union['Dataset', 'outer_plan']): a data source which contains
-#                 'data_dependent' variables.
-
-#         Returns:
-#             technique: with any data dependent parameters added.
-
-#         """
-#         if technique is not None and technique.data_dependent is not None:
-
-#             for key, value in technique.data_dependent.items():
-#                 try:
-#                     technique.parameters.update({key: getattr(data, value)})
-#                 except KeyError:
-#                     print('no matching parameter found for', key, 'in data')
-#         return technique
-
-#     def _add_parameters_to_algorithm(self,
-#             technique: technique) -> technique:
-#         """Instances 'algorithm' with 'parameters' in technique.
-
-#         Args:
-#             technique (technique): with completed 'algorith' and 'parameters'.
-
-#         Returns:
-#             technique: with 'algorithm' instanced with 'parameters'.
-
-#         """
-#         if technique is not None:
-#             try:
-#                 technique.algorithm = technique.algorithm(
-#                     **technique.parameters)
-#             except AttributeError:
-#                 try:
-#                     technique.algorithm = technique.algorithm(
-#                         technique.parameters)
-#                 except AttributeError:
-#                     technique.algorithm = technique.algorithm()
-#             except TypeError:
-#                 try:
-#                     technique.algorithm = technique.algorithm()
-#                 except TypeError:
-#                     pass
-#         return technique
-
-
-# @dataclasses.dataclass
-# class Scholar(sourdough.Technique):
-#     """Base class for createing technique instances to data.
-
-#     Args:
-#         name (str): designates the name of the class instance used
-#             for internal referencing throughout sourdough. If the class instance
-#             needs settings from the shared Settings instance, 'name' should
-#             match the appropriate section name in that Settings instance. When
-#             subclassing, it is a good settings to use the same 'name' attribute
-#             as the base class for effective coordination between sourdough
-#             classes. Defaults to None or __class__.__name__.lower().
-#         Settings (Settings]): shared manager settings settings.
-#         instructions (Instructions]): an instance with information to
-#             create and create the essential components of a sourdough.Creator. Defaults to
-#             None.
-
-#     """
-#     name: str = None
-#     instructions: Instructions] = None
-#     Settings: sourdough.Settings] = None
-
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         self = self.project.settings.create(instance = self)
-#         return self
-
-#     """ Private Methods """
-
-#     def _create_inner_plan(self,
-#             outer_plan: 'outer_plan',
-#             data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
-#         """Applies 'inner_plan' in 'outer_plan' instance in 'manager' to 'data'.
-
-#         Args:
-#             outer_plan ('outer_plan'): instance with stored 'inner_plan' instances.
-#             data ('Dataset'): primary instance used by 'manager'.
-
-#         Returns:
-#             'outer_plan': with modifications made and/or 'data' incorporated.
-
-#         """
-#         new_inner_plan = []
-#         for i, inner_plan in enumerate(outer_plan.inner_plan):
-#             if self.verbose:
-#                 print('Applying', inner_plan.name, str(i + 1), 'to', data.name)
-#             new_inner_plan.append(self._create_techniques(
-#                 manuscript = inner_plan,
-#                 data = data))
-#         outer_plan.inner_plan = new_inner_plan
-#         return outer_plan
-
-#     def _create_techniques(self,
-#             manuscript: Union['outer_plan', 'inner_plan'],
-#             data: Union['Dataset', 'outer_plan']) -> Union['outer_plan', 'inner_plan']:
-#         """Applies 'techniques' in 'manuscript' to 'data'.
-
-#         Args:
-#             manuscript (Union['outer_plan', 'inner_plan']): instance with stored
-#                 'techniques'.
-#             data ('Dataset'): primary instance used by 'manuscript'.
-
-#         Returns:
-#             Union['outer_plan', 'inner_plan']: with modifications made and/or 'data'
-#                 incorporated.
-
-#         """
-#         for technique in manuscript.techniques:
-#             if self.verbose:
-#                 print('Applying', technique.name, 'to', data.name)
-#             if isinstance(data, Dataset):
-#                 data = technique.create(data = data)
-#             else:
-#                 for inner_plan in data.inner_plan:
-#                     manuscript.inner_plan.append(technique.create(data = inner_plan))
-#         if isinstance(data, Dataset):
-#             setattr(manuscript, 'data', data)
-#         return manuscript
-
-#     """ Core sourdough Methods """
-
-#     def create(self, outer_plan: 'outer_plan', data: Union['Dataset', 'outer_plan']) -> 'outer_plan':
-#         """Applies 'outer_plan' instance in 'manager' to 'data' or other stored outer_plan.
-
-#         Args:
-#             outer_plan ('outer_plan'): instance with stored technique instances (either
-#                 stored in the 'techniques' or 'inner_plan' attributes).
-#             data ([Union['Dataset', 'outer_plan']): a data source with information to
-#                 finalize 'parameters' for each technique instance in 'outer_plan'
-
-#         Returns:
-#             'outer_plan': with 'parameters' for each technique instance finalized
-#                 and connected to 'algorithm'.
-
-#         """
-#         if hasattr(outer_plan, 'techniques'):
-#             outer_plan = self._create_techniques(manuscript = outer_plan, data = data)
-#         else:
-#             outer_plan = self._create_inner_plan(outer_plan = outer_plan, data = data)
-#         return outer_plan
+    """ Private Methods """
+        
+    def _get_data_dependent(self,
+            component: 'sourdough.Component') -> 'sourdough.Component':
+        """Gets parameters that are derived from data.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        if isinstance(component, sourdough.Task):
+            component.technique = self._add_data_dependent(
+                technique = component.technique)
+        elif isinstance(component, sourdough.Technique):
+            component = self._add_data_dependent(technique = component)
+        return component
+
+    def _add_data_dependent(self,
+            technique: 'sourdough.Technique') -> 'sourdough.Technique':
+        """Adds parameters that are derived from data.
+
+        Args:
+            technique (technique): an instance for parameters to be added to.
+
+        Returns:
+            technique: instance with parameters added.
+
+        """
+        try:
+            for key, value in technique.data_dependent.items():
+                try:
+                    technique.parameters.update(
+                        {key: getattr(self.project.data, value)})
+                except KeyError:
+                    print('no matching parameter found for', key, 'in data')
+        except (AttributeError, TypeError):
+            pass
+        return technique
+    

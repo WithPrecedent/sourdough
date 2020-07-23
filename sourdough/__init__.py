@@ -32,15 +32,13 @@ from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import ProxyMixin
 from sourdough.base.mixins import OptionsMixin
+from sourdough.base.mixins import LoaderMixin
 
 # Imports for sourdough projects
 from sourdough.project.filer import Filer
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
 from sourdough.project.creators import Reader
-from sourdough.project.structures import Structure
-from sourdough.project.structures import Graph
-from sourdough.project.structures import Tree
 from sourdough.project.project import Project
 
 
@@ -56,15 +54,14 @@ __all__ = [
     'Lexicon',
     'Catalog',
     'Plan',
+    'Settings',
     'LibraryMixin',
     'RegistryMixin',
     'ProxyMixin',
     'OptionsMixin',
+    'LoaderMixin',
     'Filer',
     'Author',
     'Publisher',
     'Reader',  
-    'Structure',
-    'Graph',
-    'Tree'
     'Project']

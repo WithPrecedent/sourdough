@@ -89,7 +89,7 @@ class Worker(sourdough.Action, sourdough.Plan):
         Sequence['sourdough.Action'], 
         str] = dataclasses.field(default_factory = list)
     name: str = None
-    design: str = dataclasses.field(default_factory = lambda: 'chained')
+    structure: str = dataclasses.field(default_factory = lambda: 'chained')
     
     """ Initialization Methods """
 
@@ -146,7 +146,24 @@ class Worker(sourdough.Action, sourdough.Plan):
             for action in self.__iter__():
                 data = action.perform(data = data)
             return data
-             
+    
+    def apply(self, tool: Callable, recursive: bool = True) -> None:
+        """
+        
+        """
+        new_contents = []
+        for item in self.__iter__():
+            if isinstance(item, sourdough.Plan):
+                if recursive:
+                    new_item = item.apply(tool = tool, recursive = True)
+                else:
+                    new_item = item
+            else:
+                new_item = tool(item)
+            new_contents.append(new_item)
+        self.contents = new_contents
+        return self
+               
     """ Properties """
     
     @property
@@ -180,7 +197,7 @@ class Worker(sourdough.Action, sourdough.Plan):
                 object.
                 
         """
-        return [isinstance(i, Task) for i in self._get_flattened()]
+        return [isinstance(i, sourdough.Task) for i in self._get_flattened()]
     
     @property    
     def techniques(self) -> Sequence['sourdough.Technique']:
@@ -191,7 +208,18 @@ class Worker(sourdough.Action, sourdough.Plan):
                 tree object.
                 
         """
-        return [isinstance(i, Technique) for i in self._get_flattened()]
+        return [
+            isinstance(i, sourdough.Technique) for i in self._get_flattened()]
+    
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable selected by structural settings."""
+        if isinstance(self.structure.iterator, str):
+            return getattr(self, self.structure.iterator)(
+                contents = self.contents)
+        else:
+            return self.structure.iterator(self.contents)
     
     """ Private Methods """
     
