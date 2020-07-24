@@ -21,60 +21,53 @@ import sourdough
 
 @dataclasses.dataclass
 class Filer(object):
-    """File and folder project for sourdough.
+    """File and folder management for sourdough.
 
     Creates and stores dynamic and static file paths, properly formats files
     for import and export, and provides methods for loading and saving
     sourdough, pandas, and numpy objects.
 
     Args:
-        settings (Settings): a Settings instance with a section named 'filer'
-            with file-management related settings.
-        root_folder (Union[str, Path, Sequence[str], Sequence[Path]]]): the
-            complete path from which the other paths and folders used by
-            FileProject should be created. Defaults to None. If not passed, the
-            parent folder of the parent folder of the current working directory
-            is used.
-        input_folder (Union[str, Path]]): the input_folder subfolder
+        settings (sourdough.Settings): a Settings instance, preferably with a 
+            section named 'filer' or 'files' with file-management related 
+            settings. If 'settings' does not have file configuration options or
+            if 'settings' is None, internal defaults will be used. Defaults to
+            None.
+        root_folder (Union[str, pathlib.Path]): the complete path from which the 
+            other paths and folders used by Filer are ordinarily derived 
+            (unless you decide to use full paths for all other options). 
+            Defaults to None. If not passed, the parent folder of the current 
+            working directory is used.
+        input_folder (Union[str, pathlib.Path]]): the input_folder subfolder 
             name or a complete path if the 'input_folder' is not off of
-            'root_folder'. Defaults to 'data'.
-        output_folder (Union[str, Path]]): the output_folder subfolder
-            name or a complete path if-*+ the 'output_folder' is not off of
-            'root_folder'. Defaults to 'output_folder'.
+            'root_folder'. Defaults to 'input'.
+        output_folder (Union[str, pathlib.Path]]): the output_folder subfolder
+            name or a complete path if the 'output_folder' is not off of
+            'root_folder'. Defaults to 'output'.
 
     """
-    settings: sourdough.Settings = None
+    settings: 'sourdough.Settings' = None
     root_folder: Union[
         str,
-        pathlib.Path,
-        Sequence[str],
-        Sequence[pathlib.Path]] = dataclasses.field(
-            default_factory = lambda: ['..', '..'])
-    input_folder: Union[str, pathlib.Path] = dataclasses.field(
-        default_factory = lambda: 'data')
-    output_folder: Union[str, pathlib.Path] = dataclasses.field(
-        default_factory = lambda: 'results')
+        pathlib.Path] = pathlib.Path('..')
+    input_folder: Union[str, pathlib.Path] = 'input'
+    output_folder: Union[str, pathlib.Path] = 'output'
     
     """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Injects attributes from 'settings'.
+        # Attempots to Inject attributes from 'settings'.
         try:
             self.settings.inject(
                 instance = self, 
-                other_sections = ['files', 'filer'])
-        except AttributeError:
+                additional = ['files', 'filer'])
+        except (AttributeError, TypeError):
             pass
         # Validates core folder paths and writes them to disk.
         self.root_folder = self.validate(path = self.root_folder)
-        self._write_folder(folder = self.root_folder)
-        self.input_folder = self.validate(
-            path = [self.root_folder, self.input_folder])
-        self._write_folder(folder = self.input_folder)
-        self.output_folder = self.validate(
-            path = [self.root_folder, self.output_folder])
-        self._write_folder(folder = self.output_folder)
+        self.input_folder = self._validate_io_folder(path = self.input_folder)
+        self.output_folder = self._validate_io_folder(path = self.output_folder)
         # Sets default file formats in a dictionary of FileFormat instances.
         self.file_formats = self._get_default_file_formats()
         # Gets default parameters for file transfers from 'settings'.
@@ -88,37 +81,45 @@ class Filer(object):
 
     """ Public Methods """
     
-    def validate(self,
-            path: Union[str, Sequence[str], pathlib.Path]) -> pathlib.Path:
-        """Turns 'file_path' into a pathlib.Path object.
+    def validate(self, 
+            path: Union[str, pathlib.Path],
+            test: bool = True,
+            create: bool = True) -> pathlib.Path:
+        """Turns 'file_path' into a pathlib.Path.
 
         Args:
-            path (Union[str, Sequence[str], pathlib.Path]): string, Path, or list
-                used to create final Path object.
+            path (Union[str, pathlib.Path]): str or Path to be validated. If
+                a str is passed, the method will see if an attribute matching
+                'path' exists and if that attribute contains a Path.
+            test (bool): whether to test if the path exists. Defaults to True.
+            create (bool): whether to create the folder path if 'test' is True,
+                but the folder does not exist. Defaults to True.
 
         Raises:
-            TypeError: if 'path' is neither a list, string, nor Path.
+            TypeError: if 'path' is neither a str nor Path.
+            FileNotFoundError: if the validated path does not exist and 'create'
+                is False.
 
         Returns:
-            Path: of 'path'.
+            pathlib.Path: derived from 'path'.
 
         """
-        if path is None:
-            path = ['..', '..']
-        if isinstance(path, list):
-            new_path = pathlib.Path()
-            for item in path:
-                new_path = new_path.joinpath(item)
-            return new_path
-        elif isinstance(path, str):
-            try:
-                return getattr(self, path)
-            except AttributeError:
-                return pathlib.Path(path)
+        if isinstance(path, str):
+            if (hasattr(self, path) 
+                    and isinstance(getattr(self, path), pathlib.Path)):
+                validated = getattr(self, path)
+            else:
+                validated = pathlib.Path(path)
         elif isinstance(path, pathlib.Path):
-            return path
+            validated = path
         else:
-            raise TypeError('path must be a str, list, or Path type')
+            raise TypeError(f'path must be a str or Path type')
+        if test and not validated.exists():
+            if create:
+                self._write_folder(folder = validated)
+            else:
+                raise FileNotFoundError(f'{validated} does not exist')
+        return validated
         
     def load(self,
             file_path: Union[str, pathlib.Path] = None,
@@ -141,7 +142,7 @@ class Filer(object):
             file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArgs: can be passed if additional options are desired specific
+            **kwargs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -149,7 +150,7 @@ class Filer(object):
                 variable of a supported type is returned.
 
         """
-        return loader.transfer(
+        return self.loader.transfer(
             file_path = file_path,
             folder = folder,
             file_name = file_name,
@@ -179,11 +180,11 @@ class Filer(object):
             file_format (Union[str, 'FileFormat']]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArgs: can be passed if additional options are desired specific
+            **kwargs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         """
-        saver.transfer(
+        self.saver.transfer(
             variable = variable,
             file_path = file_path,
             folder = folder,
@@ -224,6 +225,22 @@ class Filer(object):
 
     """ Private Methods """
 
+    def _validate_io_folder(self, 
+            path: Union[str, pathlib.Path]) -> pathlib.Path:
+        """[summary]
+
+        Args:
+            path (Union[str, pathlib.Path]): [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        try:
+            return self.validate(path = path, create = False)
+        except FileNotFoundError:
+            return self.validate(path = self.root_folder / path)
+                
     def _get_default_file_formats(self) -> Mapping[str, 'FileFormat']:
         """Returns supported file formats.
 
@@ -234,7 +251,7 @@ class Filer(object):
         return {
             'csv': FileFormat(
                 name = 'csv',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.csv',
                 load_method = 'read_csv',
                 save_method = 'to_csv',
@@ -247,7 +264,7 @@ class Filer(object):
                     'nrows': 'test_size'}),
             'excel': FileFormat(
                 name = 'excel',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.xlsx',
                 load_method = 'read_excel',
                 save_method = 'to_excel',
@@ -258,14 +275,14 @@ class Filer(object):
                     'nrows': 'test_size'}),
             'feather': FileFormat(
                 name = 'feather',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.feather',
                 load_method = 'read_feather',
                 save_method = 'to_feather',
                 required_parameters = {'nthreads': -1}),
             'hdf': FileFormat(
                 name = 'hdf',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.hdf',
                 load_method = 'read_hdf',
                 save_method = 'to_hdf',
@@ -274,7 +291,7 @@ class Filer(object):
                     'chunksize': 'test_size'}),
             'json': FileFormat(
                 name = 'json',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.json',
                 load_method = 'read_json',
                 save_method = 'to_json',
@@ -284,26 +301,28 @@ class Filer(object):
                     'chunksize': 'test_size'}),
             'stata': FileFormat(
                 name = 'stata',
-                module = 'pandas',
+                modules =  'pandas',
                 extension = '.dta',
                 load_method = 'read_stata',
                 save_method = 'to_stata',
                 shared_parameters = {'chunksize': 'test_size'}),
             'text': FileFormat(
                 name = 'text',
-                module = None,
+                modules =  None,
                 extension = '.txt',
                 load_method = '_import_text',
                 save_method = '_export_text'),
             'png': FileFormat(
                 name = 'png',
-                module = 'seaborn',
+                modules =  'seaborn',
                 extension = '.png',
                 save_method = 'save_fig',
-                required_parameters = {'bbox_inches': 'tight', 'format': 'png'}),
+                required_parameters = {
+                    'bbox_inches': 'tight', 
+                    'format': 'png'}),
             'pickle': FileFormat(
                 name = 'pickle',
-                module = None,
+                modules =  None,
                 extension = '.pickle',
                 load_method = '_pickle_object',
                 save_method = '_unpickle_object')}
@@ -380,7 +399,7 @@ class Distributor(abc.ABC):
 
     def _check_required_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArgs: Mapping[str, Any]) -> Mapping[str, Any]:
+            passed_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
         """Adds requited parameters if not passed.
 
         Args:
@@ -395,13 +414,13 @@ class Distributor(abc.ABC):
         new_kwargs = passed_kwargs
         if file_format.required_parameters:
             for key, value in file_format.required_parameters:
-                if value not in new_kwArgs:
+                if value not in new_kwargs:
                     new_kwargs[key] = value
         return new_kwargs
 
     def _check_shared_parameters(self,
             file_format: 'FileFormat',
-            passed_kwArgs: Mapping[str, Any]) -> Mapping[str, Any]:
+            passed_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
         """Selects kwargs for particular methods.
 
         If a needed argument was not passed, default values are used.
@@ -453,7 +472,7 @@ class Distributor(abc.ABC):
         Args:
             file_format (FileFormat): an instance with information about the
                 needed and optional parameters.
-            kwArgs: additional parameters to pass to an input/output method.
+            kwargs: additional parameters to pass to an input/output method.
 
         Returns:
             Mapping[str, Any]: parameters to be passed to an input/output method.
@@ -471,9 +490,9 @@ class Distributor(abc.ABC):
             file_path: Union[str, pathlib.Path],
             folder: Union[str, pathlib.Path],
             file_name: str,
-            file_format: Union[str, 'FileFormat']) -> Sequence[
+            file_format: Union[str, 'FileFormat']) -> Sequence[Union[
                 pathlib.Path,
-                'FileFormat']:
+                'FileFormat']]:
         """Prepares file path related arguments for loading or saving a file.
 
         Args:
@@ -484,7 +503,7 @@ class Distributor(abc.ABC):
             file_format (Union[str, FileFormat]): object with information about
                 how the file should be loaded or the key to such an object
                 stored in 'filer'.
-            **kwArgs: can be passed if additional options are desired specific
+            **kwargs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -544,7 +563,7 @@ class FileLoader(Distributor):
             file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArgs: can be passed if additional options are desired specific
+            **kwargs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         Returns:
@@ -606,7 +625,7 @@ class FileSaver(Distributor):
             file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
-            **kwArgs: can be passed if additional options are desired specific
+            **kwargs: can be passed if additional options are desired specific
                 to the pandas or python method used internally.
 
         """
@@ -624,7 +643,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.base.LazyLoader):
+class FileFormat(sourdough.LoaderMixin, sourdough.Component):
     """File format information.
 
     Args:
@@ -654,8 +673,9 @@ class FileFormat(sourdough.base.LazyLoader):
     """
 
     name: str = None
-    module: str = dataclasses.field(
-        default_factory = lambda: 'sourdough')
+    modules: str = 'sourdough'
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict())
     extension: str = None
     load_method: str = None
     save_method: str = None

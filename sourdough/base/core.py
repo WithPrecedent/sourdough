@@ -219,10 +219,12 @@ class Plan(Component, collections.abc.MutableSequence):
         
         """
         if (isinstance(contents, Sequence) 
-                and all(isinstance(c, Component) for c in contents)):
+            and (all(isinstance(c, Component) for c in contents)
+                or all(issubclass(c, Component) for c in contents))):
             return contents
         elif (isinstance(contents, Mapping)
-                and all(isinstance(c, Component) for c in contents.values())):
+            and (all(isinstance(c, Component) for c in contents.values())
+                or all(issubclass(c, Component) for c in contents.values()))):
             return list(contents.values())
         elif isinstance(contents, Component):
             return [contents]
@@ -764,11 +766,13 @@ class Catalog(Creator, Lexicon):
         """
         if isinstance(contents, sourdough.Component):
             return {contents.get_name(): contents}
-        elif (isinstance(contents, Mapping) 
-                and all(isinstance(v, Component) for v in contents.values())):
+        elif (isinstance(contents, Mapping)
+            and (all(isinstance(v, Component) for v in contents.values())
+                or all(issubclass(v, Component) for v in contents.values()))):
             return contents
         elif (isinstance(contents, Sequence)
-                and all(isinstance(i, Component) for i in contents)):
+            and (all(isinstance(i, Component) for c in contents)
+                or all(issubclass(i, Component) for c in contents))):
             new_contents = {}
             for component in contents:
                 new_contents[component.get_name()] = component

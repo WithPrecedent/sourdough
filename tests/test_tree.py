@@ -6,17 +6,38 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 
 import dataclasses
+import pathlib
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Project(sourdough.Project):
+class AComponent(
+    sourdough.RegistryMixin,
+    sourdough.LibraryMixin,
+    sourdough.Component):
     pass
 
 
-def test_tree():
+@dataclasses.dataclass
+class OtherComponent(AComponent):
+    pass
 
+
+@dataclasses.dataclass
+class AnotherComponent(sourdough.OptionsMixin, sourdough.Component):
+    
+    options = sourdough.Catalog(contents = {
+        'base': AComponent(),
+        'other': OtherComponent()})
+
+
+def test_tree():
+    project = sourdough.Project(
+        name = 'awesome_project',
+        settings = pathlib.Path('tests') / 'composite_settings.py',
+        structure = 'comparative',
+        automatic = False)
     return
 
 

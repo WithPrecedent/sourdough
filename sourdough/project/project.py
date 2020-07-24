@@ -145,10 +145,10 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             Sequence[sourdough.Creator]: a list with Creator subclass instances.
                   
         """
-        if all(isinstance(c, sourdough.Creator) for c in contents):
+        if all(issubclass(c, sourdough.Creator) for c in contents):
             return contents
         else:       
-            raise TypeError(f'{stage} must be a str or Creator type')
+            raise TypeError(f'contents must only contain Creator subclasses')
                  
     def advance(self, stage: str = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
