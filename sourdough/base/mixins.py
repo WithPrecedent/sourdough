@@ -427,8 +427,8 @@ class LoaderMixin(abc.ABC):
             thing = None
             for module in sourdough.utilities.listify(self.modules):
                 try:
-                    thing = getattr(
-                        importlib.import_module(module), getattr(self, key))
+                    imported = importlib.import_module(module)
+                    thing = getattr(imported, key)
                     break
                 except (ImportError, AttributeError):
                     pass

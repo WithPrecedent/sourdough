@@ -47,9 +47,7 @@ class Filer(object):
 
     """
     settings: 'sourdough.Settings' = None
-    root_folder: Union[
-        str,
-        pathlib.Path] = pathlib.Path('..')
+    root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
     
@@ -65,6 +63,7 @@ class Filer(object):
         except (AttributeError, TypeError):
             pass
         # Validates core folder paths and writes them to disk.
+        self.root_folder = self.root_folder or pathlib.Path('..')
         self.root_folder = self.validate(path = self.root_folder)
         self.input_folder = self._validate_io_folder(path = self.input_folder)
         self.output_folder = self._validate_io_folder(path = self.output_folder)

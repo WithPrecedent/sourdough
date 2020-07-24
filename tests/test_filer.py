@@ -12,12 +12,12 @@ import sourdough
 
 
 def test_filer():
-    settings = sourdough.Settings(contents = 'tests\ini_settings.ini')
+    settings = sourdough.Settings(
+        contents = pathlib.Path('tests') / 'ini_settings.ini')
     filer = sourdough.Filer(settings = settings)
-    # Tests default folders.
-    assert str(filer.root_folder) == '..\..'
-    assert str(filer.input_folder) == '..\..\data'
     # Tests injection from settings.
+    assert str(filer.root_folder) == '..'
+    assert str(filer.input_folder) == '../input'
     assert filer.file_encoding == 'windows-1252'
     return
 

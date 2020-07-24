@@ -1,9 +1,14 @@
 """
-.. module:: utilities
-:synopsis: sourdough tools and decorators
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
+utilities: sourdough utility functions and decorators
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+Contents:
+    decorators: class, method, and function decorators.
+    memory: classes and functions for conserving system memory.
+    tools: assorted functions for making basic tasks easier.
+
 """
 
 from .tools import listify

@@ -10,4 +10,10 @@ Contents:
 
 """
 
-settings = {'general': {'verbose': True}}
+settings = {
+    'general': {'verbose': True},
+    'files': {
+        'source_format': 'csv',
+        'interim_format': 'csv',
+        'final_format': 'csv',
+        'file_encoding': 'windows-1252'}}

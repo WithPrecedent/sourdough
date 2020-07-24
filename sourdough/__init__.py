@@ -1,9 +1,20 @@
 """
-.. module:: sourdough
-:synopsis: get a head start on python managers
-:author: Corey Rayburn Yung
-:copyright: 2020
-:license: Apache-2.0
+sourdough: getting a head start on python projects
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+Contents:
+    base: core structural classes and mixins.
+    configuration: classes related to configuration options and file management.
+    project: classes applying 'base' to composite object projects.
+    utilities: classes and functions that make complex and commmon tasks easier.
+
+In general, python files in sourdough are over-documented to allow beginning
+programmers to understand basic design choices that were made. If there is any
+area of the documentation that could be made clearer, please don't hesitate
+to email me - I want to ensure the package is as accessible as possible.
+
 """
 
 """ 
@@ -13,30 +24,32 @@ second-level access.
 For example:
 
     Instead of acccesing Component via sourdough.base.core.Component,
-    you can just use: sourdough.base.Component
+    you can just use: sourdough.Component
     
 """
 
-# Functions and decorators for use in sourdough.
+# Imports of functions and decorators for use throughout sourdough.
 from sourdough import utilities
 
-# Core base class imports
+# Imports of core base classes and compatible mixins.
 from sourdough.base.core import Component
 from sourdough.base.core import Action
 from sourdough.base.core import Creator
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
 from sourdough.base.core import Plan
-from sourdough.base.settings import Settings
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import ProxyMixin
 from sourdough.base.mixins import OptionsMixin
 from sourdough.base.mixins import LoaderMixin
 
-# Imports for sourdough projects
-from sourdough.project.filer import Filer
-from sourdough.project import defaults
+# Imports of configuration and file management classes.
+from sourdough.configuration import defaults
+from sourdough.configuration.settings import Settings
+from sourdough.configuration.filer import Filer
+
+# Imports for sourdough projects.
 from sourdough.project import structures
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
@@ -56,14 +69,14 @@ __all__ = [
     'Lexicon',
     'Catalog',
     'Plan',
-    'Settings',
     'LibraryMixin',
     'RegistryMixin',
     'ProxyMixin',
     'OptionsMixin',
     'LoaderMixin',
-    'Filer',
     'defaults',
+    'Settings',
+    'Filer',
     'structures',
     'Author',
     'Publisher',

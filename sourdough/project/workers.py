@@ -96,6 +96,7 @@ class Worker(sourdough.Action, sourdough.Plan):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         super().__post_init__()
+        print('test worker name', self.name, self.__class__)
         # Converts str in 'contents' to objects.
         self.contents = self.validate(contents = self.contents)
 
@@ -116,6 +117,7 @@ class Worker(sourdough.Action, sourdough.Plan):
             
         """
         new_contents = []
+        print('test contents', contents)
         for task in contents:
             if isinstance(task, str):
                 try:

@@ -11,6 +11,7 @@ Contents:
 """
 import dataclasses
 import pathlib
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import warnings
 
@@ -92,6 +93,7 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
     structure: str = dataclasses.field(default_factory = 'chained')
     automatic: bool = True
+    data: object = None
     structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
             'chained': sourdough.structures.Chained, 
@@ -117,8 +119,8 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
-        # Initializes or validates a composite Plan instance.
-        self.plan = self.structures[self.structure](name = self.name)
+        # Initializes a composite Plan subclass instance.
+        self.plan = self._initialize_plan(structure = self.structure)
         # Initializes Creator instances stored in 'contents'.
         self.contents = self._initialize_creators(contents = self.contents)
         # Sets current 'stage' and 'index' for that 'stage'.
@@ -226,7 +228,30 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             return getattr(self.contents[self.index], 'create')
         else:
             raise StopIteration()
-     
+
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        try:
+            return textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                structure: {self.structure}
+                automatic: {self.automatic}
+                stage: {self.stage}
+                plan: {self.plan}''')
+        except AttributeError:
+            return textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                structure: {self.structure}
+                automatic: {self.automatic}
+                stage: {self.stage}''')   
+        
     """ Private Methods """
 
     def _initialize_creators(self, 
@@ -251,7 +276,39 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
                 else:
                     raise TypeError(f'{creator} is not a Creator type')
         return new_contents   
-                     
+    
+    def _initialize_plan(self, 
+            structure: Union[
+                str, 
+                sourdough.structures.Structure]) -> sourdough.Plan:
+        """Instances a Plan subclass based upon 'structure'.
+        
+        Args:
+            structure (Union[str, sourdough.structures.Structure]): str matching
+                a key in 'structures' or a subclass of Structure.
+        
+        Returns:
+            sourdough.Plan: an instance created based upon 'structure'.
+        
+        """
+        structure = self._initialize_structure(structure = structure)
+        # Lazily imports needed classes for Plan construction.    
+        for key, value in structure.components.items():
+            structure.load(value)
+        return structure.load(structure.components['root'])(
+            name = self.name, 
+            data = self.data)
+        
+    def _initialize_structure(self, 
+            structure: Union[
+                str, 
+                sourdough.structures.Structure]) -> (
+                    sourdough.structures.Structure): 
+        if isinstance(structure, str):
+            return self.structures[structure]()
+        else:
+            return structure()
+                          
     def _auto_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """Automatically advances through and iterates stored Creator instances.
 
@@ -265,5 +322,5 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             
         """
         for stage in self.contents:
-            self.iterate(plan = plan)
+            plan = self.iterate(plan = plan)
         return plan

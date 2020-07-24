@@ -8,13 +8,13 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workers': ['parser', 'munger'],
-        'manager_structure': 'chained'},
+        'cool_project_structure': 'chained'},
     'parser': {
-        'parser_tasks': ['divider'],
+        'parser_tasks': ['divide'],
         'parser_structure': 'comparative',
-        'divider_techniques': ['slice', 'dice']},
+        'divide_techniques': ['slice', 'dice']},
     'munger': {
-        'munger_tasks': ['searcher', 'destroyer'],
-        'searcher_techniques': ['find', 'locate'],
-        'destroyer_techniques': ['explode', 'annihilate']},
-    'divider_parameters': {'replace_strings': True}}
+        'munger_tasks': ['search', 'destroy'],
+        'search_techniques': ['find', 'locate'],
+        'destroy_techniques': ['explode', 'annihilate']},
+    'divide_parameters': {'replace_strings': True}}

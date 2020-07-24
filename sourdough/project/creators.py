@@ -43,28 +43,33 @@ class Author(sourdough.Creator):
                 
         """
         attributes = {}
+        print('test plan', plan)
         # Finds and sets the 'structure' of 'plan'.
-        design = self.project.settings[plan.name][f'{plan.name}_structure']
-        plan.structure = self.project.structures[design]()
+        plan.structure = self._get_structure(name = plan.name)
         # Iterates through appropriate settings to create 'contents' of 'plan'.
         for key, value in self.project.settings[plan.name].items():
             # Finds settings that have suffixes matching keys in the 
             # 'components' of 'structure' of 'plan'.
             if any(key.endswith(s) for s in plan.structure.components.keys()):
                 for item in sourdough.utilities.listify(value):
+                    print('test key, item', key, item)
                     # Checks if special prebuilt instance exists.
                     try:
-                        thing = self.project.options[item]
+                        component = self.project.options[item]
+                        print('test try component', component)
                     # Otherwise uses the appropriate generic type.
                     except KeyError:
+                        print('yes key error')
                         suffix = key.split('_')[:-1]
                         name = plan.structure.components[suffix]
-                        thing = plan.stucture.load(name)(name = item)
-                    # Recursively calls the 'create' method if the 'thing' 
+                        component = plan.stucture.load(name)(name = item)
+                    component = self._instance_component(component = component)
+                    # Recursively calls the 'create' method if the 'component' 
                     # created is a Plan type.
-                    if isinstance(thing, sourdough.Plan):
-                        thing = self.create(plan = thing)
-                    plan.add(thing)
+                    if isinstance(component, sourdough.Plan):
+                        component = self.create(plan = component)
+                    print('test component', component)
+                    plan.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_structure'):
                 attributes[key] = value
@@ -73,7 +78,22 @@ class Author(sourdough.Creator):
             setattr(plan, key, value)
         return plan          
 
-
+    """ Private Methods """
+    
+    def _get_structure(self, name: str) -> sourdough.structures.Structure: 
+        try:
+            design = self.project.settings[name][f'{name}_structure']
+        except KeyError:
+            design = self.project.structure
+        return self.project._initialize_structure(structure = design)    
+    
+    def _instance_component(self, 
+            component: sourdough.Component) -> sourdough.Component:
+        try:
+            return component()
+        except TypeError:
+            return component
+        
 @dataclasses.dataclass
 class Publisher(sourdough.Creator):
     """Finalizes a composite object from user settings.
