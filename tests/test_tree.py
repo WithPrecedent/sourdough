@@ -27,7 +27,6 @@ class Search(sourdough.project.actions.Task):
         return   
 
 
-
 def test_tree():
     sourdough.Project.options.add(Parser)
     sourdough.Project.options.add(Search)

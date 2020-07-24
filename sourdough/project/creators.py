@@ -14,6 +14,7 @@ Contents:
 
 """
 import dataclasses
+import inspect
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -43,7 +44,6 @@ class Author(sourdough.Creator):
                 
         """
         attributes = {}
-        print('test plan', plan)
         # Finds and sets the 'structure' of 'plan'.
         plan.structure = self._get_structure(name = plan.name)
         # Iterates through appropriate settings to create 'contents' of 'plan'.
@@ -52,23 +52,20 @@ class Author(sourdough.Creator):
             # 'components' of 'structure' of 'plan'.
             if any(key.endswith(s) for s in plan.structure.components.keys()):
                 for item in sourdough.utilities.listify(value):
-                    print('test key, item', key, item)
                     # Checks if special prebuilt instance exists.
                     try:
                         component = self.project.options[item]
-                        print('test try component', component)
                     # Otherwise uses the appropriate generic type.
                     except KeyError:
-                        print('yes key error')
-                        suffix = key.split('_')[:-1]
+                        print('test key', key)
+                        suffix = key.split('_')[-1]
                         name = plan.structure.components[suffix]
-                        component = plan.stucture.load(name)(name = item)
+                        component = plan.structure.load(name)(name = item)
                     component = self._instance_component(component = component)
                     # Recursively calls the 'create' method if the 'component' 
                     # created is a Plan type.
                     if isinstance(component, sourdough.Plan):
                         component = self.create(plan = component)
-                    print('test component', component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_structure'):

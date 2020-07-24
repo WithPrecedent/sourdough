@@ -96,37 +96,38 @@ class Worker(sourdough.Action, sourdough.Plan):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         super().__post_init__()
-        print('test worker name', self.name, self.__class__)
         # Converts str in 'contents' to objects.
         self.contents = self.validate(contents = self.contents)
 
     """ Public Methods """
     
-    def validate(self, 
-            contents: Union[
-                Sequence['sourdough.Action'], 
-                str]) -> Sequence['sourdough.Action']:
-        """Converts all str in 'contents' to 'Action' instances.
+    # def validate(self, 
+    #         contents: Union[
+    #             'sourdough.Action',
+    #             Sequence['sourdough.Action']]) -> Sequence['sourdough.Action']:
+    #     """Converts all str in 'contents' to 'Action' instances.
         
-        Args:
-            contents (Union[Sequence[sourdough.Action], str]): Action subclass
-                instances or str corresponding to keys in 'options'.
+    #     Args:
+    #         contents (Union[sourdough.Action, Sequence[sourdough.Action]]): 
+    #             Action subclass instance(s).
                 
-        Returns:
-            Sequence[sourdough.Action]: a list of all Action subclass instances.
+    #     Returns:
+    #         Sequence[sourdough.Action]: a list of all Action subclass instances.
             
-        """
-        new_contents = []
-        print('test contents', contents)
-        for task in contents:
-            if isinstance(task, str):
-                try:
-                    new_contents.append[self.options[task]]
-                except KeyError:
-                    new_contents.append[task]
-            else:
-                new_contents.append[task]
-        return new_contents
+    #     """
+    #     new_contents = []
+    #     if isinstance(contents, Sequence):
+    #         for task in contents:
+    #             if isinstance(task, str):
+    #                 try:
+    #                     new_contents.append(self.options[task])
+    #                 except KeyError:
+    #                     new_contents.append(task)
+    #             else:
+    #                 new_contents.append(task)
+    #     elif isinstance(contents, sourdough.Action):
+            
+    #     return new_contents
         
     def perform(self, data: object = None) -> object:
         """Applies stored Action instances to 'data'.

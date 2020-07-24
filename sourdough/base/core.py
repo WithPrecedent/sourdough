@@ -62,7 +62,6 @@ class Component(abc.ABC):
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
         self.name: str = self.name or self.get_name()
-        print('test component name', self.name, self.__class__)
 
     """ Class Methods """
 
@@ -83,9 +82,9 @@ class Component(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        if inspect.isclass(cls):
+        if issubclass(cls, sourdough.Component):
             return sourdough.utilities.snakify(cls.__name__)
-        elif isinstance(cls, cls.__class__):
+        elif isinstance(cls, sourdough.Component):
             return cls.name
         else:
             return sourdough.utilities.snakify(cls.__class__.__name__)
@@ -194,6 +193,7 @@ class Plan(Component, collections.abc.MutableSequence):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
+        super().__post_init__()
         # Validates 'contents' or converts it to appropriate iterable.
         self.contents = self.validate(contents = self.contents)  
 
@@ -247,7 +247,7 @@ class Plan(Component, collections.abc.MutableSequence):
 
         """
         contents = self.validate(contents = contents)
-        self.append(contents = contents)
+        self.append(contents)
         return self    
 
     def append(self, component: 'Component') -> None:
@@ -261,7 +261,7 @@ class Plan(Component, collections.abc.MutableSequence):
             TypeError: if 'component' does not have a name attribute.
             
         """
-        if hasattr(component, 'name'):
+        if isinstance(component, Component):
             self.contents.append(component)
         else:
             raise TypeError('component must have a name attribute')
@@ -278,7 +278,7 @@ class Plan(Component, collections.abc.MutableSequence):
             TypeError: if 'component' does not have a name attribute.
             
         """
-        if hasattr(component, 'name'):
+        if isinstance(component, Component):
             self.contents.extend(component)
         else:
             raise TypeError('component must have a name attribute')
@@ -295,7 +295,7 @@ class Plan(Component, collections.abc.MutableSequence):
             TypeError: if 'component' does not have a name attribute.
             
         """
-        if hasattr(component, 'name'):
+        if isinstance(component, Component):
             self.contents.insert[index] = component
         else:
             raise TypeError('component must have a name attribute')
