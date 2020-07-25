@@ -34,6 +34,7 @@ The sourdough tree structure emphasizes:
 
 import dataclasses
 import more_itertools
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -95,6 +96,7 @@ class Worker(sourdough.Action, sourdough.Plan):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
         super().__post_init__()
         print('test worker name', self.name, self.__class__)
         # Converts str in 'contents' to objects.
@@ -222,7 +224,29 @@ class Worker(sourdough.Action, sourdough.Plan):
                 contents = self.contents)
         else:
             return self.structure.iterator(self.contents)
-    
+
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        if hasattr(self.structure, 'name'):
+            return '\n'.join([textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                structure: {self.structure.name}
+                contents:'''),
+                f'''{textwrap.indent(str(self.contents), '    ')}'''])
+        else:
+            return '\n'.join([textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                structure: {self.structure}
+                contents:'''),
+                f'''{textwrap.indent(str(self.contents), '    ')}'''])
+            
     """ Private Methods """
     
     def _get_flattened(self) -> Sequence['sourdough.Action']:
@@ -309,7 +333,7 @@ class Manager(Worker):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls inherited initialization method.
+        # Calls parent initialization method(s).
         super().__post_init__()
         # Creates unique 'identification' based upon date and time if none 
         # exists.
@@ -333,4 +357,29 @@ class Manager(Worker):
         overview['tasks'] = [s.name for s in self.tasks]
         overview['techniques'] = [t.name for t in self.techniques]
         return overview
-    
+
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        if hasattr(self.structure, 'name'):
+            return '\n'.join([textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                identification: {self.identification}
+                data: {self.data is not None}
+                structure: {self.structure.name}
+                contents:'''),
+                f'''{textwrap.indent(str(self.contents), '    ')}'''])
+        else:
+            return '\n'.join([textwrap.dedent(f'''
+                sourdough {self.__class__.__name__}
+                name: {self.name}
+                identification: {self.identification}
+                data: {self.data is not None}
+                structure: {self.structure}
+                contents:'''),
+                f'''{textwrap.indent(str(self.contents), '    ')}'''])    

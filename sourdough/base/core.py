@@ -62,7 +62,6 @@ class Component(abc.ABC):
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
         self.name: str = self.name or self.get_name()
-        print('test component name', self.name, self.__class__)
 
     """ Class Methods """
 
@@ -83,7 +82,9 @@ class Component(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        if inspect.isclass(cls):
+        if hasattr(cls, 'name') and cls.name is not None:
+            return cls.name
+        elif inspect.isclass(cls):
             return sourdough.utilities.snakify(cls.__name__)
         elif isinstance(cls, cls.__class__):
             return cls.name
@@ -100,18 +101,28 @@ class Component(abc.ABC):
 
         """
         return self.__str__()
-    
+        
     def __str__(self) -> str:
         """Returns default string representation of an instance.
-
+        
         Returns:
             str: default string representation of an instance.
-
+            
         """
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}''') 
-        
+        new_line = '\n'
+        representation = [f'sourdough {self.__class__.__name__}']
+        for dataclass_field in dataclasses.fields(self):
+            name = dataclass_field.name
+            attribute = getattr(self, name)
+            if (isinstance(attribute, (Sequence, Mapping))
+                    and not isinstance(attribute, str)):
+                representation.append(
+                    f'''{name}:{new_line}{textwrap.indent(
+                        str(attribute), '    ')}''')
+            else:
+                representation.append(f'{name}: {str(attribute)}')
+        return new_line.join(representation)        
+
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
@@ -194,6 +205,8 @@ class Plan(Component, collections.abc.MutableSequence):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
         # Validates 'contents' or converts it to appropriate iterable.
         self.contents = self.validate(contents = self.contents)  
 
@@ -230,8 +243,9 @@ class Plan(Component, collections.abc.MutableSequence):
         elif isinstance(contents, Component):
             return [contents]
         else:
-            raise TypeError('contents must be a list of Components, dict with' 
-                            'Component values, or Component type')
+            raise TypeError(
+                'contents must be a list of Components, dict with' 
+                'Component values, or Component type')
 
     def add(self, 
             contents: Union[
@@ -451,31 +465,10 @@ class Plan(Component, collections.abc.MutableSequence):
         """
         self.add(other)
         return self
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-    
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            contents: {self.contents.__str__()}''') 
-
+        
  
 @dataclasses.dataclass
-class Creator(abc.ABC):
+class Creator(Component, abc.ABC):
     """Base class for stages of creation of sourdough objects.
     
     All subclasses must have 'create' methods. 
@@ -498,7 +491,7 @@ class Creator(abc.ABC):
 
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping):
+class Lexicon(Component, collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
 
     Lexicon subclasses can serve as drop in replacements for dicts with added
@@ -535,6 +528,8 @@ class Lexicon(collections.abc.MutableMapping):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()    
         # Validates 'contents' or converts it to appropriate iterable.
         self.contents = self.validate(contents = self.contents)  
         
@@ -666,17 +661,6 @@ class Lexicon(collections.abc.MutableMapping):
 
         """
         return self.__str__()
-    
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            contents: {self.contents.__str__()}''')     
 
 
 @dataclasses.dataclass
@@ -733,7 +717,7 @@ class Catalog(Creator, Lexicon):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Validates 'contents' or converts it to a dict.
+        # Calls parent initialization method(s).
         super().__post_init__()
         # Sets 'default' to all keys of 'contents', if not passed.
         self.defaults = self.defaults or 'all'
@@ -899,18 +883,6 @@ class Catalog(Creator, Lexicon):
             i: self.contents[i]
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
-
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-        
-        Returns:
-            str: default string representation of an instance.
-            
-        """
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            contents: {self.contents.__str__()}
-            defaults: {self.defaults.__str__()}''')
 
 
 """ 

@@ -27,7 +27,7 @@ class Author(sourdough.Creator):
         project (sourdough.Project): the related Project instance.
     
     """
-    project: 'sourdough.Project' 
+    project: 'sourdough.Project' = None  
     
     """ Public Methods """
     
@@ -43,7 +43,6 @@ class Author(sourdough.Creator):
                 
         """
         attributes = {}
-        print('test plan', plan)
         # Finds and sets the 'structure' of 'plan'.
         plan.structure = self._get_structure(name = plan.name)
         # Iterates through appropriate settings to create 'contents' of 'plan'.
@@ -52,11 +51,9 @@ class Author(sourdough.Creator):
             # 'components' of 'structure' of 'plan'.
             if any(key.endswith(s) for s in plan.structure.components.keys()):
                 for item in sourdough.utilities.listify(value):
-                    print('test key, item', key, item)
                     # Checks if special prebuilt instance exists.
                     try:
                         component = self.project.options[item]
-                        print('test try component', component)
                     # Otherwise uses the appropriate generic type.
                     except KeyError:
                         print('yes key error')
@@ -68,7 +65,6 @@ class Author(sourdough.Creator):
                     # created is a Plan type.
                     if isinstance(component, sourdough.Plan):
                         component = self.create(plan = component)
-                    print('test component', component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_structure'):
@@ -102,7 +98,7 @@ class Publisher(sourdough.Creator):
         project (sourdough.Project): the related Project instance.
     
     """    
-    project: 'sourdough.Project'  
+    project: 'sourdough.Project' = None  
 
     """ Public Methods """
  
@@ -245,7 +241,7 @@ class Publisher(sourdough.Creator):
 @dataclasses.dataclass
 class Reader(sourdough.Creator):
     
-    project: 'sourdough.Project'  
+    project: 'sourdough.Project' = None  
     
     def create(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
         """[summary]

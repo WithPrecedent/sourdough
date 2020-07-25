@@ -22,6 +22,7 @@ import collections
 import copy
 import dataclasses
 import itertools
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -89,7 +90,7 @@ class Graph(sourdough.Plan, abc.ABC):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls inherited initialization method.
+        # Calls parent initialization method(s).
         super().__post_init__()
         # Converts 'contents' to the proper structure.
         if isinstance(self.edges, dict):
@@ -260,6 +261,30 @@ class Graph(sourdough.Plan, abc.ABC):
         """
         return iter(self.get_sorted(return_components = True))
     
+    def __repr__(self) -> str:
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return '\n'.join([textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            nodes:'''),
+            f'''{textwrap.indent(str(self.contents), '    ')}
+            edges:
+            {textwrap.indent(str(self.edges), '    ')}'''])   
+         
     """ Private Methods """
     
     def _topological_sort(self, 
@@ -393,9 +418,7 @@ class DAGraph(Graph):
         
     def get_sorted(self, 
             graph: 'sourdough.Worker' = None,
-            return_components: bool = False) -> Sequence[Union[
-                Component, 
-                'sourdough.Component']]:
+            return_components: bool = False) -> Sequence['sourdough.Component']:
         """Performs a topological sort on 'graph'.
         
         If 'graph' is not passed, the 'contents' attribute is used instead.

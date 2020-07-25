@@ -107,7 +107,7 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls inherited initialization method.
+        # Calls parent initialization method(s).
         super().__post_init__()
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
@@ -236,21 +236,44 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             str: default string representation of an instance.
 
         """
-        try:
+        if hasattr(self.structure, 'name'):
             return textwrap.dedent(f'''
                 sourdough {self.__class__.__name__}
                 name: {self.name}
-                structure: {self.structure}
                 automatic: {self.automatic}
-                stage: {self.stage}
-                plan: {self.plan}''')
-        except AttributeError:
+                data: {self.data is not None}
+                structure: {self.structure.name}
+                defaults:
+                {textwrap.indent(str(self.defaults), '    ')}
+                contents:
+                {textwrap.indent(str(self.contents), '    ')}
+                settings:
+                {textwrap.indent(str(self.settings), '    ')}
+                filer:
+                {textwrap.indent(str(self.filer), '    ')}
+                options:
+                {textwrap.indent(str(self.options), '    ')}
+                structures:
+                {textwrap.indent(str(self.structures), '    ')}''')
+        else:
             return textwrap.dedent(f'''
                 sourdough {self.__class__.__name__}
                 name: {self.name}
-                structure: {self.structure}
                 automatic: {self.automatic}
-                stage: {self.stage}''')   
+                data: {self.data is not None}
+                structure: {self.structure}
+                defaults:
+                {textwrap.indent(str(self.defaults), '    ')}
+                contents:
+                {textwrap.indent(str(self.contents), '    ')}
+                settings:
+                {textwrap.indent(str(self.settings), '    ')}
+                filer:
+                {textwrap.indent(str(self.filer), '    ')}
+                options:
+                {textwrap.indent(str(self.options), '    ')}
+                structures:
+                {textwrap.indent(str(self.structures), '    ')}''')
         
     """ Private Methods """
 

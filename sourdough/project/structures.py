@@ -12,6 +12,7 @@ Contents:
 import abc
 import dataclasses
 import itertools
+import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import more_itertools
@@ -37,6 +38,19 @@ class Structure(sourdough.LoaderMixin, sourdough.Component):
     _loaded: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: dict)
 
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            modules: {self.modules}
+            components: {self.components}
+            iterator: {self.iterator}''') 
 
 @dataclasses.dataclass
 class TreeStructure(Structure, abc.ABC):

@@ -66,7 +66,7 @@ class Settings(sourdough.Lexicon):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Validates 'contents' or converts it to a dict.
+        # Calls parent initialization method(s).
         super().__post_init__()
         # Infers types for values in 'contents', if the 'infer_types' option is 
         # selected.
@@ -221,6 +221,21 @@ class Settings(sourdough.Lexicon):
             pass
         return self
 
+    def __missing__(self, key: str) -> 'Settings':
+        """Automatically creates a nested Settings if 'key' is missing.
+        
+        This method implements autovivification.
+        
+        Args:
+            key (str): name of key sought in this instance.
+            
+        Returns:
+            Settings: a new, nested settings at 'key'.
+        
+        """
+        value = self[key] = type(self)(infer_types = False)
+        return value
+        
     """ Private Methods """
 
     def _load_from_ini(self, file_path: str) -> Mapping[str, Any]:

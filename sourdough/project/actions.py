@@ -75,15 +75,27 @@ class Technique(sourdough.Action):
     """ Dunder Methods """
 
     def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
+        """Returns '__str__' representation.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
         return self.__str__()
 
     def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__} {self.name}
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return '\n'.join([textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
             algorithm: {str(self.algorithm)}
-            parameters: {str(self.parameters)}''')
+            parameters:'''),
+            f'''{textwrap.indent(str(self.parameters), '    ')}'''])
         
             
 @dataclasses.dataclass
@@ -166,11 +178,23 @@ class Task(sourdough.Action, abc.ABC):
                  '{self.technique}')
 
     def __repr__(self) -> str:
-        """Returns string representation of a class instance."""
-        return self.__str__()
+        """Returns '__str__' representation.
 
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return self.__str__()
+    
     def __str__(self) -> str:
-        """Returns string representation of a class instance."""
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__} {self.name}
-            technique: {str(self.technique)}''')
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return '\n'.join([textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            technique:'''),
+            f'''{textwrap.indent(str(self.technique), '    ')}'''])
