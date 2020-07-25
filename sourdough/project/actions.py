@@ -99,7 +99,7 @@ class Technique(sourdough.Action):
         
             
 @dataclasses.dataclass
-class Task(sourdough.Action, abc.ABC):
+class Task(sourdough.Action):
     """Wrapper for a Technique.
 
     Subclasses of Task can store additional methods and attributes to apply to 
@@ -131,7 +131,6 @@ class Task(sourdough.Action, abc.ABC):
 
     """ Public Methods """
     
-    @abc.abstractmethod
     def perform(self, data: object = None, **kwargs) -> object:
         """Subclasses must provide their own methods.
         

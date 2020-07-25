@@ -14,6 +14,7 @@ Contents:
 
 """
 import dataclasses
+import inspect
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
@@ -56,10 +57,10 @@ class Author(sourdough.Creator):
                         component = self.project.options[item]
                     # Otherwise uses the appropriate generic type.
                     except KeyError:
-                        print('yes key error')
-                        suffix = key.split('_')[:-1]
+                        print('test key', key)
+                        suffix = key.split('_')[-1]
                         name = plan.structure.components[suffix]
-                        component = plan.stucture.load(name)(name = item)
+                        component = plan.structure.load(name)(name = item)
                     component = self._instance_component(component = component)
                     # Recursively calls the 'create' method if the 'component' 
                     # created is a Plan type.
