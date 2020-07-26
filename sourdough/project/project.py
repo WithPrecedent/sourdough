@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (OptionsMixin, Plan): iterable which contains the needed
+    Project (OptionsMixin, Inventory): iterable which contains the needed
         information and data for constructing and executing tree objects.
 
 """
@@ -19,20 +19,20 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Project(sourdough.OptionsMixin, sourdough.Plan):
+class Project(sourdough.OptionsMixin, sourdough.Inventory):
     """Constructs, organizes, and stores tree Workers and Actions.
     
-    A Project inherits all of the differences between a Plan and a python
+    A Project inherits all of the differences between a Inventory and a python
     list.
 
-    A Project differs from a Plan in 5 significant ways:
+    A Project differs from a Inventory in 5 significant ways:
         1) The Project is the public interface to composite object construction 
             and application. It may store the composite object instance(s) as 
             well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
         2) Project stores Creator subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Plan 
+            instances are used to assemble and apply the parts of Inventory 
             instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
@@ -76,7 +76,7 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
             components of a composite structure.
     
     Attributes:
-        plan (sourdough.Plan): the iterable composite object created by Project.
+        plan (sourdough.Inventory): the iterable composite object created by Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
         stage (str): name of the last stage that has been implemented. It is set
@@ -119,7 +119,7 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
-        # Initializes a composite Plan subclass instance.
+        # Initializes a composite Inventory subclass instance.
         self.plan = self._initialize_plan(structure = self.structure)
         # Initializes Creator instances stored in 'contents'.
         self.contents = self._initialize_creators(contents = self.contents)
@@ -183,18 +183,18 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         self.stage = new_stage
         return self
 
-    def iterate(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+    def iterate(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
         """Advances to next stage and applies that stage to 'plan'.
 
         Args:
-            plan (sourdough.Plan): instance to apply the next stage's methods 
+            plan (sourdough.Inventory): instance to apply the next stage's methods 
                 to.
                 
         Raises:
             IndexError: if this instance is already at the last stage.
 
         Returns:
-            sourdough.Plan: with the last stage applied.
+            sourdough.Inventory: with the last stage applied.
             
         """
         if self.index == len(self.contents) - 1:
@@ -303,19 +303,19 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
     def _initialize_plan(self, 
             structure: Union[
                 str, 
-                sourdough.structures.Structure]) -> sourdough.Plan:
-        """Instances a Plan subclass based upon 'structure'.
+                sourdough.structures.Structure]) -> sourdough.Inventory:
+        """Instances a Inventory subclass based upon 'structure'.
         
         Args:
             structure (Union[str, sourdough.structures.Structure]): str matching
                 a key in 'structures' or a subclass of Structure.
         
         Returns:
-            sourdough.Plan: an instance created based upon 'structure'.
+            sourdough.Inventory: an instance created based upon 'structure'.
         
         """
         structure = self._initialize_structure(structure = structure)
-        # Lazily imports needed classes for Plan construction.    
+        # Lazily imports needed classes for Inventory construction.    
         for key, value in structure.components.items():
             structure.load(value)
         return structure.load(structure.components['root'])(
@@ -332,15 +332,15 @@ class Project(sourdough.OptionsMixin, sourdough.Plan):
         else:
             return structure()
                           
-    def _auto_contents(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+    def _auto_contents(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
         """Automatically advances through and iterates stored Creator instances.
 
         Args:
-            plan (sourdough.Plan): an instance containing any data for the plan 
+            plan (sourdough.Inventory): an instance containing any data for the plan 
                 methods to be applied to.
                 
         Returns:
-            sourdough.Plan: modified by the stored Creator instance's 
+            sourdough.Inventory: modified by the stored Creator instance's 
                 'create' methods.
             
         """

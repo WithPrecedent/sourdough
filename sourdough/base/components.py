@@ -1,26 +1,30 @@
 """
-core: sourdough core base classes
+components: sourdough core base classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Component: abstract base class for composite objects.
+    Component: abstract base class for core sourdough objects.
     Action (Component): abstract base class for storing action methods. 
-        Subclasses must have a 'perform' method.
-    Plan (Component): iterable containing Action and Component instances 
-        with dict and list interfaces and methods.
-    Creator: abstract base class for constructing Action, Component, and
-        Plan instances. Subclasses must have a 'create' method.
-    Lexicon: sourdough drop-in replacement for dict with additional 
+        Action subclasses must have a 'perform' method.
+    Inventory (Component): iterable containing Component subclass instances 
+        with both dict and list interfaces and methods.
+    Creator (Component): abstract base class for constructing Component subclass 
+        instances. Creator subclasses must have a 'create' method.
+    Loader (Component): lazy loader which uses a 'load' method to import python 
+        objects on demand.
+    Lexicon (Component): sourdough drop-in replacement for dict with additional 
         functionality.
-    Catalog (Lexicon): list and wildcard accepting dict replacement.
+    Catalog (Lexicon, Creator): list and wildcard accepting dict replacement 
+        with a 'create' method for instancing and/or validating stored objects.
 
 """
 
 import abc
 import collections.abc
 import dataclasses
+import importlib
 import inspect
 import more_itertools
 import textwrap
@@ -31,7 +35,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Component(abc.ABC):
-    """Base class for composite sourdough objects.
+    """Base class for core sourdough objects.
 
     A Component has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Component instances can be used 
@@ -86,8 +90,6 @@ class Component(abc.ABC):
             return cls.name
         elif inspect.isclass(cls):
             return sourdough.utilities.snakify(cls.__name__)
-        elif isinstance(cls, sourdough.Component):
-            return cls.name
         else:
             return sourdough.utilities.snakify(cls.__class__.__name__)
 
@@ -111,22 +113,22 @@ class Component(abc.ABC):
         """
         new_line = '\n'
         representation = [f'sourdough {self.__class__.__name__}']
-        for dataclass_field in dataclasses.fields(self):
-            name = dataclass_field.name
-            attribute = getattr(self, name)
-            if (isinstance(attribute, (Sequence, Mapping))
-                    and not isinstance(attribute, str)):
+        attributes = [a for a in self.__dict__ if not a.startswith('_')]
+        for attribute in attributes:
+            value = getattr(self, attribute)
+            if (isinstance(value, (Sequence, Mapping))
+                    and not isinstance(value, str)):
                 representation.append(
-                    f'''{name}:{new_line}{textwrap.indent(
-                        str(attribute), '    ')}''')
+                    f'''{attribute}:{new_line}{textwrap.indent(
+                        str(value), '    ')}''')
             else:
-                representation.append(f'{name}: {str(attribute)}')
-        return new_line.join(representation)        
+                representation.append(f'{attribute}: {str(value)}')
+        return new_line.join(representation)    
 
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
-    """Base class for applying stored methods to passed data.
+    """Base class for performing actions in sourdough.
     
     All Action subclasses must have 'perform' methods. Acceptance and return of 
     a data argument by the 'perform' method is optional.
@@ -156,35 +158,38 @@ class Action(Component, abc.ABC):
 
         
 @dataclasses.dataclass
-class Plan(Component, collections.abc.MutableSequence):
+class Inventory(Component, collections.abc.MutableSequence):
     """Base class for sourdough sequenced iterables.
     
-    A Plan differs from a python list in 6 significant ways:
+    A Inventory differs from a python list in 6 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
             in sourdough. This is inherited from Component.
         2) It includes an 'add' method which allows different datatypes to
-            be passed and added to the 'contents' of a Plan instance.
+            be passed and added to the 'contents' of a Inventory instance.
         3) It only stores items that have a 'name' attribute or are str type.
-        4) It includes a 'subsetify' method which will return a Plan or
-            Plan subclass instance with only the items with 'name'
+        4) It includes a 'subsetify' method which will return a Inventory or
+            Inventory subclass instance with only the items with 'name'
             attributes matching items in the 'subset' argument.
-        5) Plan has an interface of both a dict and a list, but stores a 
-            list. Plan does this by taking advantage of the 'name' 
+        5) Inventory has an interface of both a dict and a list, but stores a 
+            list. Inventory does this by taking advantage of the 'name' 
             attribute in Component instances (although any instance with a 
-            'name' attribute is compatiable with a Plan). A 'name' acts 
+            'name' attribute is compatiable with a Inventory). A 'name' acts 
             as a key to create the facade of a dictionary with the items in the 
             stored list serving as values. This allows for duplicate keys for 
             storing class instances, easier iteration, and returning multiple 
             matching items. This design comes at the expense of lookup speed. As 
-            a result, Plan should only be used if a high volumne of 
+            a result, Inventory should only be used if a high volumne of 
             access calls is not anticipated. Ordinarily, the loss of lookup 
             speed should have negligible effect on overall performance. 
-        6) Iterating Plan iterates all contained iterables by using the
+        6) Iterating Inventory iterates all contained iterables by using the
             'more_itertools.collapse' method. This orders all stored iterables 
             in a depth-first manner.      
 
     Args:
-        contents (Sequence[Component]]): stored list of Component instances.
+        contents (Union[Component, Mapping[str, Component], 
+            Sequence[Component]]): Component instances to store in a list.
+            If a dict is passed, the keys will be ignored and only the values
+            will be added to 'contents'. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -198,7 +203,10 @@ class Plan(Component, collections.abc.MutableSequence):
             snake case version of the class name ('__class__.__name__').
 
     """
-    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    contents: Union[
+        'Component',
+        Mapping[str, 'Component'], 
+        Sequence['Component']] = dataclasses.field(default_factory = list)
     name: str = None
 
     """ Initialization Methods """
@@ -244,7 +252,7 @@ class Plan(Component, collections.abc.MutableSequence):
             return [contents]
         else:
             raise TypeError(
-                'contents must be a list of Components, dict with' 
+                'contents must be a list of Components, dict with ' 
                 'Component values, or Component type')
 
     def add(self, 
@@ -315,7 +323,7 @@ class Plan(Component, collections.abc.MutableSequence):
             raise TypeError('component must have a name attribute')
         return self
  
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Plan':
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Inventory':
         """Returns a subset of 'contents'.
 
         Args:
@@ -378,7 +386,7 @@ class Plan(Component, collections.abc.MutableSequence):
         corresponding index.
         
         If only one match is found, a single Component instance is returned. If
-        more are found, a Plan or Plan subclass with the matching
+        more are found, a Inventory or Inventory subclass with the matching
         'name' attributes is returned.
 
         Args:
@@ -387,7 +395,7 @@ class Plan(Component, collections.abc.MutableSequence):
         Returns:
             Component: value(s) stored in 'contents' that correspond 
                 to 'key'. If there is more than one match, the return is a
-                Plan or Plan subclass with that matching stored
+                Inventory or Inventory subclass with that matching stored
                 components.
 
         """
@@ -469,14 +477,27 @@ class Plan(Component, collections.abc.MutableSequence):
  
 @dataclasses.dataclass
 class Creator(Component, abc.ABC):
-    """Base class for stages of creation of sourdough objects.
+    """Base class for builders of sourdough objects.
     
     All subclasses must have 'create' methods. 
     
     Creators often have a 'settings' parameter to acquire information about
     object construction. However, that parameter is not required.
     
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
     """
+    name: str = None
     
     """ Required Subclass Methods """
     
@@ -489,6 +510,70 @@ class Creator(Component, abc.ABC):
         """
         pass
 
+
+@dataclasses.dataclass
+class Loader(Component, abc.ABC):
+    """Mixin for lazy loading of python modules and objects.
+
+    Args:
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation.
+
+    """
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: list)
+    name: str = None
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict())
+    
+    """ Public Methods """
+
+    def load(self, attribute: str) -> object:
+        """Returns object named in 'attribute'.
+
+        Args:
+            attribute (str): name of attribute to load from modules listed in
+                'modules'.
+
+        Returns:
+            object: loaded from a python module.
+
+        """
+        try:
+            key = getattr(self, attribute)
+        except AttributeError:
+            key = attribute
+        if key in self._loaded:
+            thing = self._loaded[key]
+        else:
+            thing = None
+            for module in sourdough.utilities.listify(self.modules):
+                try:
+                    imported = importlib.import_module(module)
+                    thing = getattr(imported, key)
+                    break
+                except (ImportError, AttributeError):
+                    pass
+            if thing is None:
+                raise ImportError(f'{attribute} is not in {self.modules}')
+            else:
+                self._loaded[key] = thing
+        return thing
+    
 
 @dataclasses.dataclass
 class Lexicon(Component, collections.abc.MutableMapping):
@@ -520,9 +605,21 @@ class Lexicon(Component, collections.abc.MutableMapping):
     Args:
         contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
             dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
               
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
       
     """ Initialization Methods """
     
@@ -653,15 +750,6 @@ class Lexicon(Component, collections.abc.MutableMapping):
         self.add(other)
         return self
 
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-
 
 @dataclasses.dataclass
 class Catalog(Creator, Lexicon):
@@ -703,7 +791,18 @@ class Catalog(Creator, Lexicon):
             the key passed is not a list or special access key (True) or to 
             return a list only when a list or special acces key is used (False). 
             Defaults to False.
-            
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').  
+                     
     """
     contents: Union[
         'sourdough.Component',
@@ -712,7 +811,8 @@ class Catalog(Creator, Lexicon):
             default_factory = dict)    
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
-
+    name: str = None
+    
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
@@ -1068,4 +1168,5 @@ presently fit with the sourdough workflow. However, the code should still work.
 #             sourdough {self.__class__.__name__}
 #             product: {self.product}
 #             default: {self.default}
-#             options: {str(self.options)}''')        
+#             options: {str(self.options)}''')    
+    

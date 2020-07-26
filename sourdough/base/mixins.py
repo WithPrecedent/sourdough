@@ -13,14 +13,10 @@ Contents:
         class attribute.
     ProxyMixin: mixin which creates a python property which refers to another
         attribute by using the 'proxify' method.
-    LoaderMixin: lazy loader mixin which uses a 'load' method to look for str
-        names of objects stored in attributes in the 'module' and 
-        'default_module' attributes.
 
 """
 import abc
 import dataclasses
-import importlib
 # import inspect
 # import pathlib
 # import pyclbr
@@ -379,61 +375,3 @@ class ProxyMixin(abc.ABC):
                     getattr(self, item))
         return self
 
-
-@dataclasses.dataclass
-class LoaderMixin(abc.ABC):
-    """Mixin for lazy loading of python modules and objects.
-
-    Args:
-        module (str): name of module where object to use is located (can either 
-            be a sourdough or non-sourdough module). Defaults to 'sourdough'.
-        default_module (str): a backup name of module where object to use is 
-            located (can either be a sourdough or non-sourdough module).
-            Defaults to 'sourdough'.
-
-    Namespaces: 'modules', '_loaded', 'load'
-
-    """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = lambda: list)
-    _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict())
-
-    """ Public Methods """
-
-    def load(self, attribute: str) -> object:
-        """Returns object named in 'attribute'.
-
-        The method searches both 'module' and 'default_module' for the named
-        'attribute'. It also checks to see if the 'attribute' is directly
-        loadable from the module or if it is the name of a local attribute that
-        has a value of a loadable object in the module.
-
-        Args:
-            attribute (str): name of attribute to load from 'module' or
-                'default_module'.
-
-        Returns:
-            object: from 'module' or 'default_module'.
-
-        """
-        try:
-            key = getattr(self, attribute)
-        except AttributeError:
-            key = attribute
-        if key in self._loaded:
-            thing = self._loaded[key]
-        else:
-            thing = None
-            for module in sourdough.utilities.listify(self.modules):
-                try:
-                    imported = importlib.import_module(module)
-                    thing = getattr(imported, key)
-                    break
-                except (ImportError, AttributeError):
-                    pass
-            if thing is None:
-                raise ImportError(f'{attribute} is not in {self.modules}')
-            else:
-                self._loaded[key] = thing
-        return thing

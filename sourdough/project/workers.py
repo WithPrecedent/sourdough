@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Worker (Action, Plan): iterable of Task, Technique, or other Worker
+    Worker (Action, Inventory): iterable of Task, Technique, or other Worker
         instances.
     Manager (Worker): top-level Worker, which also contains information for
         project serialization and replicability.
@@ -19,7 +19,7 @@ The sourdough tree structure emphasizes:
         instances. There are no limits on the number of children that the tree 
         objects can have. The trees can be constructed for different iteration 
         patterns (using the 'design') attribute or manually built by users.
-    3) Accessibility: because sourdough tree objects inherit from Plan,
+    3) Accessibility: because sourdough tree objects inherit from Inventory,
         users can access the trees with list and dictionary methods. Further,
         'workers', 'tasks', and 'techniques' properties all for instance access
         to the various types of contained objects.
@@ -41,13 +41,13 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Worker(sourdough.Action, sourdough.Plan):
+class Worker(sourdough.Action, sourdough.Inventory):
     """Base class for a tree object.
 
-    Worker inherits all of the differences between a Plan and a python 
+    Worker inherits all of the differences between a Inventory and a python 
     list.
     
-    A Worker differs from a Plan in 4 significant ways:
+    A Worker differs from a Inventory in 4 significant ways:
         1) It has a 'design' attribute which indicates how the contained 
             iterable should be ordered. 
         2) It mixes in Action which allows it to be stored as part of a 
@@ -158,7 +158,7 @@ class Worker(sourdough.Action, sourdough.Plan):
         """
         new_contents = []
         for item in self.__iter__():
-            if isinstance(item, sourdough.Plan):
+            if isinstance(item, sourdough.Inventory):
                 if recursive:
                     new_item = item.apply(tool = tool, recursive = True)
                 else:

@@ -23,7 +23,7 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Component via sourdough.base.core.Component,
+    Instead of acccesing Component via sourdough.base.components.Component,
     you can just use: sourdough.Component
     
 """
@@ -32,17 +32,17 @@ For example:
 from sourdough import utilities
 
 # Imports of core base classes and compatible mixins.
-from sourdough.base.core import Component
-from sourdough.base.core import Action
-from sourdough.base.core import Creator
-from sourdough.base.core import Lexicon
-from sourdough.base.core import Catalog
-from sourdough.base.core import Plan
+from sourdough.base.components import Component
+from sourdough.base.components import Action
+from sourdough.base.components import Inventory
+from sourdough.base.components import Creator
+from sourdough.base.components import Loader
+from sourdough.base.components import Lexicon
+from sourdough.base.components import Catalog
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import ProxyMixin
 from sourdough.base.mixins import OptionsMixin
-from sourdough.base.mixins import LoaderMixin
 
 # Imports of configuration and file management classes.
 from sourdough.configuration import defaults
@@ -65,15 +65,15 @@ __all__ = [
     'utilities',
     'Component',
     'Action',
+    'Inventory',
     'Creator',
     'Lexicon',
     'Catalog',
-    'Plan',
     'LibraryMixin',
     'RegistryMixin',
     'ProxyMixin',
     'OptionsMixin',
-    'LoaderMixin',
+    'Loader',
     'defaults',
     'Settings',
     'Filer',

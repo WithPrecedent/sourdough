@@ -56,7 +56,7 @@ class Edge(object):
  
  
 @dataclasses.dataclass
-class Graph(sourdough.Plan, abc.ABC):
+class Graph(sourdough.Inventory, abc.ABC):
     """Base class for sourdough graphs.
     
     Args:

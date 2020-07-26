@@ -5,11 +5,11 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Author (Creator): creates a Plan instance from passed arguments and/or a 
+    Author (Creator): creates a Inventory instance from passed arguments and/or a 
         Settings instance.
-    Publisher (Creator): finalizes a Plan instance based upon the initial
+    Publisher (Creator): finalizes a Inventory instance based upon the initial
         construction by an Author instance and/or runtime user editing.
-    Reader (Creator): executes a Plan instance, storing changes and results
+    Reader (Creator): executes a Inventory instance, storing changes and results
         in the Reader instance and/or passed data object.
 
 """
@@ -32,15 +32,15 @@ class Author(sourdough.Creator):
     
     """ Public Methods """
     
-    def create(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
         """Drafts a plan with its 'contents' organized and instanced.
         
         Args:
-            plan (sourdough.Plan): Plan instance to organize the 
+            plan (sourdough.Inventory): Inventory instance to organize the 
                 information in 'contents' or 'settings'.
 
         Returns:
-            sourdough.Plan: an instance with contents fully instanced.
+            sourdough.Inventory: an instance with contents fully instanced.
                 
         """
         attributes = {}
@@ -63,8 +63,8 @@ class Author(sourdough.Creator):
                         component = plan.structure.load(name)(name = item)
                     component = self._instance_component(component = component)
                     # Recursively calls the 'create' method if the 'component' 
-                    # created is a Plan type.
-                    if isinstance(component, sourdough.Plan):
+                    # created is a Inventory type.
+                    if isinstance(component, sourdough.Inventory):
                         component = self.create(plan = component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
@@ -103,7 +103,7 @@ class Publisher(sourdough.Creator):
 
     """ Public Methods """
  
-    def create(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
         """[summary]
 
         Returns:
@@ -244,7 +244,7 @@ class Reader(sourdough.Creator):
     
     project: 'sourdough.Project' = None  
     
-    def create(self, plan: 'sourdough.Plan') -> 'sourdough.Plan':
+    def create(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
         """[summary]
 
         Returns:
