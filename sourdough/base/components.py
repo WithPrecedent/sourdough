@@ -12,10 +12,10 @@ Contents:
         instances. Creator subclasses must have a 'create' method.
     Loader (Component): lazy loader which uses a 'load' method to import python 
         objects on demand.
-    Inventory (Component): iterable containing Component subclass instances 
-        with both dict and list interfaces and methods.
-    Lexicon (Component): sourdough drop-in replacement for dict with additional 
-        functionality.
+    Hybrid (Component, MutableSequence): iterable containing Component subclass 
+        instances with both dict and list interfaces and methods.
+    Lexicon (Component, MutableMapping): sourdough drop-in replacement for dict
+        with additional functionality.
     Catalog (Lexicon, Creator): list and wildcard accepting dict replacement 
         with a 'create' method for instancing and/or validating stored objects.
 
@@ -28,7 +28,7 @@ import importlib
 import inspect
 import more_itertools
 import textwrap
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -153,7 +153,11 @@ class Action(Component, abc.ABC):
     
     @abc.abstractmethod
     def perform(self, data: object = None, **kwargs) -> object:
-        """Subclasses must provide their own methods."""
+        """Performs some action related to passed 'data'.
+        
+        Subclasses must provide their own methods.
+        
+        """
         pass
         
  
@@ -258,34 +262,37 @@ class Loader(Component):
     
         
 @dataclasses.dataclass
-class Inventory(Component, collections.abc.MutableSequence):
+class Hybrid(Component, collections.abc.MutableSequence):
     """Base class for sourdough sequenced iterables.
     
-    A Inventory differs from a python list in 5 significant ways:
+    A Hybrid differs from a python list in 5 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
             in sourdough. This is inherited from Component.
-        2) It includes an 'add' method which allows different datatypes to
-            be passed and added to the 'contents' of a Inventory instance.
-        3) It only stores items that have a 'name' attribute or are str type.
-        4) It includes a 'subsetify' method which will return a Inventory or
-            Inventory subclass instance with only the items with 'name'
-            attributes matching items in the 'subset' argument.
-        5) Inventory has an interface of both a dict and a list, but stores a 
-            list. Inventory does this by taking advantage of the 'name' 
-            attribute in Component instances. A 'name' acts as a key to create 
-            the facade of a dictionary with the items in the stored list serving 
-            as values. This allows for duplicate keys for storing class 
-            instances, easier iteration, and returning multiple matching items. 
-            This design comes at the expense of lookup speed. As a result, 
-            Inventory should only be used if a high volumne of access calls is 
-            not anticipated. Ordinarily, the loss of lookup speed should have 
-            negligible effect on overall performance.      
+        2) It only stores Component subclasses or subclass instances.
+        3) It includes an 'add' method which allows different datatypes to be 
+            passed and added to the 'contents' of a Hybrid instance. The base
+            class allows Mappings and Sequences of Component subclasses and
+            Component subclass instances. 
+        4) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
+            subclass instance with only the items with 'name' attributes 
+            matching items in the 'subset' argument.
+        5) Hybrid has an interface of both a dict and a list, but stores a list. 
+            Hybrid does this by taking advantage of the 'name' attribute of 
+            Component instances. A 'name' acts as a key to create the facade of 
+            a dictionary with the items in the stored list serving as values. 
+            This allows for duplicate keys for storing class instances, easier 
+            iteration, and returning multiple matching items. This design comes 
+            at the expense of lookup speed. As a result, Hybrid should only be 
+            used if a high volume of access calls is not anticipated. 
+            Ordinarily, the loss of lookup speed should have negligible effect 
+            on overall performance.      
 
     Args:
         contents (Union[Component, Mapping[str, Component], 
-            Sequence[Component]]): Component instances to store in a list.
-            If a dict is passed, the keys will be ignored and only the values
-            will be added to 'contents'. Defaults to an empty list.
+            Sequence[Component]]): Component subclasses or Component subclass 
+            instances to store in a list. If a dict is passed, the keys will be 
+            ignored and only the values will be added to 'contents'. Defaults to 
+            an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -304,6 +311,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         Mapping[str, 'Component'], 
         Sequence['Component']] = dataclasses.field(default_factory = list)
     name: str = None
+    _default: Any = None
 
     """ Initialization Methods """
     
@@ -390,6 +398,11 @@ class Inventory(Component, collections.abc.MutableSequence):
         contents = self.validate(contents = contents)
         self.contents.append(contents)
         return self    
+
+    def clear(self) -> None:
+        """Removes all items for 'contents'."""
+        self.contents = []
+        return self
    
     def extend(self, 
             contents: Union[
@@ -409,8 +422,27 @@ class Inventory(Component, collections.abc.MutableSequence):
         """
         contents = self.validate(contents = contents)
         self.contents.extend(contents)
-        return self    
-    
+        return self  
+
+    def get(self, 
+            key: Union[str, int]) -> Union[
+                'Component', 
+                Sequence['Component']]:
+        """Returns value(s) in 'contents' or value in '_default' attribute.
+        
+        Args:
+            key (Union[str, int]): index or stored Component name to get from
+                'contents'.
+                
+        Returns:
+            Union['Component', Sequence['Component']]: items in 'contents' or 
+                value in '_default' attribute. 
+        """
+        try:
+            return self[key]
+        except KeyError:
+            return self._default
+            
     def insert(self, index: int, component: 'Component') -> None:
         """Inserts 'component' at 'index' in 'contents'.
 
@@ -423,12 +455,70 @@ class Inventory(Component, collections.abc.MutableSequence):
             
         """
         if isinstance(component, Component):
-            self.contents.insert[index] = component
+            self.contents.insert(index, component)
         else:
             raise TypeError('component must be a Component type')
         return self
- 
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Inventory':
+
+    def items(self) -> Tuple[str, 'Component']:
+        """Emulates python dict 'items' method.
+        
+        Returns:
+            Tuple[str, Component]: tuple of Component names and Components.
+            
+        """
+        return tuple(zip(self.keys(), self.values()))
+
+    def keys(self) -> Sequence[str]:
+        """Emulates python dict 'keys' method.
+        
+        Returns:
+            Sequence['Component']: list of names of Components stored in 
+                'contents'
+            
+        """
+        return [c.name for c in self.contents]
+
+    def pop(self, 
+            key: Union[str, int]) -> Union[
+                'Component', 
+                Sequence['Component']]:
+        """Pops item(s) from 'contents'.
+
+        Args:
+            key (Union[str, int]): index or stored Component name to pop from
+                'contents'.
+                
+        Returns:
+            Union['Component', Sequence['Component']]: items popped from 
+                'contents'.
+            
+        """
+        popped = self[key]
+        del self[key]
+        return popped
+        
+    def remove(self, key: Union[str, int]) -> None:
+        """Removes item(s) from 'contents'.
+
+        Args:
+            key (Union[str, int]): index or stored Component name to remove from
+                'contents'.
+            
+        """
+        del self[key]
+        return self
+     
+    def setdefault(self, value: Any) -> None:
+        """Sets default value to return when 'get' method is used.
+        
+        Args:
+            value (Any): default value to return.
+            
+        """
+        self._default = value 
+     
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Hybrid':
         """Returns a subset of 'contents'.
 
         Args:
@@ -445,39 +535,44 @@ class Inventory(Component, collections.abc.MutableSequence):
             contents = [c for c in self.contents if c.name in subset])    
      
     def update(self, 
-            components: Union[
+            contents: Union[
                 Mapping[str, 'Component'], 
                 Sequence['Component']]) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            components (Union[Mapping[str, Component], Sequence[
-                Component]]): Component instances to add to 
-                'contents'. If a Mapping is passed, the keys are ignored and
-                the values are added to 'contents'. To mimic 'update', the
-                passed 'components' are added to 'contents' by the 'extend'
-                method.
+            contents (Union[Mapping[str, Component], Sequence[Component]]): 
+                Component instances to add to the 'contents' attribute. If a 
+                Mapping is passed, the values are added to 'contents' and the
+                keys become the 'name' attributes of those avalues. To mimic 
+                'update', the passed 'components' are added to 'contents' by the 
+                'extend' method.
  
         Raises:
             TypeError: if any of 'components' do not have a name attribute or
                 if 'components is not a dict.               
         
         """
-        if isinstance(components, Mapping):
-            for key, value in components.items():
-                if hasattr(value, 'name'):
-                    self.append(component = value)
-                else:
-                    new_component = value
-                    new_component.name = key
-                    self.extend(component = new_component)
-        elif all(hasattr(c, 'name') for c in components):
-            for component in components:
-                self.append(component = component)
+        if isinstance(contents, Mapping):
+            for key, value in contents.items():
+                new_component = value
+                new_component.name = key
+                self.extend(contents = new_component)
+        elif all(isinstance(c, Component) for c in contents):
+            self.extend(contents = contents)
         else:
             raise TypeError(
-                'components must be a dict or all have a name attribute')
+                'components must be a dict or list containing Components')
         return self
+
+    def values(self) -> Sequence['Component']:
+        """Emulates python dict 'values' method.
+        
+        Returns:
+            Sequence['Component']: list of Components stored in 'contents'
+            
+        """
+        return self.contents
           
     """ Dunder Methods """
 
@@ -491,7 +586,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         corresponding index.
         
         If only one match is found, a single Component instance is returned. If
-        more are found, a Inventory or Inventory subclass with the matching
+        more are found, a Hybrid or Hybrid subclass with the matching
         'name' attributes is returned.
 
         Args:
@@ -500,7 +595,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         Returns:
             Component: value(s) stored in 'contents' that correspond 
                 to 'key'. If there is more than one match, the return is a
-                Inventory or Inventory subclass with that matching stored
+                Hybrid or Hybrid subclass with that matching stored
                 components.
 
         """
@@ -508,11 +603,13 @@ class Inventory(Component, collections.abc.MutableSequence):
             return self.contents[key]
         else:
             matches = [c for c in self.contents if c.name == key]
-            if len(matches) == 1:
+            if len(matches) == 0:
+                raise KeyError(f'{key} is not in {self.name}')
+            elif len(matches) == 1:
                 return matches[0]
             else:
                 return self.__class__(name = self.name, contents = matches)
-
+            
     def __setitem__(self, 
             key: Union[str, int], 
             value: 'Component') -> None:
@@ -530,7 +627,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         if isinstance(key, int):
             self.contents[key] = value
         else:
-            self.contents.add(value)
+            self.add(value)
         return self
 
     def __delitem__(self, key: Union[str, int]) -> None:
@@ -577,7 +674,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         """
         self.add(other)
         return self
-
+    
 
 @dataclasses.dataclass
 class Lexicon(Component, collections.abc.MutableMapping):

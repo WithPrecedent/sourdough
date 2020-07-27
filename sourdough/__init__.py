@@ -31,10 +31,10 @@ For example:
 # Imports of functions and decorators for use throughout sourdough.
 from sourdough import utilities
 
-# Imports of core base classes and compatible mixins.
+# Imports of core base classes and mixins.
 from sourdough.base.components import Component
 from sourdough.base.components import Action
-from sourdough.base.components import Inventory
+from sourdough.base.components import Hybrid
 from sourdough.base.components import Creator
 from sourdough.base.components import Loader
 from sourdough.base.components import Lexicon
@@ -65,7 +65,7 @@ __all__ = [
     'utilities',
     'Component',
     'Action',
-    'Inventory',
+    'Hybrid',
     'Creator',
     'Lexicon',
     'Catalog',

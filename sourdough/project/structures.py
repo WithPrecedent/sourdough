@@ -5,8 +5,8 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (OptionsMixin, Inventory): iterable which contains the needed
-        information and data for constructing and executing tree objects.
+    Structure (Loader): base class for defining composite structures in 
+        sourdough.
 
 """
 import abc
@@ -323,3 +323,4 @@ class Cycle(Structure):
     iterator: Union[str, Callable] = itertools.cycle
     _loaded: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: dict)       
+    

@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (OptionsMixin, Inventory): iterable which contains the needed
+    Project (OptionsMixin, Hybrid): iterable which contains the needed
         information and data for constructing and executing tree objects.
 
 """
@@ -19,20 +19,20 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Project(sourdough.OptionsMixin, sourdough.Inventory):
+class Project(sourdough.OptionsMixin, sourdough.Hybrid):
     """Constructs, organizes, and stores tree Workers and Actions.
     
-    A Project inherits all of the differences between a Inventory and a python
+    A Project inherits all of the differences between a Hybrid and a python
     list.
 
-    A Project differs from a Inventory in 5 significant ways:
+    A Project differs from a Hybrid in 5 significant ways:
         1) The Project is the public interface to composite object construction 
             and application. It may store the composite object instance(s) as 
             well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
         2) Project stores Creator subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Inventory 
+            instances are used to assemble and apply the parts of Hybrid 
             instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
@@ -76,7 +76,7 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
             components of a composite structure.
     
     Attributes:
-        plan (sourdough.Inventory): the iterable composite object created by Project.
+        plan (sourdough.Hybrid): the iterable composite object created by Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
         stage (str): name of the last stage that has been implemented. It is set
@@ -99,7 +99,7 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
             'chained': sourdough.structures.Chained, 
             'comparative': sourdough.structures.Comparative,
             'cycle': sourdough.structures.Cycle,
-            'directed': sourdough.structures.DirectedGraph,
+            'graph': sourdough.structures.Graph,
             'flat': sourdough.structures.Flat})
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()    
     
@@ -119,7 +119,7 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
         self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
-        # Initializes a composite Inventory subclass instance.
+        # Initializes a composite Hybrid subclass instance.
         self.plan = self._initialize_plan(structure = self.structure)
         # Initializes Creator instances stored in 'contents'.
         self.contents = self._initialize_creators(contents = self.contents)
@@ -183,18 +183,18 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
         self.stage = new_stage
         return self
 
-    def iterate(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
+    def iterate(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """Advances to next stage and applies that stage to 'plan'.
 
         Args:
-            plan (sourdough.Inventory): instance to apply the next stage's methods 
+            plan (sourdough.Hybrid): instance to apply the next stage's methods 
                 to.
                 
         Raises:
             IndexError: if this instance is already at the last stage.
 
         Returns:
-            sourdough.Inventory: with the last stage applied.
+            sourdough.Hybrid: with the last stage applied.
             
         """
         if self.index == len(self.contents) - 1:
@@ -229,51 +229,51 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
         else:
             raise StopIteration()
 
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns default string representation of an instance.
 
-        Returns:
-            str: default string representation of an instance.
+    #     Returns:
+    #         str: default string representation of an instance.
 
-        """
-        if hasattr(self.structure, 'name'):
-            return textwrap.dedent(f'''
-                sourdough {self.__class__.__name__}
-                name: {self.name}
-                automatic: {self.automatic}
-                data: {self.data is not None}
-                structure: {self.structure.name}
-                defaults:
-                {textwrap.indent(str(self.defaults), '    ')}
-                contents:
-                {textwrap.indent(str(self.contents), '    ')}
-                settings:
-                {textwrap.indent(str(self.settings), '    ')}
-                filer:
-                {textwrap.indent(str(self.filer), '    ')}
-                options:
-                {textwrap.indent(str(self.options), '    ')}
-                structures:
-                {textwrap.indent(str(self.structures), '    ')}''')
-        else:
-            return textwrap.dedent(f'''
-                sourdough {self.__class__.__name__}
-                name: {self.name}
-                automatic: {self.automatic}
-                data: {self.data is not None}
-                structure: {self.structure}
-                defaults:
-                {textwrap.indent(str(self.defaults), '    ')}
-                contents:
-                {textwrap.indent(str(self.contents), '    ')}
-                settings:
-                {textwrap.indent(str(self.settings), '    ')}
-                filer:
-                {textwrap.indent(str(self.filer), '    ')}
-                options:
-                {textwrap.indent(str(self.options), '    ')}
-                structures:
-                {textwrap.indent(str(self.structures), '    ')}''')
+    #     """
+    #     if hasattr(self.structure, 'name'):
+    #         return textwrap.dedent(f'''
+    #             sourdough {self.__class__.__name__}
+    #             name: {self.name}
+    #             automatic: {self.automatic}
+    #             data: {self.data is not None}
+    #             structure: {self.structure.name}
+    #             defaults:
+    #             {textwrap.indent(str(self.defaults), '    ')}
+    #             contents:
+    #             {textwrap.indent(str(self.contents), '    ')}
+    #             settings:
+    #             {textwrap.indent(str(self.settings), '    ')}
+    #             filer:
+    #             {textwrap.indent(str(self.filer), '    ')}
+    #             options:
+    #             {textwrap.indent(str(self.options), '    ')}
+    #             structures:
+    #             {textwrap.indent(str(self.structures), '    ')}''')
+    #     else:
+    #         return textwrap.dedent(f'''
+    #             sourdough {self.__class__.__name__}
+    #             name: {self.name}
+    #             automatic: {self.automatic}
+    #             data: {self.data is not None}
+    #             structure: {self.structure}
+    #             defaults:
+    #             {textwrap.indent(str(self.defaults), '    ')}
+    #             contents:
+    #             {textwrap.indent(str(self.contents), '    ')}
+    #             settings:
+    #             {textwrap.indent(str(self.settings), '    ')}
+    #             filer:
+    #             {textwrap.indent(str(self.filer), '    ')}
+    #             options:
+    #             {textwrap.indent(str(self.options), '    ')}
+    #             structures:
+    #             {textwrap.indent(str(self.structures), '    ')}''')
         
     """ Private Methods """
 
@@ -303,19 +303,19 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
     def _initialize_plan(self, 
             structure: Union[
                 str, 
-                sourdough.structures.Structure]) -> sourdough.Inventory:
-        """Instances a Inventory subclass based upon 'structure'.
+                sourdough.structures.Structure]) -> sourdough.Hybrid:
+        """Instances a Hybrid subclass based upon 'structure'.
         
         Args:
             structure (Union[str, sourdough.structures.Structure]): str matching
                 a key in 'structures' or a subclass of Structure.
         
         Returns:
-            sourdough.Inventory: an instance created based upon 'structure'.
+            sourdough.Hybrid: an instance created based upon 'structure'.
         
         """
         structure = self._initialize_structure(structure = structure)
-        # Lazily imports needed classes for Inventory construction.    
+        # Lazily imports needed classes for Hybrid construction.    
         for key, value in structure.components.items():
             structure.load(value)
         return structure.load(structure.components['root'])(
@@ -332,15 +332,15 @@ class Project(sourdough.OptionsMixin, sourdough.Inventory):
         else:
             return structure()
                           
-    def _auto_contents(self, plan: 'sourdough.Inventory') -> 'sourdough.Inventory':
+    def _auto_contents(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """Automatically advances through and iterates stored Creator instances.
 
         Args:
-            plan (sourdough.Inventory): an instance containing any data for the plan 
+            plan (sourdough.Hybrid): an instance containing any data for the plan 
                 methods to be applied to.
                 
         Returns:
-            sourdough.Inventory: modified by the stored Creator instance's 
+            sourdough.Hybrid: modified by the stored Creator instance's 
                 'create' methods.
             
         """
