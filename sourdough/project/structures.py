@@ -25,87 +25,256 @@ class Structure(sourdough.Loader):
     """Contains default types for composite structures to be loaded.
     
     Args:  
-        modules (str): name of module where object to use is located (can either 
-            be a sourdough or non-sourdough module). Defaults to 'sourdough'.
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
          
     """
-    name: str = None
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = lambda: list)
+    name: str = None
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: dict)
     iterator: Union[str, Callable] = iter  
     _loaded: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: dict)
 
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__() 
+        # Imports the modules        
 
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            modules: {self.modules}
-            components: {self.components}
-            iterator: {self.iterator}''') 
 
 @dataclasses.dataclass
-class TreeStructure(Structure, abc.ABC):
+class Tree(Structure, abc.ABC):
+    """Contains default types for tree structures to be loaded.
     
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """    
     modules: str = dataclasses.field(
         default_factory = lambda: [
             'sourdough.project.workers',
             'sourdough.project.actions'])
+    name: str = None
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: {
             'root': 'Manager',
             'workers': 'Worker',
             'tasks': 'Task',
             'techniques': 'Technique'})
+    iterator: Union[str, Callable] = iter 
     _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict()) 
+        default_factory = lambda: dict) 
         
 
 @dataclasses.dataclass
-class Chained(TreeStructure):
-    """Contains default types for composite structures
+class Chained(Tree):
+    """Contains default types for composite structures to be loaded.
     
-            
-    """      
-    iterator: Union[str, Callable] = iter
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """    
+    modules: str = dataclasses.field(
+        default_factory = lambda: [
+            'sourdough.project.workers',
+            'sourdough.project.actions'])
+    name: str = None
+    components: Mapping[str, str] = dataclasses.field(
+        default_factory = lambda: {
+            'root': 'Manager',
+            'workers': 'Worker',
+            'tasks': 'Task',
+            'techniques': 'Technique'})
+    iterator: Union[str, Callable] = iter  
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict)
     
       
 @dataclasses.dataclass
-class Comparative(TreeStructure):
-    """Contains default types for composite structures
+class Comparative(Tree):
+    """Contains default types for composite structures to be loaded.
     
-            
-    """    
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """   
+    modules: str = dataclasses.field(
+        default_factory = lambda: [
+            'sourdough.project.workers',
+            'sourdough.project.actions'])
+    name: str = None
+    components: Mapping[str, str] = dataclasses.field(
+        default_factory = lambda: {
+            'root': 'Manager',
+            'workers': 'Worker',
+            'tasks': 'Task',
+            'techniques': 'Technique'})
     iterator: Union[str, Callable] = itertools.product
-      
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict)      
+
 
 @dataclasses.dataclass
-class Flat(TreeStructure):
-    """Contains default types for composite structures
+class Flat(Tree):
+    """Contains default types for composite structures to be loaded.
     
-            
-    """    
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """
+    modules: str = dataclasses.field(
+        default_factory = lambda: [
+            'sourdough.project.workers',
+            'sourdough.project.actions'])
+    name: str = None
+    components: Mapping[str, str] = dataclasses.field(
+        default_factory = lambda: {
+            'root': 'Manager',
+            'workers': 'Worker',
+            'tasks': 'Task',
+            'techniques': 'Technique'})
     iterator: Union[str, Callable] = more_itertools.collapse
-
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict)   
+    
 
 @dataclasses.dataclass
-class GraphStructure(Structure, abc.ABC):
-    """Contains default types for composite structures
+class Graph(Structure):
+    """Contains default types for composite structures to be loaded.
     
-            
-    """    
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """   
     modules: str = dataclasses.field(
         default_factory = lambda: [
             'sourdough.project.graphs',
             'sourdough.project.actions'])
+    name: str = None
     components: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: {
             'root': 'Node',
@@ -113,24 +282,44 @@ class GraphStructure(Structure, abc.ABC):
             'edges': 'Edge',
             'task': 'Task',
             'techniques': 'Technique'})
+    iterator: Union[str, Callable] = itertools.product
     _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict())  
-
-
-@dataclasses.dataclass
-class DirectedGraph(GraphStructure):
-    """Contains default types for composite structures
-    
-            
-    """   
-    iterator: Union[str, Callable] = 'iterable'
-
+        default_factory = lambda: dict)   
+ 
  
 @dataclasses.dataclass
 class Cycle(Structure):
-    """Contains default types for composite structures
+    """Contains default types for composite structures to be loaded.
     
-            
-    """    
+    Args:  
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        components (Mapping[str, str]): dict with keys as the type of composite
+            class and values as the names of classes in 'modules'. Defaults to
+            an empty dict.
+        iterator (str, Callable): name of a method to iterator through a
+            composite object or a function for iteration. Defaults to iter.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+         
+    """ 
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: list)
+    name: str = None
+    components: Mapping[str, str] = dataclasses.field(
+        default_factory = lambda: dict)
     iterator: Union[str, Callable] = itertools.cycle
-    
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict)       

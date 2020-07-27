@@ -8,12 +8,12 @@ Contents:
     Component: abstract base class for core sourdough objects.
     Action (Component): abstract base class for storing action methods. 
         Action subclasses must have a 'perform' method.
-    Inventory (Component): iterable containing Component subclass instances 
-        with both dict and list interfaces and methods.
     Creator (Component): abstract base class for constructing Component subclass 
         instances. Creator subclasses must have a 'create' method.
     Loader (Component): lazy loader which uses a 'load' method to import python 
         objects on demand.
+    Inventory (Component): iterable containing Component subclass instances 
+        with both dict and list interfaces and methods.
     Lexicon (Component): sourdough drop-in replacement for dict with additional 
         functionality.
     Catalog (Lexicon, Creator): list and wildcard accepting dict replacement 
@@ -42,7 +42,7 @@ class Component(abc.ABC):
     to create a variety of tree data structures such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
-    collectively, with Component.
+    collectively, with Component and its subclasses.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -128,10 +128,10 @@ class Component(abc.ABC):
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
-    """Base class for performing actions in sourdough.
+    """Base class for performing actions on other objects in sourdough.
     
-    All Action subclasses must have 'perform' methods. Acceptance and return of 
-    a data argument by the 'perform' method is optional.
+    All Action subclasses must have 'perform' methods which has 'data' as its
+    first parameter.
     
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -155,13 +155,113 @@ class Action(Component, abc.ABC):
     def perform(self, data: object = None, **kwargs) -> object:
         """Subclasses must provide their own methods."""
         pass
+        
+ 
+@dataclasses.dataclass
+class Creator(Component, abc.ABC):
+    """Base class for builders of sourdough objects.
+    
+    All subclasses must have 'create' methods. 
+    
+    Creators often have a 'settings' parameter to acquire information about
+    object construction. However, that parameter is not required.
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+    """
+    name: str = None
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, component: 'Component' = None, **kwargs) -> 'Component':
+        """Constructs or modifies a Component instance.
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass
 
+
+@dataclasses.dataclass
+class Loader(Component):
+    """Base class for lazy loading of python modules and objects.
+
+    Args:
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+
+    """
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: list)
+    name: str = None
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: dict)
+    
+    """ Public Methods """
+
+    def load(self, attribute: str) -> object:
+        """Returns object named in 'attribute'.
+
+        Args:
+            attribute (str): name of attribute to load from modules listed in
+                'modules'.
+
+        Returns:
+            object: loaded from a python module.
+
+        """
+        try:
+            key = getattr(self, attribute)
+        except AttributeError:
+            key = attribute
+        if key in self._loaded:
+            thing = self._loaded[key]
+        else:
+            thing = None
+            for module in sourdough.utilities.listify(self.modules):
+                try:
+                    imported = importlib.import_module(module)
+                    thing = getattr(imported, key)
+                    break
+                except (ImportError, AttributeError):
+                    pass
+            if thing is None:
+                raise ImportError(f'{attribute} is not in {self.modules}')
+            else:
+                self._loaded[key] = thing
+        return thing
+    
         
 @dataclasses.dataclass
 class Inventory(Component, collections.abc.MutableSequence):
     """Base class for sourdough sequenced iterables.
     
-    A Inventory differs from a python list in 6 significant ways:
+    A Inventory differs from a python list in 5 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
             in sourdough. This is inherited from Component.
         2) It includes an 'add' method which allows different datatypes to
@@ -172,18 +272,14 @@ class Inventory(Component, collections.abc.MutableSequence):
             attributes matching items in the 'subset' argument.
         5) Inventory has an interface of both a dict and a list, but stores a 
             list. Inventory does this by taking advantage of the 'name' 
-            attribute in Component instances (although any instance with a 
-            'name' attribute is compatiable with a Inventory). A 'name' acts 
-            as a key to create the facade of a dictionary with the items in the 
-            stored list serving as values. This allows for duplicate keys for 
-            storing class instances, easier iteration, and returning multiple 
-            matching items. This design comes at the expense of lookup speed. As 
-            a result, Inventory should only be used if a high volumne of 
-            access calls is not anticipated. Ordinarily, the loss of lookup 
-            speed should have negligible effect on overall performance. 
-        6) Iterating Inventory iterates all contained iterables by using the
-            'more_itertools.collapse' method. This orders all stored iterables 
-            in a depth-first manner.      
+            attribute in Component instances. A 'name' acts as a key to create 
+            the facade of a dictionary with the items in the stored list serving 
+            as values. This allows for duplicate keys for storing class 
+            instances, easier iteration, and returning multiple matching items. 
+            This design comes at the expense of lookup speed. As a result, 
+            Inventory should only be used if a high volumne of access calls is 
+            not anticipated. Ordinarily, the loss of lookup speed should have 
+            negligible effect on overall performance.      
 
     Args:
         contents (Union[Component, Mapping[str, Component], 
@@ -242,11 +338,14 @@ class Inventory(Component, collections.abc.MutableSequence):
         """
         if (isinstance(contents, Sequence) 
             and (all(isinstance(c, Component) for c in contents)
-                or all(issubclass(c, Component) for c in contents))):
+                or (all(inspect.isclass(c) for c in contents)
+                    and all(issubclass(c, Component) for c in contents)))):
             return contents
         elif (isinstance(contents, Mapping)
             and (all(isinstance(c, Component) for c in contents.values())
-                or all(issubclass(c, Component) for c in contents.values()))):
+                or (all(inspect.isclass(c) for c in contents.values())
+                    and all(
+                        issubclass(c, Component) for c in contents.values())))):
             return list(contents.values())
         elif isinstance(contents, Component):
             return [contents]
@@ -260,7 +359,7 @@ class Inventory(Component, collections.abc.MutableSequence):
                 'Component',
                 Mapping[str, 'Component'], 
                 Sequence['Component']]) -> None:
-        """Appends 'contents' argument to 'contents' attribute.
+        """Extends 'contents' argument to 'contents' attribute.
         
         Args:
             contents (Union[Component, Mapping[str, Component], 
@@ -269,42 +368,48 @@ class Inventory(Component, collections.abc.MutableSequence):
 
         """
         contents = self.validate(contents = contents)
-        self.append(contents)
+        self.extend(contents)
         return self    
 
-    def append(self, component: 'Component') -> None:
+    def append(self, 
+            contents: Union[
+                'Component',
+                Mapping[str, 'Component'], 
+                Sequence['Component']]) -> None:
         """Appends 'component' to 'contents'.
         
         Args:
-            component (Component): Component instance to add to 
-                'contents'.
+            contents (Union[Component, Mapping[str, Component], 
+                Sequence[Component]]): Component instance(s) to add to the
+                'contents' attribute.
 
         Raises:
             TypeError: if 'component' does not have a name attribute.
             
         """
-        if isinstance(component, Component):
-            self.contents.append(component)
-        else:
-            raise TypeError('component must have a name attribute')
+        contents = self.validate(contents = contents)
+        self.contents.append(contents)
         return self    
    
-    def extend(self, component: 'Component') -> None:
+    def extend(self, 
+            contents: Union[
+                'Component',
+                Mapping[str, 'Component'], 
+                Sequence['Component']]) -> None:
         """Extends 'component' to 'contents'.
         
         Args:
-            component (Component): Component instance to add to 
-                'contents'.
+            contents (Union[Component, Mapping[str, Component], 
+                Sequence[Component]]): Component instance(s) to add to the
+                'contents' attribute.
 
         Raises:
             TypeError: if 'component' does not have a name attribute.
             
         """
-        if isinstance(component, Component):
-            self.contents.extend(component)
-        else:
-            raise TypeError('component must have a name attribute')
-        return self   
+        contents = self.validate(contents = contents)
+        self.contents.extend(contents)
+        return self    
     
     def insert(self, index: int, component: 'Component') -> None:
         """Inserts 'component' at 'index' in 'contents'.
@@ -314,13 +419,13 @@ class Inventory(Component, collections.abc.MutableSequence):
             component (Component): object to be inserted.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute.
+            TypeError: if 'component' is not a Component type.
             
         """
         if isinstance(component, Component):
             self.contents.insert[index] = component
         else:
-            raise TypeError('component must have a name attribute')
+            raise TypeError('component must be a Component type')
         return self
  
     def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Inventory':
@@ -446,14 +551,13 @@ class Inventory(Component, collections.abc.MutableSequence):
         return self
 
     def __iter__(self) -> Iterable:
-        """Returns collapsed iterable of 'contents'.
+        """Returns iterable of 'contents'.
      
         Returns:
-            Iterable: using the itertools method which automatically iterates
-                all stored iterables within 'contents'.Any
+            Iterable: generic ordered iterable of 'contents'.
                
         """
-        return iter(more_itertools.collapse(self.contents))
+        return iter(self.contents)
 
     def __len__(self) -> int:
         """Returns length of collapsed 'contents'.
@@ -473,107 +577,7 @@ class Inventory(Component, collections.abc.MutableSequence):
         """
         self.add(other)
         return self
-        
- 
-@dataclasses.dataclass
-class Creator(Component, abc.ABC):
-    """Base class for builders of sourdough objects.
-    
-    All subclasses must have 'create' methods. 
-    
-    Creators often have a 'settings' parameter to acquire information about
-    object construction. However, that parameter is not required.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-    """
-    name: str = None
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, component: 'Component' = None, **kwargs) -> 'Component':
-        """Constructs or modifies a Component instance.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass
 
-
-@dataclasses.dataclass
-class Loader(Component, abc.ABC):
-    """Mixin for lazy loading of python modules and objects.
-
-    Args:
-        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
-            load is/are located. use is located. Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        _loaded (Mapping[str, Any]): dictionary of str keys and previously
-            loaded objects. This is checked first by the 'load' method to avoid
-            unnecessary re-importation.
-
-    """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = lambda: list)
-    name: str = None
-    _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict())
-    
-    """ Public Methods """
-
-    def load(self, attribute: str) -> object:
-        """Returns object named in 'attribute'.
-
-        Args:
-            attribute (str): name of attribute to load from modules listed in
-                'modules'.
-
-        Returns:
-            object: loaded from a python module.
-
-        """
-        try:
-            key = getattr(self, attribute)
-        except AttributeError:
-            key = attribute
-        if key in self._loaded:
-            thing = self._loaded[key]
-        else:
-            thing = None
-            for module in sourdough.utilities.listify(self.modules):
-                try:
-                    imported = importlib.import_module(module)
-                    thing = getattr(imported, key)
-                    break
-                except (ImportError, AttributeError):
-                    pass
-            if thing is None:
-                raise ImportError(f'{attribute} is not in {self.modules}')
-            else:
-                self._loaded[key] = thing
-        return thing
-    
 
 @dataclasses.dataclass
 class Lexicon(Component, collections.abc.MutableMapping):
@@ -758,7 +762,7 @@ class Catalog(Creator, Lexicon):
     A Catalog inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Catalog differs from a Lexicon in 5 significant ways:
+    A Catalog differs from a Lexicon in 6 significant ways:
         1) It recognizes an 'all' key which will return a list of all values
             stored in a Catalog instance.
         2) It recognizes a 'default' key which will return all values matching

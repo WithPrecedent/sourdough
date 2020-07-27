@@ -57,7 +57,7 @@ from sourdough.project.creators import Reader
 from sourdough.project.project import Project
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 

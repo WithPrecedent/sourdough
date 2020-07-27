@@ -674,7 +674,7 @@ class FileFormat(sourdough.Loader, sourdough.Component):
     name: str = None
     modules: str = 'sourdough'
     _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict())
+        default_factory = lambda: dict)
     extension: str = None
     load_method: str = None
     save_method: str = None
