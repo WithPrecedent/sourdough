@@ -1,5 +1,5 @@
 """
-test_dictionaries: unit tests for Lexicon and its subclasses
+test_lexicon: unit tests for Lexicon
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,7 +20,7 @@ class AnotherComponent(sourdough.Component):
     pass
 
 
-def test_dictionaries():
+def test_lexicon():
     test_component = AComponent(name = 'first_test')
     another_component = AnotherComponent()
     test_mapping = {'a_key': AComponent(), 'another_key': AnotherComponent()}
@@ -43,26 +43,16 @@ def test_dictionaries():
     subset_lexicon = lexicon.subsetify(subset = ['a_key'])
     assert test_keys == ['a_key', 'another_key']
     assert list(subset_lexicon.keys()) == ['a_key']
-    
-    # Tests Catalog
-    catalog = sourdough.Catalog(contents = {
-        'test' : test_component,
-        'another': another_component})
-    assert catalog['all'] == [test_component, another_component]
-    assert catalog['default'] == [test_component, another_component]
-    assert catalog['another'] == another_component
-    assert catalog['none'] == []
-    
-    # # Tests Reflector
-    # mirror_dict = sourdough.Reflector(contents = {
-    #     'run' : 'tired',
-    #     'sleep': 'rested',
-    #     'walk': 'relax'})
-    # assert mirror_dict['run'] == 'tired'
-    # assert mirror_dict['relax'] == 'walk'
+    assert len(lexicon) == 2
+    del lexicon['a_key']
+    assert len(lexicon) == 1
+    for key, value in lexicon.items():
+        pass
+    lexicon += {'another_component': another_component}
+    assert len(lexicon) == 2
     return
 
 
 if __name__ == '__main__':
-    test_dictionaries()
+    test_lexicon()
     

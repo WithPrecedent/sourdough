@@ -65,7 +65,7 @@ class Component(abc.ABC):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
-        self.name: str = self.name or self.get_name()
+        self.name = self.name or self.get_name()
 
     """ Class Methods """
 
@@ -304,6 +304,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
             the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
+        _default (Any): default value to use when there is a KeyError using the
+            'get' method.
 
     """
     contents: Union[
@@ -400,7 +402,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         return self    
 
     def clear(self) -> None:
-        """Removes all items for 'contents'."""
+        """Removes all items from 'contents'."""
         self.contents = []
         return self
    
@@ -477,7 +479,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
                 'contents'
             
         """
-        return [c.name for c in self.contents]
+        return [c.get_name() for c in self.contents]
 
     def pop(self, 
             key: Union[str, int]) -> Union[
@@ -532,7 +534,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         subset = sourdough.utilities.listify(subset)
         return self.__class__(
             name = self.name,
-            contents = [c for c in self.contents if c.name in subset])    
+            contents = [c for c in self.contents if c.get_name() in subset])    
      
     def update(self, 
             contents: Union[
@@ -602,7 +604,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         if isinstance(key, int):
             return self.contents[key]
         else:
-            matches = [c for c in self.contents if c.name == key]
+            matches = [c for c in self.contents if c.get_name() == key]
             if len(matches) == 0:
                 raise KeyError(f'{key} is not in {self.name}')
             elif len(matches) == 1:
@@ -644,7 +646,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         if isinstance(key, int):
             del self.contents[key]
         else:
-            self.contents = [c for c in self.contents if c.name != key]
+            self.contents = [c for c in self.contents if c.get_name() != key]
         return self
 
     def __iter__(self) -> Iterable:
@@ -663,7 +665,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
             int: length of collapsed 'contents'.
 
         """
-        return len(more_itertools.collapse(self.contents))
+        return len(list(more_itertools.collapse(self.contents)))
 
     def __add__(self, other: Any) -> None:
         """Combines argument with 'contents'.
@@ -696,7 +698,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
             Lexicon subclass instance with only the key/value pairs matching
             keys in the 'subset' argument.
         4) It allows the '+' operator to be used to join a Lexicon instance
-            with another Lexicon instance, a dict, or a Component. The '+' 
+            with another Lexicon instance, or another Mapping. The '+' 
             operator calls the Lexicon 'add' method to implement how the added 
             item(s) is/are added to the Lexicon instance.
     
@@ -983,7 +985,7 @@ class Catalog(Creator, Lexicon):
         """
         new_defaults = [i for i in self.defaults if i in subset] 
         return super().subsetify(
-            contents = self.contents,
+            subset = subset,
             defaults = new_defaults,
             always_return_list = self.always_return_list)
 

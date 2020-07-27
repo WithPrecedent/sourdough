@@ -1,5 +1,5 @@
 """
-test_hybrids: unit tests for Hybrid
+test_hybrid: unit tests for Hybrid
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -59,6 +59,22 @@ def test_hybrid():
     plan.setdefault(None)  
     assert plan.get('nothing') == None
     plan['crazy_component'] = AnotherComponent(name = 'crazy')
+    plan.append(sourdough.Hybrid(
+        name = 'nested', 
+        contents = [another_component, some_component]))
+    assert plan.keys() == [
+        'some_component', 
+        'another_component',
+        'new_plan', 
+        'crazy',
+        'nested']
+    assert len(plan) == 6
+    plan.clear()
+    assert len(plan) == 0
+    plan += another_component
+    assert len(plan) == 1
+    plan.remove(0)
+    assert len(plan) == 0
     return
 
 
