@@ -77,7 +77,10 @@ class Author(sourdough.Creator):
 
     """ Private Methods """
     
-    def _get_structure(self, name: str) -> sourdough.structures.Structure: 
+    def _get_structure(self, name: str) -> 'sourdough.structures.Structure':
+        """
+        
+        """ 
         try:
             design = self.project.settings[name][f'{name}_structure']
         except KeyError:
@@ -85,7 +88,12 @@ class Author(sourdough.Creator):
         return self.project._initialize_structure(structure = design)    
     
     def _instance_component(self, 
-            component: sourdough.Component) -> sourdough.Component:
+            component: 'sourdough.Component') -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
         try:
             return component()
         except TypeError:
