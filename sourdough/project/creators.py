@@ -60,7 +60,7 @@ class Author(sourdough.Creator):
                         print('test key', key)
                         suffix = key.split('_')[-1]
                         name = plan.structure.components[suffix]
-                        component = plan.structure.load(name)(name = item)
+                        component = plan.structure.load(key = name)(name = item)
                     component = self._instance_component(component = component)
                     # Recursively calls the 'create' method if the 'component' 
                     # created is a Hybrid type.
@@ -90,6 +90,7 @@ class Author(sourdough.Creator):
             return component()
         except TypeError:
             return component
+
         
 @dataclasses.dataclass
 class Publisher(sourdough.Creator):
@@ -120,6 +121,7 @@ class Publisher(sourdough.Creator):
         """
         
         """
+        thing = component.structure.load('technique')
         if isinstance(component, sourdough.Technique):
             return self._set_technique_parameters(technique = component)
         elif isinstance(component, sourdough.Task):

@@ -315,20 +315,28 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         
         """
         structure = self._initialize_structure(structure = structure)
-        # Lazily imports needed classes for Hybrid construction.    
-        for key, value in structure.components.items():
-            structure.load(value)
-        return structure.load(structure.components['root'])(
-            name = self.name, 
-            data = self.data)
+        return structure.load(key = 'root')(name = self.name, data = self.data)
         
     def _initialize_structure(self, 
             structure: Union[
                 str, 
-                sourdough.structures.Structure]) -> (
-                    sourdough.structures.Structure): 
+                'sourdough.structures.Structure']) -> (
+                    'sourdough.structures.Structure'):
+        """Returns a Structure instance based upon 'structure'.
+
+        Args:
+            structure (Union[str, sourdough.structures.Structure]): str matching
+                a key in 'structures', a Structure subclass, or a Structure
+                subclass instance.
+
+        Returns:
+            sourdough.structures.Structure: a Structure subclass instance.
+            
+        """
         if isinstance(structure, str):
             return self.structures[structure]()
+        elif isinstance(structure, sourdough.structures.Structure):
+            return structure
         else:
             return structure()
                           

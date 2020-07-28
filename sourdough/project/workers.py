@@ -102,34 +102,6 @@ class Worker(sourdough.Action, sourdough.Hybrid):
         self.contents = self.validate(contents = self.contents)
 
     """ Public Methods """
-    
-    # def validate(self, 
-    #         contents: Union[
-    #             'sourdough.Action',
-    #             Sequence['sourdough.Action']]) -> Sequence['sourdough.Action']:
-    #     """Converts all str in 'contents' to 'Action' instances.
-        
-    #     Args:
-    #         contents (Union[sourdough.Action, Sequence[sourdough.Action]]): 
-    #             Action subclass instance(s).
-                
-    #     Returns:
-    #         Sequence[sourdough.Action]: a list of all Action subclass instances.
-            
-    #     """
-    #     new_contents = []
-    #     if isinstance(contents, Sequence):
-    #         for task in contents:
-    #             if isinstance(task, str):
-    #                 try:
-    #                     new_contents.append(self.options[task])
-    #                 except KeyError:
-    #                     new_contents.append(task)
-    #             else:
-    #                 new_contents.append(task)
-    #     elif isinstance(contents, sourdough.Action):
-            
-    #     return new_contents
         
     def perform(self, data: object = None) -> object:
         """Applies stored Action instances to 'data'.
@@ -144,11 +116,11 @@ class Worker(sourdough.Action, sourdough.Hybrid):
             
         """
         if data is None:
-            for action in self.__iter__():
+            for action in iter(self):
                 action.perform()
             return self
         else:
-            for action in self.__iter__():
+            for action in iter(self):
                 data = action.perform(data = data)
             return data
     
@@ -157,7 +129,7 @@ class Worker(sourdough.Action, sourdough.Hybrid):
         
         """
         new_contents = []
-        for item in self.__iter__():
+        for item in iter(self):
             if isinstance(item, sourdough.Hybrid):
                 if recursive:
                     new_item = item.apply(tool = tool, recursive = True)
@@ -226,27 +198,27 @@ class Worker(sourdough.Action, sourdough.Hybrid):
         else:
             return self.structure.iterator(self.contents)
 
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns default string representation of an instance.
 
-        Returns:
-            str: default string representation of an instance.
+    #     Returns:
+    #         str: default string representation of an instance.
 
-        """
-        if hasattr(self.structure, 'name'):
-            return '\n'.join([textwrap.dedent(f'''
-                sourdough {self.__class__.__name__}
-                name: {self.name}
-                structure: {self.structure.name}
-                contents:'''),
-                f'''{textwrap.indent(str(self.contents), '    ')}'''])
-        else:
-            return '\n'.join([textwrap.dedent(f'''
-                sourdough {self.__class__.__name__}
-                name: {self.name}
-                structure: {self.structure}
-                contents:'''),
-                f'''{textwrap.indent(str(self.contents), '    ')}'''])
+    #     """
+    #     if hasattr(self.structure, 'name'):
+    #         return '\n'.join([textwrap.dedent(f'''
+    #             sourdough {self.__class__.__name__}
+    #             name: {self.name}
+    #             structure: {self.structure.name}
+    #             contents:'''),
+    #             f'''{textwrap.indent(str(self.contents), '    ')}'''])
+    #     else:
+    #         return '\n'.join([textwrap.dedent(f'''
+    #             sourdough {self.__class__.__name__}
+    #             name: {self.name}
+    #             structure: {self.structure}
+    #             contents:'''),
+    #             f'''{textwrap.indent(str(self.contents), '    ')}'''])
             
     """ Private Methods """
     
@@ -326,7 +298,7 @@ class Manager(Worker):
         'sourdough.Action', 
         str]] = dataclasses.field(default_factory = list) 
     name: str = None
-    structure: str = dataclasses.field(default_factory = lambda: 'chained')
+    structure: str = 'chained'
     identification: str = None
     data: Any = None
 

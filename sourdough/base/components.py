@@ -221,44 +221,40 @@ class Loader(Component):
 
     """
     modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = lambda: list)
+        default_factory = list)
     name: str = None
     _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: dict)
+        default_factory = dict)
     
     """ Public Methods """
 
-    def load(self, attribute: str) -> object:
-        """Returns object named in 'attribute'.
+    def load(self, key: str) -> object:
+        """Returns object named in 'key'.
 
         Args:
-            attribute (str): name of attribute to load from modules listed in
-                'modules'.
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
 
         Returns:
-            object: loaded from a python module.
+            object: imported from a python module.
 
         """
-        try:
-            key = getattr(self, attribute)
-        except AttributeError:
-            key = attribute
         if key in self._loaded:
-            thing = self._loaded[key]
+            imported = self._loaded[key]
         else:
-            thing = None
-            for module in sourdough.utilities.listify(self.modules):
+            imported = None
+            for module in self.modules:
                 try:
-                    imported = importlib.import_module(module)
-                    thing = getattr(imported, key)
+                    imported = sourdough.utilities.importify(
+                        module = module, 
+                        key = key)
                     break
-                except (ImportError, AttributeError):
+                except (AttributeError, ImportError):
                     pass
-            if thing is None:
-                raise ImportError(f'{attribute} is not in {self.modules}')
-            else:
-                self._loaded[key] = thing
-        return thing
+        if imported is None:
+            raise ImportError(f'{key} was not found in {self.modules}')
+        else:
+            return imported
     
         
 @dataclasses.dataclass

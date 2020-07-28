@@ -7,6 +7,7 @@
 """
 
 import datetime
+import importlib
 import inspect
 import pathlib
 import re
@@ -54,7 +55,27 @@ def classify(
             return variable.__class__
         except AttributeError:
             return variable
-            
+        
+def importify(module: str, key: str) -> object:
+    """Lazily loads object from 'module'.
+
+    Args:
+        module (str): name of module holding object that is sought.
+        key (str): name of object sought.
+
+    Raises:
+        ImportError: if 'key' is not found in 'module'.
+
+    Returns:
+        object: class, function, or variable in 'module'.
+        
+    """
+    print('test module key', module, key)
+    try:
+        return getattr(importlib.import_module(module), key)
+    except (ImportError, AttributeError):
+       raise ImportError(f'failed to load {key} in {module}')
+             
 def instancify(
         variable: Any, 
         options: Mapping[str, Any] = None,
