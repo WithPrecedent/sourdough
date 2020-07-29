@@ -6,29 +6,24 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Component: abstract base class for core sourdough objects.
-    Action (Component): abstract base class for storing action methods. 
-        Action subclasses must have a 'perform' method.
-    Creator (Component): abstract base class for constructing Component subclass 
-        instances. Creator subclasses must have a 'create' method.
-    Loader (Component): lazy loader which uses a 'load' method to import python 
-        objects on demand.
+    Action (Component): abstract base class for storing action methods. Action 
+        subclasses must have a 'perform' method.
     Hybrid (Component, MutableSequence): iterable containing Component subclass 
         instances with both dict and list interfaces and methods.
     Lexicon (Component, MutableMapping): sourdough drop-in replacement for dict
         with additional functionality.
-    Catalog (Lexicon, Creator): list and wildcard accepting dict replacement 
-        with a 'create' method for instancing and/or validating stored objects.
+    Catalog (Lexicon): list and wildcard accepting dict replacement with a 
+        'create' method for instancing and/or validating stored objects.
 
 """
 
 import abc
 import collections.abc
 import dataclasses
-import importlib
 import inspect
 import more_itertools
 import textwrap
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -105,10 +100,10 @@ class Component(abc.ABC):
         return self.__str__()
         
     def __str__(self) -> str:
-        """Returns default string representation of an instance.
+        """Returns pretty string representation of an instance.
         
         Returns:
-            str: default string representation of an instance.
+            str: pretty string representation of an instance.
             
         """
         new_line = '\n'
@@ -128,10 +123,10 @@ class Component(abc.ABC):
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
-    """Base class for performing components on other objects in sourdough.
+    """Base class for performing actions on other objects in sourdough.
     
-    All Action subclasses must have 'perform' methods which has 'data' as its
-    first parameter.
+    All Action subclasses must have 'perform' methods which have 'item' as their
+    first parameters.
     
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -159,109 +154,20 @@ class Action(Component, abc.ABC):
         
         """
         pass
-        
- 
-@dataclasses.dataclass
-class Creator(Component, abc.ABC):
-    """Base class for builders of sourdough objects.
-    
-    All subclasses must have 'create' methods. 
-    
-    Creators often have a 'settings' parameter to acquire information about
-    object construction. However, that parameter is not required.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-    """
-    name: str = None
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, component: 'Component' = None, **kwargs) -> 'Component':
-        """Constructs or modifies a Component instance.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass
-
-
-@dataclasses.dataclass
-class Loader(Component):
-    """Base class for lazy loading of python modules and objects.
-
-    Args:
-        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
-            load is/are located. use is located. Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        _loaded (Mapping[str, Any]): dictionary of str keys and previously
-            loaded objects. This is checked first by the 'load' method to avoid
-            unnecessary re-importation. Defaults to an empty dict.
-
-    """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    _loaded: Mapping[str, Any] = dataclasses.field(
-        default_factory = dict)
-    
-    """ Public Methods """
-
-    def load(self, key: str) -> object:
-        """Returns object named in 'key'.
-
-        Args:
-            key (str): name of class, function, or variable to try to import 
-                from modules listed in 'modules'.
-
-        Returns:
-            object: imported from a python module.
-
-        """
-        if key in self._loaded:
-            imported = self._loaded[key]
-        else:
-            imported = None
-            for module in self.modules:
-                try:
-                    imported = sourdough.utilities.importify(
-                        module = module, 
-                        key = key)
-                    break
-                except (AttributeError, ImportError):
-                    pass
-        if imported is None:
-            raise ImportError(f'{key} was not found in {self.modules}')
-        else:
-            return imported
     
         
 @dataclasses.dataclass
 class Hybrid(Component, collections.abc.MutableSequence):
-    """Base class for sourdough sequenced iterables.
+    """Base class for ordered iterables in sourdough.
     
-    A Hybrid differs from a python list in 5 significant ways:
+    Hybrid combines the functionality and interfaces of python dicts and lists.
+    It allows duplicate keys and list-like iteration while supporting the easier
+    access methods of dictionaries. In order to support this hybrid approach to
+    iterables, Hybrid can only store Component subclasses.
+    
+    Hybrid is the primary base class used in sourdough projects.
+    
+    A Hybrid differs from a python list in 7 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
             in sourdough. This is inherited from Component.
         2) It only stores Component subclasses or subclass instances.
@@ -269,10 +175,14 @@ class Hybrid(Component, collections.abc.MutableSequence):
             passed and added to the 'contents' of a Hybrid instance. The base
             class allows Mappings and Sequences of Component subclasses and
             Component subclass instances. 
-        4) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
+        4) It uses a 'validate' method to validate or convert the passed 
+            'contents' argument. It will convert all supported datatypes to 
+            a dict. The 'validate' method is automatically called when a
+            Hybrid is instanced and when the 'add' method is called.
+        5) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
             subclass instance with only the items with 'name' attributes 
             matching items in the 'subset' argument.
-        5) Hybrid has an interface of both a dict and a list, but stores a list. 
+        6) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
             Component instances. A 'name' acts as a key to create the facade of 
             a dictionary with the items in the stored list serving as values. 
@@ -281,7 +191,11 @@ class Hybrid(Component, collections.abc.MutableSequence):
             at the expense of lookup speed. As a result, Hybrid should only be 
             used if a high volume of access calls is not anticipated. 
             Ordinarily, the loss of lookup speed should have negligible effect 
-            on overall performance.      
+            on overall performance.
+        7) It includes 'apply' and 'find' methods which traverse items in
+            'contents' (recursively, if the 'recursive' argument is True), to
+            either 'apply' a callable or 'find' items matching criteria in a
+            callable. 
 
     Args:
         contents (Union[Component, Mapping[str, Component], 
@@ -303,6 +217,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
         _default (Any): default value to use when there is a KeyError using the
             'get' method.
 
+    Attributes:
+        contents (Sequence[Component]): all objects in 'contents' must be
+            sourdough Component subclass instances and are stored in a list.
+        
     """
     contents: Union[
         'Component',
@@ -396,6 +314,33 @@ class Hybrid(Component, collections.abc.MutableSequence):
         contents = self.validate(contents = contents)
         self.contents.append(contents)
         return self    
+    
+    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
+        """Maps 'tool' to items stored in 'contents'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'contents' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'contents'. Defaults to True.
+            kwargs: additional arguments to pass when 'tool' is used.
+        
+        """
+        new_contents = []
+        for item in iter(self.contents):
+            if isinstance(item, sourdough.Hybrid):
+                if recursive:
+                    new_item = item.apply(
+                        tool = tool, 
+                        recursive = True, 
+                        **kwargs)
+                else:
+                    new_item = item
+            else:
+                new_item = tool(item, **kwargs)
+            new_contents.append(new_item)
+        self.contents = new_contents
+        return self
 
     def clear(self) -> None:
         """Removes all items from 'contents'."""
@@ -422,6 +367,41 @@ class Hybrid(Component, collections.abc.MutableSequence):
         self.contents.extend(contents)
         return self  
 
+    def find(self, 
+            tool: Callable, 
+            recursive: bool = True, 
+            matches: Sequence['Component'] = None,
+            **kwargs) -> Sequence['Component']:
+        """Finds items in 'contents' that match criteria in 'tool'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'contents' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'contents'. Defaults to True.
+            matches (Sequence[Component]): items matching the criteria
+                in 'tool'. This should not be passed by an external call to
+                'find'. It is included to allow recursive searching.
+            kwargs: additional arguments to pass when 'tool' is used.
+            
+        Returns:
+            Sequence[Component]: stored items matching the criteria
+                in 'tool'. 
+        
+        """
+        if matches is None:
+            matches = []
+        for item in iter(self.contents):
+            matches.extend(sourdough.utilities.listify(tool(item, **kwargs)))
+            if isinstance(item, sourdough.Hybrid):
+                if recursive:
+                    matches.extend(item.find(
+                        tool = tool, 
+                        recursive = True,
+                        matches = matches, 
+                        **kwargs))
+        return matches
+    
     def get(self, 
             key: Union[str, int]) -> Union[
                 'Component', 
@@ -647,6 +627,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
 
     def __iter__(self) -> Iterable:
         """Returns iterable of 'contents'.
+        
+        Hybrid subclasses can be restrucuted to support different iterators at
+        runtime. This is done by the Structure subclasses that are part of the
+        'project' subclass.
      
         Returns:
             Iterable: generic ordered iterable of 'contents'.
@@ -851,24 +835,24 @@ class Lexicon(Component, collections.abc.MutableMapping):
 
 
 @dataclasses.dataclass
-class Catalog(Creator, Lexicon):
+class Catalog(Lexicon):
     """Base class for a wildcard and list-accepting dictionary.
 
     A Catalog inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Catalog differs from a Lexicon in 6 significant ways:
+    A Catalog differs from a Lexicon in 7 significant ways:
         1) It recognizes an 'all' key which will return a list of all values
             stored in a Catalog instance.
         2) It recognizes a 'default' key which will return all values matching
             keys listed in the 'defaults' attribute. 'default' can also be set
             using the 'catalog['default'] = new_default' assignment. If 
             'defaults' is not passed when the instance is initialized, the 
-            initial value of 'defaults' is 'all'
+            initial value of 'defaults' is 'all'.
         3) It recognizes a 'none' key which will return an empty list.
-        4) It supports a list of keys being accessed with the matching
-            values returned. For example, 'catalog[['first_key', 'second_key']]' 
-            will return the values for those keys in a list ['first_value',
+        4) It supports a list of keys being accessed with the matching values 
+            returned. For example, 'catalog[['first_key', 'second_key']]' will 
+            return the values for those keys in a list ['first_value',
             'second_value'].
         5) If a single key is sought, a Catalog can either return the stored
             value or a stored value in a list (if 'always_return_list' is
@@ -876,13 +860,15 @@ class Catalog(Creator, Lexicon):
             when the iterator assumes a single datatype will be returned.
         6) It includes a 'create' method which will either instance a stored
             class or return a stored instance.
+        7) Catalog can only store Component subclases in 'contents'. This allows
+            it to accept Sequences of Components when the class is instanced or
+            when the 'add' method is used.
 
     Args:
-        contents (Union[sourdough.Component, Sequence[sourdough.Component], 
-            Mapping[str, sourdough.Component]]): Component(s) to validate or
-            convert to a dict. If 'contents' is a Sequence or a Component, 
-            the key for storing 'contents' is the 'name' attribute of each 
-            Component.
+        contents (Union[Component, Sequence[Component], Mapping[str, 
+            Component]]): Component(s) to validate or convert to a dict. If 
+            'contents' is a Sequence or a Component, the key for storing 
+            'contents' is the 'name' attribute of each Component.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
@@ -904,9 +890,9 @@ class Catalog(Creator, Lexicon):
                      
     """
     contents: Union[
-        'sourdough.Component',
-        Sequence['sourdough.Component'],
-        Mapping[str, 'sourdough.Component']] = dataclasses.field(
+        'Component',
+        Sequence['Component'],
+        Mapping[str, 'Component']] = dataclasses.field(
             default_factory = dict)    
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
@@ -925,15 +911,15 @@ class Catalog(Creator, Lexicon):
 
     def validate(self, 
             contents: Union[
-                'sourdough.Component',
-                Sequence['sourdough.Component'],
-                Mapping[str, 'sourdough.Component']]) -> Mapping[
-                    str, 'sourdough.Component']:
+                'Component',
+                Sequence['Component'],
+                Mapping[str, 'Component']]) -> Mapping[
+                    str, 'Component']:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
-            contents (Union[sourdough.Component, Sequence[sourdough.Component], 
-                Mapping[str, sourdough.Component]]): Component(s) to validate or
+            contents (Union[Component, Sequence[Component], 
+                Mapping[str, Component]]): Component(s) to validate or
                 convert to a dict. If 'contents' is a Sequence or a Component, 
                 the key for storing 'contents' is the 'name' attribute of each 
                 Component.
@@ -944,13 +930,13 @@ class Catalog(Creator, Lexicon):
                 as values.
                 
         Returns:
-            Mapping (str, sourdough.Component): a properly typed dict derived
+            Mapping (str, Component): a properly typed dict derived
                 from passed 'contents'.
             
         """
-        if (isinstance(contents, sourdough.Component) 
+        if (isinstance(contents, Component) 
             or (inspect.isclass(contents) 
-                and issubclass(contents, sourdough.Component))):
+                and issubclass(contents, Component))):
             return {contents.get_name(): contents}
         elif (isinstance(contents, Mapping)
             and (all(isinstance(v, Component) for v in contents.values())
@@ -985,7 +971,7 @@ class Catalog(Creator, Lexicon):
             defaults = new_defaults,
             always_return_list = self.always_return_list)
 
-    def create(self, key: str, **kwargs) -> 'sourdough.Component':
+    def create(self, key: str, **kwargs) -> 'Component':
         """Returns an instance of a stored subclass or instance.
         
         This method acts as a factory for instancing stored classes or returning
@@ -997,7 +983,7 @@ class Catalog(Creator, Lexicon):
                 instanced.
                     
         Returns:
-            sourdough.Component: that has been instanced with kwargs as 
+            Component: that has been instanced with kwargs as 
                 arguments if it was a stored class. Otherwise, the instance
                 is returned as it was stored.
             
@@ -1234,12 +1220,12 @@ presently fit with the sourdough workflow. However, the code should still work.
 #     """ Class Methods """
     
 #     @classmethod
-#     def add(cls, key: str, option: 'sourdough.Component') -> None:
+#     def add(cls, key: str, option: 'Component') -> None:
 #         """Adds 'option' to 'options' at 'key'.
         
 #         Args:
 #             key (str): name of key to link to 'option'.
-#             option (sourdough.Component): object to store in 'options'.
+#             option (Component): object to store in 'options'.
             
 #         """
 #         cls.options[key] = option

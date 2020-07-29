@@ -11,6 +11,8 @@ Contents:
         class attribute.
     OptionsMixin: mixin for storing strategies or options in an 'options'
         class attribute.
+    LoaderMixin: lazy loader mixin which uses a 'load' method to import python 
+        objects on demand.
     ProxyMixin: mixin which creates a python property which refers to another
         attribute by using the 'proxify' method.
 
@@ -263,7 +265,55 @@ class OptionsMixin(abc.ABC):
             return instances
         else:
             raise TypeError('option must be a str or list type')
-     
+
+
+@dataclasses.dataclass
+class LoaderMixin(abc.ABC):
+    """Mixin for lazy loading of python modules and objects.
+
+    Args:
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. use is located. Defaults to an empty list.
+        _loaded (Mapping[str, Any]): dictionary of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+
+    """
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = list)
+    _loaded: Mapping[str, Any] = dataclasses.field(
+        default_factory = dict)
+    
+    """ Public Methods """
+
+    def load(self, key: str) -> object:
+        """Returns object named by 'key'.
+
+        Args:
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
+
+        Returns:
+            object: imported from a python module.
+
+        """
+        if key in self._loaded:
+            imported = self._loaded[key]
+        else:
+            imported = None
+            for module in self.modules:
+                try:
+                    imported = sourdough.utilities.importify(
+                        module = module, 
+                        key = key)
+                    break
+                except (AttributeError, ImportError):
+                    pass
+        if imported is None:
+            raise ImportError(f'{key} was not found in {self.modules}')
+        else:
+            return imported
+            
     
 @dataclasses.dataclass
 class ProxyMixin(abc.ABC):

@@ -35,13 +35,12 @@ from sourdough import utilities
 from sourdough.base.core import Component
 from sourdough.base.core import Action
 from sourdough.base.core import Hybrid
-from sourdough.base.core import Creator
-from sourdough.base.core import Loader
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import ProxyMixin
+from sourdough.base.mixins import LoaderMixin
 from sourdough.base.mixins import OptionsMixin
 
 # Imports of configuration and file management classes.
@@ -50,7 +49,7 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project import designs
+from sourdough.project import structures
 from sourdough.project.actions import Technique
 from sourdough.project.actions import Task
 from sourdough.project.actions import Worker
@@ -71,7 +70,7 @@ __all__ = [
     'Component',
     'Action',
     'Hybrid',
-    'Creator',
+    'Action',
     'Lexicon',
     'Catalog',
     'LibraryMixin',
@@ -82,7 +81,7 @@ __all__ = [
     'defaults',
     'Settings',
     'Filer',
-    'designs',
+    'structures',
     'Technique',
     'Task',
     'Worker',

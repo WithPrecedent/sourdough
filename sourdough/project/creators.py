@@ -5,11 +5,11 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Author (Creator): creates a Hybrid instance from passed arguments and/or a 
+    Author (Action): creates a Hybrid instance from passed arguments and/or a 
         Settings instance.
-    Publisher (Creator): finalizes a Hybrid instance based upon the initial
+    Publisher (Action): finalizes a Hybrid instance based upon the initial
         construction by an Author instance and/or runtime user editing.
-    Reader (Creator): executes a Hybrid instance, storing changes and results
+    Reader (Action): executes a Hybrid instance, storing changes and results
         in the Reader instance and/or passed data object.
 
 """
@@ -21,7 +21,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Author(sourdough.Creator):
+class Author(sourdough.Action):
     """Constructs composite objects from user settings.
     
     Args:
@@ -32,7 +32,7 @@ class Author(sourdough.Creator):
     
     """ Public Methods """
     
-    def create(self, 
+    def perform(self, 
             plan: 'sourdough.Hybrid', 
             parent: 'sourdough.Hybrid' = None) -> 'sourdough.Hybrid':
         """Drafts a plan with its 'contents' organized and instanced.
@@ -62,10 +62,10 @@ class Author(sourdough.Creator):
                         plan = plan,
                         name = item,
                         key = suffix)
-                    # Recursively calls the 'create' method if the 'component' 
+                    # Recursively calls the 'perform' method if the 'component' 
                     # created is a Hybrid type.
                     if isinstance(component, sourdough.Hybrid):
-                        component = self.create(plan = component)
+                        component = self.perform(plan = component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_design'):
@@ -132,7 +132,7 @@ class Author(sourdough.Creator):
 
         
 @dataclasses.dataclass
-class Publisher(sourdough.Creator):
+class Publisher(sourdough.Action):
     """Finalizes a composite object from user settings.
     
     Args:
@@ -143,7 +143,7 @@ class Publisher(sourdough.Creator):
 
     """ Public Methods """
  
-    def create(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def perform(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """Finalizes a plan with 'parameters' added.
         
         Args:
@@ -285,11 +285,11 @@ class Publisher(sourdough.Creator):
 
 
 @dataclasses.dataclass
-class Reader(sourdough.Creator):
+class Reader(sourdough.Action):
     
     project: 'sourdough.Project' = None  
     
-    def create(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def perform(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """[summary]
 
         Returns:
@@ -301,7 +301,7 @@ class Reader(sourdough.Creator):
         if self.project.data is None:
             plan.perform()
         else:
-            self.project.data = plan.perform(data = self.project.data)
+            self.project.data = plan.perform(item = self.project.data)
         return plan
 
     """ Private Methods """

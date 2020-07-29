@@ -25,7 +25,7 @@ class Structure(sourdough.OptionsMixin, sourdough.Component):
     iterators: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
             'chain': itertools.chain,
-            'chunks': itertools.ichunked,
+            'chunks': more_itertools.ichunked,
             'combinations': itertools.combinations,
             'copies': itertools.tee,
             'custom': 'iterator',

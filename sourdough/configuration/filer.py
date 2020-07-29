@@ -96,7 +96,7 @@ class Filer(object):
 
         Raises:
             TypeError: if 'path' is neither a str nor Path.
-            FileNotFoundError: if the validated path does not exist and 'create'
+            FileNotFoundError: if the validated path does not exist and 'perform'
                 is False.
 
         Returns:
@@ -642,7 +642,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.Loader, sourdough.Component):
+class FileFormat(sourdough.LoaderMixin, sourdough.Component):
     """File format information.
 
     Args:

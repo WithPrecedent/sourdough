@@ -41,7 +41,7 @@ def test_catalog():
     assert catalog[['test', 'another']] == [test_component, another_component]
     catalog.always_return_list = True
     assert catalog['test'] == [test_component]
-    assert catalog.create('another') == another_component
+    assert catalog.perform('another') == another_component
     subset_catalog = catalog.subsetify(subset = ['third', 'a_key'])
     assert subset_catalog.always_return_list
     return

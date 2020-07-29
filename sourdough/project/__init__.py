@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     components: subclasses of Action which can be used in composite objects.
-    creators: subclasses of Creator which are used to construct composite
+    creators: subclasses of Action which are used to construct composite
         objects (including components of the complete objects).
     graphs: classes related to graph designs.
     project: interface classes for constructing and executing composite objects.

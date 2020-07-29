@@ -37,7 +37,7 @@ class Edge(sourdough.Component):
     start: 'sourdough.Node' = None
     stop: 'sourdough.Node' = None
     directed: bool = False
-    weight: float = None
+    weight: float = 1.0
     name: str = None
     
     """ Public Methods """

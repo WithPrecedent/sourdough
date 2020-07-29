@@ -90,7 +90,7 @@ class Plan(sourdough.Hybrid):
             return self
         else:
             for action in iter(self):
-                data = action.perform(data = data)
+                data = action.perform(item = data)
             return data
     
     def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
@@ -223,20 +223,20 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
             well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
-        2) Project stores Creator subclass instances in 'contents'. Those 
+        2) Project stores Action subclass instances in 'contents'. Those 
             instances are used to assemble and apply the parts of Hybrid 
             instances.
         3) Project includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
         4) It has an OptionsMixin, which contains a Catalog instance storing
-            default Creator instances in 'options'.
+            default Action instances in 'options'.
         5)
         
     Args:
-        contents (Sequence[Union[sourdough.Creator, str]]]): list of 
-            Creator subclass instances or strings which correspond to keys in 
+        contents (Sequence[Union[sourdough.Action, str]]]): list of 
+            Action subclass instances or strings which correspond to keys in 
             'options'. Defaults to 'default', which will use the 'defaults' 
-            attribute of 'options' to select Creator instances.
+            attribute of 'options' to select Action instances.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -283,7 +283,7 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
             has been implemented. It is set by the 'advance' method.
             
     """
-    contents: Sequence['sourdough.Creator'] = dataclasses.field(
+    contents: Sequence['sourdough.Action'] = dataclasses.field(
         default_factory = lambda: [
             sourdough.Author, sourdough.Publisher, sourdough.Reader])
     name: str = None
@@ -333,7 +333,7 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
             settings = self.settings)
         # Initializes a composite Hybrid subclass instance.
         self.plan = self._initialize_plan(design = self.design)
-        # Initializes Creator instances stored in 'contents'.
+        # Initializes Action instances stored in 'contents'.
         self.contents = self._initialize_creators(contents = self.contents)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
@@ -345,24 +345,24 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
     """ Public Methods """
 
     def validate(self, 
-            contents: 'sourdough.Creator') -> Sequence['sourdough.Creator']:
-        """Validates that all 'contents' are Creator subclass instances.
+            contents: 'sourdough.Action') -> Sequence['sourdough.Action']:
+        """Validates that all 'contents' are Action subclass instances.
 
         Args:
-            contents (sourdough.Creator): list of Creator subclass instances.
+            contents (sourdough.Action): list of Action subclass instances.
 
         Raises:
-            TypeError: if an item in 'contents' is not a Creator subclass 
+            TypeError: if an item in 'contents' is not a Action subclass 
                 instance.
             
         Returns:
-            Sequence[sourdough.Creator]: a list with Creator subclass instances.
+            Sequence[sourdough.Action]: a list with Action subclass instances.
                   
         """
-        if all(issubclass(c, sourdough.Creator) for c in contents):
+        if all(issubclass(c, sourdough.Action) for c in contents):
             return contents
         else:       
-            raise TypeError(f'contents must only contain Creator subclasses')
+            raise TypeError(f'contents must only contain Action subclasses')
                  
     def advance(self, stage: str = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
@@ -414,7 +414,7 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
                 f'{self.name} is at the last stage and cannot further iterate')
         else:
             self.advance()
-            plan = self.contents[self.index].create(plan = plan)
+            plan = self.contents[self.index].perform(plan = plan)
         return plan
             
     """ Dunder Methods """
@@ -423,10 +423,10 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         """Returns iterable of methods of 'contents'.
         
         Returns:
-            Iterable: 'create' methods of 'contents'.
+            Iterable: 'perform' methods of 'contents'.
             
         """
-        return iter([getattr(s, 'create') for s in self.contents])
+        return iter([getattr(s, 'perform') for s in self.contents])
 
     def __next__(self) -> Callable:
         """Returns next method after method matching 'item'.
@@ -437,7 +437,7 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         """
         if self.index < len(self.contents):
             self.advance()
-            return getattr(self.contents[self.index], 'create')
+            return getattr(self.contents[self.index], 'perform')
         else:
             raise StopIteration()
 
@@ -494,15 +494,15 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         return sourdough.utilities.datetime_string(prefix = self.name)
     
     def _initialize_creators(self, 
-            contents: Sequence['sourdough.Creator']) -> Sequence[
-                'sourdough.Creator']:
-        """Instances each Creator in 'contents'.
+            contents: Sequence['sourdough.Action']) -> Sequence[
+                'sourdough.Action']:
+        """Instances each Action in 'contents'.
         
         Args:
-            contents (Sequence[sourdough.Creator]): list of Creator classes.
+            contents (Sequence[sourdough.Action]): list of Action classes.
         
         Returns:
-            Sequence[sourdough.Creator]: list of Creator classes.
+            Sequence[sourdough.Action]: list of Action classes.
         
         """
         new_contents = []
@@ -510,10 +510,10 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
             try:
                 new_contents.append(creator(project = self))
             except TypeError:
-                if isinstance(creator, sourdough.Creator):
+                if isinstance(creator, sourdough.Action):
                     new_contents.append(creator)
                 else:
-                    raise TypeError(f'{creator} is not a Creator type')
+                    raise TypeError(f'{creator} is not a Action type')
         return new_contents   
     
     def _initialize_plan(self, 
@@ -557,15 +557,15 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
             return design()
                           
     def _auto_contents(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-        """Automatically advances through and iterates stored Creator instances.
+        """Automatically advances through and iterates stored Action instances.
 
         Args:
             plan (sourdough.Hybrid): an instance containing any data for the plan 
                 methods to be applied to.
                 
         Returns:
-            sourdough.Hybrid: modified by the stored Creator instance's 
-                'create' methods.
+            sourdough.Hybrid: modified by the stored Action instance's 
+                'perform' methods.
             
         """
         for stage in self.contents:
