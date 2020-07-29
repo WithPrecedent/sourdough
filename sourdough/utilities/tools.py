@@ -70,7 +70,6 @@ def importify(module: str, key: str) -> object:
         object: class, function, or variable in 'module'.
         
     """
-    print('test module key', module, key)
     try:
         return getattr(importlib.import_module(module), key)
     except (ImportError, AttributeError):

@@ -9,7 +9,7 @@ import dataclasses
 import pathlib
 
 import sourdough
-import sourdough.project.actions
+import sourdough.project.components
 import sourdough.project.workers
 
 
@@ -21,7 +21,7 @@ class Parser(sourdough.project.workers.Worker):
 
 
 @dataclasses.dataclass
-class Search(sourdough.project.actions.Task):
+class Search(sourdough.project.components.Task):
 
     def perform(self):
         return   
@@ -33,7 +33,7 @@ def test_tree():
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
-        structure = 'comparative',
+        design = 'comparative',
         automatic = True)
     print('test project', project)
     return

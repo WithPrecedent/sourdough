@@ -23,7 +23,7 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Component via sourdough.base.components.Component,
+    Instead of acccesing Component via sourdough.base.core.Component,
     you can just use: sourdough.Component
     
 """
@@ -32,13 +32,13 @@ For example:
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
-from sourdough.base.components import Component
-from sourdough.base.components import Action
-from sourdough.base.components import Hybrid
-from sourdough.base.components import Creator
-from sourdough.base.components import Loader
-from sourdough.base.components import Lexicon
-from sourdough.base.components import Catalog
+from sourdough.base.core import Component
+from sourdough.base.core import Action
+from sourdough.base.core import Hybrid
+from sourdough.base.core import Creator
+from sourdough.base.core import Loader
+from sourdough.base.core import Lexicon
+from sourdough.base.core import Catalog
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import ProxyMixin
@@ -50,7 +50,12 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project import structures
+from sourdough.project import designs
+from sourdough.project.actions import Technique
+from sourdough.project.actions import Task
+from sourdough.project.actions import Worker
+from sourdough.project.components import Edge
+from sourdough.project.components import Node
 from sourdough.project.creators import Author
 from sourdough.project.creators import Publisher
 from sourdough.project.creators import Reader
@@ -77,7 +82,12 @@ __all__ = [
     'defaults',
     'Settings',
     'Filer',
-    'structures',
+    'designs',
+    'Technique',
+    'Task',
+    'Worker',
+    'Edge',
+    'Node',
     'Author',
     'Publisher',
     'Reader',  

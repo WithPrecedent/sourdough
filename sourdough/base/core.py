@@ -39,7 +39,7 @@ class Component(abc.ABC):
 
     A Component has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of tree data structures such as trees and graphs. 
+    to create a variety of tree data designs such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
     collectively, with Component and its subclasses.
@@ -128,7 +128,7 @@ class Component(abc.ABC):
 
 @dataclasses.dataclass
 class Action(Component, abc.ABC):
-    """Base class for performing actions on other objects in sourdough.
+    """Base class for performing components on other objects in sourdough.
     
     All Action subclasses must have 'perform' methods which has 'data' as its
     first parameter.
@@ -152,7 +152,7 @@ class Action(Component, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def perform(self, data: object = None, **kwargs) -> object:
+    def perform(self, item: object = None, **kwargs) -> object:
         """Performs some action related to passed 'data'.
         
         Subclasses must provide their own methods.

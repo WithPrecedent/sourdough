@@ -32,43 +32,43 @@ class Author(sourdough.Creator):
     
     """ Public Methods """
     
-    def create(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def create(self, 
+            plan: 'sourdough.Hybrid', 
+            parent: 'sourdough.Hybrid' = None) -> 'sourdough.Hybrid':
         """Drafts a plan with its 'contents' organized and instanced.
         
         Args:
-            plan (sourdough.Hybrid): Hybrid instance to organize the 
-                information in 'contents' or 'settings'.
+            plan (sourdough.Hybrid): Hybrid instance to create and organize
+                based on the information in 'contents' or 'settings'.
 
         Returns:
             sourdough.Hybrid: an instance with contents fully instanced.
                 
         """
         attributes = {}
-        # Finds and sets the 'structure' of 'plan'.
-        plan.structure = self._get_structure(name = plan.name)
+        # Finds and sets the 'design' of 'plan'.
+        plan.design = self._get_design(name = plan.name)
         # Iterates through appropriate settings to create 'contents' of 'plan'.
         for key, value in self.project.settings[plan.name].items():
             # Finds settings that have suffixes matching keys in the 
-            # 'components' of 'structure' of 'plan'.
-            if any(key.endswith(s) for s in plan.structure.components.keys()):
+            # 'components' of 'design' of 'plan'.
+            if any(key.endswith(s) for s in plan.design.components.keys()):
+                suffix = key.split('_')[-1]
+                # prefix = key[:-len(suffix) - 1]
+                # Iterates through listed items in 'value'.
                 for item in sourdough.utilities.listify(value):
-                    # Checks if special prebuilt instance exists.
-                    try:
-                        component = self.project.options[item]
-                    # Otherwise uses the appropriate generic type.
-                    except KeyError:
-                        print('test key', key)
-                        suffix = key.split('_')[-1]
-                        name = plan.structure.components[suffix]
-                        component = plan.structure.load(key = name)(name = item)
-                    component = self._instance_component(component = component)
+                    # Gets appropraite Component instance based on 'item'.
+                    component = self._get_component(
+                        plan = plan,
+                        name = item,
+                        key = suffix)
                     # Recursively calls the 'create' method if the 'component' 
                     # created is a Hybrid type.
                     if isinstance(component, sourdough.Hybrid):
                         component = self.create(plan = component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
-            elif not key.endswith('_structure'):
+            elif not key.endswith('_design'):
                 attributes[key] = value
         # Adds an extra settings as attributes to plan.
         for key, value in attributes.items():
@@ -77,27 +77,58 @@ class Author(sourdough.Creator):
 
     """ Private Methods """
     
-    def _get_structure(self, name: str) -> 'sourdough.structures.Structure':
-        """
+    def _get_design(self, name: str) -> 'sourdough.designs.Design':
+        """Returns Design class based upon 'settings' or default option.
+        
+        Args:
+            name (str): name of Hybrid for which the design is sought.
+            
+        Returns:
+            sourdough.designs.Design: the appropriate Design based on
+                'name' or the default option stored in 'project'.
         
         """ 
         try:
-            design = self.project.settings[name][f'{name}_structure']
+            design = self.project.settings[name][f'{name}_design']
         except KeyError:
-            design = self.project.structure
-        return self.project._initialize_structure(structure = design)    
-    
-    def _instance_component(self, 
-            component: 'sourdough.Component') -> 'sourdough.Component':
-        """[summary]
+            design = self.project.design
+        return self.project._initialize_design(design = design)    
 
-        Returns:
-            [type]: [description]
+    def _get_component(self, 
+            plan: 'sourdough.Hybrid', 
+            name: str,
+            key: str) -> 'sourdough.Component':
+        """[summary]
         """
+        # Checks if special prebuilt instance exists.
         try:
-            return component()
+            component = self.project.options[name]
+        # Otherwise uses the appropriate generic type.
+        except KeyError:
+            component = plan.design.load(key = key)
+        try:
+            return component(name = name)
         except TypeError:
             return component
+        
+    def _instance_component(self, 
+            component: 'sourdough.Component', 
+            **kwargs) -> 'sourdough.Component':
+        """Returns a Component instance.
+        
+        If 'component' is already an instance, it is returned intact, Otherwise,
+        it is instanced with kwargs.
+        
+        Args:
+            component (sourdough.Component): a Component subclass or subclass
+                instance.
+            kwargs: arguments to use if 'component' is instanced.
+
+        Returns:
+            sourdough.Component: a Component instance.
+            
+        """
+
 
         
 @dataclasses.dataclass
@@ -113,11 +144,16 @@ class Publisher(sourdough.Creator):
     """ Public Methods """
  
     def create(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-        """[summary]
+        """Finalizes a plan with 'parameters' added.
+        
+        Args:
+            plan (sourdough.Hybrid): Hybrid instance to finalize the objects in
+                its 'contents'.
 
         Returns:
-            [type] -- [description]
-            
+            sourdough.Hybrid: an instance with its 'contents' finalized and
+                ready for application.
+                
         """
         plan.apply(tool = self._set_parameters)
         return plan
@@ -129,7 +165,6 @@ class Publisher(sourdough.Creator):
         """
         
         """
-        thing = component.structure.load('technique')
         if isinstance(component, sourdough.Technique):
             return self._set_technique_parameters(technique = component)
         elif isinstance(component, sourdough.Task):
@@ -261,6 +296,7 @@ class Reader(sourdough.Creator):
             [type] -- [description]
             
         """
+        print('test plan reader', plan.overview)
         plan.apply(tool = self._add_data_dependent)
         if self.project.data is None:
             plan.perform()
