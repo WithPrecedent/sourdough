@@ -46,15 +46,15 @@ class Author(sourdough.Action):
                 
         """
         attributes = {}
-        # Finds and sets the 'design' of 'plan'.
-        plan.design = self._get_design(name = plan.name)
+        # Finds and sets the 'structure' of 'plan'.
+        plan.structure = self._get_structure(name = plan.name)
         # Iterates through appropriate settings to create 'contents' of 'plan'.
         for key, value in self.project.settings[plan.name].items():
             # Finds settings that have suffixes matching keys in the 
-            # 'components' of 'design' of 'plan'.
-            if any(key.endswith(s) for s in plan.design.components.keys()):
-                suffix = key.split('_')[-1]
-                # prefix = key[:-len(suffix) - 1]
+            # 'components' of 'project'.
+            if any(key.endswith(f'{s}s') 
+                    for s in self.project.options.keys()):
+                suffix = key.split('_')[-1][:-1]
                 # Iterates through listed items in 'value'.
                 for item in sourdough.utilities.listify(value):
                     # Gets appropraite Component instance based on 'item'.
@@ -68,7 +68,7 @@ class Author(sourdough.Action):
                         component = self.perform(plan = component)
                     plan.add(component)
             # Stores other settings in 'attributes'.        
-            elif not key.endswith('_design'):
+            elif not key.endswith('_structure'):
                 attributes[key] = value
         # Adds an extra settings as attributes to plan.
         for key, value in attributes.items():
@@ -77,23 +77,46 @@ class Author(sourdough.Action):
 
     """ Private Methods """
     
-    def _get_design(self, name: str) -> 'sourdough.designs.Design':
+    def _get_structure(self, name: str) -> 'sourdough.structures.Design':
         """Returns Design class based upon 'settings' or default option.
         
         Args:
-            name (str): name of Hybrid for which the design is sought.
+            name (str): name of Hybrid for which the structure is sought.
             
         Returns:
-            sourdough.designs.Design: the appropriate Design based on
+            sourdough.structures.Design: the appropriate Design based on
                 'name' or the default option stored in 'project'.
         
         """ 
         try:
-            design = self.project.settings[name][f'{name}_design']
+            structure = self.project.settings[name][f'{name}_structure']
         except KeyError:
-            design = self.project.design
-        return self.project._initialize_design(design = design)    
+            structure = self.project.structure
+        return self._initialize_structure(structure = structure)  
+      
+    def _initialize_structure(self, 
+            structure: Union[
+                str, 
+                'sourdough.structures.Structure']) -> (
+                    'sourdough.structures.Structure'):
+        """Returns a Structure instance based upon 'structure'.
 
+        Args:
+            structure (Union[str, sourdough.structures.Structure]): str matching
+                a key in 'structures', a Structure subclass, or a Structure
+                subclass instance.
+
+        Returns:
+            sourdough.structures.Structure: a Structure subclass instance.
+            
+        """
+        if isinstance(structure, str):
+            return self.project.structures[structure]()
+        elif isinstance(structure, sourdough.Structure):
+            return structure
+        else:
+            return structure()
+        
     def _get_component(self, 
             plan: 'sourdough.Hybrid', 
             name: str,
@@ -102,16 +125,18 @@ class Author(sourdough.Action):
         """
         # Checks if special prebuilt instance exists.
         try:
-            component = self.project.options[name]
+            component = plan.select(name)
+        except KeyError:
+            component = self.project.select(name)
         # Otherwise uses the appropriate generic type.
         except KeyError:
-            component = plan.design.load(key = key)
+            component = plan.structure.select(key)
         try:
             return component(name = name)
         except TypeError:
             return component
         
-    def _instance_component(self, 
+    def _initialize_component(self, 
             component: 'sourdough.Component', 
             **kwargs) -> 'sourdough.Component':
         """Returns a Component instance.

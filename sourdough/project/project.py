@@ -10,6 +10,8 @@ Contents:
 
 """
 import dataclasses
+import itertools
+import more_itertools
 import pathlib
 import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -18,20 +20,14 @@ import warnings
 import sourdough
 
 
-@dataclasses.dataclass
-class Plan(sourdough.Hybrid):
-    """Iterable container for a composite sourdough object.
-    
-   It includes a metadata label for a unique project in the 'identification' 
-   attribute. By default, this will combine the 'name' attribute with the date 
-   and time when this class is instanced.
-   
-   A 'data' attribute is added for storing any data object(s) that are needed 
-   when automatic processing is chosen.
 
+@dataclasses.dataclass
+class Overview(sourdough.Lexicon):
+    """Dictionary of different Component types in a Worker instance.
+    
     Args:
-        contents (Sequence[sourdough.Component]): instances which form the
-            structure of a composite object. Defaults to an empty list. 
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -43,97 +39,127 @@ class Plan(sourdough.Hybrid):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        design (str): the name of the structural design that should
-            be used to create objects in an instance. This should correspond
-            to a key in a Project instance's 'designs' class attribute. 
-            Defaults to 'chained'.
-        data (Any]): a data object to apply any constructed objects to.
-            This need only be provided when the class is instanced for
-            automatic execution. Defaults to None. If you are working on a data-
-            focused Manager, consider using siMpLify instead 
-            (https://github.com/WithPrecedent/simplify). It applies sourdough
-            in the data science context. sourdough itself treats 'data' as an
-            unknown object of any type which offers more flexibility of design.
-            
+              
     """
-    contents: Sequence['sourdough.Component'] = dataclasses.field(
-        default_factory = list) 
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
-    design: str = 'chained'
-    data: Any = None    
-
+    worker: 'Worker' = None
+    
     """ Initialization Methods """
-
+    
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
         super().__post_init__()
-
-
-    """ Public Methods """
+        if self.worker.structure is not None:
+            self.contents.add({
+                'name': self.worker.name, 
+                'structure': self.worker.structure.name})
+            for key, value in self.worker.structure.options.items():
+                matches = self.worker.find(
+                    self._get_type, 
+                    component = value)
+                if len(matches) > 0:
+                    self.contents[f'{key}s'] = matches
+        else:
+            raise ValueError(
+                'structure must be a Structure for an overview to be created.')
+        return self          
+    
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        """Returns pretty string representation of an instance.
         
-    def perform(self, data: object = None) -> object:
-        """Applies stored Action instances to 'data'.
-
-        Args:
-            data (object): an object to be modified and/or analyzed by stored 
-                Action instances. Defaults to None.
-
         Returns:
-            object: data, possibly with modifications made by Operataor 
-                instances. If data is not passed, no object is returned.
+            str: pretty string representation of an instance.
             
         """
-        if data is None:
-            for action in iter(self):
-                action.perform()
-            return self
-        else:
-            for action in iter(self):
-                data = action.perform(item = data)
-            return data
-    
-    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
-        """
-        
-        """
-        new_contents = []
-        for item in iter(self.contents):
-            if isinstance(item, sourdough.Hybrid):
-                if recursive:
-                    new_item = item.apply(
-                        tool = tool, 
-                        recursive = True, 
-                        **kwargs)
-                else:
-                    new_item = item
+        new_line = '\n'
+        representation = [f'sourdough {self._get_name}']
+        for key, value in self.contents.items():
+            if isinstance(value, Sequence):
+                names = [v.name for v in value]
+                representation.append(f'{key}: {", ".join(names)}')
             else:
-                new_item = tool(item, **kwargs)
-            new_contents.append(new_item)
-        self.contents = new_contents
-        return self
+                representation.append(f'{key}: {value}')
+        return new_line.join(representation)    
 
-    def find(self, 
-            tool: Callable, 
-            recursive: bool = True, 
-            matches: Sequence = None,
-            **kwargs) -> Sequence['sourdough.Component']:
+    """ Private Methods """
+
+    def _get_type(self, 
+            item: 'sourdough.Component', 
+            component: 'sourdough.Component') -> Sequence[
+                'sourdough.Component']: 
+        """[summary]
+
+        Args:
+            item (sourdough.Component): [description]
+            sourdough.Component (sourdough.Component): [description]
+
+        Returns:
+            Sequence[sourdough.Component]:
+            
         """
+        if isinstance(item, component):
+            return [item]
+        else:
+            return []
+ 
+
+@dataclasses.dataclass
+class Worker(sourdough.OptionsMixin, sourdough.Hybrid):
+    """Iterator in sourdough composite projects.
+
+    Worker inherits all of the differences between a Hybrid and a python list.
+    
+    A Worker differs from a Hybrid in 3 significant ways:
+        1) It has a 'structure' attribute which indicates how the contained 
+            iterator should be ordered. 
+        2) An 'overview' property is added which returns a dict of the names
+            of the various parts of the tree objects. It doesn't include the
+            hierarchy itself. Rather, it includes lists of all the types of
+            sourdough.Component objects.
         
-        """
-        if matches is None:
-            matches = []
-        for item in iter(self.contents):
-            matches.extend(sourdough.utilities.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.Hybrid):
-                if recursive:
-                    matches.extend(item.find(
-                        tool = tool, 
-                        recursive = True,
-                        matches = matches, 
-                        **kwargs))
-        return matches
-               
+    Args:
+        contents (Sequence[sourdough.Component]]): stored iterable of Action
+            subclasses. Defaults to an empty list.
+        name (str): creates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in sourdough.Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        structure (sourdough.Structure): structure for the organization, iteration,
+            and composition of 'contents'.
+        _default (Any): default value to use when there is a KeyError using the
+            'get' method.
+
+    Attributes:
+        contents (Sequence[sourdough.Component]): all objects in 'contents' must 
+            be sourdough Component subclass instances and are stored in a list.
+
+    ToDo:
+        draw: a method for producting a diagram of a Worker instance's 
+            'contents' to the console or a file.
+            
+    """
+    contents: Union[
+        'sourdough.Component',
+        Mapping[str, 'sourdough.Component'], 
+        Sequence['sourdough.Component']] = dataclasses.field(
+            default_factory = list)
+    name: str = None
+    structure: 'sourdough.Structure' = None
+    _default: Any = None
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+
     """ Properties """
     
     @property
@@ -145,224 +171,9 @@ class Plan(sourdough.Hybrid):
                 '_get_overview' method.
         
         """
-        return self._get_overview() 
-
-    @property    
-    def workers(self) -> Sequence['Worker']:
-        """Returns all instances of Worker in 'contents' (recursive).
-        
-        Returns:
-            Sequence[Worker]: all Worker instances in the contained tree
-                object.
-                
-        """
-        return self.find(self._get_type, component = Worker)
- 
-    @property
-    def tasks(self) -> Sequence['sourdough.Task']:
-        """Returns all instances of Task in 'contents' (recursive).
-        
-        Returns:
-            Sequence[Task]: all Task instances in the contained tree
-                object.
-                
-        """
-        return self.find(self._get_type, component = sourdough.Task)
-    
-    @property    
-    def techniques(self) -> Sequence['sourdough.Technique']:
-        """Returns all instances of Technique in 'contents' (recursive).
-        
-        Returns:
-            Sequence[Technique]: all Technique instances in the contained 
-                tree object.
-                
-        """
-        return self.find(self._get_type, component = sourdough.Technique)
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable selected by structural settings."""
-        if isinstance(self.design.iterator, str):
-            return getattr(self, self.design.iterator)(
-                contents = self.contents)
-        else:
-            return self.design.iterator(self.contents)
-        
-    """ Private Methods """
-        
-    def _get_overview(self) -> Mapping[str, Union[str, Sequence[str]]]:
-        """Returns outline of the overal project tree.
-        
-        Returns:  
-            Mapping[str, Union[str, Sequence[str]]]: project identification and
-                the names of the contained Worker, Task, and/or Technique
-                instances.
-                
-        """
-        overview = {'project': self.identification}
-        overview['workers'] = [w.name for w in self.workers]
-        overview['tasks'] = [s.name for s in self.tasks]
-        overview['techniques'] = [t.name for t in self.techniques]
-        return overview
-
-
-   
- 
-@dataclasses.dataclass
-class Project(sourdough.OptionsMixin, sourdough.Hybrid):
-    """Constructs, organizes, and stores tree Workers and Actions.
-    
-    A Project inherits all of the differences between a Hybrid and a python
-    list.
-
-    A Project differs from a Hybrid in 5 significant ways:
-        1) The Project is the public interface to composite object construction 
-            and application. It may store the composite object instance(s) as 
-            well as any required classes (such as those stored in the 'data' 
-            attribute). This includes Settings and Filer, stored in the 
-            'settings' and 'filer' attributes, respectively.
-        2) Project stores Action subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Hybrid 
-            instances.
-        3) Project includes an 'automatic' attribute which can be set to perform
-            all of its methods if all of the necessary arguments are passed.
-        4) It has an OptionsMixin, which contains a Catalog instance storing
-            default Action instances in 'options'.
-        5)
-        
-    Args:
-        contents (Sequence[Union[sourdough.Action, str]]]): list of 
-            Action subclass instances or strings which correspond to keys in 
-            'options'. Defaults to 'default', which will use the 'defaults' 
-            attribute of 'options' to select Action instances.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the '_get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
-            an instance of Settings or a str or pathlib.Path containing the 
-            file path where a file of a supported file type with settings for a 
-            Settings instance is located. Defaults to None.
-        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
-            Filer or a str or pathlib.Path containing the full path of where the 
-            root folder should be located for file input and output. A Filer
-            instance contains all file path and import/export methods for use 
-            throughout sourdough. Defaults to None.
-        design (str): type of design for the project's composite object.
-            Defaults to 'tree'.
-        identification (str): a unique identification name for a 
-            Manager instance. The name is used for creating file folders
-            related to the 'Manager'. If not provided, a string is created from
-            'name' and the date and time. This is a notable difference
-            between an ordinary Worker instancce and a Manager instance. Other
-            Workers are not given unique identification. Defaults to None.   
-        automatic (bool): whether to automatically advance 'contents' (True) or 
-            whether the contents must be changed manually by using the 'advance' 
-            or '__iter__' methods (False). Defaults to True.
-        designs (ClassVar[sourdough.Catalog]): a class attribute storing
-            composite design options.            
-        options (ClassVar[sourdough.Catalog]): a class attribute storing
-            components of a composite design.
-    
-    Attributes:
-        plan (sourdough.Hybrid): the iterable composite object created by Project.
-        index (int): the current index of the iterator in the instance. It is
-            set to -1 in the '__post_init__' method.
-        stage (str): name of the last stage that has been implemented. It is set
-            to 'initialize' in the '__post_init__' method.
-        previous_stage (str): name of the previous stage to the last stage that
-            has been implemented. It is set by the 'advance' method.
-            
-    """
-    contents: Sequence['sourdough.Action'] = dataclasses.field(
-        default_factory = lambda: [
-            sourdough.Author, sourdough.Publisher, sourdough.Reader])
-    name: str = None
-    settings: Union['sourdough.Settings', str, pathlib.Path] = None
-    filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    structure: str = 'tree'
-    identification: str = None
-    automatic: bool = True
-    data: object = None
-    structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        contents = {
-            'graph': sourdough.structures.Graph, 
-            'pipeline': sourdough.structures.Pipeline, 
-            'tree': sourdough.structures.Tree})
-    designs: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        contents = {
-            'chained': sourdough.designs.Chained, 
-            'comparative': sourdough.designs.Comparative,
-            'cycle': sourdough.designs.Cycle,
-            'graph': sourdough.designs.Graph,
-            'flat': sourdough.designs.Flat})
-    components: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-        contents = {
-            'component': sourdough.Component,
-            'task': sourdough.components.Task,
-            'technique': sourdough.components.Technique,
-            'worker': sourdough.components.Worker})
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()    
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()
-        # Removes various python warnings from console output.
-        warnings.filterwarnings('ignore')
-        # Sets unique project 'identification', if not passed.
-        self.identification = self.identification or self._set_identification()
-        # Validates or creates a 'Settings' instance.
-        self.settings = sourdough.Settings(contents = self.settings)
-        # Adds 'general' section attributes from 'settings'.
-        self.settings.inject(instance = self)
-        # Validates or creates a Filer' instance.
-        self.filer = sourdough.Filer(
-            root_folder = self.filer, 
-            settings = self.settings)
-        # Initializes a composite Hybrid subclass instance.
-        self.plan = self._initialize_plan(design = self.design)
-        # Initializes Action instances stored in 'contents'.
-        self.contents = self._initialize_creators(contents = self.contents)
-        # Sets current 'stage' and 'index' for that 'stage'.
-        self.index: int = -1
-        self.stage: str = 'initialize' 
-        # Advances through 'contents' if 'automatic' is True.
-        if self.automatic:
-            self.plan = self._auto_contents(plan = self.plan)
+        return Overview(worker = self)
 
     """ Public Methods """
-
-    def validate(self, 
-            contents: 'sourdough.Action') -> Sequence['sourdough.Action']:
-        """Validates that all 'contents' are Action subclass instances.
-
-        Args:
-            contents (sourdough.Action): list of Action subclass instances.
-
-        Raises:
-            TypeError: if an item in 'contents' is not a Action subclass 
-                instance.
-            
-        Returns:
-            Sequence[sourdough.Action]: a list with Action subclass instances.
-                  
-        """
-        if all(issubclass(c, sourdough.Action) for c in contents):
-            return contents
-        else:       
-            raise TypeError(f'contents must only contain Action subclasses')
                  
     def advance(self, stage: str = None) -> None:
         """Advances to next item in 'contents' or to 'stage' argument.
@@ -394,39 +205,19 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         self.previous_stage: str = self.stage
         self.stage = new_stage
         return self
-
-    def iterate(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-        """Advances to next stage and applies that stage to 'plan'.
-
-        Args:
-            plan (sourdough.Hybrid): instance to apply the next stage's methods 
-                to.
-                
-        Raises:
-            IndexError: if this instance is already at the last stage.
-
-        Returns:
-            sourdough.Hybrid: with the last stage applied.
-            
-        """
-        if self.index == len(self.contents) - 1:
-            raise IndexError(
-                f'{self.name} is at the last stage and cannot further iterate')
-        else:
-            self.advance()
-            plan = self.contents[self.index].perform(plan = plan)
-        return plan
             
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of methods of 'contents'.
+        """Returns iterable of 'contents' based upon 'structure'.
         
         Returns:
-            Iterable: 'perform' methods of 'contents'.
+            Iterable: of 'contents'.
             
         """
-        return iter([getattr(s, 'perform') for s in self.contents])
+        return self.structure.iterate(
+            worker = self, 
+            iterator = self.structure.iterator)
 
     def __next__(self) -> Callable:
         """Returns next method after method matching 'item'.
@@ -437,55 +228,134 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         """
         if self.index < len(self.contents):
             self.advance()
-            return getattr(self.contents[self.index], 'perform')
+            return self.contents[self.index]
         else:
-            raise StopIteration()
+            raise StopIteration() 
 
-    # def __str__(self) -> str:
-    #     """Returns default string representation of an instance.
+ 
+@dataclasses.dataclass
+class Project(Worker):
+    """Constructs, organizes, and stores tree Workers and Actions.
+    
+    A Project inherits all of the differences between a Hybrid and a python
+    list.
 
-    #     Returns:
-    #         str: default string representation of an instance.
+    A Project differs from a Hybrid in 5 significant ways:
+        1) The Project is the public interface to composite object construction 
+            and application. It may store the composite object instance(s) as 
+            well as any required classes (such as those stored in the 'data' 
+            attribute). This includes Settings and Filer, stored in the 
+            'settings' and 'filer' attributes, respectively.
+        2) Project stores Action subclass instances in 'contents'. Those 
+            instances are used to assemble and apply the parts of Hybrid 
+            instances.
+        3) Project includes an 'automatic' attribute which can be set to perform
+            all of its methods if all of the necessary arguments are passed.
+        4) It has an OptionsMixin, which contains a Catalog instance storing
+            default Action instances in 'options'.
+        5)
+        
+    Args:
+        contents (Sequence[Union[sourdough.Action, str]]]): list of 
+            Action subclass instances or strings which correspond to keys in 
+            'options'. Defaults to 'default', which will use the 'defaults' 
+            attribute of 'options' to select Action instances.
+        name (str): structureates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the '_get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
+            an instance of Settings or a str or pathlib.Path containing the 
+            file path where a file of a supported file type with settings for a 
+            Settings instance is located. Defaults to None.
+        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
+            Filer or a str or pathlib.Path containing the full path of where the 
+            root folder should be located for file input and output. A Filer
+            instance contains all file path and import/export methods for use 
+            throughout sourdough. Defaults to None.
+        structure (str): type of structure for the project's composite object.
+            Defaults to 'tree'.
+        identification (str): a unique identification name for a 
+            Manager instance. The name is used for creating file folders
+            related to the 'Manager'. If not provided, a string is created from
+            'name' and the date and time. This is a notable difference
+            between an ordinary Worker instancce and a Manager instance. Other
+            Workers are not given unique identification. Defaults to None.   
+        automatic (bool): whether to automatically advance 'contents' (True) or 
+            whether the contents must be changed manually by using the 'advance' 
+            or '__iter__' methods (False). Defaults to True.
+        structures (ClassVar[sourdough.Catalog]): a class attribute storing
+            composite structure options.            
+        options (ClassVar[sourdough.Catalog]): a class attribute storing
+            components of a composite structure.
+    
+    Attributes:
+        plan (sourdough.Hybrid): the iterable composite object created by Project.
+        index (int): the current index of the iterator in the instance. It is
+            set to -1 in the '__post_init__' method.
+        stage (str): name of the last stage that has been implemented. It is set
+            to 'initialize' in the '__post_init__' method.
+        previous_stage (str): name of the previous stage to the last stage that
+            has been implemented. It is set by the 'advance' method.
+            
+    """
+    contents: Sequence['sourdough.Action'] = dataclasses.field(
+        default_factory = lambda: [
+            sourdough.Author, sourdough.Publisher, sourdough.Reader])
+    name: str = None
+    settings: Union['sourdough.Settings', str, pathlib.Path] = None
+    filer: Union['sourdough.Filer', str, pathlib.Path] = None
+    structure: Union['sourdough.Structure', str] = 'creator'
+    plan: 'Worker' = Worker
+    identification: str = None
+    automatic: bool = True
+    data: object = None
+    _default: Any = None
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+        contents = {
+            'creator': sourdough.strutures.Creator,
+            'cycle': sourdough.structures.Cycle,
+            'graph': sourdough.structures.Graph, 
+            'progression': sourdough.structures.Progression, 
+            'study': sourdough.structures.Study,
+            'tree': sourdough.structures.Tree})
 
-    #     """
-    #     if hasattr(self.design, 'name'):
-    #         return textwrap.dedent(f'''
-    #             sourdough {self.__class__.__name__}
-    #             name: {self.name}
-    #             automatic: {self.automatic}
-    #             data: {self.data is not None}
-    #             design: {self.design.name}
-    #             defaults:
-    #             {textwrap.indent(str(self.defaults), '    ')}
-    #             contents:
-    #             {textwrap.indent(str(self.contents), '    ')}
-    #             settings:
-    #             {textwrap.indent(str(self.settings), '    ')}
-    #             filer:
-    #             {textwrap.indent(str(self.filer), '    ')}
-    #             options:
-    #             {textwrap.indent(str(self.options), '    ')}
-    #             designs:
-    #             {textwrap.indent(str(self.designs), '    ')}''')
-    #     else:
-    #         return textwrap.dedent(f'''
-    #             sourdough {self.__class__.__name__}
-    #             name: {self.name}
-    #             automatic: {self.automatic}
-    #             data: {self.data is not None}
-    #             design: {self.design}
-    #             defaults:
-    #             {textwrap.indent(str(self.defaults), '    ')}
-    #             contents:
-    #             {textwrap.indent(str(self.contents), '    ')}
-    #             settings:
-    #             {textwrap.indent(str(self.settings), '    ')}
-    #             filer:
-    #             {textwrap.indent(str(self.filer), '    ')}
-    #             options:
-    #             {textwrap.indent(str(self.options), '    ')}
-    #             designs:
-    #             {textwrap.indent(str(self.designs), '    ')}''')
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Removes various python warnings from console output.
+        warnings.filterwarnings('ignore')
+        # Sets unique project 'identification', if not passed.
+        self.identification = self.identification or self._set_identification()
+        # Validates or creates a 'Settings' instance.
+        self.settings = sourdough.Settings(contents = self.settings)
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
+        # Validates or creates a Filer' instance.
+        self.filer = sourdough.Filer(
+            root_folder = self.filer, 
+            settings = self.settings)
+        # Initializes a composite Hybrid subclass instance.
+        self.plan = self.plan(name = self.name, structures = self.structures)
+        # Initializes Action instances stored in 'contents'.
+        self.contents = self._initialize_creators(contents = self.contents)
+        # Sets current 'stage' and 'index' for that 'stage'.
+        self.index: int = -1
+        self.stage: str = 'initialize' 
+        # Advances through 'contents' if 'automatic' is True.
+        if self.automatic:
+            self.plan = self._auto_contents(plan = self.plan)
         
     """ Private Methods """
 
@@ -515,47 +385,7 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
                 else:
                     raise TypeError(f'{creator} is not a Action type')
         return new_contents   
-    
-    def _initialize_plan(self, 
-            design: Union[
-                str, 
-                sourdough.designs.Design]) -> sourdough.Hybrid:
-        """Instances a Hybrid subclass based upon 'design'.
-        
-        Args:
-            design (Union[str, sourdough.designs.Design]): str matching
-                a key in 'designs' or a subclass of Design.
-        
-        Returns:
-            sourdough.Hybrid: an instance created based upon 'design'.
-        
-        """
-        design = self._initialize_design(design = design)
-        return design.load(key = 'root')(name = self.name, data = self.data)
-        
-    def _initialize_design(self, 
-            design: Union[
-                str, 
-                'sourdough.designs.Design']) -> (
-                    'sourdough.designs.Design'):
-        """Returns a Design instance based upon 'design'.
-
-        Args:
-            design (Union[str, sourdough.designs.Design]): str matching
-                a key in 'designs', a Design subclass, or a Design
-                subclass instance.
-
-        Returns:
-            sourdough.designs.Design: a Design subclass instance.
-            
-        """
-        if isinstance(design, str):
-            return self.designs[design]()
-        elif isinstance(design, sourdough.designs.Design):
-            return design
-        else:
-            return design()
-                          
+                     
     def _auto_contents(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """Automatically advances through and iterates stored Action instances.
 
@@ -571,6 +401,5 @@ class Project(sourdough.OptionsMixin, sourdough.Hybrid):
         for stage in self.contents:
             plan = self.iterate(plan = plan)
             # print('test plan', plan)
-            print('test plan workers', plan.workers)
-            print('test stage overview', plan.overview)
+            print('test stage overview', stage.name, plan.overview)
         return plan

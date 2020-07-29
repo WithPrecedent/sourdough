@@ -9,31 +9,29 @@ import dataclasses
 import pathlib
 
 import sourdough
-import sourdough.project.components
-import sourdough.project.workers
 
 
 @dataclasses.dataclass
-class Parser(sourdough.project.workers.Worker):
+class Parser(sourdough.Worker):
 
     def perform(self):
         return
 
 
 @dataclasses.dataclass
-class Search(sourdough.project.components.Task):
+class Search(sourdough.Task):
 
     def perform(self):
         return   
 
 
 def test_tree():
-    sourdough.Project.options.add(Parser)
-    sourdough.Project.options.add(Search)
+    sourdough.Project.components.add(Parser)
+    sourdough.Project.components.add(Search)
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
-        design = 'comparative',
+        structure = 'study',
         automatic = True)
     print('test project', project)
     return

@@ -841,7 +841,7 @@ class Catalog(Lexicon):
     A Catalog inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Catalog differs from a Lexicon in 7 significant ways:
+    A Catalog differs from a Lexicon in 6 significant ways:
         1) It recognizes an 'all' key which will return a list of all values
             stored in a Catalog instance.
         2) It recognizes a 'default' key which will return all values matching
@@ -860,9 +860,6 @@ class Catalog(Lexicon):
             when the iterator assumes a single datatype will be returned.
         6) It includes a 'create' method which will either instance a stored
             class or return a stored instance.
-        7) Catalog can only store Component subclases in 'contents'. This allows
-            it to accept Sequences of Components when the class is instanced or
-            when the 'add' method is used.
 
     Args:
         contents (Union[Component, Sequence[Component], Mapping[str, 
@@ -889,11 +886,7 @@ class Catalog(Lexicon):
             snake case version of the class name ('__class__.__name__').  
                      
     """
-    contents: Union[
-        'Component',
-        Sequence['Component'],
-        Mapping[str, 'Component']] = dataclasses.field(
-            default_factory = dict)    
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     name: str = None
@@ -913,8 +906,7 @@ class Catalog(Lexicon):
             contents: Union[
                 'Component',
                 Sequence['Component'],
-                Mapping[str, 'Component']]) -> Mapping[
-                    str, 'Component']:
+                Mapping[str, Any]]) -> Mapping[str, Any]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
@@ -938,9 +930,7 @@ class Catalog(Lexicon):
             or (inspect.isclass(contents) 
                 and issubclass(contents, Component))):
             return {contents.get_name(): contents}
-        elif (isinstance(contents, Mapping)
-            and (all(isinstance(v, Component) for v in contents.values())
-                or all(issubclass(v, Component) for v in contents.values()))):
+        elif isinstance(contents, Mapping):
             return contents
         elif (isinstance(contents, Sequence)
             and (all(isinstance(c, Component) for c in contents)
@@ -951,8 +941,7 @@ class Catalog(Lexicon):
             return new_contents
         else:
             raise TypeError(
-                'contents must a Component or Mapping or Sequence storing '
-                'Components') 
+                'contents must a dict, Component, or list of Components')
 
     def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
         """Returns a subset of 'contents'.
@@ -971,7 +960,7 @@ class Catalog(Lexicon):
             defaults = new_defaults,
             always_return_list = self.always_return_list)
 
-    def create(self, key: str, **kwargs) -> 'Component':
+    def create(self, key: str, **kwargs) -> Any:
         """Returns an instance of a stored subclass or instance.
         
         This method acts as a factory for instancing stored classes or returning
