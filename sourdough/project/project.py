@@ -314,7 +314,7 @@ class Project(Worker):
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
     structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'creator': sourdough.strutures.Creator,
+            'creator': sourdough.structures.Creator,
             'cycle': sourdough.structures.Cycle,
             'graph': sourdough.structures.Graph, 
             'progression': sourdough.structures.Progression, 

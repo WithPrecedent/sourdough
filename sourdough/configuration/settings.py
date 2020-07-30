@@ -364,7 +364,7 @@ class Settings(sourdough.Lexicon):
             Mapping[str, Mapping[str, Any]]: with stored defaults added.
 
         """
-        new_contents = sourdough.defaults.settings
+        new_contents = sourdough.configuration.defaults.settings
         new_contents.update(contents)
         return new_contents
 

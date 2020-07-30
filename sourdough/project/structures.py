@@ -74,9 +74,9 @@ class Creator(Structure):
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'author': sourdough.creators.Author,
-            'publisher': sourdough.creators.Publisher,
-            'reader': sourdough.creators.Reader},
+            'author': sourdough.project.creators.Author,
+            'publisher': sourdough.project.creators.Publisher,
+            'reader': sourdough.project.creators.Reader},
         defaults = ['author', 'publisher', 'reader'])
 
 
@@ -88,9 +88,9 @@ class Cycle(Structure):
     iterator: Union[str, Callable] = itertools.cycle   
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
+            'task': sourdough.project.actions.Task,
+            'technique': sourdough.project.actions.Technique,
+            'worker': sourdough.project.project.Worker})
         
       
 @dataclasses.dataclass
@@ -101,9 +101,9 @@ class Progression(Structure):
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
+            'task': sourdough.project.actions.Task,
+            'technique': sourdough.project.actions.Technique,
+            'worker': sourdough.project.project.Worker})
   
   
 @dataclasses.dataclass
@@ -114,9 +114,9 @@ class Study(Structure):
     iterator: Union[str, Callable] = itertools.product   
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
+            'task': sourdough.project.actions.Task,
+            'technique': sourdough.project.actions.Technique,
+            'worker': sourdough.project.project.Worker})
            
     
 @dataclasses.dataclass
@@ -127,9 +127,9 @@ class Tree(Structure):
     iterator: Union[str, Callable] = more_itertools.collapse
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
+            'task': sourdough.project.actions.Task,
+            'technique': sourdough.project.actions.Technique,
+            'worker': sourdough.project.project.Worker})
   
 
 @dataclasses.dataclass
@@ -140,8 +140,8 @@ class Graph(Structure):
     iterator: Union[str, Callable] = 'iterator'    
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'edge': sourdough.Edge,
-            'node': sourdough.Node})
+            'edge': sourdough.project.components.Edge,
+            'node': sourdough.project.components.Node})
         
     # contents: Sequence[Union['sourdough.Component', str]] = dataclasses.field(
     #     default_factory = list)

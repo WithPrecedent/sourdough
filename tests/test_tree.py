@@ -25,12 +25,12 @@ class Search(sourdough.Task):
         return   
 
 def test_tree():
-    sourdough.Project.components.add(Parser)
-    sourdough.Project.components.add(Search)
+    sourdough.Project.options.add(Parser)
+    sourdough.Project.options.add(Search)
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
-        structure = 'study',
+        structure = 'creator',
         automatic = True)
     print('test project', project)
     return
