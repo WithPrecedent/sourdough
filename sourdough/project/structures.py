@@ -18,7 +18,6 @@ from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import sourdough
 
 
-
 @dataclasses.dataclass
 class Structure(sourdough.OptionsMixin, sourdough.Controller):
     

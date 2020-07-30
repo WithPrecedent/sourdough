@@ -49,35 +49,43 @@ class Author(sourdough.Action):
         worker = self._add_structure(worker = worker)
         # Iterates through appropriate settings to create 'contents' of 
         # 'worker'.
-        ignore_list = []
+        self._ignore_list = []
+        options = worker.structure.options.keys()
         for key, value in self.manager.settings[worker.name].items():
             # Finds settings that have suffixes matching keys in the 
             # 'components' of 'manager'.
-            if any(key.endswith(f'{s}s') 
-                   for s in worker.structure.options.keys()):
+            if (any(key.endswith(f'{s}s') for s in options)
+                    and key not in self._ignore_list):
                 suffix = key.split('_')[-1][:-1]
-                # Iterates through listed items in 'value'.
-                for item in sourdough.utilities.listify(value):
-                    if item not in ignore_list:
+                if suffix == 'task':
+                    worker.add(self._build_tasks(
+                        worker = worker,
+                        tasks = sourdough.utilities.listify(value),
+                        settings = self.manager.settings[worker.name]))
+                else:
+                    # Iterates through listed items in 'value'.
+                    for item in sourdough.utilities.listify(value):
                         # Gets appropraite Component instance based on 'item'.
                         component = self._get_component(
                             worker = worker,
                             name = item,
-                                key = suffix)
+                            key = suffix)
+                        component = self._instance_component(
+                            component = component,
+                            name = item)
                         # Recursively calls the 'perform' method if the 
                         # 'component' created is a Hybrid type.
                         if isinstance(component, sourdough.Hybrid):
                             component = self.perform(worker = component)
-                        elif isinstance(component, sourdough.Task):
-                            component = self._build_tasks(
-                                task = component)
-                    worker.add(component)
+                        print('test component', component, item, key)
+                        worker.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_structure'):
                 attributes[key] = value
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
             setattr(worker, key, value)
+        self._ignore_list = None
         return worker          
 
     """ Private Methods """
@@ -112,29 +120,46 @@ class Author(sourdough.Action):
         # Otherwise uses the appropriate generic type.
         except KeyError:
             component = worker.structure.select(key)
+        return component
+            
+    def _instance_component(self, 
+            component: 'sourdough.Component',
+            name: str) -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
         try:
             return component(name = name)
         except TypeError:
             return component
         
-    def _initialize_component(self, 
-            component: 'sourdough.Component', 
-            **kwargs) -> 'sourdough.Component':
-        """Returns a Component instance.
-        
-        If 'component' is already an instance, it is returned intact, Otherwise,
-        it is instanced with kwargs.
-        
-        Args:
-            component (sourdough.Component): a Component subclass or subclass
-                instance.
-            kwargs: arguments to use if 'component' is instanced.
-
-        Returns:
-            sourdough.Component: a Component instance.
-            
+    def _build_tasks(self, 
+            worker: 'sourdough.Hybrid',
+            tasks: Sequence[str],
+            settings: Mapping[str, Any]) -> Sequence['sourdough.Task']:
+        """[summary]
         """
-
+        instances = []
+        for task in tasks:
+            for technique in settings[f'{task}_techniques']:
+                technique_class = self._get_component(
+                    worker = worker,
+                    name = technique,
+                    key = 'technique')
+                technique_instance = self._instance_component(
+                    component = technique_class,
+                    name = technique)
+                task_class = self._get_component(
+                    worker = worker,
+                    name = task,
+                    key = 'task')
+                instances.append(task_class(
+                    technique = technique_instance,
+                    name = task))
+                self._ignore_list.append(f'{task}_techniques')
+        return instances 
 
         
 @dataclasses.dataclass
