@@ -37,6 +37,7 @@ from sourdough.base.core import Action
 from sourdough.base.core import Hybrid
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
+from sourdough.base.core import Controller
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import OptionsMixin
@@ -48,42 +49,52 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project import structures
-from sourdough.project import creators
-from sourdough.project.structures import Structure
-from sourdough.project.actions import Technique
-from sourdough.project.actions import Task
+from sourdough.project.components import Technique
+from sourdough.project.components import Task
 from sourdough.project.components import Edge
 from sourdough.project.components import Node
-from sourdough.project.project import Worker
-from sourdough.project.project import Project
+from sourdough.project.containers import Inventory
+from sourdough.project.containers import Overview
+from sourdough.project.containers import Worker
+from sourdough.project.workflow import Author
+from sourdough.project.workflow import Publisher
+from sourdough.project.workflow import Reader
+from sourdough.project.structures import Structure
+from sourdough.project.structures import validate_structure
+from sourdough.project.structures import Creator
+from sourdough.project.structures import Cycle
+from sourdough.project.structures import Graph
+from sourdough.project.structures import Progression
+from sourdough.project.structures import Study
+from sourdough.project.structures import Tree
+from sourdough.project.manager import Manager
 
 
 __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
-__all__ = [
-    'utilities',
-    'Component',
-    'Action',
-    'Hybrid',
-    'Action',
-    'Lexicon',
-    'Catalog',
-    'LibraryMixin',
-    'RegistryMixin',
-    'OptionsMixin',
-    'LoaderMixin',
-    'ProxyMixin',
-    'Settings',
-    'Filer',
-    'structures',
-    'Structure',
-    'Technique',
-    'Task',
-    'Edge',
-    'Node',
-    'creators',
-    'Worker',
-    'Project']
+# __all__ = [
+#     'utilities',
+#     'Component',
+#     'Action',
+#     'Hybrid',
+#     'Action',
+#     'Lexicon',
+#     'Catalog',
+#     'LibraryMixin',
+#     'RegistryMixin',
+#     'OptionsMixin',
+#     'LoaderMixin',
+#     'ProxyMixin',
+#     'Settings',
+#     'Filer',
+#     'structures',
+#     'Structure',
+#     'Technique',
+#     'Task',
+#     'Edge',
+#     'Node',
+#     'workflow',
+#     'Worker',
+#     'Project']

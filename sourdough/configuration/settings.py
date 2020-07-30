@@ -20,6 +20,15 @@ from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import sourdough
 
 
+DEFAULT_SETTINGS = {
+    'general': {'verbose': True},
+    'files': {
+        'source_format': 'csv',
+        'interim_format': 'csv',
+        'final_format': 'csv',
+        'file_encoding': 'windows-1252'}}
+
+
 @dataclasses.dataclass
 class Settings(sourdough.Lexicon):
     """Loads and Stores configuration settings.
@@ -364,7 +373,7 @@ class Settings(sourdough.Lexicon):
             Mapping[str, Mapping[str, Any]]: with stored defaults added.
 
         """
-        new_contents = sourdough.configuration.defaults.settings
+        new_contents = DEFAULT_SETTINGS
         new_contents.update(contents)
         return new_contents
 

@@ -8,140 +8,130 @@ Contents:
 
 """
 
-import abc
 import copy
 import dataclasses
+import inspect
 import itertools
 import more_itertools
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
-  
-    
+
+
+
 @dataclasses.dataclass
-class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
-
+class Structure(sourdough.OptionsMixin, sourdough.Controller):
+    
     name: str = None
-    worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = iter    
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()
-        # Sets current 'stage' and 'index' for that 'stage'.
-        self.index: int = -1
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'structure'.
-        
-        Returns:
-            Iterable: of 'contents'.
-            
-        """
-        if isinstance(self.iterator, str):
-            return getattr(self, self.iterator)()
-        else:
-            return self.iterator(self.worker.contents)
+    iterable: 'sourdough.Worker' = None
+    iterator: Union[str, Callable] = iter
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
 
-    def __next__(self) -> Union[Callable, 'sourdough.Component']:
-        """Returns next method after method matching 'item'.
+
+def validate_structure(iterable: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    """Returns a Structure instance based upon 'structure'.
+
+    Args:
+        iterable (sourdough.Hybrid): Hybrid instance with 'structure' attribute
+            to be validated.
+
+    Raises:
+        TypeError: if 'iterable.structure' is neither a str nor Structure type.
+
+    Returns:
+        sourdough.Hybrid: with a validated 'structure' attribute.
         
-        Returns:
-            Callable: next method corresponding to those listed in 'options'.
-            
-        """
-        if self.index < len(self.worker.contents):
-            self.index += 1
-            if isinstance(self.worker[self.index], sourdough.Action):
-                return self.worker[self.index].perform
-            else:
-                return self.worker[self.index]
-        else:
-            raise StopIteration()
+    """
+    if isinstance(iterable.structure, str):
+        iterable.structure = iterable.options[iterable.structure](
+            iterable = iterable)
+    elif (inspect.isclass(iterable.structure) 
+            and issubclass(iterable.structure, Structure)):
+        iterable.structure = iterable.structure(iterable = iterable) 
+    elif isinstance(iterable.structure, Structure):
+        iterable.structure.iterable = iterable
+        iterable.structure.__post_init__()
+    else:
+        raise TypeError('structure must be a str or Structure type')
+    return iterable
 
 
 @dataclasses.dataclass
 class Creator(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'author': sourdough.project.creators.Author,
-            'publisher': sourdough.project.creators.Publisher,
-            'reader': sourdough.project.creators.Reader},
-        defaults = ['author', 'publisher', 'reader'])
+            'author': sourdough.Author,
+            'publisher': sourdough.Publisher,
+            'worker': sourdough.Reader},
+        defaults = 'all')
 
 
 @dataclasses.dataclass
 class Cycle(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.cycle   
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'task': sourdough.project.actions.Task,
-            'technique': sourdough.project.actions.Technique,
-            'worker': sourdough.project.project.Worker})
+            'task': sourdough.Task,
+            'technique': sourdough.Technique,
+            'worker': sourdough.Worker})
         
       
 @dataclasses.dataclass
 class Progression(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'task': sourdough.project.actions.Task,
-            'technique': sourdough.project.actions.Technique,
-            'worker': sourdough.project.project.Worker})
+            'task': sourdough.Task,
+            'technique': sourdough.Technique,
+            'worker': sourdough.Worker})
   
   
 @dataclasses.dataclass
 class Study(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.product   
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'task': sourdough.project.actions.Task,
-            'technique': sourdough.project.actions.Technique,
-            'worker': sourdough.project.project.Worker})
+            'task': sourdough.Task,
+            'technique': sourdough.Technique,
+            'worker': sourdough.Worker})
            
     
 @dataclasses.dataclass
 class Tree(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = more_itertools.collapse
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'task': sourdough.project.actions.Task,
-            'technique': sourdough.project.actions.Technique,
-            'worker': sourdough.project.project.Worker})
+            'task': sourdough.Task,
+            'technique': sourdough.Technique,
+            'worker': sourdough.Worker})
   
 
 @dataclasses.dataclass
 class Graph(Structure):
     
     name: str = None
-    worker: 'sourdough.Worker' = None
+    iterable: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = 'iterator'    
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
-            'edge': sourdough.project.components.Edge,
-            'node': sourdough.project.components.Node})
+            'edge': sourdough.Edge,
+            'node': sourdough.Node})
         
     # contents: Sequence[Union['sourdough.Component', str]] = dataclasses.field(
     #     default_factory = list)
@@ -151,7 +141,7 @@ class Graph(Structure):
     # edges: Union[Sequence['sourdough.Edge'],
     #     Sequence[Sequence[str]], 
     #     Mapping[str, Sequence[str]]] = dataclasses.field(default_factory = list)
-    # options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()  
+    # options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()  
 
     # """ Initialization Methods """
     

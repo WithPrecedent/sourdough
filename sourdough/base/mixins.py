@@ -251,10 +251,10 @@ class OptionsMixin(abc.ABC):
                 object: instance of a stored value.
             
             """
-            try:
-                return self.options[key](**kwargs)
-            except TypeError:
-                return self.options[key]
+            if kwargs:
+                return self.options[single_key](**kwargs)
+            else:
+                return self.options[single_key]
             
         if isinstance(key, str):
             return _select_item(single_key = key)

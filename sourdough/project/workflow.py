@@ -1,5 +1,5 @@
 """
-creators: sourdough workflow stages for object creation
+workflow: sourdough workflow for manager creation and iteration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -13,6 +13,7 @@ Contents:
         in the Reader instance and/or passed data object.
 
 """
+
 import dataclasses
 import inspect
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -25,20 +26,18 @@ class Author(sourdough.Action):
     """Constructs composite objects from user settings.
     
     Args:
-        project (sourdough.Project): the related Project instance.
+        manager (sourdough.Manager): the related Manager instance.
     
     """
-    project: 'sourdough.Project' = None  
+    manager: 'sourdough.Manager' = None  
     
     """ Public Methods """
     
-    def perform(self, 
-            plan: 'sourdough.Hybrid', 
-            parent: 'sourdough.Hybrid' = None) -> 'sourdough.Hybrid':
-        """Drafts a plan with its 'contents' organized and instanced.
+    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+        """Drafts a worker with its 'contents' organized and instanced.
         
         Args:
-            plan (sourdough.Hybrid): Hybrid instance to create and organize
+            worker (sourdough.Hybrid): Hybrid instance to create and organize
                 based on the information in 'contents' or 'settings'.
 
         Returns:
@@ -46,91 +45,73 @@ class Author(sourdough.Action):
                 
         """
         attributes = {}
-        # Finds and sets the 'structure' of 'plan'.
-        plan.structure = self._get_structure(name = plan.name)
-        # Iterates through appropriate settings to create 'contents' of 'plan'.
-        for key, value in self.project.settings[plan.name].items():
+        # Finds and sets the 'structure' of 'worker'.
+        worker = self._add_structure(worker = worker)
+        # Iterates through appropriate settings to create 'contents' of 
+        # 'worker'.
+        ignore_list = []
+        for key, value in self.manager.settings[worker.name].items():
             # Finds settings that have suffixes matching keys in the 
-            # 'components' of 'project'.
+            # 'components' of 'manager'.
             if any(key.endswith(f'{s}s') 
-                    for s in self.project.options.keys()):
+                   for s in worker.structure.options.keys()):
                 suffix = key.split('_')[-1][:-1]
                 # Iterates through listed items in 'value'.
                 for item in sourdough.utilities.listify(value):
-                    # Gets appropraite Component instance based on 'item'.
-                    component = self._get_component(
-                        plan = plan,
-                        name = item,
-                        key = suffix)
-                    # Recursively calls the 'perform' method if the 'component' 
-                    # created is a Hybrid type.
-                    if isinstance(component, sourdough.Hybrid):
-                        component = self.perform(plan = component)
-                    plan.add(component)
+                    if item not in ignore_list:
+                        # Gets appropraite Component instance based on 'item'.
+                        component = self._get_component(
+                            worker = worker,
+                            name = item,
+                                key = suffix)
+                        # Recursively calls the 'perform' method if the 
+                        # 'component' created is a Hybrid type.
+                        if isinstance(component, sourdough.Hybrid):
+                            component = self.perform(worker = component)
+                        elif isinstance(component, sourdough.Task):
+                            component = self._build_tasks(
+                                task = component)
+                    worker.add(component)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_structure'):
                 attributes[key] = value
-        # Adds an extra settings as attributes to plan.
+        # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
-            setattr(plan, key, value)
-        return plan          
+            setattr(worker, key, value)
+        return worker          
 
     """ Private Methods """
     
-    def _get_structure(self, name: str) -> 'sourdough.structures.Design':
-        """Returns Design class based upon 'settings' or default option.
+    def _add_structure(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """Returns Structure class based upon 'settings' or default option.
         
         Args:
             name (str): name of Hybrid for which the structure is sought.
             
         Returns:
-            sourdough.structures.Design: the appropriate Design based on
-                'name' or the default option stored in 'project'.
+            sourdough.Structure: the appropriate Structure based on
+                'name' or the default option stored in 'manager'.
         
         """ 
-        try:
-            structure = self.project.settings[name][f'{name}_structure']
+        key = f'{worker.name}_structure'
+        try:    
+            worker.structure = self.manager.settings[worker.name][key]
         except KeyError:
-            structure = self.project.structure
-        return self._initialize_structure(structure = structure)  
-      
-    def _initialize_structure(self, 
-            structure: Union[
-                str, 
-                'sourdough.structures.Structure']) -> (
-                    'sourdough.structures.Structure'):
-        """Returns a Structure instance based upon 'structure'.
+            pass
+        return sourdough.validate_structure(iterable = worker)
 
-        Args:
-            structure (Union[str, sourdough.structures.Structure]): str matching
-                a key in 'structures', a Structure subclass, or a Structure
-                subclass instance.
-
-        Returns:
-            sourdough.structures.Structure: a Structure subclass instance.
-            
-        """
-        if isinstance(structure, str):
-            return self.project.structures[structure]()
-        elif isinstance(structure, sourdough.Structure):
-            return structure
-        else:
-            return structure()
-        
     def _get_component(self, 
-            plan: 'sourdough.Hybrid', 
+            worker: 'sourdough.Hybrid', 
             name: str,
             key: str) -> 'sourdough.Component':
         """[summary]
         """
         # Checks if special prebuilt instance exists.
         try:
-            component = plan.select(name)
-        except KeyError:
-            component = self.project.select(name)
+            component = worker.structure.select(name)
         # Otherwise uses the appropriate generic type.
         except KeyError:
-            component = plan.structure.select(key)
+            component = worker.structure.select(key)
         try:
             return component(name = name)
         except TypeError:
@@ -161,18 +142,18 @@ class Publisher(sourdough.Action):
     """Finalizes a composite object from user settings.
     
     Args:
-        project (sourdough.Project): the related Project instance.
+        manager (sourdough.Manager): the related Manager instance.
     
     """    
-    project: 'sourdough.Project' = None  
+    manager: 'sourdough.Manager' = None  
 
     """ Public Methods """
  
-    def perform(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-        """Finalizes a plan with 'parameters' added.
+    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+        """Finalizes a worker with 'parameters' added.
         
         Args:
-            plan (sourdough.Hybrid): Hybrid instance to finalize the objects in
+            worker (sourdough.Hybrid): Hybrid instance to finalize the objects in
                 its 'contents'.
 
         Returns:
@@ -180,8 +161,8 @@ class Publisher(sourdough.Action):
                 ready for application.
                 
         """
-        plan.apply(tool = self._set_parameters)
-        return plan
+        worker.apply(tool = self._set_parameters)
+        return worker
 
     """ Private Methods """
 
@@ -230,7 +211,7 @@ class Publisher(sourdough.Action):
                 'sourdough.Task']) -> Union[
                     'sourdough.Technique', 
                     'sourdough.Task']:
-        """Acquires parameters from 'settings' of 'project'.
+        """Acquires parameters from 'settings' of 'manager'.
 
         Args:
             technique (technique): an instance for parameters to be added to.
@@ -241,7 +222,7 @@ class Publisher(sourdough.Action):
         """
         key = f'{technique.name}_parameters'
         try: 
-            technique.parameters.update(self.project.settings[key])
+            technique.parameters.update(self.manager.settings[key])
         except KeyError:
             pass
         return technique
@@ -300,7 +281,7 @@ class Publisher(sourdough.Action):
             for key, value in technique.runtime.items():
                 try:
                     technique.parameters.update(
-                        {key: getattr(self.project.settings['general'], value)})
+                        {key: getattr(self.manager.settings['general'], value)})
                 except AttributeError:
                     raise AttributeError(' '.join(
                         ['no matching runtime parameter', key, 'found']))
@@ -312,22 +293,21 @@ class Publisher(sourdough.Action):
 @dataclasses.dataclass
 class Reader(sourdough.Action):
     
-    project: 'sourdough.Project' = None  
+    manager: 'sourdough.Manager' = None  
     
-    def perform(self, plan: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        print('test plan reader', plan.overview)
-        plan.apply(tool = self._add_data_dependent)
-        if self.project.data is None:
-            plan.perform()
+        worker.apply(tool = self._add_data_dependent)
+        if self.manager.data is None:
+            worker.perform()
         else:
-            self.project.data = plan.perform(item = self.project.data)
-        return plan
+            self.manager.data = worker.perform(item = self.manager.data)
+        return worker
 
     """ Private Methods """
         
@@ -364,7 +344,7 @@ class Reader(sourdough.Action):
             for key, value in technique.data_dependent.items():
                 try:
                     technique.parameters.update(
-                        {key: getattr(self.project.data, value)})
+                        {key: getattr(self.manager.data, value)})
                 except KeyError:
                     print('no matching parameter found for', key, 'in data')
         except (AttributeError, TypeError):

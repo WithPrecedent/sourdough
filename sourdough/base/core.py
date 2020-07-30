@@ -23,7 +23,8 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import Any, Callable, Iterable, Mapping, Sequence, Tuple, Union
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
@@ -81,9 +82,9 @@ class Component(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        if hasattr(cls, 'name') and cls.name is not None:
-            return cls.name
-        elif inspect.isclass(cls):
+        # if hasattr(cls, 'name') and cls.name is not None:
+        #     return cls.name
+        if inspect.isclass(cls):
             return sourdough.utilities.snakify(cls.__name__)
         else:
             return sourdough.utilities.snakify(cls.__class__.__name__)
@@ -99,26 +100,26 @@ class Component(abc.ABC):
         """
         return self.__str__()
         
-    def __str__(self) -> str:
-        """Returns pretty string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of an instance.
         
-        Returns:
-            str: pretty string representation of an instance.
+    #     Returns:
+    #         str: pretty string representation of an instance.
             
-        """
-        new_line = '\n'
-        representation = [f'sourdough {self.__class__.__name__}']
-        attributes = [a for a in self.__dict__ if not a.startswith('_')]
-        for attribute in attributes:
-            value = getattr(self, attribute)
-            if (isinstance(value, (Sequence, Mapping))
-                    and not isinstance(value, str)):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value), '    ')}''')
-            else:
-                representation.append(f'{attribute}: {str(value)}')
-        return new_line.join(representation)    
+    #     """
+    #     new_line = '\n'
+    #     representation = [f'sourdough {self.__class__.__name__}']
+    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
+    #     for attribute in attributes:
+    #         value = getattr(self, attribute)
+    #         if (isinstance(value, (Sequence, Mapping))
+    #                 and not isinstance(value, str)):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value), '    ')}''')
+    #         else:
+    #             representation.append(f'{attribute}: {str(value)}')
+    #     return new_line.join(representation)    
 
 
 @dataclasses.dataclass
@@ -862,10 +863,8 @@ class Catalog(Lexicon):
             class or return a stored instance.
 
     Args:
-        contents (Union[Component, Sequence[Component], Mapping[str, 
-            Component]]): Component(s) to validate or convert to a dict. If 
-            'contents' is a Sequence or a Component, the key for storing 
-            'contents' is the 'name' attribute of each Component.
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
@@ -899,66 +898,8 @@ class Catalog(Lexicon):
         super().__post_init__()
         # Sets 'default' to all keys of 'contents', if not passed.
         self.defaults = self.defaults or 'all'
-        
+
     """ Public Methods """
-
-    def validate(self, 
-            contents: Union[
-                'Component',
-                Sequence['Component'],
-                Mapping[str, Any]]) -> Mapping[str, Any]:
-        """Validates 'contents' or converts 'contents' to a dict.
-        
-        Args:
-            contents (Union[Component, Sequence[Component], 
-                Mapping[str, Component]]): Component(s) to validate or
-                convert to a dict. If 'contents' is a Sequence or a Component, 
-                the key for storing 'contents' is the 'name' attribute of each 
-                Component.
-                
-        Raises:
-            TypeError: if 'contents' is neither a Component subclass, Sequence
-                of Component subclasses, or Mapping with Components subclasses
-                as values.
-                
-        Returns:
-            Mapping (str, Component): a properly typed dict derived
-                from passed 'contents'.
-            
-        """
-        if (isinstance(contents, Component) 
-            or (inspect.isclass(contents) 
-                and issubclass(contents, Component))):
-            return {contents.get_name(): contents}
-        elif isinstance(contents, Mapping):
-            return contents
-        elif (isinstance(contents, Sequence)
-            and (all(isinstance(c, Component) for c in contents)
-                or all(issubclass(c, Component) for c in contents))):
-            new_contents = {}
-            for component in contents:
-                new_contents[component.get_name()] = component
-            return new_contents
-        else:
-            raise TypeError(
-                'contents must a dict, Component, or list of Components')
-
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
-        """Returns a subset of 'contents'.
-
-        Args:
-            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
-                from 'contents'.
-
-        Returns:
-            Catalog: with only keys in 'subset'.
-
-        """
-        new_defaults = [i for i in self.defaults if i in subset] 
-        return super().subsetify(
-            subset = subset,
-            defaults = new_defaults,
-            always_return_list = self.always_return_list)
 
     def create(self, key: str, **kwargs) -> Any:
         """Returns an instance of a stored subclass or instance.
@@ -981,6 +922,23 @@ class Catalog(Lexicon):
             return self.contents[key](**kwargs)
         except TypeError:
             return self.contents[key] 
+        
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
+        """Returns a subset of 'contents'.
+
+        Args:
+            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
+                from 'contents'.
+
+        Returns:
+            Catalog: with only keys in 'subset'.
+
+        """
+        new_defaults = [i for i in self.defaults if i in subset] 
+        return super().subsetify(
+            subset = subset,
+            defaults = new_defaults,
+            always_return_list = self.always_return_list)
 
     """ Dunder Methods """
 
@@ -1057,6 +1015,56 @@ class Catalog(Lexicon):
             i: self.contents[i]
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
+
+
+@dataclasses.dataclass
+class Controller(Component, abc.ABC):
+    """
+    
+    """
+    name: str = None
+    iterable: 'sourdough.Hybrid' = None
+    iterator: Union[str, Callable] = iter    
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Sets current 'stage' and 'index' for that 'stage'.
+        self.index: int = -1
+    
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents' based upon 'structure'.
+        
+        Returns:
+            Iterable: of 'contents'.
+            
+        """
+        if isinstance(self.iterator, str):
+            return getattr(self, self.iterator)()
+        else:
+            return self.iterator(self.iterable.contents)
+
+    def __next__(self) -> Union[Callable, 'Component']:
+        """Returns next method after method matching 'item'.
+        
+        Returns:
+            Callable: next method corresponding to those listed in 'options'.
+            
+        """
+        if self.index < len(self.iterable.contents):
+            self.index += 1
+            if isinstance(self.iterable[self.index], Action):
+                return self.iterable[self.index].perform
+            else:
+                return self.iterable[self.index]
+        else:
+            raise StopIteration()
+
 
 
 """ 

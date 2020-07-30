@@ -21,60 +21,60 @@ class AnotherComponent(sourdough.Component):
 
 
 def test_hybrid():
-    plan = sourdough.Hybrid(_default = 'default value')
+    worker = sourdough.Hybrid(_default = 'default value')
     a_component = AComponent(name = 'test_name')
     another_component = AnotherComponent()
     some_component = AnotherComponent(name = 'some_component')
-    plan.add(a_component)
-    plan.add(another_component)
-    plan.extend([a_component, another_component])
-    plan.insert(3, some_component)
-    assert plan.keys() == [
+    worker.add(a_component)
+    worker.add(another_component)
+    worker.extend([a_component, another_component])
+    worker.insert(3, some_component)
+    assert worker.keys() == [
         'test_name', 
         'another_component', 
         'test_name', 
         'some_component',
         'another_component']
-    assert plan.values() == [
+    assert worker.values() == [
         a_component,
         another_component,
         a_component,
         some_component,
         another_component]
-    for key, value in plan.items():
+    for key, value in worker.items():
         pass
-    subset_plan = plan.subsetify(subset = ['test_name'])
-    assert subset_plan.keys() == [
+    subset_worker = worker.subsetify(subset = ['test_name'])
+    assert subset_worker.keys() == [
         'test_name', 
         'test_name']
-    assert plan.pop(1) == another_component
-    assert plan.pop('test_name') == sourdough.Hybrid(
+    assert worker.pop(1) == another_component
+    assert worker.pop('test_name') == sourdough.Hybrid(
         contents = [a_component, a_component])
-    plan.update({'new_plan': a_component})
-    assert plan.keys() == [
+    worker.update({'new_worker': a_component})
+    assert worker.keys() == [
         'some_component',
         'another_component',
-        'new_plan']
-    assert plan.get('nothing') == 'default value'
-    plan.setdefault(None)  
-    assert plan.get('nothing') == None
-    plan['crazy_component'] = AnotherComponent(name = 'crazy')
-    plan.append(sourdough.Hybrid(
+        'new_worker']
+    assert worker.get('nothing') == 'default value'
+    worker.setdefault(None)  
+    assert worker.get('nothing') == None
+    worker['crazy_component'] = AnotherComponent(name = 'crazy')
+    worker.append(sourdough.Hybrid(
         name = 'nested', 
         contents = [another_component, some_component]))
-    assert plan.keys() == [
+    assert worker.keys() == [
         'some_component', 
         'another_component',
-        'new_plan', 
+        'new_worker', 
         'crazy',
         'nested']
-    assert len(plan) == 6
-    plan.clear()
-    assert len(plan) == 0
-    plan += another_component
-    assert len(plan) == 1
-    plan.remove(0)
-    assert len(plan) == 0
+    assert len(worker) == 6
+    worker.clear()
+    assert len(worker) == 0
+    worker += another_component
+    assert len(worker) == 1
+    worker.remove(0)
+    assert len(worker) == 0
     return
 
 
