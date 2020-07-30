@@ -13,48 +13,78 @@ import copy
 import dataclasses
 import itertools
 import more_itertools
-import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
-
-
+  
+    
 @dataclasses.dataclass
 class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
 
     name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = iter    
-
-
+    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
     
-    """ Public Methods """
+    """ Initialization Methods """
     
-    def iterate(self, 
-            worker: 'sourdough.Worker',
-            iterator: Union[Callable, str]) -> 'sourdough.Worker':
-        if isinstance(iterator, str):
-            return getattr(self, iterator)(worker = worker)
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Sets current 'stage' and 'index' for that 'stage'.
+        self.index: int = -1
+    
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents' based upon 'structure'.
+        
+        Returns:
+            Iterable: of 'contents'.
+            
+        """
+        if isinstance(self.iterator, str):
+            return getattr(self, self.iterator)()
         else:
-            return iterator(worker.contents)
+            return self.iterator(self.worker.contents)
+
+    def __next__(self) -> Union[Callable, 'sourdough.Component']:
+        """Returns next method after method matching 'item'.
+        
+        Returns:
+            Callable: next method corresponding to those listed in 'options'.
+            
+        """
+        if self.index < len(self.worker.contents):
+            self.index += 1
+            if isinstance(self.worker[self.index], sourdough.Action):
+                return self.worker[self.index].perform
+            else:
+                return self.worker[self.index]
+        else:
+            raise StopIteration()
 
 
 @dataclasses.dataclass
 class Creator(Structure):
     
     name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
-            'author': sourdough.Author,
-            'publisher': sourdough.Publisher,
-            'reader': sourdough.Reader},
+            'author': sourdough.creators.Author,
+            'publisher': sourdough.creators.Publisher,
+            'reader': sourdough.creators.Reader},
         defaults = ['author', 'publisher', 'reader'])
 
 
 @dataclasses.dataclass
 class Cycle(Structure):
     
-    name: str = None 
+    name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.cycle   
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -67,6 +97,7 @@ class Cycle(Structure):
 class Progression(Structure):
     
     name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -78,7 +109,8 @@ class Progression(Structure):
 @dataclasses.dataclass
 class Study(Structure):
     
-    name: str = None  
+    name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.product   
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -91,6 +123,7 @@ class Study(Structure):
 class Tree(Structure):
     
     name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = more_itertools.collapse
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {
@@ -102,7 +135,8 @@ class Tree(Structure):
 @dataclasses.dataclass
 class Graph(Structure):
     
-    name: str = None 
+    name: str = None
+    worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = 'iterator'    
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
         contents = {

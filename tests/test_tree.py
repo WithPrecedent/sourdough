@@ -24,7 +24,6 @@ class Search(sourdough.Task):
     def perform(self):
         return   
 
-
 def test_tree():
     sourdough.Project.components.add(Parser)
     sourdough.Project.components.add(Search)

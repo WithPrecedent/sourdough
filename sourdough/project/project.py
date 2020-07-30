@@ -10,6 +10,7 @@ Contents:
 
 """
 import dataclasses
+import inspect
 import itertools
 import more_itertools
 import pathlib
@@ -160,6 +161,15 @@ class Worker(sourdough.OptionsMixin, sourdough.Hybrid):
     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
     structures: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
 
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Validates or converts 'structure'.
+        self.structure = self._validate_structure(structure = self.structure)
+            
     """ Properties """
     
     @property
@@ -173,39 +183,6 @@ class Worker(sourdough.OptionsMixin, sourdough.Hybrid):
         """
         return Overview(worker = self)
 
-    """ Public Methods """
-                 
-    def advance(self, stage: str = None) -> None:
-        """Advances to next item in 'contents' or to 'stage' argument.
-
-        This method only needs to be called manually if 'automatic' is False.
-        Otherwise, this method is automatically called when the class is 
-        instanced.
-
-        Args:
-            stage (str): name of item in 'contents'. Defaults to None. 
-                If not passed, the method goes to the next item in contents.
-
-        Raises:
-            ValueError: if 'stage' is neither None nor in 'contents'.
-            IndexError: if 'advance' is called at the last stage in 'contents'.
-
-        """
-        if stage is None:
-            try:
-                new_stage = self.contents[self.index + 1]
-            except IndexError:
-                raise IndexError(f'{self.name} cannot advance further')
-        else:
-            try:
-                new_stage = self.contents[stage]
-            except KeyError:
-                raise ValueError(f'{stage} is not a recognized stage')
-        self.index += 1
-        self.previous_stage: str = self.stage
-        self.stage = new_stage
-        return self
-            
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
@@ -215,22 +192,39 @@ class Worker(sourdough.OptionsMixin, sourdough.Hybrid):
             Iterable: of 'contents'.
             
         """
-        return self.structure.iterate(
-            worker = self, 
-            iterator = self.structure.iterator)
+        return self.structure.__iter__()
+    
+    """ Private Methods """
+    
+    def _validate_structure(self,
+            structure: Union[
+                str, 
+                'sourdough.Structure']) -> 'sourdough.Structure':
+        """Returns a Structure instance based upon 'structure'.
 
-    def __next__(self) -> Callable:
-        """Returns next method after method matching 'item'.
-        
+        Args:
+            structure (Union[str, sourdough.structures.Structure]): str matching
+                a key in 'structures', a Structure subclass, or a Structure
+                subclass instance.
+
+        Raises:
+            TypeError: if 'structure' is neither a str nor Structure type.
+
         Returns:
-            Callable: next method corresponding to those listed in 'options'.
+            sourdough.structures.Structure: a Structure subclass instance.
             
         """
-        if self.index < len(self.contents):
-            self.advance()
-            return self.contents[self.index]
+        if isinstance(structure, str):
+            return self.structures[structure](worker = self)
+        elif (inspect.isclass(structure) 
+                and issubclass(structure, sourdough.Structure)):
+            return structure(worker = self) 
+        elif isinstance(structure, sourdough.Structure):
+            structure.worker = self
+            structure = structure.__post_init__()
+            return structure
         else:
-            raise StopIteration() 
+            raise TypeError('structure must be a str or Structure type')
 
  
 @dataclasses.dataclass
@@ -307,8 +301,7 @@ class Project(Worker):
             
     """
     contents: Sequence['sourdough.Action'] = dataclasses.field(
-        default_factory = lambda: [
-            sourdough.Author, sourdough.Publisher, sourdough.Reader])
+        default_factory = list)
     name: str = None
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
@@ -349,7 +342,7 @@ class Project(Worker):
         # Initializes a composite Hybrid subclass instance.
         self.plan = self.plan(name = self.name, structures = self.structures)
         # Initializes Action instances stored in 'contents'.
-        self.contents = self._initialize_creators(contents = self.contents)
+        self.contents = self._initialize_contents(contents = self.contents)
         # Sets current 'stage' and 'index' for that 'stage'.
         self.index: int = -1
         self.stage: str = 'initialize' 
@@ -363,7 +356,7 @@ class Project(Worker):
         """Sets unique 'identification' str based upon date and time."""
         return sourdough.utilities.datetime_string(prefix = self.name)
     
-    def _initialize_creators(self, 
+    def _initialize_contents(self, 
             contents: Sequence['sourdough.Action']) -> Sequence[
                 'sourdough.Action']:
         """Instances each Action in 'contents'.
@@ -375,6 +368,7 @@ class Project(Worker):
             Sequence[sourdough.Action]: list of Action classes.
         
         """
+        if not contents:
         new_contents = []
         for creator in contents:
             try:

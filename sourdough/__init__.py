@@ -49,15 +49,13 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project import structures
-from sourdough.project.structures import Structure
+from sourdough.project import creators
 from sourdough.project.actions import Technique
 from sourdough.project.actions import Task
 from sourdough.project.components import Edge
 from sourdough.project.components import Node
-from sourdough.project.creators import Author
-from sourdough.project.creators import Publisher
-from sourdough.project.creators import Reader
+from sourdough.project import structures
+from sourdough.project.structures import Structure
 from sourdough.project.project import Worker
 from sourdough.project.project import Project
 
@@ -88,8 +86,6 @@ __all__ = [
     'Task',
     'Edge',
     'Node',
-    'Author',
-    'Publisher',
-    'Reader',  
+    'creators',
     'Worker',
     'Project']
