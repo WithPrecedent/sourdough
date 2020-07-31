@@ -244,7 +244,7 @@ class Worker(sourdough.Hybrid):
         # Calls parent initialization method(s).
         super().__post_init__()
         # Validates or converts 'structure'.
-        self = sourdough.validate_structure(iterable = self)
+        self = sourdough.Structure.validate(hybrid = self)
             
     """ Properties """
     

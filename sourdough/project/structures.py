@@ -28,7 +28,6 @@ class Structure(sourdough.OptionsMixin, sourdough.Controller, abc.ABC):
     iterator: Union[str, Callable] = iter
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
 
-
     """ Required Subclass Methods """
 
     @abc.abstractmethod
@@ -36,7 +35,36 @@ class Structure(sourdough.OptionsMixin, sourdough.Controller, abc.ABC):
         """Subclasses must provide their own methods"""
         pass
         
+    """ Class Methods """
 
+    @classmethod
+    def validate(cls, hybrid: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+        """Returns a Structure instance based upon 'structure'.
+
+        Args:
+            hybrid (sourdough.Hybrid): Hybrid instance with 'structure' attribute
+                to be validated.
+
+        Raises:
+            TypeError: if 'hybrid.structure' is neither a str nor Structure type.
+
+        Returns:
+            sourdough.Hybrid: with a validated 'structure' attribute.
+            
+        """
+        if isinstance(hybrid.structure, str):
+            hybrid.structure = hybrid.options[hybrid.structure](
+                hybrid = hybrid)
+        elif (inspect.isclass(hybrid.structure) 
+                and issubclass(hybrid.structure, cls)):
+            hybrid.structure = hybrid.structure(hybrid = hybrid) 
+        elif isinstance(hybrid.structure, cls):
+            hybrid.structure.hybrid = hybrid
+            hybrid.structure.__post_init__()
+        else:
+            raise TypeError(f'structure must be a str or {cls} type')
+        return hybrid
+    
     """ Private Methods """
 
     def _add_attributes(self, settings: Mapping[str, Any]) -> None:
@@ -71,39 +99,10 @@ class Structure(sourdough.OptionsMixin, sourdough.Controller, abc.ABC):
         except TypeError:
             return component  
 
-
     def _divide_key(self, key: str) -> Tuple[str, str]:
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
-
-
-def validate_structure(hybrid: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-    """Returns a Structure instance based upon 'structure'.
-
-    Args:
-        hybrid (sourdough.Hybrid): Hybrid instance with 'structure' attribute
-            to be validated.
-
-    Raises:
-        TypeError: if 'hybrid.structure' is neither a str nor Structure type.
-
-    Returns:
-        sourdough.Hybrid: with a validated 'structure' attribute.
-        
-    """
-    if isinstance(hybrid.structure, str):
-        hybrid.structure = hybrid.options[hybrid.structure](
-            hybrid = hybrid)
-    elif (inspect.isclass(hybrid.structure) 
-            and issubclass(hybrid.structure, Structure)):
-        hybrid.structure = hybrid.structure(hybrid = hybrid) 
-    elif isinstance(hybrid.structure, Structure):
-        hybrid.structure.hybrid = hybrid
-        hybrid.structure.__post_init__()
-    else:
-        raise TypeError('structure must be a str or Structure type')
-    return hybrid
 
 
 @dataclasses.dataclass
@@ -118,7 +117,21 @@ class Creator(Structure):
             'publisher': sourdough.Publisher,
             'worker': sourdough.Reader},
         defaults = 'all')
+    
+    def organize(self, settings: Mapping[str, Any]) -> None:
+        """[summary]
 
+        Args:
+            settings (Mapping[str, Any]): [description]
+            
+        """
+        for key, value in settings.items():
+            prefix, suffix = self._divide_key(key = key)
+            for item in sourdough.utilities.listify(value):
+                component = self._get_component(name = item, generic = suffix)
+                component = self._instance_component(component = component)
+                self.hybrid.contents.add(component)
+        return self
 
 @dataclasses.dataclass
 class Cycle(Structure):

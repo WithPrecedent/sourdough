@@ -60,7 +60,6 @@ from sourdough.project.workflow import Author
 from sourdough.project.workflow import Publisher
 from sourdough.project.workflow import Reader
 from sourdough.project.structures import Structure
-from sourdough.project.structures import validate_structure
 from sourdough.project.structures import Creator
 from sourdough.project.structures import Cycle
 from sourdough.project.structures import Graph

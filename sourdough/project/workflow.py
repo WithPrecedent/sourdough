@@ -106,12 +106,9 @@ class Author(sourdough.Action):
             worker.structure = self.manager.settings[worker.name][key]
         except KeyError:
             pass
-        return sourdough.validate_structure(iterable = worker)
+        return sourdough.Structure.validate(hybrid = worker)
 
 
-
-
-        
 @dataclasses.dataclass
 class Publisher(sourdough.Action):
     """Finalizes a composite object from user settings.
