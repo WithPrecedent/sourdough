@@ -8,58 +8,109 @@ Contents:
 
 """
 
+import abc
 import copy
 import dataclasses
 import inspect
 import itertools
 import more_itertools
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Structure(sourdough.OptionsMixin, sourdough.Controller):
+class Structure(sourdough.OptionsMixin, sourdough.Controller, abc.ABC):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = iter
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
 
 
-def validate_structure(iterable: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def organize(self, settings: Mapping[str, Any]) -> None:
+        """Subclasses must provide their own methods"""
+        pass
+        
+
+    """ Private Methods """
+
+    def _add_attributes(self, settings: Mapping[str, Any]) -> None:
+        """
+                
+        """
+        for key, value in settings.items():
+            setattr(self.worker, key, value)
+        return self
+
+    def _get_component(self, name: str, generic: str) -> 'sourdough.Component':
+        """[summary]
+        """
+        # Checks if special prebuilt instance exists.
+        try:
+            component = self.select(name)
+        # Otherwise uses the appropriate generic type.
+        except KeyError:
+            component = self.select(generic)
+        return component
+            
+    def _instance_component(self, 
+            component: 'sourdough.Component',
+            name: str) -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        try:
+            return component(name = name)
+        except TypeError:
+            return component  
+
+
+    def _divide_key(self, key: str) -> Tuple[str, str]:
+        suffix = key.split('_')[-1][:-1]
+        prefix = key[:-len(suffix) - 2]
+        return prefix, suffix
+
+
+def validate_structure(hybrid: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
     """Returns a Structure instance based upon 'structure'.
 
     Args:
-        iterable (sourdough.Hybrid): Hybrid instance with 'structure' attribute
+        hybrid (sourdough.Hybrid): Hybrid instance with 'structure' attribute
             to be validated.
 
     Raises:
-        TypeError: if 'iterable.structure' is neither a str nor Structure type.
+        TypeError: if 'hybrid.structure' is neither a str nor Structure type.
 
     Returns:
         sourdough.Hybrid: with a validated 'structure' attribute.
         
     """
-    if isinstance(iterable.structure, str):
-        iterable.structure = iterable.options[iterable.structure](
-            iterable = iterable)
-    elif (inspect.isclass(iterable.structure) 
-            and issubclass(iterable.structure, Structure)):
-        iterable.structure = iterable.structure(iterable = iterable) 
-    elif isinstance(iterable.structure, Structure):
-        iterable.structure.iterable = iterable
-        iterable.structure.__post_init__()
+    if isinstance(hybrid.structure, str):
+        hybrid.structure = hybrid.options[hybrid.structure](
+            hybrid = hybrid)
+    elif (inspect.isclass(hybrid.structure) 
+            and issubclass(hybrid.structure, Structure)):
+        hybrid.structure = hybrid.structure(hybrid = hybrid) 
+    elif isinstance(hybrid.structure, Structure):
+        hybrid.structure.hybrid = hybrid
+        hybrid.structure.__post_init__()
     else:
         raise TypeError('structure must be a str or Structure type')
-    return iterable
+    return hybrid
 
 
 @dataclasses.dataclass
 class Creator(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
@@ -73,7 +124,7 @@ class Creator(Structure):
 class Cycle(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.cycle   
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
@@ -86,33 +137,77 @@ class Cycle(Structure):
 class Progression(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
             'worker': sourdough.Worker})
-  
+    
+    def organize(self, settings: Mapping[str, Any]) -> None:
+        """[summary]
+
+        Args:
+            settings (Mapping[str, Any]): [description]
+            
+        """
+        for key, value in settings.items():
+            prefix, suffix = self._divide_key(key = key)
+            for item in sourdough.utilities.listify(value):
+                component = self._get_component(name = item, generic = suffix)
+                component = self._instance_component(component = component)
+                self.hybrid.contents.add(component)
+        return self
+                
   
 @dataclasses.dataclass
 class Study(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.product   
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
             'worker': sourdough.Worker})
-           
+    
+    def organize(self, settings: Mapping[str, Any]) -> None:
+        pass
+        
+                   
+    def _build_tasks(self, 
+            worker: 'sourdough.Hybrid',
+            tasks: Sequence[str],
+            settings: Mapping[str, Any]) -> Sequence['sourdough.Task']:
+        """[summary]
+        """
+        instances = []
+        for task in tasks:
+            for technique in settings[f'{task}_techniques']:
+                technique_class = self._get_component(
+                    worker = worker,
+                    name = technique,
+                    key = 'technique')
+                technique_instance = self._instance_component(
+                    component = technique_class,
+                    name = technique)
+                task_class = self._get_component(
+                    worker = worker,
+                    name = task,
+                    key = 'task')
+                instances.append(task_class(
+                    technique = technique_instance,
+                    name = task))
+                self._ignore_list.append(f'{task}_techniques')
+        return instances 
     
 @dataclasses.dataclass
 class Tree(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = more_itertools.collapse
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
@@ -125,7 +220,7 @@ class Tree(Structure):
 class Graph(Structure):
     
     name: str = None
-    iterable: 'sourdough.Worker' = None
+    hybrid: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = 'iterator'    
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {

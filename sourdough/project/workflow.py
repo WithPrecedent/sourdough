@@ -108,58 +108,8 @@ class Author(sourdough.Action):
             pass
         return sourdough.validate_structure(iterable = worker)
 
-    def _get_component(self, 
-            worker: 'sourdough.Hybrid', 
-            name: str,
-            key: str) -> 'sourdough.Component':
-        """[summary]
-        """
-        # Checks if special prebuilt instance exists.
-        try:
-            component = worker.structure.select(name)
-        # Otherwise uses the appropriate generic type.
-        except KeyError:
-            component = worker.structure.select(key)
-        return component
-            
-    def _instance_component(self, 
-            component: 'sourdough.Component',
-            name: str) -> 'sourdough.Component':
-        """[summary]
 
-        Returns:
-            [type]: [description]
-        """
-        try:
-            return component(name = name)
-        except TypeError:
-            return component
-        
-    def _build_tasks(self, 
-            worker: 'sourdough.Hybrid',
-            tasks: Sequence[str],
-            settings: Mapping[str, Any]) -> Sequence['sourdough.Task']:
-        """[summary]
-        """
-        instances = []
-        for task in tasks:
-            for technique in settings[f'{task}_techniques']:
-                technique_class = self._get_component(
-                    worker = worker,
-                    name = technique,
-                    key = 'technique')
-                technique_instance = self._instance_component(
-                    component = technique_class,
-                    name = technique)
-                task_class = self._get_component(
-                    worker = worker,
-                    name = task,
-                    key = 'task')
-                instances.append(task_class(
-                    technique = technique_instance,
-                    name = task))
-                self._ignore_list.append(f'{task}_techniques')
-        return instances 
+
 
         
 @dataclasses.dataclass
