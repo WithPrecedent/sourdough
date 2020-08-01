@@ -8,12 +8,12 @@ Contents:
     Component: abstract base class for core sourdough objects.
     Action (Component): abstract base class for storing action methods. Action 
         subclasses must have a 'perform' method.
-    Hybrid (Component, MutableSequence): iterable containing Component subclass 
-        instances with both dict and list interfaces and methods.
     Lexicon (Component, MutableMapping): sourdough drop-in replacement for dict
         with additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
         'create' method for instancing and/or validating stored objects.
+    Hybrid (Component, MutableSequence): iterable containing Component subclass 
+        instances with both dict and list interfaces and methods.
 
 """
 
@@ -23,8 +23,7 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -100,26 +99,31 @@ class Component(abc.ABC):
         """
         return self.__str__()
         
-    # def __str__(self) -> str:
-    #     """Returns pretty string representation of an instance.
+    def __str__(self) -> str:
+        """Returns pretty string representation of an instance.
         
-    #     Returns:
-    #         str: pretty string representation of an instance.
+        Returns:
+            str: pretty string representation of an instance.
             
-    #     """
-    #     new_line = '\n'
-    #     representation = [f'sourdough {self.__class__.__name__}']
-    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
-    #     for attribute in attributes:
-    #         value = getattr(self, attribute)
-    #         if (isinstance(value, (Sequence, Mapping))
-    #                 and not isinstance(value, str)):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value), '    ')}''')
-    #         else:
-    #             representation.append(f'{attribute}: {str(value)}')
-    #     return new_line.join(representation)    
+        """
+        new_line = '\n'
+        representation = [f'sourdough {self.__class__.__name__}']
+        attributes = [a for a in self.__dict__ if not a.startswith('_')]
+        for attribute in attributes:
+            value = getattr(self, attribute)
+            if (isinstance(value, Component) 
+                    and isinstance(value, (Sequence, Mapping))):
+                representation.append(
+                    f'''{attribute}:{new_line}{textwrap.indent(
+                        str(value.contents), '    ')}''')            
+            elif (isinstance(value, (Sequence, Mapping)) 
+                    and not isinstance(value, str)):
+                representation.append(
+                    f'''{attribute}:{new_line}{textwrap.indent(
+                        str(value), '    ')}''')
+            else:
+                representation.append(f'{attribute}: {str(value)}')
+        return new_line.join(representation)    
 
 
 @dataclasses.dataclass
@@ -165,27 +169,26 @@ class Lexicon(Component, collections.abc.MutableMapping):
     features.
     
     A Lexicon differs from a python dict in 4 significant ways:
-        1) It includes an 'add' method which allows different datatypes to
+        1) It includes a 'name' attribute which is used for internal referencing
+            in sourdough. This is inherited from Component.
+        2) It includes an 'add' method which allows different datatypes to
             be passed and added to a Lexicon instance. All of the normal dict 
             methods are also available. 'add' should be used to set default or 
             more complex methods of adding elements to the stored dict.
-        2) It uses a 'validate' method to validate or convert the passed 
+        3) It uses a 'validate' method to validate or convert the passed 
             'contents' argument. It will convert all supported datatypes to 
             a dict. The 'validate' method is automatically called when a
             Lexicon is instanced and when the 'add' method is called.
-        3) It includes a 'subsetify' method which will return a Lexicon or
+        4) It includes a 'subsetify' method which will return a Lexicon or
             Lexicon subclass instance with only the key/value pairs matching
             keys in the 'subset' argument.
-        4) It allows the '+' operator to be used to join a Lexicon instance
-            with another Lexicon instance, or another Mapping. The '+' 
-            operator calls the Lexicon 'add' method to implement how the added 
-            item(s) is/are added to the Lexicon instance.
-    
-    All Lexicon subclasses must include a 'validate' method. Requirements for
-    that method are described in the abstractmethod itself.
+        5) It allows the '+' operator to be used to join a Lexicon instance
+            with another Lexicon instance or another Mapping. The '+' operator 
+            calls the Lexicon 'add' method to implement how the added item(s) 
+            is/are added to the Lexicon instance.
     
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -200,7 +203,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
             snake case version of the class name ('__class__.__name__').
               
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
       
     """ Initialization Methods """
@@ -261,7 +264,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
                 method.
 
         Returns:
-            Lexicon: with only keys in 'subset'.
+            Lexicon: with only key/value pairs with keys in 'subset'.
 
         """
         subset = sourdough.utilities.listify(subset)
@@ -361,7 +364,7 @@ class Catalog(Lexicon):
             class or return a stored instance.
 
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
@@ -383,7 +386,7 @@ class Catalog(Lexicon):
             snake case version of the class name ('__class__.__name__').  
                      
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     name: str = None
@@ -399,7 +402,7 @@ class Catalog(Lexicon):
 
     """ Public Methods """
 
-    def create(self, key: str, **kwargs) -> Any:
+    def create(self, key: str, **kwargs) -> object:
         """Returns an instance of a stored subclass or instance.
         
         This method acts as a factory for instancing stored classes or returning
@@ -411,9 +414,9 @@ class Catalog(Lexicon):
                 instanced.
                     
         Returns:
-            Component: that has been instanced with kwargs as 
-                arguments if it was a stored class. Otherwise, the instance
-                is returned as it was stored.
+            object: that has been instanced with kwargs as arguments if it 
+                was a stored class. Otherwise, the instance is returned as it 
+                was stored.
             
         """
         try:
@@ -432,7 +435,10 @@ class Catalog(Lexicon):
             Catalog: with only keys in 'subset'.
 
         """
-        new_defaults = [i for i in self.defaults if i in subset] 
+        if isinstance(self.defaults, str):
+            new_defaults = self.defaults
+        else:
+            new_defaults = [i for i in self.defaults if i in subset] 
         return super().subsetify(
             subset = subset,
             defaults = new_defaults,
@@ -492,8 +498,8 @@ class Catalog(Lexicon):
                 in 'contents'.
 
         """
-        if key in ['default', ['default']]:
-            self.defaults = sourdough.tools.listify(value)
+        if key in ['default', ['default'], 'defaults', ['defaults']]:
+            self.defaults = sourdough.utilities.listify(value)
         else:
             try:
                 self.contents[key] = value
@@ -511,7 +517,7 @@ class Catalog(Lexicon):
         """
         self.contents = {
             i: self.contents[i]
-            for i in self.contents if i not in sourdough.tools.listify(key)}
+            for i in self.contents if i not in sourdough.utilities.listify(key)}
         return self
 
         
@@ -524,7 +530,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
     access methods of dictionaries. In order to support this hybrid approach to
     iterables, Hybrid can only store Component subclasses.
     
-    Hybrid is the primary base class used in sourdough projects.
+    Hybrid is the primary iterable base class used in sourdough composite 
+    objects.
     
     A Hybrid differs from a python list in 7 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
@@ -573,12 +580,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
             the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        _default (Any): default value to use when there is a KeyError using the
-            'get' method.
 
     Attributes:
-        contents (Sequence[Component]): all objects in 'contents' must be
-            sourdough Component subclass instances and are stored in a list.
+        _default (Any): default value to use when there is a KeyError using the
+            'get' method.
         
     """
     contents: Union[
@@ -596,6 +601,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
         super().__post_init__()        
         # Validates 'contents' or converts it to appropriate iterable.
         self.contents = self.validate(contents = self.contents)  
+        # Sets default for default value using the 'get' method.
+        self._default = None
 
     """ Public Methods """
     
@@ -989,7 +996,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         
         Hybrid subclasses can be restrucuted to support different iterators at
         runtime. This is done by the Structure subclasses that are part of the
-        'project' subclass.
+        'project' subpackage.
      
         Returns:
             Iterable: generic ordered iterable of 'contents'.
@@ -1015,63 +1022,6 @@ class Hybrid(Component, collections.abc.MutableSequence):
         """
         self.add(other)
         return self
-    
-    
-@dataclasses.dataclass
-class Controller(Component, abc.ABC):
-    """
-    
-    """
-    name: str = None
-    hybrid: 'sourdough.Hybrid' = None
-    iterator: Callable = iter    
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()
-        # Sets current 'stage' and 'index' for that 'stage'.
-        self.index: int = -1
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def organize(self, settings: Mapping[str, Any]) -> None:
-        """Subclasses must provide their own methods"""
-        pass
-        
-    """ Dunder Methods """
-    
-    # def __iter__(self) -> Iterable:
-    #     """Returns iterable of 'contents' based upon 'structure'.
-        
-    #     Returns:
-    #         Iterable: of 'contents'.
-            
-    #     """
-    #     try:
-    #         self.iterator(self.hybrid.contents)
-    #     except TypeError:
-    #         return iter(self.hybrid.contents)
-
-    def __next__(self) -> Union[Callable, 'Component']:
-        """Returns next method after method matching 'item'.
-        
-        Returns:
-            Callable: next method corresponding to those listed in 'options'.
-            
-        """
-        if self.index < len(self.hybrid.contents):
-            self.index += 1
-            if isinstance(self.hybrid[self.index], Action):
-                return self.hybrid[self.index].perform
-            else:
-                return self.hybrid[self.index]
-        else:
-            raise StopIteration()
-
 
 
 """ 
@@ -1088,11 +1038,11 @@ isn't included in the uploaded package build.
 #     matched values and keys, respectively.
 
 #     Args:
-#         contents (Mapping[str, Any]]): stored dictionary. Defaults to 
+#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to 
 #             en empty dict.
               
 #     """
-#     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
 
 #     def __post_init__(self) -> None:
 #         """Creates 'reversed_contents' from passed 'contents'."""
@@ -1204,7 +1154,7 @@ presently fit with the sourdough workflow. However, the code should still work.
 #                 'product' must correspond to key(s) in 'options'. Defaults to 
 #                 None. If not passed, the product listed in 'default' will be 
 #                 used.
-#             kwargs (MutableMapping[str, Any]): parameters to pass to the object 
+#             kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
 #                 being created.
 
 #         Returns:

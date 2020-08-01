@@ -26,7 +26,7 @@ class Technique(sourdough.Action):
     Args:
         algorithm (object): core object used by the 'perform' method. Defaults 
             to None.
-        parameters (Mapping[str, Any]]): parameters to be attached to
+        parameters (Mapping[Any, Any]]): parameters to be attached to
             'algorithm' when the 'perform' method is called. Defaults to an 
             empty dict.
         name (str): designates the name of a class instance that is used for 
@@ -43,7 +43,7 @@ class Technique(sourdough.Action):
             
     """
     algorithm: object = None
-    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     selected: Sequence[str] = None
     required: Mapping[str, str] = None

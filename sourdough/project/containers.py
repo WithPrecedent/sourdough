@@ -46,7 +46,7 @@ class Inventory(sourdough.Catalog):
             snake case version of the class name ('__class__.__name__').  
                      
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     name: str = None
@@ -105,7 +105,7 @@ class Overview(sourdough.Lexicon):
     """Dictionary of different Component types in a Worker instance.
     
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -120,7 +120,7 @@ class Overview(sourdough.Lexicon):
             snake case version of the class name ('__class__.__name__').
               
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     worker: 'sourdough.Worker' = None
     
@@ -216,12 +216,13 @@ class Worker(sourdough.Hybrid):
             snake case version of the class name ('__class__.__name__').
         structure (sourdough.Structure): structure for the organization, iteration,
             and composition of 'contents'.
-        _default (Any): default value to use when there is a KeyError using the
-            'get' method.
+
 
     Attributes:
         contents (Sequence[sourdough.Component]): all objects in 'contents' must 
             be sourdough Component subclass instances and are stored in a list.
+        _default (Any): default value to use when there is a KeyError using the
+            'get' method.    
 
     ToDo:
         draw: a method for producting a diagram of a Worker instance's 
@@ -235,7 +236,6 @@ class Worker(sourdough.Hybrid):
             default_factory = list)
     name: str = None
     structure: 'sourdough.Structure' = 'progression'
-    _default: Any = None
 
     """ Initialization Methods """
 
@@ -244,7 +244,7 @@ class Worker(sourdough.Hybrid):
         # Calls parent initialization method(s).
         super().__post_init__()
         # Validates or converts 'structure'.
-        self = sourdough.Structure.validate(hybrid = self)
+        self = sourdough.Structure.validate(worker = self)
             
     """ Properties """
     

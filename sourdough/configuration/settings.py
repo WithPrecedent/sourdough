@@ -55,7 +55,7 @@ class Settings(sourdough.Lexicon):
     supported file format.
 
     Args:
-        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
+        contents (Union[str, pathlib.Path, Mapping[str, Mapping[Any, Any]]]): a 
             dict, a str file path to a file with settings, or a pathlib Path to
             a file with settings. Defaults to en empty dict.
         infer_types (bool]): whether values in 'contents' are converted
@@ -67,7 +67,7 @@ class Settings(sourdough.Lexicon):
     contents: Union[
         str,
         pathlib.Path,
-        Mapping[str, Mapping[str, Any]]] = dataclasses.field(
+        Mapping[str, Mapping[Any, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
 
@@ -90,11 +90,11 @@ class Settings(sourdough.Lexicon):
             contents: Union[
                 str,
                 pathlib.Path,
-                Mapping[str, Any]]) -> Mapping[str, Any]:
+                Mapping[Any, Any]]) -> Mapping[Any, Any]:
         """Validates 'contents' or converts 'contents' to the proper type.
 
         Args:
-            contents (Union[str, pathlib.Path, Mapping[str, Any]]): a dict, a
+            contents (Union[str, pathlib.Path, Mapping[Any, Any]]): a dict, a
                 str file path to a file with settings, or a pathlib Path to a 
                 file with settings.
 
@@ -102,7 +102,7 @@ class Settings(sourdough.Lexicon):
             TypeError: if 'contents' is neither a str, dict, or Path.
 
         Returns:
-            Mapping[str, Any]: 'contents' in its proper form.
+            Mapping[Any, Any]: 'contents' in its proper form.
 
         """
         if isinstance(contents, Mapping):
@@ -119,12 +119,12 @@ class Settings(sourdough.Lexicon):
 
     def add(self, 
             section: str, 
-            contents: Mapping[str, Any]) -> None:
+            contents: Mapping[Any, Any]) -> None:
         """Adds 'settings' to 'contents'.
 
         Args:
             section (str): name of section to add 'contents' to.
-            contents (Mapping[str, Any]): a dict to store in 'section'.
+            contents (Mapping[Any, Any]): a dict to store in 'section'.
 
         """
         try:
@@ -172,7 +172,7 @@ class Settings(sourdough.Lexicon):
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: str) -> Union[Mapping[str, Any], Any]:
+    def __getitem__(self, key: str) -> Union[Mapping[Any, Any], Any]:
         """Returns a section of the active dictionary or key within a section.
 
         Args:
@@ -180,7 +180,7 @@ class Settings(sourdough.Lexicon):
                 sought.
 
         Returns:
-            Union[Mapping[str, Any], Any]: dict if 'key' matches a section in
+            Union[Mapping[Any, Any], Any]: dict if 'key' matches a section in
                 the active dictionary. If 'key' matches a key within a section,
                 the value, which can be any of the supported datatypes is
                 returned.
@@ -196,7 +196,7 @@ class Settings(sourdough.Lexicon):
                     pass
             raise KeyError(f'{key} is not found in {self.__class__.__name__}')
 
-    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
+    def __setitem__(self, key: str, value: Mapping[Any, Any]) -> None:
         """Creates new key/value pair(s) in a section of the active dictionary.
 
         Args:
@@ -247,14 +247,14 @@ class Settings(sourdough.Lexicon):
         
     """ Private Methods """
 
-    def _load_from_ini(self, file_path: str) -> Mapping[str, Any]:
+    def _load_from_ini(self, file_path: str) -> Mapping[Any, Any]:
         """Returns settings dictionary from an .ini file.
 
         Args:
             file_path (str): path to configparser-compatible .ini file.
 
         Returns:
-            Mapping[str, Any] of contents.
+            Mapping[Any, Any] of contents.
 
         Raises:
             FileNotFoundError: if the file_path does not correspond to a file.
@@ -268,14 +268,14 @@ class Settings(sourdough.Lexicon):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
 
-    def _load_from_json(self, file_path: str) -> Mapping[str, Any]:
+    def _load_from_json(self, file_path: str) -> Mapping[Any, Any]:
         """Returns settings dictionary from an .json file.
 
         Args:
             file_path (str): path to configparser-compatible .json file.
 
         Returns:
-            Mapping[str, Any] of contents.
+            Mapping[Any, Any] of contents.
 
         Raises:
             FileNotFoundError: if the file_path does not correspond to a file.
@@ -288,7 +288,7 @@ class Settings(sourdough.Lexicon):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
 
-    def _load_from_py(self, file_path: str) -> Mapping[str, Any]:
+    def _load_from_py(self, file_path: str) -> Mapping[Any, Any]:
         """Returns a settings dictionary from a .py file.
 
         Args:
@@ -296,7 +296,7 @@ class Settings(sourdough.Lexicon):
                 defined.
 
         Returns:
-            Mapping[str, Any] of contents.
+            Mapping[Any, Any] of contents.
 
         Raises:
             FileNotFoundError: if the file_path does not correspond to a
@@ -316,14 +316,14 @@ class Settings(sourdough.Lexicon):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
 
-    def _load_from_toml(self, file_path: str) -> Mapping[str, Any]:
+    def _load_from_toml(self, file_path: str) -> Mapping[Any, Any]:
         """Returns settings dictionary from a .toml file.
 
         Args:
             file_path (str): path to configparser-compatible .toml file.
 
         Returns:
-            Mapping[str, Any] of contents.
+            Mapping[Any, Any] of contents.
 
         Raises:
             FileNotFoundError: if the file_path does not correspond to a file.
@@ -335,16 +335,16 @@ class Settings(sourdough.Lexicon):
             raise FileNotFoundError(f'settings file {file_path} not found')
 
     def _infer_types(self,
-            contents: Mapping[str, Mapping[str, Any]]) -> Mapping[
-                str, Mapping[str, Any]]:
+            contents: Mapping[str, Mapping[Any, Any]]) -> Mapping[
+                str, Mapping[Any, Any]]:
         """Converts stored values to appropriate datatypes.
 
         Args:
-            contents (Mapping[str, Mapping[str, Any]]): a nested contents dict
+            contents (Mapping[str, Mapping[Any, Any]]): a nested contents dict
                 to review.
 
         Returns:
-            Mapping[str, Mapping[str, Any]]: with the nested values converted to 
+            Mapping[str, Mapping[Any, Any]]: with the nested values converted to 
                 the appropriate datatypes.
 
         """
@@ -360,17 +360,17 @@ class Settings(sourdough.Lexicon):
         return new_contents
 
     def _add_defaults(self,
-            contents: Mapping[str, Mapping[str, Any]]) -> Mapping[
-                str, Mapping[str, Any]]:
+            contents: Mapping[str, Mapping[Any, Any]]) -> Mapping[
+                str, Mapping[Any, Any]]:
         """Creates a backup set of mappings for sourdough settings lookup.
 
 
         Args:
-            contents (MutableMapping[str, Mapping[str, Any]]): a nested contents 
+            contents (MutableMapping[str, Mapping[Any, Any]]): a nested contents 
                 dict to add defaults to.
 
         Returns:
-            Mapping[str, Mapping[str, Any]]: with stored defaults added.
+            Mapping[str, Mapping[Any, Any]]: with stored defaults added.
 
         """
         new_contents = DEFAULT_SETTINGS

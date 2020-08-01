@@ -327,7 +327,7 @@ class Filer(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.Settings) -> Mapping[str, Any]:
+            settings: sourdough.Settings) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
@@ -398,16 +398,16 @@ class Distributor(abc.ABC):
 
     def _check_required_parameters(self,
             file_format: 'FileFormat',
-            passed_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
+            passed_kwargs: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Adds requited parameters if not passed.
 
         Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
-            passed_kwargs (MutableMapping[str, Any]): kwargs passed to method.
+            passed_kwargs (MutableMapping[Any, Any]): kwargs passed to method.
 
         Returns:
-            Mapping[str, Any]: kwargs with only relevant parameters.
+            Mapping[Any, Any]: kwargs with only relevant parameters.
 
         """
         new_kwargs = passed_kwargs
@@ -419,7 +419,7 @@ class Distributor(abc.ABC):
 
     def _check_shared_parameters(self,
             file_format: 'FileFormat',
-            passed_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
+            passed_kwargs: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Selects kwargs for particular methods.
 
         If a needed argument was not passed, default values are used.
@@ -427,10 +427,10 @@ class Distributor(abc.ABC):
         Args:
             file_format (FileFormat): an instance with information about
                 additional kwargs to search for.
-            passed_kwargs (MutableMapping[str, Any]): kwargs passed to method.
+            passed_kwargs (MutableMapping[Any, Any]): kwargs passed to method.
 
         Returns:
-            Mapping[str, Any]: kwargs with only relevant parameters.
+            Mapping[Any, Any]: kwargs with only relevant parameters.
 
         """
         new_kwargs = passed_kwargs
@@ -465,7 +465,7 @@ class Distributor(abc.ABC):
 
     def _get_parameters(self,
             file_format: 'FileFormat',
-            **kwargs) -> Mapping[str, Any]:
+            **kwargs) -> Mapping[Any, Any]:
         """Creates complete parameters for a file input/output method.
 
         Args:
@@ -474,7 +474,7 @@ class Distributor(abc.ABC):
             kwargs: additional parameters to pass to an input/output method.
 
         Returns:
-            Mapping[str, Any]: parameters to be passed to an input/output method.
+            Mapping[Any, Any]: parameters to be passed to an input/output method.
 
         """
         parameters = self._check_required_parameters(
@@ -665,7 +665,7 @@ class FileFormat(sourdough.LoaderMixin, sourdough.Component):
             as a local attribute. Defaults to None.
         shared_parameters (Sequence[str]]): names of commonly used kwargs
             for either the import or export method. Defaults to None.
-        required_parameters (Mapping[str, Any]]): any required parameters
+        required_parameters (Mapping[Any, Any]]): any required parameters
             that should be passed to the import or export methods. Defaults to
             None.
 
@@ -673,11 +673,11 @@ class FileFormat(sourdough.LoaderMixin, sourdough.Component):
 
     name: str = None
     modules: str = 'sourdough'
-    _loaded: Mapping[str, Any] = dataclasses.field(
+    _loaded: Mapping[Any, Any] = dataclasses.field(
         default_factory = dict)
     extension: str = None
     load_method: str = None
     save_method: str = None
     shared_parameters: Sequence[str] = None
-    required_parameters: Mapping[str, Any] = None
+    required_parameters: Mapping[Any, Any] = None
     

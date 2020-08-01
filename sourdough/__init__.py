@@ -37,7 +37,6 @@ from sourdough.base.core import Action
 from sourdough.base.core import Hybrid
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
-from sourdough.base.core import Controller
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import OptionsMixin

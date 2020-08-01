@@ -30,12 +30,12 @@ except ImportError:
 
 def classify(
         variable: Any, 
-        options: Mapping[str, Any] = None) -> object:
+        options: Mapping[Any, Any] = None) -> object:
     """Converts 'variable' to a class, if possible.
 
     Args:
         variable (Any): variable to create a class out of.
-        options (Mapping[str, Any]): mapping containing str keys and
+        options (Mapping[Any, Any]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -77,13 +77,13 @@ def importify(module: str, key: str) -> object:
              
 def instancify(
         variable: Any, 
-        options: Mapping[str, Any] = None,
+        options: Mapping[Any, Any] = None,
         **kwargs) -> object:
     """Converts 'variable' to a class instance with 'kwargs' as parameters.
 
     Args:
         variable (Any): variable to create an instance out of.
-        options (Mapping[str, Any]]): mapping containing str keys and
+        options (Mapping[Any, Any]]): mapping containing str keys and
             classes as values. If 'variable' is a string, the method will seek
             to use it as a key in options. Defaults to None.
 
@@ -272,8 +272,8 @@ def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
 """ Other tools """
 
 def add_prefix(
-        iterable: Union[Mapping[str, Any], Sequence],
-        prefix: str) -> Union[Mapping[str, Any], Sequence]:
+        iterable: Union[Mapping[Any, Any], Sequence],
+        prefix: str) -> Union[Mapping[Any, Any], Sequence]:
     """Adds prefix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string prefix.
@@ -292,8 +292,8 @@ def add_prefix(
         return [prefix + '_' + item for item in iterable]
 
 def add_suffix(
-        iterable: Union[Mapping[str, Any], Sequence],
-        suffix: str) -> Union[Mapping[str, Any], Sequence]:
+        iterable: Union[Mapping[Any, Any], Sequence],
+        suffix: str) -> Union[Mapping[Any, Any], Sequence]:
     """Adds suffix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string suffix.

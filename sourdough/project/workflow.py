@@ -76,13 +76,13 @@ class Author(sourdough.Action):
             worker.structure = self.manager.settings[worker.name][key]
         except KeyError:
             pass
-        return sourdough.Structure.validate(hybrid = worker)
+        return sourdough.Structure.validate(worker = worker)
 
     def _divide_settings(self,
-            settings: Mapping[str, Any],
+            settings: Mapping[Any, Any],
             structure: 'sourdough.Structure') -> Tuple[
-                Mapping[str, Any],
-                Mapping[str, Any]]:
+                Mapping[Any, Any],
+                Mapping[Any, Any]]:
         """
 
         Args:
