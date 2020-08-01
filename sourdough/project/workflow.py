@@ -16,7 +16,7 @@ Contents:
 
 import dataclasses
 import inspect
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
 
 import sourdough
 
@@ -47,49 +47,19 @@ class Author(sourdough.Action):
         attributes = {}
         # Finds and sets the 'structure' of 'worker'.
         worker = self._add_structure(worker = worker)
-        # Iterates through appropriate settings to create 'contents' of 
-        # 'worker'.
-        self._ignore_list = []
-        options = worker.structure.options.keys()
-        for key, value in self.manager.settings[worker.name].items():
-            # Finds settings that have suffixes matching keys in the 
-            # 'components' of 'manager'.
-            if (any(key.endswith(f'{s}s') for s in options)
-                    and key not in self._ignore_list):
-                suffix = key.split('_')[-1][:-1]
-                if suffix == 'task':
-                    worker.add(self._build_tasks(
-                        worker = worker,
-                        tasks = sourdough.utilities.listify(value),
-                        settings = self.manager.settings[worker.name]))
-                else:
-                    # Iterates through listed items in 'value'.
-                    for item in sourdough.utilities.listify(value):
-                        # Gets appropraite Component instance based on 'item'.
-                        component = self._get_component(
-                            worker = worker,
-                            name = item,
-                            key = suffix)
-                        component = self._instance_component(
-                            component = component,
-                            name = item)
-                        # Recursively calls the 'perform' method if the 
-                        # 'component' created is a Hybrid type.
-                        if isinstance(component, sourdough.Hybrid):
-                            component = self.perform(worker = component)
-                        print('test component', component, item, key)
-                        worker.add(component)
-            # Stores other settings in 'attributes'.        
-            elif not key.endswith('_structure'):
-                attributes[key] = value
+        # Divides settings into different subsections.
+        component_settings, attributes = self._divide_settings(
+            settings = self.manager.settings[worker.name],
+            structure = worker.structure) 
+        # Organizes 'contents' of 'worker' according to its 'structure'.
+        worker.structure.organize(settings = component_settings)
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
             setattr(worker, key, value)
-        self._ignore_list = None
         return worker          
 
     """ Private Methods """
-    
+
     def _add_structure(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """Returns Structure class based upon 'settings' or default option.
         
@@ -108,7 +78,33 @@ class Author(sourdough.Action):
             pass
         return sourdough.Structure.validate(hybrid = worker)
 
+    def _divide_settings(self,
+            settings: Mapping[str, Any],
+            structure: 'sourdough.Structure') -> Tuple[
+                Mapping[str, Any],
+                Mapping[str, Any]]:
+        """
 
+        Args:
+
+
+        Returns:
+            Tuple
+        
+        """
+        component_settings = {}
+        attributes = {}
+        for key, value in settings.items():
+            # Stores settings related to available Component 'options' according
+            # to 'structure'.
+            if any(key.endswith(f'_{s}s') for s in structure.options.keys()):
+                component_settings[key] = sourdough.utilities.listify(value)
+            # Stores other settings in 'attributes'.        
+            elif not key.endswith('_structure'):
+                attributes[key] = value
+        return component_settings, attributes
+                
+        
 @dataclasses.dataclass
 class Publisher(sourdough.Action):
     """Finalizes a composite object from user settings.
@@ -274,11 +270,11 @@ class Reader(sourdough.Action):
             [type] -- [description]
             
         """
-        worker.apply(tool = self._add_data_dependent)
-        if self.manager.data is None:
-            worker.perform()
-        else:
-            self.manager.data = worker.perform(item = self.manager.data)
+        # worker.apply(tool = self._add_data_dependent)
+        # if self.manager.data is None:
+        #     worker.perform()
+        # else:
+        #     self.manager.data = worker.perform(item = self.manager.data)
         return worker
 
     """ Private Methods """

@@ -176,7 +176,6 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
             
         """
         for stage in self:
-            print('test init project', project)
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
             project = stage.perform(worker = project)

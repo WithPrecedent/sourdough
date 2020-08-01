@@ -115,7 +115,7 @@ class Creator(Structure):
         contents = {
             'author': sourdough.Author,
             'publisher': sourdough.Publisher,
-            'worker': sourdough.Reader},
+            'reader': sourdough.Reader},
         defaults = 'all')
     
     def organize(self, settings: Mapping[str, Any]) -> None:
@@ -127,11 +127,14 @@ class Creator(Structure):
         """
         for key, value in settings.items():
             prefix, suffix = self._divide_key(key = key)
-            for item in sourdough.utilities.listify(value):
+            for item in value:
                 component = self._get_component(name = item, generic = suffix)
-                component = self._instance_component(component = component)
-                self.hybrid.contents.add(component)
+                component = self._instance_component(
+                    component = component,
+                    name = item)
+                self.hybrid.add(component)
         return self
+
 
 @dataclasses.dataclass
 class Cycle(Structure):
@@ -167,10 +170,12 @@ class Progression(Structure):
         """
         for key, value in settings.items():
             prefix, suffix = self._divide_key(key = key)
-            for item in sourdough.utilities.listify(value):
+            for item in value:
                 component = self._get_component(name = item, generic = suffix)
-                component = self._instance_component(component = component)
-                self.hybrid.contents.add(component)
+                component = self._instance_component(
+                    component = component,
+                    name = item)
+                self.hybrid.add(component)
         return self
                 
   
@@ -215,7 +220,8 @@ class Study(Structure):
                     name = task))
                 self._ignore_list.append(f'{task}_techniques')
         return instances 
-    
+
+
 @dataclasses.dataclass
 class Tree(Structure):
     
