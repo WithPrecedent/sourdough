@@ -235,6 +235,13 @@ class Study(Structure):
     def organize(self, settings: Mapping[Any, Any]) -> None:
         pass
         
+    def _iterable(self, *args) -> Tuple[str, str]:
+        pools = [tuple(pool) for pool in args]
+        result = [[]]
+        for pool in pools:
+            result = [x + [y] for x in result for y in pool]
+        for product in result:
+            yield tuple(product)
                    
     def _build_tasks(self, 
             worker: 'sourdough.Worker',
