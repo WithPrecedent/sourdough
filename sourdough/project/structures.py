@@ -9,16 +9,43 @@ Contents:
 """
 
 import abc
+import collections.abc
 import copy
 import dataclasses
 import inspect
 import itertools
 import more_itertools
 from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+    Any, Callable, ClassVar, Iterable, Iterator, Mapping, Sequence, Tuple, 
+    Union)
 
 import sourdough
 
+
+
+@dataclasses.dataclass
+class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):
+    
+    
+    @abc.abstractmethod
+    def generator(self, *args) -> Iterator:
+        pass
+        
+    
+
+@dataclasses.dataclass
+class Study(LazyIterator):
+    
+    
+    def generator(self, *args) -> sourdough.Action:
+        pools = [tuple(pool) for pool in args]
+        result = [[]]
+        for pool in pools:
+            result = [x + [y] for x in result for y in pool]
+        for product in result:
+            yield tuple(product)
+             
+    
 
 @dataclasses.dataclass
 class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
