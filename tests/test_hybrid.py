@@ -21,7 +21,8 @@ class AnotherComponent(sourdough.Component):
 
 
 def test_hybrid():
-    worker = sourdough.Hybrid(_default = 'default value')
+    worker = sourdough.Hybrid()
+    worker.setdefault('default value')
     a_component = AComponent(name = 'test_name')
     another_component = AnotherComponent()
     some_component = AnotherComponent(name = 'some_component')
@@ -44,6 +45,7 @@ def test_hybrid():
     for key, value in worker.items():
         pass
     subset_worker = worker.subsetify(subset = ['test_name'])
+    print('test keys', subset_worker.keys())
     assert subset_worker.keys() == [
         'test_name', 
         'test_name']

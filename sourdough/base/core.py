@@ -591,7 +591,6 @@ class Hybrid(Component, collections.abc.MutableSequence):
         Mapping[str, 'Component'], 
         Sequence['Component']] = dataclasses.field(default_factory = list)
     name: str = None
-    _default: Any = None
 
     """ Initialization Methods """
     
@@ -626,7 +625,9 @@ class Hybrid(Component, collections.abc.MutableSequence):
                 compatible with an instance.
         
         """
-        if isinstance(contents, Component):
+        if (isinstance(contents, Component) or 
+                (inspect.isclass(contents) 
+                    and issubclass(contents, Component))):
             return [contents]
         elif (isinstance(contents, Sequence) 
             and (all(isinstance(c, Component) for c in contents)
@@ -821,7 +822,11 @@ class Hybrid(Component, collections.abc.MutableSequence):
                 'contents'
             
         """
-        return [c.get_name() for c in self.contents]
+        print('test internal contents', self.contents)
+        try:
+            return [c.name for c in self.contents]
+        except AttributeError:
+            return [c.get_name() for c in self.contents]
 
     def pop(self, 
             key: Union[str, int]) -> Union[
@@ -874,9 +879,14 @@ class Hybrid(Component, collections.abc.MutableSequence):
 
         """
         subset = sourdough.utilities.listify(subset)
-        return self.__class__(
-            name = self.name,
-            contents = [c for c in self.contents if c.get_name() in subset])    
+        try:
+            return self.__class__(
+                name = self.name,
+                contents = [c for c in self.contents if c.name in subset])  
+        except AttributeError:            
+            return self.__class__(
+                name = self.name,
+                contents = [c for c in self.contents if c.get_name() in subset])    
      
     def update(self, 
             contents: Union[
@@ -946,7 +956,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
         if isinstance(key, int):
             return self.contents[key]
         else:
-            matches = [c for c in self.contents if c.get_name() == key]
+            try:
+                matches = [c for c in self.contents if c.name == key]
+            except AttributeError:
+                matches = [c for c in self.contents if c.get_name() == key]
             if len(matches) == 0:
                 raise KeyError(f'{key} is not in {self.name}')
             elif len(matches) == 1:
@@ -988,7 +1001,11 @@ class Hybrid(Component, collections.abc.MutableSequence):
         if isinstance(key, int):
             del self.contents[key]
         else:
-            self.contents = [c for c in self.contents if c.get_name() != key]
+            try:
+                self.contents = [c for c in self.contents if c.name != key]
+            except AttributeError:
+                self.contents = [
+                    c for c in self.contents if c.get_name() != key]
         return self
 
     def __iter__(self) -> Iterable:
