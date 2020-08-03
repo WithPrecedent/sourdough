@@ -45,7 +45,6 @@ def test_hybrid():
     for key, value in worker.items():
         pass
     subset_worker = worker.subsetify(subset = ['test_name'])
-    print('test keys', subset_worker.keys())
     assert subset_worker.keys() == [
         'test_name', 
         'test_name']

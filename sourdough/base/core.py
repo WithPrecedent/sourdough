@@ -19,6 +19,7 @@ Contents:
 
 import abc
 import collections.abc
+import copy
 import dataclasses
 import inspect
 import more_itertools
@@ -81,8 +82,6 @@ class Component(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        # if hasattr(cls, 'name') and cls.name is not None:
-        #     return cls.name
         if inspect.isclass(cls):
             return sourdough.utilities.snakify(cls.__name__)
         else:
@@ -153,7 +152,7 @@ class Action(Component, abc.ABC):
     
     @abc.abstractmethod
     def perform(self, item: object = None, **kwargs) -> object:
-        """Performs some action related to passed 'data'.
+        """Performs some action related to passed 'item'.
         
         Subclasses must provide their own methods.
         
@@ -213,7 +212,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
         # Calls parent initialization method(s).
         super().__post_init__()    
         # Validates 'contents' or converts it to appropriate iterable.
-        self.contents = self.validate(contents = self.contents)  
+        self._initial_validation()  
         
     """ Public Methods """
     
@@ -335,6 +334,16 @@ class Lexicon(Component, collections.abc.MutableMapping):
         self.add(other)
         return self
 
+    """ Private Methods """
+    
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        new_contents = copy.deepcopy(self.contents)
+        new_contents = self.validate(contents = new_contents)
+        self.contents = {}
+        self.add(contents = new_contents)
+        return self
+    
 
 @dataclasses.dataclass
 class Catalog(Lexicon):
@@ -564,7 +573,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
             callable. 
 
     Args:
-        contents (Union[Component, Mapping[str, Component], 
+        contents (Union[Component, Mapping[Any, Component], 
             Sequence[Component]]): Component subclasses or Component subclass 
             instances to store in a list. If a dict is passed, the keys will be 
             ignored and only the values will be added to 'contents'. Defaults to 
@@ -588,7 +597,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
     """
     contents: Union[
         'Component',
-        Mapping[str, 'Component'], 
+        Mapping[Any, 'Component'], 
         Sequence['Component']] = dataclasses.field(default_factory = list)
     name: str = None
 
@@ -599,7 +608,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         # Calls parent initialization method(s).
         super().__post_init__()        
         # Validates 'contents' or converts it to appropriate iterable.
-        self.contents = self.validate(contents = self.contents)  
+        self._initial_validation()  
         # Sets default for default value using the 'get' method.
         self._default = None
 
@@ -608,12 +617,12 @@ class Hybrid(Component, collections.abc.MutableSequence):
     def validate(self, 
             contents: Union[
                 'Component',
-                Mapping[str, 'Component'], 
+                Mapping[Any, 'Component'], 
                 Sequence['Component']]) -> Sequence['Component']:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Union[Component, Mapping[str, Component], 
+            contents (Union[Component, Mapping[Any, Component], 
                 Sequence[Component]]): items to validate or convert to a list of
                 Component instances.
             
@@ -628,7 +637,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
         if (isinstance(contents, Component) or 
                 (inspect.isclass(contents) 
                     and issubclass(contents, Component))):
-            return [contents]
+            if isinstance(contents, Sequence):
+                return contents
+            else:
+                return [contents]
         elif (isinstance(contents, Sequence) 
             and (all(isinstance(c, Component) for c in contents)
                 or (all(inspect.isclass(c) for c in contents)
@@ -648,12 +660,12 @@ class Hybrid(Component, collections.abc.MutableSequence):
     def add(self, 
             contents: Union[
                 'Component',
-                Mapping[str, 'Component'], 
+                Mapping[Any, 'Component'], 
                 Sequence['Component']]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
-            contents (Union[Component, Mapping[str, Component], 
+            contents (Union[Component, Mapping[Any, Component], 
                 Sequence[Component]]): Component instance(s) to add to the
                 'contents' attribute.
 
@@ -665,12 +677,12 @@ class Hybrid(Component, collections.abc.MutableSequence):
     def append(self, 
             contents: Union[
                 'Component',
-                Mapping[str, 'Component'], 
+                Mapping[Any, 'Component'], 
                 Sequence['Component']]) -> None:
         """Appends 'component' to 'contents'.
         
         Args:
-            contents (Union[Component, Mapping[str, Component], 
+            contents (Union[Component, Mapping[Any, Component], 
                 Sequence[Component]]): Component instance(s) to add to the
                 'contents' attribute.
 
@@ -679,6 +691,9 @@ class Hybrid(Component, collections.abc.MutableSequence):
             
         """
         contents = self.validate(contents = contents)
+        if (isinstance(contents, Sequence)
+                and not isinstance(contents, Component)):
+            contents = self.__class__(contents)
         self.contents.append(contents)
         return self    
     
@@ -717,12 +732,12 @@ class Hybrid(Component, collections.abc.MutableSequence):
     def extend(self, 
             contents: Union[
                 'Component',
-                Mapping[str, 'Component'], 
+                Mapping[Any, 'Component'], 
                 Sequence['Component']]) -> None:
         """Extends 'component' to 'contents'.
         
         Args:
-            contents (Union[Component, Mapping[str, Component], 
+            contents (Union[Component, Mapping[Any, Component], 
                 Sequence[Component]]): Component instance(s) to add to the
                 'contents' attribute.
 
@@ -822,7 +837,6 @@ class Hybrid(Component, collections.abc.MutableSequence):
                 'contents'
             
         """
-        print('test internal contents', self.contents)
         try:
             return [c.name for c in self.contents]
         except AttributeError:
@@ -890,12 +904,12 @@ class Hybrid(Component, collections.abc.MutableSequence):
      
     def update(self, 
             contents: Union[
-                Mapping[str, 'Component'], 
+                Mapping[Any, 'Component'], 
                 Sequence['Component']]) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            contents (Union[Mapping[str, Component], Sequence[Component]]): 
+            contents (Union[Mapping[Any, Component], Sequence[Component]]): 
                 Component instances to add to the 'contents' attribute. If a 
                 Mapping is passed, the values are added to 'contents' and the
                 keys become the 'name' attributes of those avalues. To mimic 
@@ -1040,6 +1054,16 @@ class Hybrid(Component, collections.abc.MutableSequence):
         self.add(other)
         return self
 
+    """ Private Methods """
+    
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        new_contents = copy.deepcopy(self.contents)
+        new_contents = self.validate(contents = new_contents)
+        self.contents = []
+        self.add(contents = new_contents)
+        return self
+        
 
 """ 
 Reflector is currently omitted from the sourdough build because I'm unsure

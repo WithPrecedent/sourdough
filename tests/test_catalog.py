@@ -25,8 +25,6 @@ def test_catalog():
     another_component = AnotherComponent()
     test_mapping = {'a_key': AComponent(), 'another_key': AnotherComponent()}
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
-    
-    # Tests Catalog
     catalog = sourdough.Catalog(contents = {
         'test' : test_component,
         'another': another_component})
@@ -36,12 +34,16 @@ def test_catalog():
     assert catalog['none'] == []
     catalog += {'third': another_component}
     catalog.add(test_mapping)
-    catalog.add(test_sequence)
-    assert len(catalog) == 7
+    try:
+        catalog.add(test_sequence)
+        raise TypeError('test failed to raise TypeError')
+    except TypeError:
+        pass
+    assert len(catalog) == 5
     assert catalog[['test', 'another']] == [test_component, another_component]
     catalog.always_return_list = True
     assert catalog['test'] == [test_component]
-    assert catalog.perform('another') == another_component
+    assert catalog.create('another') == another_component
     subset_catalog = catalog.subsetify(subset = ['third', 'a_key'])
     assert subset_catalog.always_return_list
     return

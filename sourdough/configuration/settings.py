@@ -55,7 +55,7 @@ class Settings(sourdough.Lexicon):
     supported file format.
 
     Args:
-        contents (Union[str, pathlib.Path, Mapping[str, Mapping[Any, Any]]]): a 
+        contents (Union[str, pathlib.Path, Mapping[Any, Mapping[Any, Any]]]): a 
             dict, a str file path to a file with settings, or a pathlib Path to
             a file with settings. Defaults to en empty dict.
         infer_types (bool]): whether values in 'contents' are converted
@@ -67,7 +67,7 @@ class Settings(sourdough.Lexicon):
     contents: Union[
         str,
         pathlib.Path,
-        Mapping[str, Mapping[Any, Any]]] = dataclasses.field(
+        Mapping[Any, Mapping[Any, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
 
@@ -247,6 +247,11 @@ class Settings(sourdough.Lexicon):
         
     """ Private Methods """
 
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        self.contents = self.validate(contents = self.contents)
+        return self
+
     def _load_from_ini(self, file_path: str) -> Mapping[Any, Any]:
         """Returns settings dictionary from an .ini file.
 
@@ -335,16 +340,16 @@ class Settings(sourdough.Lexicon):
             raise FileNotFoundError(f'settings file {file_path} not found')
 
     def _infer_types(self,
-            contents: Mapping[str, Mapping[Any, Any]]) -> Mapping[
+            contents: Mapping[Any, Mapping[Any, Any]]) -> Mapping[
                 str, Mapping[Any, Any]]:
         """Converts stored values to appropriate datatypes.
 
         Args:
-            contents (Mapping[str, Mapping[Any, Any]]): a nested contents dict
+            contents (Mapping[Any, Mapping[Any, Any]]): a nested contents dict
                 to review.
 
         Returns:
-            Mapping[str, Mapping[Any, Any]]: with the nested values converted to 
+            Mapping[Any, Mapping[Any, Any]]: with the nested values converted to 
                 the appropriate datatypes.
 
         """
@@ -360,17 +365,17 @@ class Settings(sourdough.Lexicon):
         return new_contents
 
     def _add_defaults(self,
-            contents: Mapping[str, Mapping[Any, Any]]) -> Mapping[
+            contents: Mapping[Any, Mapping[Any, Any]]) -> Mapping[
                 str, Mapping[Any, Any]]:
         """Creates a backup set of mappings for sourdough settings lookup.
 
 
         Args:
-            contents (MutableMapping[str, Mapping[Any, Any]]): a nested contents 
+            contents (MutableMapping[Any, Mapping[Any, Any]]): a nested contents 
                 dict to add defaults to.
 
         Returns:
-            Mapping[str, Mapping[Any, Any]]: with stored defaults added.
+            Mapping[Any, Mapping[Any, Any]]: with stored defaults added.
 
         """
         new_contents = DEFAULT_SETTINGS

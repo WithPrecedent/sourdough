@@ -1,5 +1,5 @@
 """
-structures: general composite object types
+structures: composite object designs and iterators
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -48,14 +48,14 @@ class Study(LazyIterator):
     
 
 @dataclasses.dataclass
-class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
+class Structure(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
     """
     
     """
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = iter
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
 
     """ Initialization Methods """
     
@@ -91,7 +91,7 @@ class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
             
         """
         if isinstance(worker.structure, str):
-            worker.structure = worker.options[worker.structure](
+            worker.structure = worker.registry[worker.structure](
                 worker = worker)
         elif (inspect.isclass(worker.structure) 
                 and issubclass(worker.structure, cls)):
@@ -121,12 +121,12 @@ class Structure(sourdough.OptionsMixin, sourdough.Component, abc.ABC):
         """Returns next method after method matching 'item'.
         
         Returns:
-            Callable: next method corresponding to those listed in 'options'.
+            Callable: next method corresponding to those listed in 'registry'.
             
         """
         if self.index < len(self.worker.contents):
             self.index += 1
-            if isinstance(self.worker[self.index], Action):
+            if isinstance(self.worker[self.index], sourdough.Action):
                 return self.worker[self.index].perform
             else:
                 return self.worker[self.index]
@@ -179,7 +179,7 @@ class Creator(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'author': sourdough.Author,
             'publisher': sourdough.Publisher,
@@ -210,7 +210,7 @@ class Cycle(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.cycle   
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -223,7 +223,7 @@ class Progression(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.chain
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -253,7 +253,7 @@ class Study(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = itertools.product   
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -303,7 +303,7 @@ class Tree(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = more_itertools.collapse
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -316,7 +316,7 @@ class Graph(Structure):
     name: str = None
     worker: 'sourdough.Worker' = None
     iterator: Union[str, Callable] = 'iterator'    
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'edge': sourdough.Edge,
             'node': sourdough.Node})
@@ -328,7 +328,7 @@ class Graph(Structure):
     # data: Any = None    
     # edges: Union[Sequence['sourdough.Edge'],
     #     Sequence[Sequence[str]], 
-    #     Mapping[str, Sequence[str]]] = dataclasses.field(default_factory = list)
+    #     Mapping[Any, Sequence[str]]] = dataclasses.field(default_factory = list)
     # options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()  
 
     # """ Initialization Methods """
@@ -349,11 +349,11 @@ class Graph(Structure):
            
     # """ Public Methods """
     
-    # def from_dict(self, adjacency: Mapping[str, Sequence[str]]) -> None:
+    # def from_dict(self, adjacency: Mapping[Any, Sequence[str]]) -> None:
     #     """[summary]
 
     #     Args:
-    #         adjacency (MutableMapping[str, Sequence[str]]): [description]
+    #         adjacency (MutableMapping[Any, Sequence[str]]): [description]
 
     #     Returns:
     #         [type]: [description]

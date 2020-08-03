@@ -240,7 +240,7 @@ class Filer(object):
         except FileNotFoundError:
             return self.validate(path = self.root_folder / path)
                 
-    def _get_default_file_formats(self) -> Mapping[str, 'FileFormat']:
+    def _get_default_file_formats(self) -> Mapping[Any, 'FileFormat']:
         """Returns supported file formats.
 
         Returns:

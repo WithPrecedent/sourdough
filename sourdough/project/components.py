@@ -46,9 +46,9 @@ class Technique(sourdough.Action):
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     selected: Sequence[str] = None
-    required: Mapping[str, str] = None
-    runtime: Mapping[str, str] = None
-    data_dependent: Mapping[str, str] = None
+    required: Mapping[Any, str] = None
+    runtime: Mapping[Any, str] = None
+    data_dependent: Mapping[Any, str] = None
     
     """ Public Methods """
     
@@ -99,7 +99,7 @@ class Task(sourdough.Action):
             snake case version of the class name ('__class__.__name__').
             
     """
-    technique: Technique = None
+    technique: Union[Technique, str] = None
     name: str = None
 
     """ Public Methods """
