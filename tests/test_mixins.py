@@ -40,7 +40,7 @@ class ProxiedComponent(sourdough.ProxyMixin, sourdough.Component):
         self.proxify(proxy = 'new_property', attribute = '_hidden_attribute')
 
 
-def test_components():
+def test_mixins():
     # Tests Component, RegistryMixin, and LibraryMixin
     a_component = AComponent()
     other_component = OtherComponent()
@@ -66,4 +66,4 @@ def test_components():
     return
 
 if __name__ == '__main__':
-    test_components()
+    test_mixins()

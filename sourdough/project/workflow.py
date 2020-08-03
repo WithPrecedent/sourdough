@@ -33,29 +33,32 @@ class Author(sourdough.Action):
     
     """ Public Methods """
     
-    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
-        """Drafts a worker with its 'contents' organized and instanced.
+    def perform(self, 
+            worker: 'sourdough.Project' = None) -> 'sourdough.Project':
+        """Drafts an Project of a sourdough project.
         
         Args:
-            worker (sourdough.Hybrid): Hybrid instance to create and organize
-                based on the information in 'contents' or 'settings'.
+            worker (sourdough.Project): Project instance to create and organize
+                based on the information in 'settings'.
 
         Returns:
-            sourdough.Hybrid: an instance with contents fully instanced.
+            sourdough.Project: an instance with contents organized.
                 
         """
+        if worker is None:
+            worker = sourdough.Project(name = self.manager.name)
         attributes = {}
         # Finds and sets the 'structure' of 'worker'.
-        worker = self._add_structure(worker = worker)
+        outline = self._add_structure(worker = worker)
         # Divides settings into different subsections.
         component_settings, attributes = self._divide_settings(
-            settings = self.manager.settings[worker.name],
+            settings = self.manager.settings[outline.name],
             structure = worker.structure) 
         # Organizes 'contents' of 'worker' according to its 'structure'.
         worker.structure.organize(settings = component_settings)
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
-            setattr(worker, key, value)
+            setattr(outline, key, value)
         return worker          
 
     """ Private Methods """

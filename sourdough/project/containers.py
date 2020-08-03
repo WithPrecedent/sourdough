@@ -20,131 +20,6 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Outline(sourdough.Hybrid):
-    """A lightweight container for describing a sourdough project.
-
-    An Outline inherits the differences between a Lexicon and an ordinary python
-    dict.
-    
-    A Lexicon differs from a Lexicon in 2 significant ways:
-        1) It only stores str types in the keys and values. This is to ensure
-            that an Outline is lightweight and easily used for lazy evaluation
-            of project iterables.
-        2)
-    
-    Args:
-        contents (Tuple[str, str]): stored dictionary. Defaults to an empty 
-            dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-              
-    """
-    contents: Sequence[Union['sourdough.Task', 'Outline']] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    structure: Union['sourdough.Structure', str] = 'progression'
-    
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Union[
-                Tuple[str, str],
-                'sourdough.Task',
-                'Outline',
-                Sequence[Union[
-                    Tuple[str, str],
-                    'sourdough.Task',
-                    'Outline']]]) -> Sequence[Union[
-                        'sourdough.Task', 
-                        'Outline']]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-
-                
-        """
-        new_contents = []
-        if isinstance(contents, (Tuple[str, str], sourdough.Task, Outline)):
-            new_contents = [contents]
-        elif isinstance(contents, Sequence):
-            for item in contents:
-                if (isinstance(item, Tuple)
-                        and len(item) == 2
-                        and all(isinstance(item, str) for i in item)):
-                    new_contents.append(
-                        sourdough.Task(name = item[0], technique = item[1]))
-                elif isinstance(item, (sourdough.Task, Outline)):
-                    new_contents.append(item)
-                else:
-                    raise TypeError(
-                        'contents must be a list containing Task instances, '
-                        'Outline instances, or Tuples of two str types')
-        else:
-            raise TypeError('contents must be a list')
-        return new_contents
-
-    def add(self, 
-            contents: Union[
-                Tuple[str, str],
-                'sourdough.Task',
-                'Outline',
-                Sequence[Union[
-                    Tuple[str, str],
-                    'sourdough.Task',
-                    'Outline']]]) -> None:
-        """Extends 'contents' argument to 'contents' attribute.
-        
-        Args:
-
-        """
-        super().add(contents = contents)
-        return self    
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'structure'.
-        
-        If 'structure' has not been initialized, this method returns the default
-        python 'iter' method of 'contents'. This should not happen as long as
-        the '__post_init__' method from Hybrid is not overwritten without 
-        calling 'super().__post_init__'.
-        
-        Returns:
-            Iterable: of 'contents'.
-            
-        """
-        try:
-            return self.structure.__iter__()
-        except (AttributeError, TypeError):
-            return iter(self.contents)
-        
-    """ Private Methods """
-    
-    def _initial_validation(self) -> None:
-        """Validates passed 'contents' on class initialization."""
-        super()._initial_validation()
-        # Validates or converts 'structure'.
-        self = sourdough.Structure.validate(worker = self)
-        return self
-        
-
-@dataclasses.dataclass
 class Inventory(sourdough.Catalog):
     """
 
@@ -415,4 +290,128 @@ class Worker(sourdough.Hybrid):
         # Validates or converts 'structure'.
         self = sourdough.Structure.validate(worker = self)
         return self
+
+
+
+@dataclasses.dataclass
+class Project(Worker):
+    """A lightweight container for describing a sourdough project.
+
+    An Project inherits the differences between a Hybrid and an ordinary python
+    list.
+    
+    An Project differs from a Hybrid in 2 significant ways:
+        1) It only stores Task instances and other Project instances.
+        2)
+    
+    Args:
+        contents (Tuple[str, str]): stored dictionary. Defaults to an empty 
+            dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Component is called, 'name' is set based upon
+            the 'get_name' method in Component. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+              
+    """
+    contents: Sequence[Union['sourdough.Task', 'Project']] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    structure: Union['sourdough.Structure', str] = 'progression'
+    
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Union[
+                Tuple[str, str],
+                'sourdough.Task',
+                'Project',
+                Sequence[Union[
+                    Tuple[str, str],
+                    'sourdough.Task',
+                    'Project']]]) -> Sequence[Union[
+                        'sourdough.Task', 
+                        'Project']]:
+        """Validates 'contents' or converts 'contents' to proper type.
         
+        Args:
+
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+
+                
+        """
+        new_contents = []
+        if isinstance(contents, (Tuple[str, str], sourdough.Task, Project)):
+            new_contents = [contents]
+        elif isinstance(contents, Sequence):
+            for item in contents:
+                if (isinstance(item, Tuple)
+                        and len(item) == 2
+                        and all(isinstance(item, str) for i in item)):
+                    new_contents.append(
+                        sourdough.Task(name = item[0], technique = item[1]))
+                elif isinstance(item, (sourdough.Task, Project)):
+                    new_contents.append(item)
+                else:
+                    raise TypeError(
+                        'contents must be a list containing Task instances, '
+                        'Project instances, or Tuples of two str types')
+        else:
+            raise TypeError('contents must be a list')
+        return new_contents
+
+    def add(self, 
+            contents: Union[
+                Tuple[str, str],
+                'sourdough.Task',
+                'Project',
+                Sequence[Union[
+                    Tuple[str, str],
+                    'sourdough.Task',
+                    'Project']]]) -> None:
+        """Extends 'contents' argument to 'contents' attribute.
+        
+        Args:
+
+        """
+        super().add(contents = contents)
+        return self    
+    
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents' based upon 'structure'.
+        
+        If 'structure' has not been initialized, this method returns the default
+        python 'iter' method of 'contents'. This should not happen as long as
+        the '__post_init__' method from Hybrid is not overwritten without 
+        calling 'super().__post_init__'.
+        
+        Returns:
+            Iterable: of 'contents'.
+            
+        """
+        try:
+            return self.structure.__iter__()
+        except (AttributeError, TypeError):
+            return iter(self.contents)
+        
+    """ Private Methods """
+    
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        super()._initial_validation()
+        # Validates or converts 'structure'.
+        self = sourdough.Structure.validate(worker = self)
+        return self
+              

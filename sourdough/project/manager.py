@@ -100,8 +100,7 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
     identification: str = None
     automatic: bool = True
     data: object = None
-    project: 'sourdough.Worker' = sourdough.Worker
-    _default: Any = None
+    project: 'sourdough.Worker' = sourdough.Project
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'creator': sourdough.Creator,

@@ -55,6 +55,7 @@ from sourdough.project.components import Node
 from sourdough.project.containers import Inventory
 from sourdough.project.containers import Overview
 from sourdough.project.containers import Worker
+from sourdough.project.containers import Project
 from sourdough.project.workflow import Author
 from sourdough.project.workflow import Publisher
 from sourdough.project.workflow import Reader
