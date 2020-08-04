@@ -8,7 +8,7 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workers': ['parser', 'munger'],
-        'cool_project_role': 'progression'},
+        'cool_project_role': 'obey'},
     'parser': {
         'parser_tasks': ['divide'],
         'parser_role': 'study',

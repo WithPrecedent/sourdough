@@ -9,6 +9,7 @@ Contents:
 
 """
 
+import abc
 import dataclasses
 import pathlib
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -17,6 +18,56 @@ import warnings
 import sourdough
 
 
+@dataclasses.dataclass
+class ComponentsMixin(sourdough.Action, abc.ABC):
+    """Mixin which stores subclasses in a 'components' class attribute.
+
+    Args:
+        components (ClassVar[sourdough.Inventory]): the instance which stores 
+            subclass in a Inventory instance.
+
+    Namespaces: 'components', 'register_from_disk', 'build', 
+        'find_subclasses', '_import_from_path', '_get_subclasse'
+    
+    """
+    components: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'components'.
+        if not hasattr(super(), 'components') and issubclass(sourdough.Action):
+            cls.components[cls.get_name()] = cls
+                
+    """ Public Methods """
+    
+    def build(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Creates instance(s) of a class(es) stored in 'components'.
+
+        Args:
+            key (str): name matching a key in 'components' for which the value
+                is sought.
+
+        Raises:
+            TypeError: if 'key' is neither a str nor Sequence type.
+            
+        Returns:
+            Any: instance(s) of a stored class(es) with kwargs passed as 
+                arguments.
+            
+        """
+        if isinstance(key, str):
+            return self.components.create(key = key, **kwargs)
+        elif isinstance(key, Sequence):
+            instances = []
+            for item in key:
+                instances.append(self.components.create(name = item, **kwargs))
+            return instances
+        else:
+            raise TypeError('key must be a str or list type')    
+ 
+ 
 @dataclasses.dataclass
 class Project(sourdough.OptionsMixin, sourdough.Worker):
     """Constructs, organizes, and stores tree Workers and Actions.
@@ -81,7 +132,7 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
             components of a composite role.
     
     Attributes:
-        project (sourdough.Worker): the iterable composite object created by
+        manager (sourdough.Worker): the iterable composite object created by
             Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
@@ -100,15 +151,8 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
     identification: str = None
     automatic: bool = True
     data: object = None
-    project: 'sourdough.Worker' = sourdough.Manager
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'creator': sourdough.Creator,
-            'cycle': sourdough.Cycle,
-            'graph': sourdough.Graph, 
-            'progression': sourdough.Progression, 
-            'study': sourdough.Study,
-            'tree': sourdough.Tree})
+    manager: 'sourdough.Worker' = sourdough.Manager
+    components: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
 
     """ Initialization Methods """
 
@@ -128,20 +172,30 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
         self.filer = sourdough.Filer(
             root_folder = self.filer, 
             settings = self.settings)
-        # Initializes a composite object subclass instance.
-        self.project.options = self.options
-        self.project = self.project(name = self.name)
+        # Initializes project manager.
+        self._initialize_manager()
         # Initializes Action instances stored in 'contents'.
         self.contents = self._initialize_contents(contents = self.contents)
         # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
-            self.project = self._auto_contents(project = self.project)
+            self.manager = self._auto_contents(manager = self.manager)
         
     """ Private Methods """
 
     def _set_identification(self) -> None:
         """Sets unique 'identification' str based upon date and time."""
         return sourdough.utilities.datetime_string(prefix = self.name)
+    
+    def _initialize_manager(self) -> None:
+        """Initializes a Manager instance for the 'manager' attribute."""
+        try:
+            self.manager = self.manager(
+                name = self.name,
+                identification = self.identification)
+        except TypeError:
+            if not isinstance(self.manager, sourdough.Manager):
+                raise TypeError('manager must be a Manager type')
+        return self
     
     def _initialize_contents(self, 
             contents: Sequence['sourdough.Action']) -> Sequence[
@@ -162,11 +216,11 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
             new_contents.append(creator(manager = self))
         return new_contents   
                      
-    def _auto_contents(self, project: 'sourdough.Worker') -> 'sourdough.Worker':
+    def _auto_contents(self, manager: 'sourdough.Worker') -> 'sourdough.Worker':
         """Automatically advances through and iterates stored Action instances.
 
         Args:
-            project (sourdough.Worker): an instance containing any data for the 
+            manager (sourdough.Worker): an instance containing any data for the 
                 worker methods to be applied to.
                 
         Returns:
@@ -177,8 +231,8 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
         for stage in self:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
-            project = stage.perform(worker = project)
-            print('test project', project.contents)
-            # print('test stage overview', project.overview)
-        return project
+            manager = stage.perform(worker = manager)
+            print('test manager', manager.contents)
+            # print('test stage overview', manager.overview)
+        return manager
     

@@ -1,5 +1,5 @@
 """
-rolemposite object designs and iterators
+roles: composite object designs and iterators
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,42 +20,21 @@ from typing import (
     Union)
 
 import sourdough
-
-
-
-@dataclasses.dataclass
-class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):
-    
-    
-    @abc.abstractmethod
-    def generator(self, *args) -> Iterator:
-        pass
-        
-    
-
-@dataclasses.dataclass
-class Study(LazyIterator):
-    
-    
-    def generator(self, *args) -> sourdough.Action:
-        pools = [tuple(pool) for pool in args]
-        result = [[]]
-        for pool in pools:
-            result = [x + [y] for x in result for y in pool]
-        for product in result:
-            yield tuple(product)
              
     
-
 @dataclasses.dataclass
 class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
     """
     
     """
-    name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = iter
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    name: str = None
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+        contents = {
+            'create': sourdough.Create,
+            'obey': sourdough.Obey,
+            'study': sourdough.Study,
+            'survey': sourdough.Survey})
 
     """ Initialization Methods """
     
@@ -100,13 +79,14 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
             worker.role.worker = worker
             worker.role.__post_init__()
         else:
-            raise TypeError(f'role must be a str or {cls} type')
+            raise TypeError(
+                f'The role attribute of worker must be a str or {cls} type')
         return worker
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'role
+        """Returns iterable of 'contents' based upon 'role'.
         
         Returns:
             Iterable: of 'contents'.
@@ -168,18 +148,25 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
             return component  
 
     def _divide_key(self, key: str) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            Tuple[str, str]: [description]
+        """
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
 
 
 @dataclasses.dataclass
-class Creator(Role):
+class Create(sourdough.OptionsMixin, Role):
     
-    name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = itertools.chain
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    name: str = None
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'author': sourdough.Author,
             'publisher': sourdough.Publisher,
@@ -202,28 +189,14 @@ class Creator(Role):
                     name = item)
                 self.worker.add(component)
         return self
-
-
-@dataclasses.dataclass
-class Cycle(Role):
-    
-    name: str = None
-    worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = itertools.cycle   
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
         
       
 @dataclasses.dataclass
-class Progression(Role):
+class Obey(sourdough.OptionsMixin, Role):
     
-    name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = itertools.chain
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    name: str = None
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -248,12 +221,11 @@ class Progression(Role):
                 
   
 @dataclasses.dataclass
-class Study(Role):
+class Study(sourdough.OptionsMixin, Role):
     
-    name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = itertools.product   
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    name: str = None 
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
@@ -298,28 +270,63 @@ class Study(Role):
 
 
 @dataclasses.dataclass
-class Tree(Role):
+class Survey(sourdough.OptionsMixin, Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = more_itertools.collapse
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    iterator: Union[str, Callable] = itertools.cycle   
+    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'task': sourdough.Task,
             'technique': sourdough.Technique,
             'worker': sourdough.Worker})
+
+
+# @dataclasses.dataclass
+# class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):
+    
+    
+#     @abc.abstractmethod
+#     def generator(self, *args) -> Iterator:
+#         pass
+        
+    
+
+# @dataclasses.dataclass
+# class Study(LazyIterator):
+    
+    
+#     def generator(self, *args) -> sourdough.Action:
+#         pools = [tuple(pool) for pool in args]
+#         result = [[]]
+#         for pool in pools:
+#             result = [x + [y] for x in result for y in pool]
+#         for product in result:
+#             yield tuple(product)
+
+# @dataclasses.dataclass
+# class Tree(Role):
+    
+#     name: str = None
+#     worker: 'sourdough.Worker' = None
+#     iterator: Union[str, Callable] = more_itertools.collapse
+#     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+#         contents = {
+#             'task': sourdough.Task,
+#             'technique': sourdough.Technique,
+#             'worker': sourdough.Worker})
   
 
-@dataclasses.dataclass
-class Graph(Role):
+# @dataclasses.dataclass
+# class Graph(Role):
     
-    name: str = None
-    worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = 'iterator'    
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'edge': sourdough.Edge,
-            'node': sourdough.Node})
+#     name: str = None
+#     worker: 'sourdough.Worker' = None
+#     iterator: Union[str, Callable] = 'iterator'    
+#     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+#         contents = {
+#             'edge': sourdough.Edge,
+#             'node': sourdough.Node})
         
     # contents: Sequence[Union['sourdough.Component', str]] = dataclasses.field(
     #     default_factory = list)

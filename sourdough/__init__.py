@@ -54,18 +54,16 @@ from sourdough.project.components import Edge
 from sourdough.project.components import Node
 from sourdough.project.containers import Inventory
 from sourdough.project.containers import Overview
-from sourdough.project.containers import Worker
-from sourdough.project.containers import Manager
+from sourdough.project.workers import Worker
+from sourdough.project.workers import Manager
 from sourdough.project.workflow import Author
 from sourdough.project.workflow import Publisher
 from sourdough.project.workflow import Reader
 from sourdough.project.roles import Role
-from sourdough.project.roles import Creator
-from sourdough.project.roles import Cycle
-from sourdough.project.roles import Graph
-from sourdough.project.roles import Progression
+from sourdough.project.roles import Create
+from sourdough.project.roles import Obey
 from sourdough.project.roles import Study
-from sourdough.project.roles import Tree
+from sourdough.project.roles import Survey
 from sourdough.project.manager import Project
 
 
