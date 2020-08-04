@@ -24,7 +24,8 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import Any, Callable, Iterable, Mapping, Sequence, Tuple, Union
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
@@ -1159,94 +1160,66 @@ Factory is currently omitted from the sourdough build because its design doesn't
 presently fit with the sourdough workflow. However, the code should still work.
 """
 
-# @dataclasses.dataclass
-# class Factory(abc.ABC):
-#     """The Factory interface instances a class from available options.
+@dataclasses.dataclass
+class Factory(Component, abc.ABC):
+    """The Factory interface instances a class from available options.
 
-#     Args:
-#         product (Union[str, Sequence[str]]): name(s) of sourdough object(s) to 
-#             return. 'product' must correspond to a key(s) in 'options'. 
-#             Defaults to None.
-#         default (ClassVar[Union[str, Sequence[str]]]): the name(s) of the 
-#             default object(s) to instance. If 'product' is not passed, 'default' 
-#             is used. 'default' must correspond to key(s) in 'options'. Defaults 
-#             to None.
-#         options (ClassVar[sourdough.Catalog]): a dictionary of available options 
-#             for object creation. Keys are the names of the 'product'. Values are 
-#             the objects to create. Defaults to an empty dictionary.
+    Args:
+        component (Union[str, Sequence[str]]: name of sourdough component(s) to 
+            return. 'component' must correspond to key(s) in 'options'. Defaults 
+            to None.
+        options (ClassVar[sourdough.Catalog]): a dict of available options 
+            for object creation. Defaults to an empty Catalog instance.
 
-#     Returns:
-#         Any: the factory uses the '__new__' method to return a different object 
-#             instance with kwargs as the parameters.
+    Raises:
+        TypeError: if 'component' is neither a str nor Sequence of str.
 
-#     """
-#     product: Union[str, Sequence[str]] = None
-#     default: ClassVar[Union[str, Sequence[str]]] = None
-#     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
-#         always_return_list = True)
+    Returns:
+        Any: the factory uses the '__new__' method to return a different object 
+            product instance with kwargs as the parameters.
 
-#     """ Initialization Methods """
+    """
+    component: Union[str, Sequence[str]] = None
+    options: ClassVar['Catalog'] = Catalog()
+    name: str = None
+
+    """ Initialization Methods """
     
-#     def __new__(cls, product: str = None, **kwargs) -> Any:
-#         """Returns an instance from 'options'.
+    def __new__(cls, component: str = None, **kwargs) -> Any:
+        """Returns an instance from 'options'.
 
-#         Args:
-#             product (str): name of sourdough object(s) to return. 
-#                 'product' must correspond to key(s) in 'options'. Defaults to 
-#                 None. If not passed, the product listed in 'default' will be 
-#                 used.
-#             kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
-#                 being created.
+        Args:
+            component (str): name of sourdough component(s) to return. 
+                'component' must correspond to key(s) in 'options'. Defaults to 
+                None.
+            kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
+                being created.
 
-#         Returns:
-#             Any: an instance of an object stored in 'options'.
+        Returns:
+            Any: an instance of an object stored in 'options'.
         
-#         """
-#         if not product:
-#             product = cls.default
-#         if isinstance(product, str):
-#             return cls.options[product](**kwargs)
-#         else:
-#             instances = []
-#             for match in cls.options[product]:
-#                 instances.append(match(**kwargs))
-#             return instances
+        """
+        if isinstance(component, str):
+            return cls.options[component](**kwargs)
+        elif isinstance(component, Sequence):
+            instances = []
+            for match in cls.options[component]:
+                instances.append(match(**kwargs))
+            return instances
+        else:
+            raise TypeError('component must be a str or list type')
     
-#     """ Class Methods """
+    """ Class Methods """
     
-#     @classmethod
-#     def add(cls, key: str, option: 'Component') -> None:
-#         """Adds 'option' to 'options' at 'key'.
+    @classmethod
+    def add(cls, key: str, option: Any) -> None:
+        """Adds 'option' to 'options' at 'key'.
         
-#         Args:
-#             key (str): name of key to link to 'option'.
-#             option (Component): object to store in 'options'.
+        Args:
+            key (str): name of key to link to 'option'.
+            option (Any): object to store in 'options'.
             
-#         """
-#         cls.options[key] = option
-#         return cls
-        
-#     """ Dunder Methods """
-    
-#     def __repr__(self) -> str:
-#         """Returns '__str__' representation.
-
-#         Returns:
-#             str: default representation of a class instance.
-
-#         """
-#         return self.__str__()
-
-#     def __str__(self) -> str:
-#         """Returns default representation of a class instance.
-
-#         Returns:
-#             str: default representation of a class instance.
-
-#         """
-#         return textwrap.dedent(f'''
-#             sourdough {self.__class__.__name__}
-#             product: {self.product}
-#             default: {self.default}
-#             options: {str(self.options)}''')    
-    
+        """
+        cls.options[key] = option
+        return cls
+   
