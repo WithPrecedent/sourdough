@@ -55,18 +55,18 @@ from sourdough.project.components import Node
 from sourdough.project.containers import Inventory
 from sourdough.project.containers import Overview
 from sourdough.project.containers import Worker
-from sourdough.project.containers import Project
+from sourdough.project.containers import Manager
 from sourdough.project.workflow import Author
 from sourdough.project.workflow import Publisher
 from sourdough.project.workflow import Reader
-from sourdough.project.structures import Structure
-from sourdough.project.structures import Creator
-from sourdough.project.structures import Cycle
-from sourdough.project.structures import Graph
-from sourdough.project.structures import Progression
-from sourdough.project.structures import Study
-from sourdough.project.structures import Tree
-from sourdough.project.manager import Manager
+from sourdough.project.roles import Role
+from sourdough.project.roles import Creator
+from sourdough.project.roles import Cycle
+from sourdough.project.roles import Graph
+from sourdough.project.roles import Progression
+from sourdough.project.roles import Study
+from sourdough.project.roles import Tree
+from sourdough.project.manager import Project
 
 
 __version__ = '0.1.1'
@@ -88,12 +88,12 @@ __author__ = 'Corey Rayburn Yung'
 #     'ProxyMixin',
 #     'Settings',
 #     'Filer',
-#     'structures',
-#     'Structure',
+#     'roles',
+#     'Role',
 #     'Technique',
 #     'Task',
 #     'Edge',
 #     'Node',
 #     'workflow',
 #     'Worker',
-#     'Project']
+#     'Manager']

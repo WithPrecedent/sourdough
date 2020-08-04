@@ -1026,7 +1026,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         """Returns iterable of 'contents'.
         
         Hybrid subclasses can be restrucuted to support different iterators at
-        runtime. This is done by the Structure subclasses that are part of the
+        runtime. This is done by the Role subclasses that are part of the
         'project' subpackage.
      
         Returns:

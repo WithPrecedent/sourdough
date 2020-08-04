@@ -8,10 +8,10 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workers': ['parser', 'munger'],
-        'cool_project_structure': 'progression'},
+        'cool_project_role': 'progression'},
     'parser': {
         'parser_tasks': ['divide'],
-        'parser_structure': 'study',
+        'parser_role': 'study',
         'divide_techniques': ['slice', 'dice']},
     'munger': {
         'munger_tasks': ['search', 'destroy'],

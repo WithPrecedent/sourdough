@@ -1,5 +1,5 @@
 """
-test_manager: tests Manager class and created composite objects
+test_manager: tests Project class and created composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -27,12 +27,12 @@ class Search(sourdough.Task):
 
 
 def test_manager():
-    sourdough.Manager.options.add(Parser)
-    sourdough.Manager.options.add(Search)
-    manager = sourdough.Manager(
+    sourdough.Project.options.add(Parser)
+    sourdough.Project.options.add(Search)
+    manager = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
-        structure = 'creator',
+        role = 'creator',
         automatic = True)
     print('test project', manager.project)
     return

@@ -26,36 +26,36 @@ class Author(sourdough.Action):
     """Constructs composite objects from user settings.
     
     Args:
-        manager (sourdough.Manager): the related Manager instance.
+        manager (sourdough.Project): the related Project instance.
     
     """
-    manager: 'sourdough.Manager' = None  
+    manager: 'sourdough.Project' = None  
     
     """ Public Methods """
     
     def perform(self, 
-            worker: 'sourdough.Project' = None) -> 'sourdough.Project':
-        """Drafts an Project of a sourdough project.
+            worker: 'sourdough.Manager' = None) -> 'sourdough.Manager':
+        """Drafts an Manager of a sourdough project.
         
         Args:
-            worker (sourdough.Project): Project instance to create and organize
+            worker (sourdough.Manager): Manager instance to create and organize
                 based on the information in 'settings'.
 
         Returns:
-            sourdough.Project: an instance with contents organized.
+            sourdough.Manager: an instance with contents organized.
                 
         """
         if worker is None:
-            worker = sourdough.Project(name = self.manager.name)
+            worker = sourdough.Manager(name = self.manager.name)
         attributes = {}
-        # Finds and sets the 'structure' of 'worker'.
-        outline = self._add_structure(worker = worker)
+        # Finds and sets the 'role' of 'worker'.
+        outline = self._add_role(worker = worker)
         # Divides settings into different subsections.
         component_settings, attributes = self._divide_settings(
             settings = self.manager.settings[outline.name],
-            structure = worker.structure) 
-        # Organizes 'contents' of 'worker' according to its 'structure'.
-        worker.structure.organize(settings = component_settings)
+            role = worker.role) 
+        # Organizes 'contents' of 'worker' according to its 'role'.
+        worker.role.organize(settings = component_settings)
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
             setattr(outline, key, value)
@@ -63,27 +63,27 @@ class Author(sourdough.Action):
 
     """ Private Methods """
 
-    def _add_structure(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Returns Structure class based upon 'settings' or default option.
+    def _add_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """Returns Role class based upon 'settings' or default option.
         
         Args:
-            name (str): name of Hybrid for which the structure is sought.
+            name (str): name of Hybrid for which the role is sought.
             
         Returns:
-            sourdough.Structure: the appropriate Structure based on
+            sourdough.Role: the appropriate Role based on
                 'name' or the default option stored in 'manager'.
         
         """ 
-        key = f'{worker.name}_structure'
+        key = f'{worker.name}_role'
         try:    
-            worker.structure = self.manager.settings[worker.name][key]
+            worker.role = self.manager.settings[worker.name][key]
         except KeyError:
             pass
-        return sourdough.Structure.validate(worker = worker)
+        return sourdough.Role.validate(worker = worker)
 
     def _divide_settings(self,
             settings: Mapping[Any, Any],
-            structure: 'sourdough.Structure') -> Tuple[
+            role: 'sourdough.Role') -> Tuple[
                 Mapping[Any, Any],
                 Mapping[Any, Any]]:
         """
@@ -99,11 +99,11 @@ class Author(sourdough.Action):
         attributes = {}
         for key, value in settings.items():
             # Stores settings related to available Component 'options' according
-            # to 'structure'.
-            if any(key.endswith(f'_{s}s') for s in structure.options.keys()):
+            # to 'role'.
+            if any(key.endswith(f'_{s}s') for s in role.options.keys()):
                 component_settings[key] = sourdough.utilities.listify(value)
             # Stores other settings in 'attributes'.        
-            elif not key.endswith('_structure'):
+            elif not key.endswith('_role'):
                 attributes[key] = value
         return component_settings, attributes
                 
@@ -113,10 +113,10 @@ class Publisher(sourdough.Action):
     """Finalizes a composite object from user settings.
     
     Args:
-        manager (sourdough.Manager): the related Manager instance.
+        manager (sourdough.Project): the related Project instance.
     
     """    
-    manager: 'sourdough.Manager' = None  
+    manager: 'sourdough.Project' = None  
 
     """ Public Methods """
  
@@ -264,7 +264,7 @@ class Publisher(sourdough.Action):
 @dataclasses.dataclass
 class Reader(sourdough.Action):
     
-    manager: 'sourdough.Manager' = None  
+    manager: 'sourdough.Project' = None  
     
     def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """[summary]

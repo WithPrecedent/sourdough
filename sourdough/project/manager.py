@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Manager (Hybrid): creates a project using stored Action subclass instances.
+    Project (Hybrid): creates a project using stored Action subclass instances.
 
 """
 
@@ -18,22 +18,22 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Manager(sourdough.OptionsMixin, sourdough.Worker):
+class Project(sourdough.OptionsMixin, sourdough.Worker):
     """Constructs, organizes, and stores tree Workers and Actions.
     
-    A Project inherits all of the differences between a Hybrid and a python
+    A Manager inherits all of the differences between a Hybrid and a python
     list.
 
-    A Project differs from a Hybrid in 5 significant ways:
-        1) The Project is the public interface to composite object construction 
+    A Manager differs from a Hybrid in 5 significant ways:
+        1) The Manager is the public interface to composite object construction 
             and application. It may store the composite object instance(s) as 
             well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
-        2) Project stores Action subclass instances in 'contents'. Those 
+        2) Manager stores Action subclass instances in 'contents'. Those 
             instances are used to assemble and apply the parts of Hybrid 
             instances.
-        3) Project includes an 'automatic' attribute which can be set to perform
+        3) Manager includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
         4) It has an OptionsMixin, which contains a Catalog instance storing
             default Action instances in 'options'.
@@ -44,7 +44,7 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
             Action subclass instances or strings which correspond to keys in 
             'options'. Defaults to 'default', which will use the 'defaults' 
             attribute of 'options' to select Action instances.
-        name (str): structureates the name of a class instance that is used for 
+        name (str): roleates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
@@ -64,25 +64,25 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
             root folder should be located for file input and output. A Filer
             instance contains all file path and import/export methods for use 
             throughout sourdough. Defaults to None.
-        structure (str): type of structure for the project's composite object.
+        role (str): type of role for the project's composite object.
             Defaults to 'tree'.
         identification (str): a unique identification name for a 
-            Manager instance. The name is used for creating file folders
-            related to the 'Manager'. If not provided, a string is created from
+            Project instance. The name is used for creating file folders
+            related to the 'Project'. If not provided, a string is created from
             'name' and the date and time. This is a notable difference
-            between an ordinary Worker instancce and a Manager instance. Other
+            between an ordinary Worker instancce and a Project instance. Other
             Workers are not given unique identification. Defaults to None.   
         automatic (bool): whether to automatically advance 'contents' (True) or 
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
-        structures (ClassVar[sourdough.Catalog]): a class attribute storing
-            composite structure options.            
+        roles (ClassVar[sourdough.Catalog]): a class attribute storing
+            composite role options.            
         options (ClassVar[sourdough.Catalog]): a class attribute storing
-            components of a composite structure.
+            components of a composite role.
     
     Attributes:
         project (sourdough.Worker): the iterable composite object created by
-            Manager.
+            Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
         stage (str): name of the last stage that has been implemented. It is set
@@ -95,12 +95,12 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
         default_factory = list)
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    structure: Union['sourdough.Structure', str] = 'creator'
+    role: Union['sourdough.Role', str] = 'creator'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    project: 'sourdough.Worker' = sourdough.Project
+    project: 'sourdough.Worker' = sourdough.Manager
     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         contents = {
             'creator': sourdough.Creator,
@@ -156,7 +156,7 @@ class Manager(sourdough.OptionsMixin, sourdough.Worker):
         
         """
         if not contents:
-            contents = self.structure.options['default']
+            contents = self.role.options['default']
         new_contents = []
         for creator in contents:
             new_contents.append(creator(manager = self))

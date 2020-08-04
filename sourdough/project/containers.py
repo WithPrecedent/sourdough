@@ -142,11 +142,11 @@ class Overview(sourdough.Lexicon):
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
         super().__post_init__()
-        if self.worker.structure is not None:
+        if self.worker.role is not None:
             self.add({
                 'name': self.worker.name, 
-                'structure': self.worker.structure.name})
-            for key, value in self.worker.structure.options.items():
+                'role': self.worker.role.name})
+            for key, value in self.worker.role.options.items():
                 matches = self.worker.find(
                     self._get_type, 
                     component = value)
@@ -154,7 +154,7 @@ class Overview(sourdough.Lexicon):
                     self.contents[f'{key}s'] = matches
         else:
             raise ValueError(
-                'structure must be a Structure for an overview to be created.')
+                'role must be a Role for an overview to be created.')
         return self          
     
     """ Dunder Methods """
@@ -205,7 +205,7 @@ class Worker(sourdough.Hybrid):
     Worker inherits all of the differences between a Hybrid and a python list.
     
     A Worker differs from a Hybrid in 3 significant ways:
-        1) It has a 'structure' attribute which indicates how the contained 
+        1) It has a 'role' attribute which indicates how the contained 
             iterator should be ordered. 
         2) An 'overview' property is added which returns a dict of the names
             of the various parts of the tree objects. It doesn't include the
@@ -226,9 +226,9 @@ class Worker(sourdough.Hybrid):
             the 'get_name' method in sourdough.Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        structure (Union[sourdough.Structure, str]): structure for the 
+        role (Union[sourdough.Role, str]): role for the 
             organization, iteration, and composition of 'contents' or a str
-            corresponding to an option in 'Structure.registry'.
+            corresponding to an option in 'Role.registry'.
 
 
     Attributes:
@@ -249,7 +249,7 @@ class Worker(sourdough.Hybrid):
         Sequence['sourdough.Component'],
         Sequence[str]] = dataclasses.field(default_factory = list)
     name: str = None
-    structure: Union['sourdough.Structure', str] = 'progression'
+    role: Union['sourdough.Role', str] = 'progression'
       
     """ Properties """
     
@@ -266,9 +266,9 @@ class Worker(sourdough.Hybrid):
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'structure'.
+        """Returns iterable of 'contents' based upon 'role'.
         
-        If 'structure' has not been initialized, this method returns the default
+        If 'role' has not been initialized, this method returns the default
         python 'iter' method of 'contents'. This should not happen as long as
         the '__post_init__' method from Hybrid is not overwritten without 
         calling 'super().__post_init__'.
@@ -278,7 +278,7 @@ class Worker(sourdough.Hybrid):
             
         """
         try:
-            return self.structure.__iter__()
+            return self.role.__iter__()
         except (AttributeError, TypeError):
             return iter(self.contents)
         
@@ -287,21 +287,20 @@ class Worker(sourdough.Hybrid):
     def _initial_validation(self) -> None:
         """Validates passed 'contents' on class initialization."""
         super()._initial_validation()
-        # Validates or converts 'structure'.
-        self = sourdough.Structure.validate(worker = self)
+        # Validates or converts 'role'.
+        self = sourdough.Role.validate(worker = self)
         return self
 
 
-
 @dataclasses.dataclass
-class Project(Worker):
+class Manager(Worker):
     """A lightweight container for describing a sourdough project.
 
-    An Project inherits the differences between a Hybrid and an ordinary python
+    An Manager inherits the differences between a Hybrid and an ordinary python
     list.
     
-    An Project differs from a Hybrid in 2 significant ways:
-        1) It only stores Task instances and other Project instances.
+    An Manager differs from a Hybrid in 2 significant ways:
+        1) It only stores Task instances and other Manager instances.
         2)
     
     Args:
@@ -320,10 +319,18 @@ class Project(Worker):
             snake case version of the class name ('__class__.__name__').
               
     """
-    contents: Sequence[Union['sourdough.Task', 'Project']] = dataclasses.field(
+    contents: Sequence[Union['sourdough.Task', 'Manager']] = dataclasses.field(
         default_factory = list)
     name: str = None
-    structure: Union['sourdough.Structure', str] = 'progression'
+    role: Union['sourdough.Role', str] = 'progression'
+    options: ClassVar['Inventory'] = Inventory(
+        contents = {
+            'create': sourdough.Create,
+            'job': sourdough.Job,
+            'study': sourdough.Study,
+            'survey': sourdough.Survey,
+            
+        })
     
     """ Public Methods """
     
@@ -331,13 +338,13 @@ class Project(Worker):
             contents: Union[
                 Tuple[str, str],
                 'sourdough.Task',
-                'Project',
+                'Manager',
                 Sequence[Union[
                     Tuple[str, str],
                     'sourdough.Task',
-                    'Project']]]) -> Sequence[Union[
+                    'Manager']]]) -> Sequence[Union[
                         'sourdough.Task', 
-                        'Project']]:
+                        'Manager']]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
@@ -351,7 +358,7 @@ class Project(Worker):
                 
         """
         new_contents = []
-        if isinstance(contents, (Tuple[str, str], sourdough.Task, Project)):
+        if isinstance(contents, (Tuple[str, str], sourdough.Task, Manager)):
             new_contents = [contents]
         elif isinstance(contents, Sequence):
             for item in contents:
@@ -360,12 +367,12 @@ class Project(Worker):
                         and all(isinstance(item, str) for i in item)):
                     new_contents.append(
                         sourdough.Task(name = item[0], technique = item[1]))
-                elif isinstance(item, (sourdough.Task, Project)):
+                elif isinstance(item, (sourdough.Task, Manager)):
                     new_contents.append(item)
                 else:
                     raise TypeError(
                         'contents must be a list containing Task instances, '
-                        'Project instances, or Tuples of two str types')
+                        'Manager instances, or Tuples of two str types')
         else:
             raise TypeError('contents must be a list')
         return new_contents
@@ -374,11 +381,11 @@ class Project(Worker):
             contents: Union[
                 Tuple[str, str],
                 'sourdough.Task',
-                'Project',
+                'Manager',
                 Sequence[Union[
                     Tuple[str, str],
                     'sourdough.Task',
-                    'Project']]]) -> None:
+                    'Manager']]]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
@@ -390,9 +397,9 @@ class Project(Worker):
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'structure'.
+        """Returns iterable of 'contents' based upon 'role'.
         
-        If 'structure' has not been initialized, this method returns the default
+        If 'role' has not been initialized, this method returns the default
         python 'iter' method of 'contents'. This should not happen as long as
         the '__post_init__' method from Hybrid is not overwritten without 
         calling 'super().__post_init__'.
@@ -402,7 +409,7 @@ class Project(Worker):
             
         """
         try:
-            return self.structure.__iter__()
+            return self.role.__iter__()
         except (AttributeError, TypeError):
             return iter(self.contents)
         
@@ -411,7 +418,7 @@ class Project(Worker):
     def _initial_validation(self) -> None:
         """Validates passed 'contents' on class initialization."""
         super()._initial_validation()
-        # Validates or converts 'structure'.
-        self = sourdough.Structure.validate(worker = self)
+        # Validates or converts 'role'.
+        self = sourdough.Role.validate(worker = self)
         return self
               

@@ -1,5 +1,5 @@
 """
-structures: composite object designs and iterators
+rolemposite object designs and iterators
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -48,7 +48,7 @@ class Study(LazyIterator):
     
 
 @dataclasses.dataclass
-class Structure(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
+class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
     """
     
     """
@@ -77,36 +77,36 @@ class Structure(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
 
     @classmethod
     def validate(cls, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Returns a Structure instance based upon 'structure'.
-
+        """Returns a Role instance based upon 'role'.
+        
         Args:
-            worker (sourdough.Worker): Hybrid instance with 'structure' attribute
+            worker (sourdough.Worker): Hybrid instance with 'role' attribute
                 to be validated.
-
+                
         Raises:
-            TypeError: if 'worker.structure' is neither a str nor Structure type.
-
+            TypeError: if 'worker.role' is neither a str nor Role type.
+            
         Returns:
-            sourdough.Worker: with a validated 'structure' attribute.
+            sourdough.Worker: with a validated 'role' attribute.
             
         """
-        if isinstance(worker.structure, str):
-            worker.structure = worker.registry[worker.structure](
+        if isinstance(worker.role, str):
+            worker.role = worker.registry[worker.role](
                 worker = worker)
-        elif (inspect.isclass(worker.structure) 
-                and issubclass(worker.structure, cls)):
-            worker.structure = worker.structure(worker = worker) 
-        elif isinstance(worker.structure, cls):
-            worker.structure.worker = worker
-            worker.structure.__post_init__()
+        elif (inspect.isclass(worker.role) 
+                and issubclass(worker.role, cls)):
+            worker.role = worker.role(worker = worker) 
+        elif isinstance(worker.role, cls):
+            worker.role.worker = worker
+            worker.role.__post_init__()
         else:
-            raise TypeError(f'structure must be a str or {cls} type')
+            raise TypeError(f'role must be a str or {cls} type')
         return worker
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'structure'.
+        """Returns iterable of 'contents' based upon 'role
         
         Returns:
             Iterable: of 'contents'.
@@ -174,7 +174,7 @@ class Structure(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Creator(Structure):
+class Creator(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -205,7 +205,7 @@ class Creator(Structure):
 
 
 @dataclasses.dataclass
-class Cycle(Structure):
+class Cycle(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -218,7 +218,7 @@ class Cycle(Structure):
         
       
 @dataclasses.dataclass
-class Progression(Structure):
+class Progression(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -248,7 +248,7 @@ class Progression(Structure):
                 
   
 @dataclasses.dataclass
-class Study(Structure):
+class Study(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -298,7 +298,7 @@ class Study(Structure):
 
 
 @dataclasses.dataclass
-class Tree(Structure):
+class Tree(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -311,7 +311,7 @@ class Tree(Structure):
   
 
 @dataclasses.dataclass
-class Graph(Structure):
+class Graph(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
