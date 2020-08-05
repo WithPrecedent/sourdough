@@ -77,12 +77,12 @@ class RegistryMixin(abc.ABC):
 
     Args:
         register_from_disk (bool): whether to look in the current working
-            folder and subfolders for subclasses of the Component class for 
+            folder and subfolders for subclasses of the Element class for 
             which this class is a mixin. Defaults to False.
         registry (ClassVar[sourdough.Catalog]): the instance which stores 
             subclass in a Catalog instance.
 
-    Namespaces: 'registry', 'register_from_disk', 'build', 
+    Namespaces: 'registry', 'register_from_disk', 'build', '_registry_base',
         'find_subclasses', '_import_from_path', '_get_subclasse'
         
     To Do:
@@ -98,8 +98,10 @@ class RegistryMixin(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Adds new subclass to 'registry'.
-        if not hasattr(super(), 'registry'):
-            cls.registry[cls.get_name()] = cls
+        if not hasattr(cls, '_registry_base'):
+            cls._registry_base = cls
+        if not (hasattr(super(), 'registry') or cls == cls._registry_base):
+            cls._registry_base.registry[cls.get_name()] = cls
 
     # def __post_init__(self) -> None:
     #     """Initializes class instance attributes."""
@@ -108,9 +110,8 @@ class RegistryMixin(abc.ABC):
     #     if self.register_from_disk:
     #         self.find_subclasses(folder = pathlib.Path.cwd())
                 
-    """ Public Methods """
-    
-    def build(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
+    @classmethod
+    def build(cls, key: Union[str, Sequence[str]], **kwargs) -> Any:
         """Creates instance(s) of a class(es) stored in 'registry'.
 
         Args:
@@ -126,11 +127,11 @@ class RegistryMixin(abc.ABC):
             
         """
         if isinstance(key, str):
-            return self.registry.create(key = key, **kwargs)
+            return cls.registry.create(key = key, **kwargs)
         elif isinstance(key, Sequence):
             instances = []
             for item in key:
-                instances.append(self.registry.create(name = item, **kwargs))
+                instances.append(cls.registry.create(key = item, **kwargs))
             return instances
         else:
             raise TypeError('key must be a str or list type')
@@ -138,13 +139,13 @@ class RegistryMixin(abc.ABC):
     # def find_subclasses(self, 
     #         folder: Union[str, pathlib.Path], 
     #         recursive: bool = True) -> None:
-    #     """Adds Component subclasses for python files in 'folder'.
+    #     """Adds Element subclasses for python files in 'folder'.
         
     #     If 'recursive' is True, subfolders are searched as well.
         
     #     Args:
     #         folder (Union[str, pathlib.Path]): folder to initiate search for 
-    #             Component subclasses.
+    #             Element subclasses.
     #         recursive (bool]): whether to also search subfolders (True)
     #             or not (False). Defaults to True.
                 
@@ -183,21 +184,21 @@ class RegistryMixin(abc.ABC):
     #     return module_spec.loader.exec_module(module)
     
     # def _get_subclasses(self, 
-    #         module: object) -> Sequence['sourdough.Component']:
+    #         module: object) -> Sequence['sourdough.Element']:
     #     """Returns a list of subclasses in 'module'.
         
     #     Args:
     #         module (object): an import python module.
         
     #     Returns:
-    #         Sequence[Component]: list of subclasses of Component. If none are 
+    #         Sequence[Element]: list of subclasses of Element. If none are 
     #             found, an empty list is returned.
                 
     #     """
     #     matches = []
     #     for item in pyclbr.readmodule(module):
     #         # Adds direct subclasses.
-    #         if inspect.issubclass(item, sourdough.Component):
+    #         if inspect.issubclass(item, sourdough.Element):
     #             matches.append[item]
     #         else:
     #             # Adds subclasses of other subclasses.
@@ -317,7 +318,7 @@ class LoaderMixin(abc.ABC):
     
 @dataclasses.dataclass
 class ProxyMixin(abc.ABC):
-    """Mixin which creates a proxy name for a Component subclass attribute.
+    """Mixin which creates a proxy name for a Element subclass attribute.
 
     The 'proxify' method dynamically creates a property to access the stored
     attribute. This allows class instances to customize names of stored

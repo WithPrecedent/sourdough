@@ -8,7 +8,6 @@ Contents:
 
 
 """
-
 import abc
 import dataclasses
 import inspect
@@ -19,16 +18,15 @@ from typing import (
 import sourdough
 
 
-
 @dataclasses.dataclass
 class Inventory(sourdough.Catalog):
-    """
+    """Catalog subclass with a more limiting 'validate' method.
 
     Args:
-        contents (Union[Component, Sequence[Component], Mapping[Any, 
-            Component]]): Component(s) to validate or convert to a dict. If 
-            'contents' is a Sequence or a Component, the key for storing 
-            'contents' is the 'name' attribute of each Component.
+        contents (Union[Element, Sequence[Element], Mapping[Any, 
+            Element]]): Element(s) to validate or convert to a dict. If 
+            'contents' is a Sequence or a Element, the key for storing 
+            'contents' is the 'name' attribute of each Element.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
@@ -36,6 +34,7 @@ class Inventory(sourdough.Catalog):
             the key passed is not a list or special access key (True) or to 
             return a list only when a list or special acces key is used (False). 
             Defaults to False.
+        stored_types (Tuple[Callable]):
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -43,8 +42,8 @@ class Inventory(sourdough.Catalog):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').  
                      
@@ -52,70 +51,71 @@ class Inventory(sourdough.Catalog):
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
+    stored_types: Tuple[Callable] = (sourdough.Element)
     name: str = None
         
     """ Public Methods """
 
     def validate(self, 
             contents: Union[
-                'sourdough.Component',
-                Mapping[Any, 'sourdough.Component'],
-                Sequence['sourdough.Component']]) -> Mapping[
-                    str, 'sourdough.Component']:
+                'sourdough.Element',
+                Mapping[Any, 'sourdough.Element'],
+                Sequence['sourdough.Element']]) -> Mapping[
+                    str, 'sourdough.Element']:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
-            contents (Union[Component, Mapping[Any, sourdough.Component], 
-                Sequence[Component]]): Component(s) to validate or convert to a 
-                dict. If 'contents' is a Sequence or a Component, the key for 
-                storing 'contents' is the 'name' attribute of each Component.
+            contents (Union[Element, Mapping[Any, self.stored_types], 
+                Sequence[Element]]): Element(s) to validate or convert to a 
+                dict. If 'contents' is a Sequence or a Element, the key for 
+                storing 'contents' is the 'name' attribute of each Element.
                 
         Raises:
-            TypeError: if 'contents' is neither a Component subclass, Sequence
-                of Component subclasses, or Mapping with Components subclasses
+            TypeError: if 'contents' is neither a Element subclass, Sequence
+                of Element subclasses, or Mapping with Elements subclasses
                 as values.
                 
         Returns:
-            Mapping (str, sourdough.Component): a properly typed dict derived
+            Mapping (str, self.stored_types): a properly typed dict derived
                 from passed 'contents'.
             
         """
         if (isinstance(contents, Mapping)
-            and (all(isinstance(c, sourdough.Component) 
+            and (all(isinstance(c, self.stored_types) 
                     for c in contents.values())
-                or all(issubclass(c, sourdough.Component)
+                or all(issubclass(c, self.stored_types)
                          for c in contents.values()))):
             return contents
-        elif isinstance(contents, sourdough.Component):
+        elif isinstance(contents, self.stored_types):
             return {contents.name: contents}
         elif (inspect.isclass(contents) 
-                and issubclass(contents, sourdough.Component)):
+                and issubclass(contents, self.stored_types)):
             return {contents.get_name(): contents}
         elif isinstance(contents, Sequence):
             new_contents = {}
-            for component in contents:
-                if (isinstance(contents, sourdough.Component) or 
+            for element in contents:
+                if (isinstance(contents, self.stored_types) or 
                         (inspect.isclass(contents) 
-                            and issubclass(contents, sourdough.Component))):
+                            and issubclass(contents, self.stored_types))):
                     try:
-                        new_contents[component.name] = component
+                        new_contents[element.name] = element
                     except AttributeError:
-                        new_contents[component.get_name()] = component
+                        new_contents[element.get_name()] = element
                 else:
                     raise TypeError(
-                        'contents must contain all Component subclasses or '
+                        'contents must contain all Element subclasses or '
                         'subclass instances')  
                 
             return new_contents
         else:
             raise TypeError(
-                'contents must a dict with Component values, Component, or '
-                'list of Components')    
+                f'contents must a dict with {self.stored_types} values, '
+                f'{self.stored_types}, or a list of {self.stored_types}')    
 
 
 @dataclasses.dataclass
 class Overview(sourdough.Lexicon):
-    """Dictionary of different Component types in a Worker instance.
+    """Dictionary of different Element types in a Worker instance.
     
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
@@ -127,8 +127,8 @@ class Overview(sourdough.Lexicon):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
               
@@ -150,7 +150,7 @@ class Overview(sourdough.Lexicon):
             for key, value in self.worker.role.options.items():
                 matches = self.worker.find(
                     self._get_type, 
-                    component = value)
+                    element = value)
                 if len(matches) > 0:
                     self.contents[f'{key}s'] = matches
         else:
@@ -180,20 +180,20 @@ class Overview(sourdough.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: 'sourdough.Component', 
-            component: 'sourdough.Component') -> Sequence[
-                'sourdough.Component']: 
+            item: 'sourdough.Element', 
+            element: 'sourdough.Element') -> Sequence[
+                'sourdough.Element']: 
         """[summary]
 
         Args:
-            item (sourdough.Component): [description]
-            sourdough.Component (sourdough.Component): [description]
+            item (self.stored_types): [description]
+            self.stored_types (self.stored_types): [description]
 
         Returns:
-            Sequence[sourdough.Component]:
+            Sequence[self.stored_types]:
             
         """
-        if isinstance(item, component):
+        if isinstance(item, element):
             return [item]
         else:
             return []
@@ -204,7 +204,7 @@ class Overview(sourdough.Lexicon):
 #     """Mixin which stores classes or instances in a dynamically-named attribute.
     
 #     In contrast to the typical OptionsMixin, the SmartOptionsMixin searches the
-#     MRO for the first Component subclass and uses its name to create a class
+#     MRO for the first Element subclass and uses its name to create a class
 #     attribute.
 
 #     Namespaces: 'options', 'select', '{snakify(compenent_class.snakify)}s',
@@ -275,11 +275,11 @@ class Overview(sourdough.Lexicon):
 #     def _set_options_attribute(self) -> None:
 #         """Assigns Inventory instance to dynamically named attribute.
         
-#         The name of the attribute is the snake_case name of the first Component
+#         The name of the attribute is the snake_case name of the first Element
 #         subclass found in the MRO.
         
 #         """
-#         base = [issubclass(c, sourdough.Component) for c in self.__mro__()][0]
+#         base = [issubclass(c, sourdough.Element) for c in self.__mro__()][0]
 #         base = f'{sourdough.utilities.snakify(base.__name__)}s'
 #         self._options_attribute = base
 #         setattr(self, base, sourdough.Inventory(always_return_list = True))

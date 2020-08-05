@@ -18,6 +18,11 @@ from .tools import snakify
 from .tools import subsetify
 from .tools import typify
 from .tools import datetime_string
+from .tools import add_prefix
+from .tools import add_suffix
+from .tools import drop_prefix
+from .tools import drop_suffix
+from .tools import deduplicate
 
 
 __version__ = '0.1.1'

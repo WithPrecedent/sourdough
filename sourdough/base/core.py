@@ -1,18 +1,18 @@
 """
-components: sourdough core base classes
+elements: sourdough core base classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Component: abstract base class for core sourdough objects.
-    Action (Component): abstract base class for storing action methods. Action 
+    Element: abstract base class for core sourdough objects.
+    Action (Element): abstract base class for storing action methods. Action 
         subclasses must have a 'perform' method.
-    Lexicon (Component, MutableMapping): sourdough drop-in replacement for dict
+    Lexicon (Element, MutableMapping): sourdough drop-in replacement for dict
         with additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
         'create' method for instancing and/or validating stored objects.
-    Hybrid (Component, MutableSequence): iterable containing Component subclass 
+    Hybrid (Element, MutableSequence): iterable containing Element subclass 
         instances with both dict and list interfaces and methods.
 
 """
@@ -31,15 +31,15 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(abc.ABC):
+class Element(abc.ABC):
     """Base class for core sourdough objects.
 
-    A Component has a 'name' attribute for internal referencing and to allow 
-    sourdough iterables to function propertly. Component instances can be used 
+    A Element has a 'name' attribute for internal referencing and to allow 
+    sourdough iterables to function propertly. Element instances can be used 
     to create a variety of tree data designs such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
-    collectively, with Component and its subclasses.
+    collectively, with Element and its subclasses.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -49,8 +49,8 @@ class Component(abc.ABC):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
     
@@ -111,7 +111,7 @@ class Component(abc.ABC):
         attributes = [a for a in self.__dict__ if not a.startswith('_')]
         for attribute in attributes:
             value = getattr(self, attribute)
-            if (isinstance(value, Component) 
+            if (isinstance(value, Element) 
                     and isinstance(value, (Sequence, Mapping))):
                 representation.append(
                     f'''{attribute}:{new_line}{textwrap.indent(
@@ -127,7 +127,7 @@ class Component(abc.ABC):
 
 
 @dataclasses.dataclass
-class Action(Component, abc.ABC):
+class Action(Element, abc.ABC):
     """Base class for performing actions on other objects in sourdough.
     
     All Action subclasses must have 'perform' methods which have 'item' as their
@@ -141,8 +141,8 @@ class Action(Component, abc.ABC):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
     
@@ -162,7 +162,7 @@ class Action(Component, abc.ABC):
     
 
 @dataclasses.dataclass
-class Lexicon(Component, collections.abc.MutableMapping):
+class Lexicon(Element, collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
 
     Lexicon subclasses can serve as drop in replacements for dicts with added
@@ -170,7 +170,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
     
     A Lexicon differs from a python dict in 4 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Component.
+            in sourdough. This is inherited from Element.
         2) It includes an 'add' method which allows different datatypes to
             be passed and added to a Lexicon instance. All of the normal dict 
             methods are also available. 'add' should be used to set default or 
@@ -197,8 +197,8 @@ class Lexicon(Component, collections.abc.MutableMapping):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
               
@@ -245,7 +245,7 @@ class Lexicon(Component, collections.abc.MutableMapping):
         
         Args:
             contents (Mapping[Any, Any]): items to add to 'contents' attribute.
-                Component.
+                Element.
 
         """
         contents = self.validate(contents = contents)
@@ -390,8 +390,8 @@ class Catalog(Lexicon):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').  
                      
@@ -419,8 +419,8 @@ class Catalog(Lexicon):
         instances.
         
         Args:
-            key (str): key to desired Component in 'contents'.
-            kwargs: arguments to pass to the selected Component when it is
+            key (str): key to desired Element in 'contents'.
+            kwargs: arguments to pass to the selected Element when it is
                 instanced.
                     
         Returns:
@@ -532,25 +532,25 @@ class Catalog(Lexicon):
 
         
 @dataclasses.dataclass
-class Hybrid(Component, collections.abc.MutableSequence):
+class Hybrid(Element, collections.abc.MutableSequence):
     """Base class for ordered iterables in sourdough.
     
     Hybrid combines the functionality and interfaces of python dicts and lists.
     It allows duplicate keys and list-like iteration while supporting the easier
     access methods of dictionaries. In order to support this hybrid approach to
-    iterables, Hybrid can only store Component subclasses.
+    iterables, Hybrid can only store Element subclasses.
     
     Hybrid is the primary iterable base class used in sourdough composite 
     objects.
     
     A Hybrid differs from a python list in 7 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Component.
-        2) It only stores Component subclasses or subclass instances.
+            in sourdough. This is inherited from Element.
+        2) It only stores Element subclasses or subclass instances.
         3) It includes an 'add' method which allows different datatypes to be 
             passed and added to the 'contents' of a Hybrid instance. The base
-            class allows Mappings and Sequences of Component subclasses and
-            Component subclass instances. 
+            class allows Mappings and Sequences of Element subclasses and
+            Element subclass instances. 
         4) It uses a 'validate' method to validate or convert the passed 
             'contents' argument. It will convert all supported datatypes to 
             a dict. The 'validate' method is automatically called when a
@@ -560,7 +560,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
             matching items in the 'subset' argument.
         6) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
-            Component instances. A 'name' acts as a key to create the facade of 
+            Element instances. A 'name' acts as a key to create the facade of 
             a dictionary with the items in the stored list serving as values. 
             This allows for duplicate keys for storing class instances, easier 
             iteration, and returning multiple matching items. This design comes 
@@ -574,8 +574,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
             callable. 
 
     Args:
-        contents (Union[Component, Mapping[Any, Component], 
-            Sequence[Component]]): Component subclasses or Component subclass 
+        contents (Union[Element, Mapping[Any, Element], 
+            Sequence[Element]]): Element subclasses or Element subclass 
             instances to store in a list. If a dict is passed, the keys will be 
             ignored and only the values will be added to 'contents'. Defaults to 
             an empty list.
@@ -586,8 +586,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the '_get_name' method in Component. If that method is not 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the '_get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
 
@@ -597,9 +597,9 @@ class Hybrid(Component, collections.abc.MutableSequence):
         
     """
     contents: Union[
-        'Component',
-        Mapping[Any, 'Component'], 
-        Sequence['Component']] = dataclasses.field(default_factory = list)
+        'Element',
+        Mapping[Any, 'Element'], 
+        Sequence['Element']] = dataclasses.field(default_factory = list)
     name: str = None
 
     """ Initialization Methods """
@@ -617,57 +617,57 @@ class Hybrid(Component, collections.abc.MutableSequence):
     
     def validate(self, 
             contents: Union[
-                'Component',
-                Mapping[Any, 'Component'], 
-                Sequence['Component']]) -> Sequence['Component']:
+                'Element',
+                Mapping[Any, 'Element'], 
+                Sequence['Element']]) -> Sequence['Element']:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Union[Component, Mapping[Any, Component], 
-                Sequence[Component]]): items to validate or convert to a list of
-                Component instances.
+            contents (Union[Element, Mapping[Any, Element], 
+                Sequence[Element]]): items to validate or convert to a list of
+                Element instances.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-            Sequence[Component]: validated or converted argument that is 
+            Sequence[Element]: validated or converted argument that is 
                 compatible with an instance.
         
         """
-        if (isinstance(contents, Component) or 
+        if (isinstance(contents, Element) or 
                 (inspect.isclass(contents) 
-                    and issubclass(contents, Component))):
+                    and issubclass(contents, Element))):
             if isinstance(contents, Sequence):
                 return contents
             else:
                 return [contents]
         elif (isinstance(contents, Sequence) 
-            and (all(isinstance(c, Component) for c in contents)
+            and (all(isinstance(c, Element) for c in contents)
                 or (all(inspect.isclass(c) for c in contents)
-                    and all(issubclass(c, Component) for c in contents)))):
+                    and all(issubclass(c, Element) for c in contents)))):
             return contents
         elif (isinstance(contents, Mapping)
-            and (all(isinstance(c, Component) for c in contents.values())
+            and (all(isinstance(c, Element) for c in contents.values())
                 or (all(inspect.isclass(c) for c in contents.values())
                     and all(
-                        issubclass(c, Component) for c in contents.values())))):
+                        issubclass(c, Element) for c in contents.values())))):
             return list(contents.values())
         else:
             raise TypeError(
-                'contents must be a list of Components, dict with ' 
-                'Component values, or Component type')
+                'contents must be a list of Elements, dict with ' 
+                'Element values, or Element type')
 
     def add(self, 
             contents: Union[
-                'Component',
-                Mapping[Any, 'Component'], 
-                Sequence['Component']]) -> None:
+                'Element',
+                Mapping[Any, 'Element'], 
+                Sequence['Element']]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
-            contents (Union[Component, Mapping[Any, Component], 
-                Sequence[Component]]): Component instance(s) to add to the
+            contents (Union[Element, Mapping[Any, Element], 
+                Sequence[Element]]): Element instance(s) to add to the
                 'contents' attribute.
 
         """
@@ -677,23 +677,23 @@ class Hybrid(Component, collections.abc.MutableSequence):
 
     def append(self, 
             contents: Union[
-                'Component',
-                Mapping[Any, 'Component'], 
-                Sequence['Component']]) -> None:
-        """Appends 'component' to 'contents'.
+                'Element',
+                Mapping[Any, 'Element'], 
+                Sequence['Element']]) -> None:
+        """Appends 'element' to 'contents'.
         
         Args:
-            contents (Union[Component, Mapping[Any, Component], 
-                Sequence[Component]]): Component instance(s) to add to the
+            contents (Union[Element, Mapping[Any, Element], 
+                Sequence[Element]]): Element instance(s) to add to the
                 'contents' attribute.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute.
+            TypeError: if 'element' does not have a name attribute.
             
         """
         contents = self.validate(contents = contents)
         if (isinstance(contents, Sequence)
-                and not isinstance(contents, Component)):
+                and not isinstance(contents, Element)):
             contents = self.__class__(contents)
         self.contents.append(contents)
         return self    
@@ -732,18 +732,18 @@ class Hybrid(Component, collections.abc.MutableSequence):
    
     def extend(self, 
             contents: Union[
-                'Component',
-                Mapping[Any, 'Component'], 
-                Sequence['Component']]) -> None:
-        """Extends 'component' to 'contents'.
+                'Element',
+                Mapping[Any, 'Element'], 
+                Sequence['Element']]) -> None:
+        """Extends 'element' to 'contents'.
         
         Args:
-            contents (Union[Component, Mapping[Any, Component], 
-                Sequence[Component]]): Component instance(s) to add to the
+            contents (Union[Element, Mapping[Any, Element], 
+                Sequence[Element]]): Element instance(s) to add to the
                 'contents' attribute.
 
         Raises:
-            TypeError: if 'component' does not have a name attribute.
+            TypeError: if 'element' does not have a name attribute.
             
         """
         contents = self.validate(contents = contents)
@@ -753,8 +753,8 @@ class Hybrid(Component, collections.abc.MutableSequence):
     def find(self, 
             tool: Callable, 
             recursive: bool = True, 
-            matches: Sequence['Component'] = None,
-            **kwargs) -> Sequence['Component']:
+            matches: Sequence['Element'] = None,
+            **kwargs) -> Sequence['Element']:
         """Finds items in 'contents' that match criteria in 'tool'.
         
         Args:
@@ -762,13 +762,13 @@ class Hybrid(Component, collections.abc.MutableSequence):
                 its first argument and any other arguments in kwargs.
             recursive (bool): whether to apply 'tool' to nested items in
                 'contents'. Defaults to True.
-            matches (Sequence[Component]): items matching the criteria
+            matches (Sequence[Element]): items matching the criteria
                 in 'tool'. This should not be passed by an external call to
                 'find'. It is included to allow recursive searching.
             kwargs: additional arguments to pass when 'tool' is used.
             
         Returns:
-            Sequence[Component]: stored items matching the criteria
+            Sequence[Element]: stored items matching the criteria
                 in 'tool'. 
         
         """
@@ -787,16 +787,16 @@ class Hybrid(Component, collections.abc.MutableSequence):
     
     def get(self, 
             key: Union[str, int]) -> Union[
-                'Component', 
-                Sequence['Component']]:
+                'Element', 
+                Sequence['Element']]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
         Args:
-            key (Union[str, int]): index or stored Component name to get from
+            key (Union[str, int]): index or stored Element name to get from
                 'contents'.
                 
         Returns:
-            Union['Component', Sequence['Component']]: items in 'contents' or 
+            Union['Element', Sequence['Element']]: items in 'contents' or 
                 value in '_default' attribute. 
         """
         try:
@@ -804,28 +804,28 @@ class Hybrid(Component, collections.abc.MutableSequence):
         except KeyError:
             return self._default
             
-    def insert(self, index: int, component: 'Component') -> None:
-        """Inserts 'component' at 'index' in 'contents'.
+    def insert(self, index: int, element: 'Element') -> None:
+        """Inserts 'element' at 'index' in 'contents'.
 
         Args:
-            index (int): index to insert 'component' at.
-            component (Component): object to be inserted.
+            index (int): index to insert 'element' at.
+            element (Element): object to be inserted.
 
         Raises:
-            TypeError: if 'component' is not a Component type.
+            TypeError: if 'element' is not a Element type.
             
         """
-        if isinstance(component, Component):
-            self.contents.insert(index, component)
+        if isinstance(element, Element):
+            self.contents.insert(index, element)
         else:
-            raise TypeError('component must be a Component type')
+            raise TypeError('element must be a Element type')
         return self
 
-    def items(self) -> Tuple[str, 'Component']:
+    def items(self) -> Tuple[str, 'Element']:
         """Emulates python dict 'items' method.
         
         Returns:
-            Tuple[str, Component]: tuple of Component names and Components.
+            Tuple[str, Element]: tuple of Element names and Elements.
             
         """
         return tuple(zip(self.keys(), self.values()))
@@ -834,7 +834,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         """Emulates python dict 'keys' method.
         
         Returns:
-            Sequence['Component']: list of names of Components stored in 
+            Sequence['Element']: list of names of Elements stored in 
                 'contents'
             
         """
@@ -845,16 +845,16 @@ class Hybrid(Component, collections.abc.MutableSequence):
 
     def pop(self, 
             key: Union[str, int]) -> Union[
-                'Component', 
-                Sequence['Component']]:
+                'Element', 
+                Sequence['Element']]:
         """Pops item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored Component name to pop from
+            key (Union[str, int]): index or stored Element name to pop from
                 'contents'.
                 
         Returns:
-            Union['Component', Sequence['Component']]: items popped from 
+            Union['Element', Sequence['Element']]: items popped from 
                 'contents'.
             
         """
@@ -866,7 +866,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         """Removes item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored Component name to remove from
+            key (Union[str, int]): index or stored Element name to remove from
                 'contents'.
             
         """
@@ -886,7 +886,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
         """Returns a subset of 'contents'.
 
         Args:
-            subset (Union[str, Sequence[str]]): key(s) to get Component 
+            subset (Union[str, Sequence[str]]): key(s) to get Element 
                 instances with matching 'name' attributes from 'contents'.
 
         Returns:
@@ -905,56 +905,56 @@ class Hybrid(Component, collections.abc.MutableSequence):
      
     def update(self, 
             contents: Union[
-                Mapping[Any, 'Component'], 
-                Sequence['Component']]) -> None:
+                Mapping[Any, 'Element'], 
+                Sequence['Element']]) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            contents (Union[Mapping[Any, Component], Sequence[Component]]): 
-                Component instances to add to the 'contents' attribute. If a 
+            contents (Union[Mapping[Any, Element], Sequence[Element]]): 
+                Element instances to add to the 'contents' attribute. If a 
                 Mapping is passed, the values are added to 'contents' and the
                 keys become the 'name' attributes of those avalues. To mimic 
-                'update', the passed 'components' are added to 'contents' by the 
+                'update', the passed 'elements' are added to 'contents' by the 
                 'extend' method.
  
         Raises:
-            TypeError: if any of 'components' do not have a name attribute or
-                if 'components is not a dict.               
+            TypeError: if any of 'elements' do not have a name attribute or
+                if 'elements is not a dict.               
         
         """
         if isinstance(contents, Mapping):
             for key, value in contents.items():
-                new_component = value
-                new_component.name = key
-                self.extend(contents = new_component)
-        elif all(isinstance(c, Component) for c in contents):
+                new_element = value
+                new_element.name = key
+                self.extend(contents = new_element)
+        elif all(isinstance(c, Element) for c in contents):
             self.extend(contents = contents)
         else:
             raise TypeError(
-                'components must be a dict or list containing Components')
+                'elements must be a dict or list containing Elements')
         return self
 
-    def values(self) -> Sequence['Component']:
+    def values(self) -> Sequence['Element']:
         """Emulates python dict 'values' method.
         
         Returns:
-            Sequence['Component']: list of Components stored in 'contents'
+            Sequence['Element']: list of Elements stored in 'contents'
             
         """
         return self.contents
           
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[str, int]) -> 'Component':
+    def __getitem__(self, key: Union[str, int]) -> 'Element':
         """Returns value(s) for 'key' in 'contents'.
         
         If 'key' is a str type, this method looks for a matching 'name'
         attribute in the stored instances.
         
-        If 'key' is an int type, this method returns the stored component at the
+        If 'key' is an int type, this method returns the stored element at the
         corresponding index.
         
-        If only one match is found, a single Component instance is returned. If
+        If only one match is found, a single Element instance is returned. If
         more are found, a Hybrid or Hybrid subclass with the matching
         'name' attributes is returned.
 
@@ -962,10 +962,10 @@ class Hybrid(Component, collections.abc.MutableSequence):
             key (Union[str, int]): name or index to search for in 'contents'.
 
         Returns:
-            Component: value(s) stored in 'contents' that correspond 
+            Element: value(s) stored in 'contents' that correspond 
                 to 'key'. If there is more than one match, the return is a
                 Hybrid or Hybrid subclass with that matching stored
-                components.
+                elements.
 
         """
         if isinstance(key, int):
@@ -984,7 +984,7 @@ class Hybrid(Component, collections.abc.MutableSequence):
             
     def __setitem__(self, 
             key: Union[str, int], 
-            value: 'Component') -> None:
+            value: 'Element') -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
@@ -1160,66 +1160,66 @@ Factory is currently omitted from the sourdough build because its design doesn't
 presently fit with the sourdough workflow. However, the code should still work.
 """
 
-@dataclasses.dataclass
-class Factory(Component, abc.ABC):
-    """The Factory interface instances a class from available options.
+# @dataclasses.dataclass
+# class Factory(Element, abc.ABC):
+#     """The Factory interface instances a class from available options.
 
-    Args:
-        component (Union[str, Sequence[str]]: name of sourdough component(s) to 
-            return. 'component' must correspond to key(s) in 'options'. Defaults 
-            to None.
-        options (ClassVar[sourdough.Catalog]): a dict of available options 
-            for object creation. Defaults to an empty Catalog instance.
+#     Args:
+#         element (Union[str, Sequence[str]]: name of sourdough element(s) to 
+#             return. 'element' must correspond to key(s) in 'options'. Defaults 
+#             to None.
+#         options (ClassVar[sourdough.Catalog]): a dict of available options 
+#             for object creation. Defaults to an empty Catalog instance.
 
-    Raises:
-        TypeError: if 'component' is neither a str nor Sequence of str.
+#     Raises:
+#         TypeError: if 'element' is neither a str nor Sequence of str.
 
-    Returns:
-        Any: the factory uses the '__new__' method to return a different object 
-            product instance with kwargs as the parameters.
+#     Returns:
+#         Any: the factory uses the '__new__' method to return a different object 
+#             product instance with kwargs as the parameters.
 
-    """
-    component: Union[str, Sequence[str]] = None
-    options: ClassVar['Catalog'] = Catalog()
-    name: str = None
+#     """
+#     element: Union[str, Sequence[str]] = None
+#     options: ClassVar['Catalog'] = Catalog()
+#     name: str = None
 
-    """ Initialization Methods """
+#     """ Initialization Methods """
     
-    def __new__(cls, component: str = None, **kwargs) -> Any:
-        """Returns an instance from 'options'.
+#     def __new__(cls, element: str = None, **kwargs) -> Any:
+#         """Returns an instance from 'options'.
 
-        Args:
-            component (str): name of sourdough component(s) to return. 
-                'component' must correspond to key(s) in 'options'. Defaults to 
-                None.
-            kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
-                being created.
+#         Args:
+#             element (str): name of sourdough element(s) to return. 
+#                 'element' must correspond to key(s) in 'options'. Defaults to 
+#                 None.
+#             kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
+#                 being created.
 
-        Returns:
-            Any: an instance of an object stored in 'options'.
+#         Returns:
+#             Any: an instance of an object stored in 'options'.
         
-        """
-        if isinstance(component, str):
-            return cls.options[component](**kwargs)
-        elif isinstance(component, Sequence):
-            instances = []
-            for match in cls.options[component]:
-                instances.append(match(**kwargs))
-            return instances
-        else:
-            raise TypeError('component must be a str or list type')
+#         """
+#         if isinstance(element, str):
+#             return cls.options[element](**kwargs)
+#         elif isinstance(element, Sequence):
+#             instances = []
+#             for match in cls.options[element]:
+#                 instances.append(match(**kwargs))
+#             return instances
+#         else:
+#             raise TypeError('element must be a str or list type')
     
-    """ Class Methods """
+#     """ Class Methods """
     
-    @classmethod
-    def add(cls, key: str, option: Any) -> None:
-        """Adds 'option' to 'options' at 'key'.
+#     @classmethod
+#     def add(cls, key: str, option: Any) -> None:
+#         """Adds 'option' to 'options' at 'key'.
         
-        Args:
-            key (str): name of key to link to 'option'.
-            option (Any): object to store in 'options'.
+#         Args:
+#             key (str): name of key to link to 'option'.
+#             option (Any): object to store in 'options'.
             
-        """
-        cls.options[key] = option
-        return cls
+#         """
+#         cls.options[key] = option
+#         return cls
    

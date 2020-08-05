@@ -269,11 +269,39 @@ def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
             else:
                 return variable
 
+def validate(
+    item: Any,
+    types: Sequence[Callable],
+    allow_lists: bool = False,
+    allow_dicts: bool = False) -> Any:
+    """Type checks 'item' based upon other arguments passed.
+    
+    Args:
+    
+    Raises:
+        TypeError: if 'item' is not of the right datatype(s).
+    
+    Returns:
+
+    """
+    if isinstance(item, types):
+        return item
+    elif (allow_lists
+            and isinstance(item, Sequence)
+            and all(isinstance(i, types) for i in item)):
+        return item
+    elif (allow_dicts
+            and isinstance(item, Mapping)
+            and all(isinstance(i, types) for i in item.values())):
+        return item
+    else:
+        raise TypeError(f'{item} must be {str(types)}')
+
 """ Other tools """
 
 def add_prefix(
-        iterable: Union[Mapping[Any, Any], Sequence],
-        prefix: str) -> Union[Mapping[Any, Any], Sequence]:
+        iterable: Union[Mapping[str, Any], Sequence[str]],
+        prefix: str) -> Union[Mapping[str, Any], Sequence[str]]:
     """Adds prefix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string prefix.
@@ -292,8 +320,8 @@ def add_prefix(
         return [prefix + '_' + item for item in iterable]
 
 def add_suffix(
-        iterable: Union[Mapping[Any, Any], Sequence],
-        suffix: str) -> Union[Mapping[Any, Any], Sequence]:
+        iterable: Union[Mapping[str, Any], Sequence[str]],
+        suffix: str) -> Union[Mapping[str, Any], Sequence[str]]:
     """Adds suffix to each item in a list or keys in a dict.
 
     An underscore is automatically added after the string suffix.
@@ -341,6 +369,42 @@ def deduplicate(
         return list(more_itertools.unique_everseen(iterable))
     except TypeError:
         return iterable.drop_duplicates(inplace = True)
+
+def drop_prefix(
+        iterable: Union[Mapping[str, Any], Sequence[str]],
+        prefix: str) -> Union[Mapping[str, Any], Sequence[str]]:
+    """Drops prefix from each item in a list or keys in a dict.
+
+    Args:
+        iterable (list(str) or dict(str: any)): iterable to be modified.
+        prefix (str): prefix to be dropped
+
+    Returns:
+        list or dict with prefixes dropped.
+
+    """
+    try:
+        return {k.rstrip(prefix): v for k, v in iterable.items()}
+    except TypeError:
+        return [item.rstrip(prefix) for item in iterable]
+    
+def drop_suffix(
+        iterable: Union[Mapping[str, Any], Sequence[str]],
+        suffix: str) -> Union[Mapping[str, Any], Sequence[str]]:
+    """Drops suffix from each item in a list or keys in a dict.
+
+    Args:
+        iterable (list(str) or dict(str: any)): iterable to be modified.
+        suffix (str): suffix to be dropped
+
+    Returns:
+        list or dict with suffixes dropped.
+
+    """
+    try:
+        return {k.rstrip(suffix): v for k, v in iterable.items()}
+    except TypeError:
+        return [item.rstrip(suffix) for item in iterable]
 
 def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.

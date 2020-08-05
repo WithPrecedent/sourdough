@@ -23,18 +23,18 @@ import sourdough
              
     
 @dataclasses.dataclass
-class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
-    """
+class Role(
+        sourdough.RegistryMixin, 
+        sourdough.Element, 
+        collections.abc.Iterable,
+        abc.ABC):
+    """Base class related to constructing and iterating Worker instances.
     
     """
     worker: 'sourdough.Worker' = None
     name: str = None
     registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'create': sourdough.Create,
-            'obey': sourdough.Obey,
-            'study': sourdough.Study,
-            'survey': sourdough.Survey})
+        stored_types = ('Role'))
 
     """ Initialization Methods """
     
@@ -48,10 +48,16 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def organize(self, settings: Mapping[Any, Any]) -> None:
-        """Subclasses must provide their own methods"""
+    def organize(self, 
+            settings: Mapping[Any, Any], 
+            project: 'sourdough.Project') -> None:
+        """Subclasses must provide their own methods."""
+
+    @abc.abstractmethod
+    def iterate(self) -> Iterable:
+        """Subclasses must provide their own methods."""
         pass
-        
+ 
     """ Class Methods """
 
     @classmethod
@@ -70,8 +76,7 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
             
         """
         if isinstance(worker.role, str):
-            worker.role = worker.registry[worker.role](
-                worker = worker)
+            worker.role = cls.registry[worker.role](worker = worker)
         elif (inspect.isclass(worker.role) 
                 and issubclass(worker.role, cls)):
             worker.role = worker.role(worker = worker) 
@@ -82,70 +87,100 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
             raise TypeError(
                 f'The role attribute of worker must be a str or {cls} type')
         return worker
+  
+    """ Public Methods """
+           
+    def finalize(self) -> None:
+        pass
+        
+    # def __next__(self) -> Union[Callable, 'sourdough.Component']:
+    #     """Returns next method after method matching 'item'.
+        
+    #     Returns:
+    #         Callable: next method corresponding to those listed in 'registry'.
+            
+    #     """
+    #     if self.index < len(self.worker.contents):
+    #         self.index += 1
+    #         if isinstance(self.worker[self.index], sourdough.Action):
+    #             return self.worker[self.index].perform
+    #         else:
+    #             return self.worker[self.index]
+    #     else:
+    #         raise StopIteration()
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'role'.
-        
-        Returns:
-            Iterable: of 'contents'.
-            
-        """
-        try:
-            self.iterator(self.worker.contents)
-        except TypeError:
-            return iter(self.worker.contents)
-
-    def __next__(self) -> Union[Callable, 'sourdough.Component']:
-        """Returns next method after method matching 'item'.
-        
-        Returns:
-            Callable: next method corresponding to those listed in 'registry'.
-            
-        """
-        if self.index < len(self.worker.contents):
-            self.index += 1
-            if isinstance(self.worker[self.index], sourdough.Action):
-                return self.worker[self.index].perform
-            else:
-                return self.worker[self.index]
-        else:
-            raise StopIteration()
-  
+        return self.iterate()
     """ Private Methods """
-
-    def _add_attributes(self, settings: Mapping[Any, Any]) -> None:
-        """
-                
-        """
-        for key, value in settings.items():
-            setattr(self.worker, key, value)
-        return self
-
-    def _get_component(self, name: str, generic: str) -> 'sourdough.Component':
+    
+    def _get_structures(self, 
+            settings: Mapping[str, Sequence[str]], 
+            project: 'sourdough.Project') -> Mapping[
+                str, Mapping[str, Sequence[str]]]:
         """[summary]
+
+        Args:
+            settings (Mapping[str, Sequence[str]]): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            Mapping[ str, Mapping[str, Sequence[str]]]: [description]
         """
-        # Checks if special prebuilt instance exists.
-        try:
-            component = self.select(name)
-        # Otherwise uses the appropriate generic type.
-        except KeyError:
-            component = self.select(generic)
-        return component
-            
-    def _instance_component(self, 
-            component: 'sourdough.Component',
-            name: str) -> 'sourdough.Component':
+        structures = {}
+        for key in project.structures.keys():
+            suffix = f'_{key}s'
+            structures[key] = {
+                k: v for k, v in settings.items() if k.endswith(suffix)} 
+        return structures
+    
+    def _build_wrapper(self,
+            key: str, 
+            generic: 'sourdough.Component',
+            wrapped: Mapping[str, Sequence[str]],
+            project: 'sourdough.Project',
+            **kwargs) -> None:
         """[summary]
+
+        Args:
+            wrapper (str): [description]
+            wrapped (Mapping[str, Sequence[str]]): [description]
+            wrapped_type (str):
+            generic_wrapper (Callable): [description]
 
         Returns:
             [type]: [description]
         """
+        # Checks if special prebuilt class exists.
+        if key in project.component.registry:
+            for item in wrapped:
+                kwargs.update({generic.wraps: item})
+                component = project.component.build(key = key, **kwargs)
+                self.worker.add(component) 
+        # Otherwise uses the appropriate generic type.
+        else:
+            for item in wrapped:
+                kwargs.update({'name': key, generic.wraps: item})
+                self.worker.add(generic(**kwargs)) 
+        return self   
+
+    def _build_component(self,
+            key: str, 
+            generic: 'sourdough.Component',
+            project: 'sourdough.Project',
+            **kwargs) -> None:
+        """[summary]
+        """
+        # Checks if special prebuilt class exists.
         try:
-            return component(name = name)
-        except TypeError:
-            return component  
+            component = project.component.build(key = key, **kwargs)
+        # Otherwise uses the appropriate generic type.
+        except KeyError:
+            kwargs.update({'name': key})
+            component = generic(**kwargs)
+        self.worker.add(component)
+        return self  
 
     def _divide_key(self, key: str) -> Tuple[str, str]:
         """[summary]
@@ -159,67 +194,53 @@ class Role(sourdough.RegistryMixin, sourdough.Component, abc.ABC):
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
-
-
-@dataclasses.dataclass
-class Create(sourdough.OptionsMixin, Role):
-    
-    worker: 'sourdough.Worker' = None
-    name: str = None
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'author': sourdough.Author,
-            'publisher': sourdough.Publisher,
-            'reader': sourdough.Reader},
-        defaults = 'all')
-    
-    def organize(self, settings: Mapping[Any, Any]) -> None:
-        """[summary]
-
-        Args:
-            settings (Mapping[Any, Any]): [description]
-            
-        """
-        for key, value in settings.items():
-            prefix, suffix = self._divide_key(key = key)
-            for item in value:
-                component = self._get_component(name = item, generic = suffix)
-                component = self._instance_component(
-                    component = component,
-                    name = item)
-                self.worker.add(component)
-        return self
-        
+          
       
 @dataclasses.dataclass
 class Obey(sourdough.OptionsMixin, Role):
     
     worker: 'sourdough.Worker' = None
     name: str = None
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
     
-    def organize(self, settings: Mapping[Any, Any]) -> None:
+    """ Public Methods """
+    
+    def organize(self, 
+            settings: Mapping[Any, Any], 
+            project: 'sourdough.Project') -> None:
         """[summary]
 
         Args:
             settings (Mapping[Any, Any]): [description]
             
         """
+        settings = {
+            k: sourdough.utilities.listify(v) for k, v in settings.items()}
+        structures = self._get_structures(
+            settings = settings, 
+            project = project)
+        wrapped = []
         for key, value in settings.items():
             prefix, suffix = self._divide_key(key = key)
+            generic = project.structures[suffix]
             for item in value:
-                component = self._get_component(name = item, generic = suffix)
-                component = self._instance_component(
-                    component = component,
-                    name = item)
-                self.worker.add(component)
+                if generic.wraps:
+                    wrapped.append(generic.wraps)
+                    self._build_wrapper(
+                        key = item,
+                        generic = generic,
+                        wrapped = structures[generic.wraps],
+                        project = project)
+                elif suffix not in wrapped:
+                    self._build_component(
+                        key = item,
+                        generic = generic,
+                        project = project)
         return self
-                
-  
+    
+    def iterate(self) -> Iterable:
+        return itertools.chain(self.worker.contents)
+    
+         
 @dataclasses.dataclass
 class Study(sourdough.OptionsMixin, Role):
     
@@ -231,8 +252,43 @@ class Study(sourdough.OptionsMixin, Role):
             'technique': sourdough.Technique,
             'worker': sourdough.Worker})
     
-    def organize(self, settings: Mapping[Any, Any]) -> None:
-        pass
+    """ Public Methods """
+    
+    def organize(self, 
+            settings: Mapping[Any, Any], 
+            project: 'sourdough.Project') -> None:
+        """[summary]
+
+        Args:
+            settings (Mapping[Any, Any]): [description]
+            
+        """
+        settings = {
+            k: sourdough.utilities.listify(v) for k, v in settings.items()}
+        structures = self._get_structures(
+            settings = settings, 
+            project = project)
+        wrapped = []
+        for key, value in settings.items():
+            prefix, suffix = self._divide_key(key = key)
+            generic = project.structures[suffix]
+            for item in value:
+                if generic.wraps:
+                    wrapped.append(generic.wraps)
+                    self._build_wrapper(
+                        key = item,
+                        generic = generic,
+                        wrapped = structures[generic.wraps],
+                        project = project)
+                elif suffix not in wrapped:
+                    self._build_component(
+                        key = item,
+                        generic = generic,
+                        project = project)
+        return self
+    
+    def iterate(self) -> Iterable:
+        return itertools.chain(self.worker.contents)
         
     def _iterable(self, *args) -> Tuple[str, str]:
         pools = [tuple(pool) for pool in args]
@@ -241,32 +297,6 @@ class Study(sourdough.OptionsMixin, Role):
             result = [x + [y] for x in result for y in pool]
         for product in result:
             yield tuple(product)
-                   
-    def _build_tasks(self, 
-            worker: 'sourdough.Worker',
-            tasks: Sequence[str],
-            settings: Mapping[Any, Any]) -> Sequence['sourdough.Task']:
-        """[summary]
-        """
-        instances = []
-        for task in tasks:
-            for technique in settings[f'{task}_techniques']:
-                technique_class = self._get_component(
-                    worker = worker,
-                    name = technique,
-                    key = 'technique')
-                technique_instance = self._instance_component(
-                    component = technique_class,
-                    name = technique)
-                task_class = self._get_component(
-                    worker = worker,
-                    name = task,
-                    key = 'task')
-                instances.append(task_class(
-                    technique = technique_instance,
-                    name = task))
-                self._ignore_list.append(f'{task}_techniques')
-        return instances 
 
 
 @dataclasses.dataclass
@@ -280,7 +310,44 @@ class Survey(sourdough.OptionsMixin, Role):
             'task': sourdough.Task,
             'technique': sourdough.Technique,
             'worker': sourdough.Worker})
+    
+    """ Public Methods """
+    
+    def organize(self, 
+            settings: Mapping[Any, Any], 
+            project: 'sourdough.Project') -> None:
+        """[summary]
 
+        Args:
+            settings (Mapping[Any, Any]): [description]
+            
+        """
+        settings = {
+            k: sourdough.utilities.listify(v) for k, v in settings.items()}
+        structures = self._get_structures(
+            settings = settings, 
+            project = project)
+        wrapped = []
+        for key, value in settings.items():
+            prefix, suffix = self._divide_key(key = key)
+            generic = project.structures[suffix]
+            for item in value:
+                if generic.wraps:
+                    wrapped.append(generic.wraps)
+                    self._build_wrapper(
+                        key = item,
+                        generic = generic,
+                        wrapped = structures[generic.wraps],
+                        project = project)
+                elif suffix not in wrapped:
+                    self._build_component(
+                        key = item,
+                        generic = generic,
+                        project = project)
+        return self
+    
+    def iterate(self) -> Iterable:
+        return itertools.chain(self.worker.contents)
 
 # @dataclasses.dataclass
 # class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):
@@ -387,13 +454,13 @@ class Survey(sourdough.OptionsMixin, Role):
           
     # def add_node(self,
     #         name: str = None,
-    #         component: 'sourdough.Component' = None) -> None:
+    #         element: 'sourdough.Component' = None) -> None:
     #     """Adds a node to the graph."""
-    #     if component and not name:
-    #         name = component.name
+    #     if element and not name:
+    #         name = element.name
     #     elif not name:
-    #         raise ValueError('component or name must be passed to add_node')
-    #     node = sourdough.Component(name = name, component = component)
+    #         raise ValueError('element or name must be passed to add_node')
+    #     node = sourdough.Component(name = name, element = element)
     #     self.contents.append(node)
     #     return self
 
@@ -498,7 +565,7 @@ class Survey(sourdough.OptionsMixin, Role):
     #         Iterable: based upon the 'get_sorted' method of a subclass.
         
     #     """
-    #     return iter(self.get_sorted(return_components = True))
+    #     return iter(self.get_sorted(return_elements = True))
     
     # def __repr__(self) -> str:
     #     """Returns '__str__' representation.
@@ -627,7 +694,7 @@ class Survey(sourdough.OptionsMixin, Role):
         
     # def get_sorted(self, 
     #         graph: 'sourdough.Worker' = None,
-    #         return_components: bool = False) -> Sequence['sourdough.Component']:
+    #         return_elements: bool = False) -> Sequence['sourdough.Component']:
     #     """Performs a topological sort on 'graph'.
         
     #     If 'graph' is not passed, the 'contents' attribute is used instead.
@@ -638,8 +705,8 @@ class Survey(sourdough.OptionsMixin, Role):
     #     if graph is None:
     #         graph = self.contents
     #     sorted_queue = self._topological_sort(graph = graph)
-    #     if return_components:
-    #         return [v.component for v in sorted_queue]
+    #     if return_elements:
+    #         return [v.element for v in sorted_queue]
     #     else:
     #         return sorted_queue
 

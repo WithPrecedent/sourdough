@@ -28,17 +28,17 @@ class OtherComponent(sourdough.Component):
         return data
     
 
-def test_component():
+def test_element():
     new_operator = NewAction()
-    other_component= OtherComponent(name = 'something')
+    other_element= OtherComponent(name = 'something')
     another_operator = OtherComponent
     assert new_operator.name == 'new_action'
-    assert other_component.name == 'something'
-    assert another_operator.get_name() == 'other_component'
+    assert other_element.name == 'something'
+    assert another_operator.get_name() == 'other_element'
     assert str(new_operator) == '\n'.join(
         ['sourdough NewAction', 'name: new_action'])
     return
 
 
 if __name__ == '__main__':
-    test_component()
+    test_element()

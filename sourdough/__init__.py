@@ -23,8 +23,8 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Component via sourdough.base.core.Component,
-    you can just use: sourdough.Component
+    Instead of acccesing Element via sourdough.base.core.Element,
+    you can just use: sourdough.Element
     
 """
 
@@ -32,7 +32,7 @@ For example:
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
-from sourdough.base.core import Component
+from sourdough.base.core import Element
 from sourdough.base.core import Action
 from sourdough.base.core import Hybrid
 from sourdough.base.core import Lexicon
@@ -48,23 +48,24 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
+from sourdough.project.containers import Inventory
+from sourdough.project.containers import Overview
+from sourdough.project.components import Component
 from sourdough.project.components import Technique
 from sourdough.project.components import Task
 from sourdough.project.components import Edge
 from sourdough.project.components import Node
-from sourdough.project.containers import Inventory
-from sourdough.project.containers import Overview
 from sourdough.project.workers import Worker
 from sourdough.project.workers import Manager
-from sourdough.project.workflow import Author
-from sourdough.project.workflow import Publisher
-from sourdough.project.workflow import Reader
+from sourdough.project.workflow import Workflow
+from sourdough.project.workflow import Draft
+from sourdough.project.workflow import Publish
+from sourdough.project.workflow import Apply
 from sourdough.project.roles import Role
-from sourdough.project.roles import Create
 from sourdough.project.roles import Obey
 from sourdough.project.roles import Study
 from sourdough.project.roles import Survey
-from sourdough.project.manager import Project
+from sourdough.project.project import Project
 
 
 __version__ = '0.1.1'
@@ -73,7 +74,7 @@ __author__ = 'Corey Rayburn Yung'
 
 # __all__ = [
 #     'utilities',
-#     'Component',
+#     'Element',
 #     'Action',
 #     'Hybrid',
 #     'Action',

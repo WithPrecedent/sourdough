@@ -27,14 +27,12 @@ class Search(sourdough.Task):
 
 
 def test_manager():
-    sourdough.Project.options.add(Parser)
-    sourdough.Project.options.add(Search)
-    manager = sourdough.Project(
+    assert 'parser' in sourdough.Component.registry
+    project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
-        role = 'creator',
         automatic = True)
-    print('test project', manager.project)
+    print('test project', project.manager)
     return
 
 # @dataclasses.dataclass
@@ -95,8 +93,8 @@ def test_manager():
 #     some_data = a_Worker.perform(item = some_data)
 #     assert some_data.other_value == 'something'
 #     # Tests manual iteration of a Worker instance.
-#     for component in a_Worker:
-#         more_data = component.perform(item = more_data)
+#     for element in a_Worker:
+#         more_data = element.perform(item = more_data)
 #     assert more_data.other_value == 'something'
 #     return
 

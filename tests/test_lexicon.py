@@ -21,15 +21,15 @@ class AnotherComponent(sourdough.Component):
 
 
 def test_lexicon():
-    test_component = AComponent(name = 'first_test')
-    another_component = AnotherComponent()
+    test_element = AComponent(name = 'first_test')
+    another_element = AnotherComponent()
     test_mapping = {'a_key': AComponent(), 'another_key': AnotherComponent()}
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
     
     # Tests Lexicon
     lexicon = sourdough.Lexicon()
     try:
-        lexicon.add(test_component)
+        lexicon.add(test_element)
         raise TypeError('TypeError message not properly triggered')
     except TypeError:
         pass
@@ -48,7 +48,7 @@ def test_lexicon():
     assert len(lexicon) == 1
     for key, value in lexicon.items():
         pass
-    lexicon += {'another_component': another_component}
+    lexicon += {'another_element': another_element}
     assert len(lexicon) == 2
     return
 

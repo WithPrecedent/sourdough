@@ -1,5 +1,5 @@
 """
-components: core pieces of a sourdough composite object
+elements: core pieces of a sourdough composite object
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -9,15 +9,54 @@ Contents:
     Task (Action): wrapper for Technique which performs some action (optional).
 
 """
-
+import abc
 import dataclasses
+import inspect
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.Action):
+class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
+    """Base class for sourdough object creators.
+    
+    Args:
+        project (sourdough.Project): the related Project instance.
+    
+    """
+    name: str = None
+    wraps: ClassVar[str] = None
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+        stored_types = ('Component'))
+
+    """ Class Methods """
+
+    @classmethod
+    def get_name(cls) -> str:
+        """Returns 'name' of class for use throughout sourdough.
+        
+        The method is a classmethod so that a 'name' can properly derived even
+        before a class is instanced. It can also be called after a subclass is
+        instanced (as is the case in '__post_init__').
+        
+        This method converts the class name from CapitalCase to snake_case.
+        
+        If a user wishes to use an alternate naming system, a subclass should
+        simply override this method. 
+        
+        Returns:
+            str: name of class for internal referencing and some access methods.
+        
+        """
+        if inspect.isclass(cls):
+            return sourdough.utilities.snakify(cls.__name__)
+        else:
+            return sourdough.utilities.snakify(cls.__class__.__name__)
+           
+    
+@dataclasses.dataclass
+class Technique(sourdough.Action, Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'algorithm' and 'parameters' attributes are combined at the last moment
@@ -72,7 +111,7 @@ class Technique(sourdough.Action):
         
             
 @dataclasses.dataclass
-class Task(sourdough.Action):
+class Task(sourdough.Action, Component):
     """Wrapper for a Technique.
 
     Subclasses of Task can store additional methods and attributes to apply to 
@@ -100,6 +139,7 @@ class Task(sourdough.Action):
             
     """
     technique: Union[Technique, str] = None
+    wraps: ClassVar[str] = 'technique'
     name: str = None
 
     """ Public Methods """
@@ -151,7 +191,7 @@ class Task(sourdough.Action):
             
             
 @dataclasses.dataclass
-class Edge(sourdough.Component):
+class Edge(Component):
     """An edge in a sourdough Graph.
 
     'start' and 'stop' are the ends of the Edge. However, which value is 
@@ -177,18 +217,18 @@ class Edge(sourdough.Component):
     
     """ Public Methods """
 
-    def get_name(self) -> str:
-        """Returns 'name' based upon attached nodes.
+    # def get_name(self) -> str:
+    #     """Returns 'name' based upon attached nodes.
         
-        Returns:
-            str: name of class for internal referencing.
+    #     Returns:
+    #         str: name of class for internal referencing.
         
-        """
-        return f'{self.start.name}_to_{self.stop.name}'
+    #     """
+    #     return f'{self.start.name}_to_{self.stop.name}'
 
 
 @dataclasses.dataclass
-class Node(sourdough.Component):
+class Node(Component):
     """An edge in a sourdough Graph.
 
     'start' and 'stop' are the ends of the Edge. However, which value is 

@@ -1,19 +1,20 @@
 """
-workflow: sourdough workflow for manager creation and iteration
+workflow: sourdough workflow for project creation and iteration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Author (Action): creates a Hybrid instance from passed arguments and/or a 
+    Draft (Action): creates a Hybrid instance from passed arguments and/or a 
         Settings instance.
-    Publisher (Action): finalizes a Hybrid instance based upon the initial
-        construction by an Author instance and/or runtime user editing.
-    Reader (Action): executes a Hybrid instance, storing changes and results
-        in the Reader instance and/or passed data object.
+    Publish (Action): finalizes a Hybrid instance based upon the initial
+        construction by an Draft instance and/or runtime user editing.
+    Apply (Action): executes a Hybrid instance, storing changes and results
+        in the Apply instance and/or passed data object.
 
 """
 
+import abc
 import dataclasses
 import inspect
 from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
@@ -22,64 +23,93 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Author(sourdough.Action):
+class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
+    """Base class for sourdough object creators.
+    
+    Args:
+        project (sourdough.Project): the related Project instance.
+    
+    """
+    name: str = None
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+        defaults = ['draft', 'publish', 'apply'], 
+        stored_types = ('Workflow'))
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, item: object = None, **kwargs) -> object:
+        """Performs some action related to passed 'item'.
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass
+
+
+@dataclasses.dataclass
+class Draft(Workflow):
     """Constructs composite objects from user settings.
     
     Args:
-        manager (sourdough.Project): the related Project instance.
+        project (sourdough.Project): the related Project instance.
     
     """
-    manager: 'sourdough.Project' = None  
+    project: 'sourdough.Project' = None  
     
     """ Public Methods """
     
-    def perform(self, 
-            worker: 'sourdough.Manager' = None) -> 'sourdough.Manager':
-        """Drafts an Manager of a sourdough project.
+    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """Drafts a Manager of a sourdough Project.
         
         Args:
-            worker (sourdough.Manager): Manager instance to create and organize
+            worker (sourdough.Worker): Manager instance to create and organize
                 based on the information in 'settings'.
 
         Returns:
-            sourdough.Manager: an instance with contents organized.
+            sourdough.Worker: an instance with contents organized.
                 
         """
-        if worker is None:
-            worker = sourdough.Manager(name = self.manager.name)
+        # Creates an empty dict of attributes to add to 'worker'.
         attributes = {}
         # Finds and sets the 'role' of 'worker'.
-        outline = self._add_role(worker = worker)
+        worker = self._add_role(worker = worker)
         # Divides settings into different subsections.
-        component_settings, attributes = self._divide_settings(
-            settings = self.manager.settings[outline.name],
+        settings, attributes = self._divide_settings(
+            settings = self.project.settings[worker.name],
             role = worker.role) 
         # Organizes 'contents' of 'worker' according to its 'role'.
-        worker.role.organize(settings = component_settings)
+        worker.role.organize(settings = settings, project = self.project)
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
-            setattr(outline, key, value)
+            setattr(worker, key, value)
+        # Recursively calls method if other 'workers' are listed.
+        new_workers = {
+            k: v for k, v in settings.items() if k.endswith('_workers')}
+        if len(new_workers) > 0: 
+            new_workers = sourdough.utilities.listify(new_workers.values())[0]
+            for new_worker in new_workers:
+                # Checks if special prebuilt class exists.
+                try:
+                    component = self.project.component.build(key = new_worker)
+                # Otherwise uses the appropriate generic type.
+                except KeyError:
+                    component = self.project.structures['worker'](
+                        name = new_worker)
+                worker.add(self.create(worker = component))
         return worker          
 
     """ Private Methods """
 
     def _add_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Returns Role class based upon 'settings' or default option.
-        
-        Args:
-            name (str): name of Hybrid for which the role is sought.
-            
-        Returns:
-            sourdough.Role: the appropriate Role based on
-                'name' or the default option stored in 'manager'.
-        
+        """
         """ 
         key = f'{worker.name}_role'
         try:    
-            worker.role = self.manager.settings[worker.name][key]
+            worker.role = self.project.settings[worker.name][key]
         except KeyError:
             pass
-        return sourdough.Role.validate(worker = worker)
+        return self.project.role.validate(worker = worker)
 
     def _divide_settings(self,
             settings: Mapping[Any, Any],
@@ -90,17 +120,17 @@ class Author(sourdough.Action):
 
         Args:
 
-
         Returns:
             Tuple
         
         """
         component_settings = {}
         attributes = {}
+        structures = self.project.structures.keys()
         for key, value in settings.items():
-            # Stores settings related to available Component 'options' according
+            # Stores settings related to available Element 'options' according
             # to 'role'.
-            if any(key.endswith(f'_{s}s') for s in role.options.keys()):
+            if any(key.endswith(f'_{s}s') for s in structures):
                 component_settings[key] = sourdough.utilities.listify(value)
             # Stores other settings in 'attributes'.        
             elif not key.endswith('_role'):
@@ -109,18 +139,18 @@ class Author(sourdough.Action):
                 
         
 @dataclasses.dataclass
-class Publisher(sourdough.Action):
+class Publish(Workflow):
     """Finalizes a composite object from user settings.
     
     Args:
-        manager (sourdough.Project): the related Project instance.
+        project (sourdough.Project): the related Project instance.
     
     """    
-    manager: 'sourdough.Project' = None  
+    project: 'sourdough.Project' = None  
 
     """ Public Methods """
  
-    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def create(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """Finalizes a worker with 'parameters' added.
         
         Args:
@@ -138,16 +168,16 @@ class Publisher(sourdough.Action):
     """ Private Methods """
 
     def _set_parameters(self, 
-            component: 'sourdough.Component') -> 'sourdough.Component':
+            element: 'sourdough.Element') -> 'sourdough.Element':
         """
         
         """
-        if isinstance(component, sourdough.Technique):
-            return self._set_technique_parameters(technique = component)
-        elif isinstance(component, sourdough.Task):
-            return self._set_task_parameters(task = component)
+        if isinstance(element, sourdough.Technique):
+            return self._set_technique_parameters(technique = element)
+        elif isinstance(element, sourdough.Task):
+            return self._set_task_parameters(task = element)
         else:
-            return component
+            return element
     
     def _set_technique_parameters(self, 
             technique: 'sourdough.Technique') -> 'sourdough.Technique':
@@ -182,7 +212,7 @@ class Publisher(sourdough.Action):
                 'sourdough.Task']) -> Union[
                     'sourdough.Technique', 
                     'sourdough.Task']:
-        """Acquires parameters from 'settings' of 'manager'.
+        """Acquires parameters from 'settings' of 'project'.
 
         Args:
             technique (technique): an instance for parameters to be added to.
@@ -193,7 +223,7 @@ class Publisher(sourdough.Action):
         """
         key = f'{technique.name}_parameters'
         try: 
-            technique.parameters.update(self.manager.settings[key])
+            technique.parameters.update(self.project.settings[key])
         except KeyError:
             pass
         return technique
@@ -252,7 +282,7 @@ class Publisher(sourdough.Action):
             for key, value in technique.runtime.items():
                 try:
                     technique.parameters.update(
-                        {key: getattr(self.manager.settings['general'], value)})
+                        {key: getattr(self.project.settings['general'], value)})
                 except AttributeError:
                     raise AttributeError(' '.join(
                         ['no matching runtime parameter', key, 'found']))
@@ -262,11 +292,11 @@ class Publisher(sourdough.Action):
 
 
 @dataclasses.dataclass
-class Reader(sourdough.Action):
+class Apply(Workflow):
     
-    manager: 'sourdough.Project' = None  
+    project: 'sourdough.Project' = None  
     
-    def perform(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def create(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
         """[summary]
 
         Returns:
@@ -274,16 +304,16 @@ class Reader(sourdough.Action):
             
         """
         # worker.apply(tool = self._add_data_dependent)
-        # if self.manager.data is None:
+        # if self.project.data is None:
         #     worker.perform()
         # else:
-        #     self.manager.data = worker.perform(item = self.manager.data)
+        #     self.project.data = worker.perform(item = self.project.data)
         return worker
 
     """ Private Methods """
         
     def _get_data_dependent(self,
-            component: 'sourdough.Component') -> 'sourdough.Component':
+            element: 'sourdough.Element') -> 'sourdough.Element':
         """Gets parameters that are derived from data.
 
         Args:
@@ -293,12 +323,12 @@ class Reader(sourdough.Action):
             technique: instance with parameters added.
 
         """
-        if isinstance(component, sourdough.Task):
-            component.technique = self._add_data_dependent(
-                technique = component.technique)
-        elif isinstance(component, sourdough.Technique):
-            component = self._add_data_dependent(technique = component)
-        return component
+        if isinstance(element, sourdough.Task):
+            element.technique = self._add_data_dependent(
+                technique = element.technique)
+        elif isinstance(element, sourdough.Technique):
+            element = self._add_data_dependent(technique = element)
+        return element
 
     def _add_data_dependent(self,
             technique: 'sourdough.Technique') -> 'sourdough.Technique':
@@ -315,7 +345,7 @@ class Reader(sourdough.Action):
             for key, value in technique.data_dependent.items():
                 try:
                     technique.parameters.update(
-                        {key: getattr(self.manager.data, value)})
+                        {key: getattr(self.project.data, value)})
                 except KeyError:
                     print('no matching parameter found for', key, 'in data')
         except (AttributeError, TypeError):

@@ -5,96 +5,46 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (Hybrid): creates a project using stored Action subclass instances.
+    Project (Hybrid): creates a project using stored Component subclass instances.
 
 """
 
-import abc
+import collections.abc
 import dataclasses
+import inspect
 import pathlib
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import warnings
 
 import sourdough
 
-
-@dataclasses.dataclass
-class ComponentsMixin(sourdough.Action, abc.ABC):
-    """Mixin which stores subclasses in a 'components' class attribute.
-
-    Args:
-        components (ClassVar[sourdough.Inventory]): the instance which stores 
-            subclass in a Inventory instance.
-
-    Namespaces: 'components', 'register_from_disk', 'build', 
-        'find_subclasses', '_import_from_path', '_get_subclasse'
-    
-    """
-    components: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'components'.
-        if not hasattr(super(), 'components') and issubclass(sourdough.Action):
-            cls.components[cls.get_name()] = cls
-                
-    """ Public Methods """
-    
-    def build(self, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'components'.
-
-        Args:
-            key (str): name matching a key in 'components' for which the value
-                is sought.
-
-        Raises:
-            TypeError: if 'key' is neither a str nor Sequence type.
-            
-        Returns:
-            Any: instance(s) of a stored class(es) with kwargs passed as 
-                arguments.
-            
-        """
-        if isinstance(key, str):
-            return self.components.create(key = key, **kwargs)
-        elif isinstance(key, Sequence):
-            instances = []
-            for item in key:
-                instances.append(self.components.create(name = item, **kwargs))
-            return instances
-        else:
-            raise TypeError('key must be a str or list type')    
- 
  
 @dataclasses.dataclass
-class Project(sourdough.OptionsMixin, sourdough.Worker):
-    """Constructs, organizes, and stores tree Workers and Actions.
+class Project(sourdough.Element, collections.abc.Iterable):
+    """Constructs, organizes, and implements a sourdough project.
     
-    A Manager inherits all of the differences between a Hybrid and a python
-    list.
+    A Project inherits all of the differences between a Worker and a Hybrid.
 
-    A Manager differs from a Hybrid in 5 significant ways:
+    A Project differs from a Worker in 5 significant ways:
         1) The Manager is the public interface to composite object construction 
             and application. It may store the composite object instance(s) as 
             well as any required classes (such as those stored in the 'data' 
             attribute). This includes Settings and Filer, stored in the 
             'settings' and 'filer' attributes, respectively.
-        2) Manager stores Action subclass instances in 'contents'. Those 
+        2) Manager stores Component subclass instances in 'contents'. Those 
             instances are used to assemble and apply the parts of Hybrid 
             instances.
         3) Manager includes an 'automatic' attribute which can be set to perform
             all of its methods if all of the necessary arguments are passed.
         4) It has an OptionsMixin, which contains a Catalog instance storing
-            default Action instances in 'options'.
+            default Component instances in 'options'.
         5)
         
     Args:
-        contents (Sequence[Union[sourdough.Action, str]]]): list of 
-            Action subclass instances or strings which correspond to keys in 
+        contents (Sequence[Union[sourdough.Component, str]]]): list of 
+            Component subclass instances or strings which correspond to keys in 
             'options'. Defaults to 'default', which will use the 'defaults' 
-            attribute of 'options' to select Action instances.
+            attribute of 'options' to select Component instances.
         name (str): roleates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -129,7 +79,7 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
         roles (ClassVar[sourdough.Catalog]): a class attribute storing
             composite role options.            
         options (ClassVar[sourdough.Catalog]): a class attribute storing
-            components of a composite role.
+            elements of a composite role.
     
     Attributes:
         manager (sourdough.Worker): the iterable composite object created by
@@ -142,17 +92,23 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
             has been implemented. It is set by the 'advance' method.
             
     """
-    contents: Sequence['sourdough.Action'] = dataclasses.field(
-        default_factory = list)
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    role: Union['sourdough.Role', str] = 'creator'
+    manager: 'sourdough.Manager' = sourdough.Manager
+    workflow: Union[
+        'sourdough.Workflow',
+        Sequence['sourdough.Workflow'],
+        Sequence[str]] = sourdough.Workflow
+    role: 'sourdough.Role' = sourdough.Role
+    component: 'sourdough.Component' = sourdough.Component
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    manager: 'sourdough.Worker' = sourdough.Manager
-    components: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    structures: ClassVar[Mapping[str, sourdough.Component]] = {
+        'worker': sourdough.Worker, 
+        'task': sourdough.Task, 
+        'technique': sourdough.Technique}
 
     """ Initialization Methods """
 
@@ -164,74 +120,113 @@ class Project(sourdough.OptionsMixin, sourdough.Worker):
         warnings.filterwarnings('ignore')
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._set_identification()
-        # Validates or creates a 'Settings' instance.
-        self.settings = sourdough.Settings(contents = self.settings)
+        # Validates various attributes or converts them to the proper type.
+        attributes = [
+            'settings', 
+            'filer', 
+            'workflow', 
+            'role', 
+            'manager', 
+            'component']
+        for attribute in attributes :
+            getattr(self, f'_validate_{attribute}')()
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
-        # Validates or creates a Filer' instance.
-        self.filer = sourdough.Filer(
-            root_folder = self.filer, 
-            settings = self.settings)
-        # Initializes project manager.
-        self._initialize_manager()
-        # Initializes Action instances stored in 'contents'.
-        self.contents = self._initialize_contents(contents = self.contents)
         # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
             self.manager = self._auto_contents(manager = self.manager)
-        
+
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        return iter(self.workflow)
+
     """ Private Methods """
 
     def _set_identification(self) -> None:
         """Sets unique 'identification' str based upon date and time."""
         return sourdough.utilities.datetime_string(prefix = self.name)
     
-    def _initialize_manager(self) -> None:
+    def _validate_settings(self) -> None:
+        """Validates 'settings' or converts it to a Settings instance."""
+        if not isinstance(self.settings, sourdough.Settings):
+            self.settings = sourdough.Settings(contents = self.settings)
+        return self
+
+    def _validate_filer(self) -> None:
+        """Validates 'filer' or converts it to a Filer instance."""
+        if not isinstance(self.filer, sourdough.Filer):
+            self.filer = sourdough.Filer(
+                root_folder = self.filer, 
+                settings = self.settings)
+        return self
+
+    def _validate_workflow(self) -> None:
+        """Validates 'workflow' or converts it to a list of Workflow subclasses.
+        """
+        if (inspect.isclass(self.workflow) 
+                and (issubclass(self.workflow, sourdough.Workflow)
+                     or self.workflow == sourdough.Workflow)):
+            workflow = self.workflow.registry['default']
+            new_workflow = []
+            for item in workflow:
+                new_workflow.append(item(project = self))
+            self.workflow = new_workflow
+        elif (isinstance(self.workflow, Sequence) 
+                and all(isinstance(w, str) for w in self.workflow)):
+            new_workflow = []
+            for item in self.workflow:
+                new_workflow.append(
+                    sourdough.Workflow.build(item, project = self))
+        elif not (isinstance(self.workflow, Sequence) 
+                and all(isinstance(w, sourdough.Workflow) 
+                    for w in self.workflow)):
+            raise TypeError('workflow must be Workflow or its subclass')
+
+    def _validate_role(self) -> None:
+        """Validates 'role' as Role or its subclass."""
+        if not (inspect.isclass(self.role) 
+                and (issubclass(self.role, sourdough.Role)
+                     or self.Role == sourdough.Role)):
+            raise TypeError('role must be Role or its subclass')
+
+    def _validate_manager(self) -> None:
         """Initializes a Manager instance for the 'manager' attribute."""
-        try:
+        if (inspect.isclass(self.manager) 
+                and (issubclass(self.manager, sourdough.Manager)
+                     or self.manager == sourdough.Manager)):
             self.manager = self.manager(
                 name = self.name,
-                identification = self.identification)
-        except TypeError:
-            if not isinstance(self.manager, sourdough.Manager):
-                raise TypeError('manager must be a Manager type')
+                identification = self.identification,
+                data = self.data)
+        elif not isinstance(self.manager, sourdough.Manager):
+            raise TypeError('manager must be a Manager type')
         return self
-    
-    def _initialize_contents(self, 
-            contents: Sequence['sourdough.Action']) -> Sequence[
-                'sourdough.Action']:
-        """Instances each Action in 'contents'.
-        
-        Args:
-            contents (Sequence[sourdough.Action]): list of Action classes.
-        
-        Returns:
-            Sequence[sourdough.Action]: list of Action classes.
-        
-        """
-        if not contents:
-            contents = self.role.options['default']
-        new_contents = []
-        for creator in contents:
-            new_contents.append(creator(manager = self))
-        return new_contents   
+
+    def _validate_component(self) -> None:
+        """Validates 'component' as Component or its subclass."""
+        if not (inspect.isclass(self.component) 
+                and (issubclass(self.component, sourdough.Component)
+                     or self.Role == sourdough.Component)):
+            raise TypeError('component must be Component or its subclass')
                      
-    def _auto_contents(self, manager: 'sourdough.Worker') -> 'sourdough.Worker':
-        """Automatically advances through and iterates stored Action instances.
+    def _auto_contents(self, 
+            manager: 'sourdough.Manager') -> 'sourdough.Manager':
+        """Advances through the stored Workflow instances.
 
         Args:
-            manager (sourdough.Worker): an instance containing any data for the 
-                worker methods to be applied to.
+            manager (sourdough.Manager): an instance containing a composite
+                object.
                 
         Returns:
-            sourdough.Worker: modified by the stored Action instance's 'perform' 
-                methods.
+            sourdough.Manager: a composite object accessed and possibly modified
+                by the stored Workflow instances.
             
         """
         for stage in self:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
-            manager = stage.perform(worker = manager)
+            manager = stage.create(worker = manager)
             print('test manager', manager.contents)
             # print('test stage overview', manager.overview)
         return manager

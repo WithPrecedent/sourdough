@@ -19,7 +19,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Worker(sourdough.Hybrid):
+class Worker(sourdough.Hybrid, sourdough.Component):
     """A lightweight container for describing a portion of a sourdough project.
 
     Worker inherits all of the differences between a Hybrid and a python list.
@@ -66,7 +66,9 @@ class Worker(sourdough.Hybrid):
         default_factory = list)
     role: Union['sourdough.Role', str] = 'obey'
     name: str = None
-      
+    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+        stored_types = ('Worker'))
+          
     """ Properties """
     
     @property
@@ -78,7 +80,69 @@ class Worker(sourdough.Hybrid):
         
         """
         return sourdough.Overview(worker = self)
+    
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Union[
+                Tuple[str, str],
+                'sourdough.Task',
+                'Worker',
+                Sequence[Union[
+                    Tuple[str, str],
+                    'sourdough.Task',
+                    'Worker']]]) -> Sequence[Union[
+                        'sourdough.Task', 
+                        'Worker']]:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Args:
 
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+
+                
+        """
+        new_contents = []
+        if isinstance(contents, (tuple, sourdough.Task, Worker)):
+            new_contents = [contents]
+        elif isinstance(contents, Sequence):
+            for item in contents:
+                if (isinstance(item, tuple)
+                        and len(item) == 2
+                        and all(isinstance(item, str) for i in item)):
+                    new_contents.append(
+                        sourdough.Task(name = item[0], technique = item[1]))
+                elif isinstance(item, (sourdough.Task, Worker)):
+                    new_contents.append(item)
+                else:
+                    raise TypeError(
+                        'contents must be a list containing Task instances, '
+                        'Worker instances, or Tuples of two str types')
+        else:
+            raise TypeError('contents must be a list')
+        return new_contents
+
+    def add(self, 
+            contents: Union[
+                Tuple[str, str],
+                'sourdough.Task',
+                'Worker',
+                Sequence[Union[
+                    Tuple[str, str],
+                    'sourdough.Task',
+                    'Worker']]]) -> None:
+        """Extends 'contents' argument to 'contents' attribute.
+        
+        Args:
+
+        """
+        super().add(contents = contents)
+        return self    
+  
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
@@ -139,67 +203,6 @@ class Manager(Worker):
         default_factory = list)
     role: Union['sourdough.Role', str] = 'obey'
     identification: str = None
+    data: object = None
     name: str = None
-    
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Union[
-                Tuple[str, str],
-                'sourdough.Task',
-                'Worker',
-                Sequence[Union[
-                    Tuple[str, str],
-                    'sourdough.Task',
-                    'Worker']]]) -> Sequence[Union[
-                        'sourdough.Task', 
-                        'Worker']]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-
                 
-        """
-        new_contents = []
-        if isinstance(contents, (Tuple[str, str], sourdough.Task, Worker)):
-            new_contents = [contents]
-        elif isinstance(contents, Sequence):
-            for item in contents:
-                if (isinstance(item, Tuple)
-                        and len(item) == 2
-                        and all(isinstance(item, str) for i in item)):
-                    new_contents.append(
-                        sourdough.Task(name = item[0], technique = item[1]))
-                elif isinstance(item, (sourdough.Task, Worker)):
-                    new_contents.append(item)
-                else:
-                    raise TypeError(
-                        'contents must be a list containing Task instances, '
-                        'Worker instances, or Tuples of two str types')
-        else:
-            raise TypeError('contents must be a list')
-        return new_contents
-
-    def add(self, 
-            contents: Union[
-                Tuple[str, str],
-                'sourdough.Task',
-                'Worker',
-                Sequence[Union[
-                    Tuple[str, str],
-                    'sourdough.Task',
-                    'Worker']]]) -> None:
-        """Extends 'contents' argument to 'contents' attribute.
-        
-        Args:
-
-        """
-        super().add(contents = contents)
-        return self    
-              
