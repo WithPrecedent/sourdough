@@ -88,6 +88,7 @@ class Draft(Workflow):
             k: v for k, v in settings.items() if k.endswith('_workers')}
         if len(new_workers) > 0: 
             new_workers = sourdough.utilities.listify(new_workers.values())[0]
+            print('test new workers', new_workers)
             for new_worker in new_workers:
                 # Checks if special prebuilt class exists.
                 try:
@@ -112,16 +113,16 @@ class Draft(Workflow):
         return self.project.role.validate(worker = worker)
 
     def _divide_settings(self,
-            settings: Mapping[Any, Any],
-            role: 'sourdough.Role') -> Tuple[
+            settings: Mapping[Any, Any]) -> Tuple[
                 Mapping[Any, Any],
                 Mapping[Any, Any]]:
-        """
+        """Divides 'settings' into component and attribute related settings.
 
         Args:
-
+            settings (Mapping[Any, Any]):
+            
         Returns:
-            Tuple
+            Tuple[Mapping[Any, Any], Mapping[Any, Any]]:
         
         """
         component_settings = {}
