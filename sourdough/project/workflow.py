@@ -23,7 +23,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
+class Workflow(sourdough.RegistryMixin, abc.ABC):
     """Base class for sourdough object creators.
     
     Args:
@@ -150,34 +150,48 @@ class Publish(Workflow):
 
     """ Public Methods """
  
-    def create(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """Finalizes a worker with 'parameters' added.
         
         Args:
-            worker (sourdough.Hybrid): Hybrid instance to finalize the objects in
+            worker (sourdough.Worker): instance to finalize the objects in
                 its 'contents'.
 
         Returns:
-            sourdough.Hybrid: an instance with its 'contents' finalized and
+            sourdough.Worker: an instance with its 'contents' finalized and
                 ready for application.
                 
         """
+        worker.apply(tool = self._get_techniques)
         worker.apply(tool = self._set_parameters)
         return worker
 
     """ Private Methods """
-
-    def _set_parameters(self, 
-            element: 'sourdough.Element') -> 'sourdough.Element':
+    
+    def _get_algorithms(self, 
+            component: 'sourdough.Component') -> 'sourdough.Component':
         """
         
         """
-        if isinstance(element, sourdough.Technique):
-            return self._set_technique_parameters(technique = element)
-        elif isinstance(element, sourdough.Task):
-            return self._set_task_parameters(task = element)
+        if isinstance(component, sourdough.Technique):
+            component.algorithm = self.project.component.registry[
+                component.algorithm]
+        elif isinstance(component, sourdough.Task):
+            component.technique.algorithm = self.project.component.registry[
+                component.technique.algorithm]
+        return component   
+    
+    def _set_parameters(self, 
+            component: 'sourdough.Component') -> 'sourdough.Component':
+        """
+        
+        """
+        if isinstance(component, sourdough.Technique):
+            return self._set_technique_parameters(technique = component)
+        elif isinstance(component, sourdough.Task):
+            return self._set_task_parameters(task = component)
         else:
-            return element
+            return component
     
     def _set_technique_parameters(self, 
             technique: 'sourdough.Technique') -> 'sourdough.Technique':
@@ -185,11 +199,7 @@ class Publish(Workflow):
         
         """
         if technique.name not in ['none', None, 'None']:
-            parameter_types = ['settings', 'selected', 'required', 'runtime']
-            # Iterates through types of 'parameter_types'.
-            for parameter_type in parameter_types:
-                technique = getattr(self, f'_get_{parameter_type}')(
-                    technique = technique)
+            technique = self._get_settings(technique = technique)
         return technique
     
     def _set_task_parameters(self, task: 'sourdough.Task') -> 'sourdough.Task':
@@ -228,127 +238,42 @@ class Publish(Workflow):
             pass
         return technique
 
-    def _get_selected(self,
-            technique: 'sourdough.Technique') -> 'sourdough.Technique':
-        """Limits parameters to those appropriate to the technique.
-
-        Args:
-            technique (technique): an instance for parameters to be selected.
-
-        Returns:
-            technique: instance with parameters selected.
-
-        """
-        if technique.selected:
-            new_parameters = {}
-            for key, value in technique.parameters.items():
-                if key in technique.selected:
-                    new_parameters[key] = value
-            technique.parameters = new_parameters
-        return technique
-
-    def _get_required(self,
-            technique: 'sourdough.Technique') -> 'sourdough.Technique':
-        """Adds required parameters (mandatory additions) to 'parameters'.
-
-        Args:
-            technique (technique): an instance for parameters to be added to.
-
-        Returns:
-            technique: instance with parameters added.
-
-        """
-        try:
-            technique.parameters.update(technique.required)
-        except TypeError:
-            pass
-        return technique
-
-    def _get_runtime(self,
-            technique: 'sourdough.Technique') -> 'sourdough.Technique':
-        """Adds parameters that are determined at runtime.
-
-        The primary example of a runtime parameter throughout sourdough is the
-        addition of a random seed for a consistent, replicable state.
-
-        Args:
-            technique (technique): an instance for parameters to be added to.
-
-        Returns:
-            technique: instance with parameters added.
-
-        """
-        try:
-            for key, value in technique.runtime.items():
-                try:
-                    technique.parameters.update(
-                        {key: getattr(self.project.settings['general'], value)})
-                except AttributeError:
-                    raise AttributeError(' '.join(
-                        ['no matching runtime parameter', key, 'found']))
-        except (AttributeError, TypeError):
-            pass
-        return technique
-
 
 @dataclasses.dataclass
 class Apply(Workflow):
     
     project: 'sourdough.Project' = None  
     
-    def create(self, worker: 'sourdough.Hybrid') -> 'sourdough.Hybrid':
+    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """[summary]
 
         Returns:
             [type] -- [description]
             
         """
-        # worker.apply(tool = self._add_data_dependent)
-        # if self.project.data is None:
-        #     worker.perform()
-        # else:
-        #     self.project.data = worker.perform(item = self.project.data)
+        new_contents = []
+        for item in worker:
+            if isinstance(item, sourdough.Worker):
+                instance = self.create(worker = item)
+            else:
+                instance = item.perform(data = self.project.data)
+            instance.role.finalize()
+            new_contents.append(instance)
+        worker.contents = new_contents
         return worker
 
     """ Private Methods """
         
-    def _get_data_dependent(self,
-            element: 'sourdough.Element') -> 'sourdough.Element':
-        """Gets parameters that are derived from data.
-
-        Args:
-            technique (technique): an instance for parameters to be added to.
-
-        Returns:
-            technique: instance with parameters added.
-
+    def _get_algorithms(self, 
+            component: 'sourdough.Component') -> 'sourdough.Component':
         """
-        if isinstance(element, sourdough.Task):
-            element.technique = self._add_data_dependent(
-                technique = element.technique)
-        elif isinstance(element, sourdough.Technique):
-            element = self._add_data_dependent(technique = element)
-        return element
-
-    def _add_data_dependent(self,
-            technique: 'sourdough.Technique') -> 'sourdough.Technique':
-        """Adds parameters that are derived from data.
-
-        Args:
-            technique (technique): an instance for parameters to be added to.
-
-        Returns:
-            technique: instance with parameters added.
-
+        
         """
-        try:
-            for key, value in technique.data_dependent.items():
-                try:
-                    technique.parameters.update(
-                        {key: getattr(self.project.data, value)})
-                except KeyError:
-                    print('no matching parameter found for', key, 'in data')
-        except (AttributeError, TypeError):
-            pass
-        return technique
-    
+        if isinstance(component, sourdough.Technique):
+            component.algorithm = self.project.component.registry[
+                component.algorithm]
+        elif isinstance(component, sourdough.Task):
+            component.technique.algorithm = self.project.component.registry[
+                component.technique.algorithm]
+        return component   
+        

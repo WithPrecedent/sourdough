@@ -56,7 +56,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
            
     
 @dataclasses.dataclass
-class Technique(sourdough.Action, Component):
+class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'algorithm' and 'parameters' attributes are combined at the last moment
@@ -82,12 +82,9 @@ class Technique(sourdough.Action, Component):
             
     """
     algorithm: object = None
+    modules: str = 'sourdough'
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
-    selected: Sequence[str] = None
-    required: Mapping[Any, str] = None
-    runtime: Mapping[Any, str] = None
-    data_dependent: Mapping[Any, str] = None
     
     """ Public Methods """
     

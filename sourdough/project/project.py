@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (Hybrid): creates a project using stored Component subclass instances.
+    Project (Hybrid): interface for sourdough projects.
 
 """
 
@@ -197,8 +197,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
                      or self.manager == sourdough.Manager)):
             self.manager = self.manager(
                 name = self.name,
-                identification = self.identification,
-                data = self.data)
+                identification = self.identification)
         elif not isinstance(self.manager, sourdough.Manager):
             raise TypeError('manager must be a Manager type')
         return self

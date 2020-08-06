@@ -216,8 +216,8 @@ class Obey(Role):
                         project = project)
         return self
     
-    def iterate(self) -> Iterable:
-        return itertools.chain(self.worker.contents)
+    def finalize(self) -> None:
+        pass
     
          
 @dataclasses.dataclass
@@ -266,8 +266,8 @@ class Study(Role):
                         project = project)
         return self
     
-    def iterate(self) -> Iterable:
-        return itertools.chain.from_iterable(self.worker.contents)
+    def finalize(self) -> None:
+        pass
 
 
 @dataclasses.dataclass
@@ -317,8 +317,8 @@ class Survey(Role):
                         project = project)
         return self
     
-    def iterate(self) -> Iterable:
-        return itertools.chain(self.worker.contents)
+    def finalize(self) -> None:
+        pass
 
 
 

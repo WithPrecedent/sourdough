@@ -288,7 +288,7 @@ class LoaderMixin(abc.ABC):
     
     """ Public Methods """
 
-    def load(self, key: str) -> object:
+    def load(self, key: str, check_attributes: bool = False) -> object:
         """Returns object named by 'key'.
 
         Args:
@@ -302,8 +302,13 @@ class LoaderMixin(abc.ABC):
         if key in self._loaded:
             imported = self._loaded[key]
         else:
+            if check_attributes:
+                try:
+                    key = getattr(self, key)
+                except AttributeError:
+                    pass
             imported = None
-            for module in self.modules:
+            for module in sourdough.utilities.listify(self.modules):
                 try:
                     imported = sourdough.utilities.importify(
                         module = module, 
