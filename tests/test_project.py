@@ -26,6 +26,51 @@ class Search(sourdough.Task):
         return   
 
 
+@dataclasses.dataclass
+class Slice(sourdough.Technique):
+
+    def perform(self):
+        return  
+
+
+@dataclasses.dataclass
+class Dice(sourdough.Technique):
+
+    def perform(self):
+        return 
+    
+    
+@dataclasses.dataclass
+class Find(sourdough.Technique):
+
+    def perform(self):
+        return 
+
+    
+@dataclasses.dataclass
+class Locate(sourdough.Technique):
+
+    def perform(self):
+        return 
+
+    
+@dataclasses.dataclass
+class Explode(sourdough.Technique):
+
+    def perform(self):
+        return 
+
+    
+@dataclasses.dataclass
+class Dynamite(sourdough.Technique):
+    
+    name: str = 'annihilate'
+
+    def perform(self):
+        return 
+    
+
+
 def test_project():
     assert 'parser' in sourdough.Component.registry
     project = sourdough.Project(

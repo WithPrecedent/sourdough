@@ -168,19 +168,28 @@ class Publish(Workflow):
 
     """ Private Methods """
     
-    def _get_algorithms(self, 
-            component: 'sourdough.Component') -> 'sourdough.Component':
+    def _get_techniques(self, 
+            component: 'sourdough.Component',
+            **kwargs) -> 'sourdough.Component':
         """
         
         """
         if isinstance(component, sourdough.Technique):
-            component.algorithm = self.project.component.registry[
-                component.algorithm]
+            component = self._get_technique(technique = component, **kwargs)
         elif isinstance(component, sourdough.Task):
-            component.technique.algorithm = self.project.component.registry[
-                component.technique.algorithm]
+            component.technique = self._get_technique(
+                technique = component.technique,
+                **kwargs)
         return component   
-    
+
+    def _get_technique(self, 
+            technique: 'sourdough.Technique',
+            **kwargs) -> 'sourdough.Technique':
+        """
+        
+        """
+        return self.project.component.build(technique, **kwargs)
+       
     def _set_parameters(self, 
             component: 'sourdough.Component') -> 'sourdough.Component':
         """
@@ -209,7 +218,7 @@ class Publish(Workflow):
         if task.technique.name not in ['none', None, 'None']:
             task = self._get_settings(technique = task)
             try:
-                task._set_conditional_parameters()
+                task.set_conditional_parameters()
             except AttributeError:
                 pass
             task.technique = self._set_technique_parameters(

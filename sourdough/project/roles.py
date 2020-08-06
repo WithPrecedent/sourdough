@@ -146,14 +146,16 @@ class Role(
         """
         # Checks if special prebuilt class exists.
         if key in project.component.registry:
+            print('test wrapped', wrapped)
             for item in wrapped:
-                kwargs.update({generic.wraps: item})
+                print('test item in wrapped', item)
+                kwargs.update({generic.wraps: key})
                 component = project.component.build(key = key, **kwargs)
                 self.worker.add(component) 
         # Otherwise uses the appropriate generic type.
         else:
             for item in wrapped:
-                kwargs.update({'name': key, generic.wraps: item})
+                kwargs.update({'name': key, generic.wraps: key})
                 self.worker.add(generic(**kwargs)) 
         return self   
 
@@ -202,6 +204,8 @@ class Obey(Role):
             prefix, suffix = self._divide_key(key = key)
             generic = project.structures[suffix]
             for item in value:
+                print('test value in organize', value)
+                print('test item in organize', item)
                 if generic.wraps:
                     wrapped.append(generic.wraps)
                     self._build_wrapper(
