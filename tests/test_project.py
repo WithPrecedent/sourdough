@@ -1,5 +1,5 @@
 """
-test_manager: tests Project class and created composite objects
+test_project: tests Project class and created composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -26,7 +26,7 @@ class Search(sourdough.Task):
         return   
 
 
-def test_manager():
+def test_project():
     assert 'parser' in sourdough.Component.registry
     project = sourdough.Project(
         name = 'cool_project',
@@ -99,4 +99,4 @@ def test_manager():
 #     return
 
 if __name__ == '__main__':
-    test_manager()
+    test_project()

@@ -51,13 +51,12 @@ class Role(
     def organize(self, 
             settings: Mapping[Any, Any], 
             project: 'sourdough.Project') -> None:
-        """Subclasses must provide their own methods."""
-
-    @abc.abstractmethod
-    def iterate(self) -> Iterable:
-        """Subclasses must provide their own methods."""
         pass
  
+    @abc.abstractmethod
+    def finalize(self) -> None:
+        pass
+    
     """ Class Methods """
 
     @classmethod
@@ -87,32 +86,12 @@ class Role(
             raise TypeError(
                 f'The role attribute of worker must be a str or {cls} type')
         return worker
-  
-    """ Public Methods """
-           
-    def finalize(self) -> None:
-        pass
-        
-    # def __next__(self) -> Union[Callable, 'sourdough.Component']:
-    #     """Returns next method after method matching 'item'.
-        
-    #     Returns:
-    #         Callable: next method corresponding to those listed in 'registry'.
-            
-    #     """
-    #     if self.index < len(self.worker.contents):
-    #         self.index += 1
-    #         if isinstance(self.worker[self.index], sourdough.Action):
-    #             return self.worker[self.index].perform
-    #         else:
-    #             return self.worker[self.index]
-    #     else:
-    #         raise StopIteration()
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        return self.iterate()
+        return itertools.chain.from_iterable(self.worker.contents)
+    
     """ Private Methods """
     
     def _get_structures(self, 
@@ -134,6 +113,19 @@ class Role(
             structures[key] = {
                 k: v for k, v in settings.items() if k.endswith(suffix)} 
         return structures
+
+    def _divide_key(self, key: str) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            Tuple[str, str]: [description]
+        """
+        suffix = key.split('_')[-1][:-1]
+        prefix = key[:-len(suffix) - 2]
+        return prefix, suffix
     
     def _build_wrapper(self,
             key: str, 
@@ -181,23 +173,10 @@ class Role(
             component = generic(**kwargs)
         self.worker.add(component)
         return self  
-
-    def _divide_key(self, key: str) -> Tuple[str, str]:
-        """[summary]
-
-        Args:
-            key (str): [description]
-
-        Returns:
-            Tuple[str, str]: [description]
-        """
-        suffix = key.split('_')[-1][:-1]
-        prefix = key[:-len(suffix) - 2]
-        return prefix, suffix
           
       
 @dataclasses.dataclass
-class Obey(sourdough.OptionsMixin, Role):
+class Obey(Role):
     
     worker: 'sourdough.Worker' = None
     name: str = None
@@ -242,7 +221,7 @@ class Obey(sourdough.OptionsMixin, Role):
     
          
 @dataclasses.dataclass
-class Study(sourdough.OptionsMixin, Role):
+class Study(Role):
     
     worker: 'sourdough.Worker' = None
     name: str = None 
@@ -288,19 +267,11 @@ class Study(sourdough.OptionsMixin, Role):
         return self
     
     def iterate(self) -> Iterable:
-        return itertools.chain(self.worker.contents)
-        
-    def _iterable(self, *args) -> Tuple[str, str]:
-        pools = [tuple(pool) for pool in args]
-        result = [[]]
-        for pool in pools:
-            result = [x + [y] for x in result for y in pool]
-        for product in result:
-            yield tuple(product)
+        return itertools.chain.from_iterable(self.worker.contents)
 
 
 @dataclasses.dataclass
-class Survey(sourdough.OptionsMixin, Role):
+class Survey(Role):
     
     name: str = None
     worker: 'sourdough.Worker' = None
@@ -348,6 +319,8 @@ class Survey(sourdough.OptionsMixin, Role):
     
     def iterate(self) -> Iterable:
         return itertools.chain(self.worker.contents)
+
+
 
 # @dataclasses.dataclass
 # class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):

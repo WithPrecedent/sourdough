@@ -72,22 +72,21 @@ class Draft(Workflow):
         """
         # Creates an empty dict of attributes to add to 'worker'.
         attributes = {}
-        # Finds and sets the 'role' of 'worker'.
-        worker = self._add_role(worker = worker)
         # Divides settings into different subsections.
-        settings, attributes = self._divide_settings(
-            settings = self.project.settings[worker.name],
-            role = worker.role) 
+        worker_settings, component_settings, attributes = self._divide_settings(
+            settings = self.project.settings[worker.name]) 
+        # Finds and sets the 'role' of 'worker'.
+        worker = self._validate_role(worker = worker)
         # Organizes 'contents' of 'worker' according to its 'role'.
-        worker.role.organize(settings = settings, project = self.project)
+        worker.role.organize(
+            settings = component_settings, 
+            project = self.project)
         # Adds an extra settings as attributes to worker.
         for key, value in attributes.items():
             setattr(worker, key, value)
         # Recursively calls method if other 'workers' are listed.
-        new_workers = {
-            k: v for k, v in settings.items() if k.endswith('_workers')}
-        if len(new_workers) > 0: 
-            new_workers = sourdough.utilities.listify(new_workers.values())[0]
+        if len(worker_settings) > 0: 
+            new_workers = list(worker_settings.values())[0]
             print('test new workers', new_workers)
             for new_worker in new_workers:
                 # Checks if special prebuilt class exists.
@@ -102,16 +101,6 @@ class Draft(Workflow):
 
     """ Private Methods """
 
-    def _add_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """
-        """ 
-        key = f'{worker.name}_role'
-        try:    
-            worker.role = self.project.settings[worker.name][key]
-        except KeyError:
-            pass
-        return self.project.role.validate(worker = worker)
-
     def _divide_settings(self,
             settings: Mapping[Any, Any]) -> Tuple[
                 Mapping[Any, Any],
@@ -125,18 +114,28 @@ class Draft(Workflow):
             Tuple[Mapping[Any, Any], Mapping[Any, Any]]:
         
         """
+        worker_settings = {}
         component_settings = {}
         attributes = {}
         structures = self.project.structures.keys()
         for key, value in settings.items():
-            # Stores settings related to available Element 'options' according
-            # to 'role'.
-            if any(key.endswith(f'_{s}s') for s in structures):
-                component_settings[key] = sourdough.utilities.listify(value)
-            # Stores other settings in 'attributes'.        
+            if key.endswith('_workers'):
+                worker_settings[key] = sourdough.utilities.listify(value)
+            elif any(key.endswith(f'_{s}s') for s in structures):
+                component_settings[key] = sourdough.utilities.listify(value)       
             elif not key.endswith('_role'):
                 attributes[key] = value
-        return component_settings, attributes
+        return worker_settings, component_settings, attributes
+    
+    def _validate_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """
+        """ 
+        key = f'{worker.name}_role'
+        try:    
+            worker.role = self.project.settings[worker.name][key]
+        except KeyError:
+            pass
+        return self.project.role.validate(worker = worker)
                 
         
 @dataclasses.dataclass

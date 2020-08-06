@@ -101,7 +101,8 @@ class RegistryMixin(abc.ABC):
         if not hasattr(cls, '_registry_base'):
             cls._registry_base = cls
         if not (hasattr(super(), 'registry') or cls == cls._registry_base):
-            cls._registry_base.registry[cls.get_name()] = cls
+            name = sourdough.utilities.snakify(cls.__name__)
+            cls._registry_base.registry[name] = cls
 
     # def __post_init__(self) -> None:
     #     """Initializes class instance attributes."""
