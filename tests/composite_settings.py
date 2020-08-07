@@ -10,7 +10,7 @@ settings = {
         'cool_project_workers': ['parser', 'munger'],
         'cool_project_role': 'obey'},
     'parser': {
-        'parser_role': 'study',
+        'parser_role': 'compare',
         'parser_tasks': ['divide'],
         'divide_techniques': ['slice', 'dice']},
     'munger': {

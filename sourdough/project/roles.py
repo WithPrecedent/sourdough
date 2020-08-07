@@ -149,13 +149,13 @@ class Role(
             print('test wrapped', wrapped)
             for item in wrapped:
                 print('test item in wrapped', item)
-                kwargs.update({generic.wraps: key})
+                kwargs.update({generic.contains: key})
                 component = project.component.build(key = key, **kwargs)
                 self.worker.add(component) 
         # Otherwise uses the appropriate generic type.
         else:
             for item in wrapped:
-                kwargs.update({'name': key, generic.wraps: key})
+                kwargs.update({'name': key, generic.contains: key})
                 self.worker.add(generic(**kwargs)) 
         return self   
 
@@ -206,12 +206,12 @@ class Obey(Role):
             for item in value:
                 print('test value in organize', value)
                 print('test item in organize', item)
-                if generic.wraps:
-                    wrapped.append(generic.wraps)
+                if generic.contains:
+                    wrapped.append(generic.contains)
                     self._build_wrapper(
                         key = item,
                         generic = generic,
-                        wrapped = structures[generic.wraps],
+                        wrapped = structures[generic.contains],
                         project = project)
                 elif suffix not in wrapped:
                     self._build_component(
@@ -225,7 +225,7 @@ class Obey(Role):
     
          
 @dataclasses.dataclass
-class Study(Role):
+class Compare(Role):
     
     worker: 'sourdough.Worker' = None
     name: str = None 
@@ -256,12 +256,12 @@ class Study(Role):
             prefix, suffix = self._divide_key(key = key)
             generic = project.structures[suffix]
             for item in value:
-                if generic.wraps:
-                    wrapped.append(generic.wraps)
+                if generic.contains:
+                    wrapped.append(generic.contains)
                     self._build_wrapper(
                         key = item,
                         generic = generic,
-                        wrapped = structures[generic.wraps],
+                        wrapped = structures[generic.contains],
                         project = project)
                 elif suffix not in wrapped:
                     self._build_component(
@@ -307,12 +307,12 @@ class Survey(Role):
             prefix, suffix = self._divide_key(key = key)
             generic = project.structures[suffix]
             for item in value:
-                if generic.wraps:
-                    wrapped.append(generic.wraps)
+                if generic.contains:
+                    wrapped.append(generic.contains)
                     self._build_wrapper(
                         key = item,
                         generic = generic,
-                        wrapped = structures[generic.wraps],
+                        wrapped = structures[generic.contains],
                         project = project)
                 elif suffix not in wrapped:
                     self._build_component(
@@ -337,7 +337,7 @@ class Survey(Role):
     
 
 # @dataclasses.dataclass
-# class Study(LazyIterator):
+# class Compare(LazyIterator):
     
     
 #     def generator(self, *args) -> sourdough.Action:

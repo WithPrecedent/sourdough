@@ -275,16 +275,15 @@ class LoaderMixin(abc.ABC):
 
     Args:
         modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
-            load is/are located. use is located. Defaults to an empty list.
-        _loaded (Mapping[Any, Any]): dictionary of str keys and previously
+            load is/are located. Defaults to an empty list.
+        _loaded (Mapping[Any, Any]): dict of str keys and previously
             loaded objects. This is checked first by the 'load' method to avoid
             unnecessary re-importation. Defaults to an empty dict.
 
     """
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = list)
-    _loaded: Mapping[Any, Any] = dataclasses.field(
-        default_factory = dict)
+    _loaded: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     
     """ Public Methods """
 

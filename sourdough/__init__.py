@@ -8,7 +8,7 @@ Contents:
     base: core structural classes and mixins.
     configuration: classes related to configuration options and file management.
     project: classes applying 'base' to composite object projects.
-    utilities: classes and functions that make complex and commmon tasks easier.
+    utilities: classes and functions that make complex and tedious tasks easier.
 
 In general, python files in sourdough are over-documented to allow beginning
 programmers to understand basic design choices that were made. If there is any
@@ -28,7 +28,7 @@ For example:
     
 """
 
-# Imports of functions and decorators for use throughout sourdough.
+# Imports of select functions and decorators for use throughout sourdough.
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
@@ -53,17 +53,15 @@ from sourdough.project.containers import Overview
 from sourdough.project.components import Component
 from sourdough.project.components import Technique
 from sourdough.project.components import Task
-from sourdough.project.components import Edge
-from sourdough.project.components import Node
-from sourdough.project.workers import Worker
-from sourdough.project.workers import Manager
+from sourdough.project.components import Worker
+from sourdough.project.components import Manager
 from sourdough.project.workflow import Workflow
 from sourdough.project.workflow import Draft
 from sourdough.project.workflow import Publish
 from sourdough.project.workflow import Apply
 from sourdough.project.roles import Role
 from sourdough.project.roles import Obey
-from sourdough.project.roles import Study
+from sourdough.project.roles import Compare
 from sourdough.project.roles import Survey
 from sourdough.project.project import Project
 
