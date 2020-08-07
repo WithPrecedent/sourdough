@@ -93,8 +93,21 @@ class Role(
         return itertools.chain.from_iterable(self.worker.contents)
     
     """ Private Methods """
+  
+    def _get_settings_suffixes(self, 
+            settings: Mapping[str, Sequence[str]]) -> Sequence[str]: 
+        """[summary]
+
+        Args:
+            settings (Mapping[str, Sequence[str]]): [description]
+
+        Returns:
+            Sequence[str]: [description]
+        """
+        suffixes = [k.split('_')[-1] for k in settings.keys()]
+        return sourdough.utilities.deduplicate(suffixes)
     
-    def _get_structures(self, 
+    def _get_suffixes(self, 
             settings: Mapping[str, Sequence[str]], 
             project: 'sourdough.Project') -> Mapping[
                 str, Mapping[str, Sequence[str]]]:
@@ -106,13 +119,15 @@ class Role(
 
         Returns:
             Mapping[ str, Mapping[str, Sequence[str]]]: [description]
+            
         """
         structures = {}
-        for key in project.structures.keys():
+        for key in project.components.registry.keys():
             suffix = f'_{key}s'
             structures[key] = {
                 k: v for k, v in settings.items() if k.endswith(suffix)} 
-        return structures
+            
+        return {k: v for k, v in project.components.registry.items()}
 
     def _divide_key(self, key: str) -> Tuple[str, str]:
         """[summary]
@@ -196,28 +211,26 @@ class Obey(Role):
         """
         settings = {
             k: sourdough.utilities.listify(v) for k, v in settings.items()}
-        structures = self._get_structures(
-            settings = settings, 
-            project = project)
-        wrapped = []
-        for key, value in settings.items():
-            prefix, suffix = self._divide_key(key = key)
-            generic = project.structures[suffix]
-            for item in value:
-                print('test value in organize', value)
-                print('test item in organize', item)
-                if generic.contains:
-                    wrapped.append(generic.contains)
-                    self._build_wrapper(
-                        key = item,
-                        generic = generic,
-                        wrapped = structures[generic.contains],
-                        project = project)
-                elif suffix not in wrapped:
+        settings_suffixes = self._get_settings_suffixes(settings = settings)
+        if len(settings_suffixes) == 1:
+            for key, value in settings.items():
+                prefix, suffix = self._divide_key(key = key)
+                generic = project.components.registry[suffix]
+                for item in value:
                     self._build_component(
                         key = item,
                         generic = generic,
                         project = project)
+        else:
+            container_key = settings.keys()[0]
+            prefix, suffix = self._divide_key(key = container_key)
+            generic = project.components.registry[suffix]
+            for item in settings[wrapper_key]:
+                self._build_container(
+                    key = item,
+                    generic = generic,
+                    settings = settings,
+                    project = project)
         return self
     
     def finalize(self) -> None:
@@ -229,12 +242,7 @@ class Compare(Role):
     
     worker: 'sourdough.Worker' = None
     name: str = None 
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
-    
+
     """ Public Methods """
     
     def organize(self, 
@@ -254,7 +262,7 @@ class Compare(Role):
         wrapped = []
         for key, value in settings.items():
             prefix, suffix = self._divide_key(key = key)
-            generic = project.structures[suffix]
+            generic = project.components.registry[suffix]
             for item in value:
                 if generic.contains:
                     wrapped.append(generic.contains)
@@ -277,14 +285,8 @@ class Compare(Role):
 @dataclasses.dataclass
 class Survey(Role):
     
-    name: str = None
     worker: 'sourdough.Worker' = None
-    iterator: Union[str, Callable] = itertools.cycle   
-    options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        contents = {
-            'task': sourdough.Task,
-            'technique': sourdough.Technique,
-            'worker': sourdough.Worker})
+    name: str = None 
     
     """ Public Methods """
     
@@ -305,7 +307,7 @@ class Survey(Role):
         wrapped = []
         for key, value in settings.items():
             prefix, suffix = self._divide_key(key = key)
-            generic = project.structures[suffix]
+            generic = project.components.registry[suffix]
             for item in value:
                 if generic.contains:
                     wrapped.append(generic.contains)

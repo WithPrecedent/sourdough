@@ -316,7 +316,7 @@ def add_prefix(
     """
     try:
         return {prefix + '_' + k: v for k, v in iterable.items()}
-    except TypeError:
+    except AttributeError:
         return [prefix + '_' + item for item in iterable]
 
 def add_suffix(
@@ -336,7 +336,7 @@ def add_suffix(
     """
     try:
         return {k + '_' + suffix: v for k, v in iterable.items()}
-    except TypeError:
+    except AttributeError:
         return [item + '_' + suffix for item in iterable]
 
 def datetime_string(prefix: str = None) -> str:
@@ -385,7 +385,7 @@ def drop_prefix(
     """
     try:
         return {k.rstrip(prefix): v for k, v in iterable.items()}
-    except TypeError:
+    except AttributeError:
         return [item.rstrip(prefix) for item in iterable]
     
 def drop_suffix(
@@ -403,7 +403,7 @@ def drop_suffix(
     """
     try:
         return {k.rstrip(suffix): v for k, v in iterable.items()}
-    except TypeError:
+    except AttributeError:
         return [item.rstrip(suffix) for item in iterable]
 
 def is_nested(dictionary: Mapping[Any, Any]) -> bool:

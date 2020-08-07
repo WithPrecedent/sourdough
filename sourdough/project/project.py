@@ -22,30 +22,30 @@ import sourdough
 @dataclasses.dataclass
 class Project(sourdough.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
-    
-    A Project inherits all of the differences between a Worker and a Hybrid.
-
-    A Project differs from a Worker in 5 significant ways:
-        1) The Manager is the public interface to composite object construction 
-            and application. It may store the composite object instance(s) as 
-            well as any required classes (such as those stored in the 'data' 
-            attribute). This includes Settings and Filer, stored in the 
-            'settings' and 'filer' attributes, respectively.
-        2) Manager stores Component subclass instances in 'contents'. Those 
-            instances are used to assemble and apply the parts of Hybrid 
-            instances.
-        3) Manager includes an 'automatic' attribute which can be set to perform
-            all of its methods if all of the necessary arguments are passed.
-        4) It has an OptionsMixin, which contains a Catalog instance storing
-            default Component instances in 'options'.
-        5)
         
     Args:
-        contents (Sequence[Union[sourdough.Component, str]]]): list of 
-            Component subclass instances or strings which correspond to keys in 
-            'options'. Defaults to 'default', which will use the 'defaults' 
-            attribute of 'options' to select Component instances.
-        name (str): roleates the name of a class instance that is used for 
+        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
+            an instance of Settings or a str or pathlib.Path containing the 
+            file path where a file of a supported file type with settings for a 
+            Settings instance is located. Defaults to None.
+        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
+            Filer or a str or pathlib.Path containing the full path of where the 
+            root folder should be located for file input and output. A Filer
+            instance contains all file path and import/export methods for use 
+            throughout sourdough. Defaults to None.
+        workflow (Union[sourdough.Workflow, Sequence[Union[sourdough.Workflow, 
+            str]]]): base Workflow class, a list of Workflow subclasses, or 
+            a list of str corresponding to Workflow subclasses in 
+            Workflow.registry. These classes are used for the construction and
+            application of a sourdough project. Defaults to sourdough.Workflow
+            which will use the default subclasses of Draft, Publish, Apply.
+        components (sourdough.Component): base class for the pieces of the 
+            project's composite object. Defaults to sourdough.Component.
+            Component.registry will automatically contain all imported 
+            subclasses and those will be the only permitted pieces of a 
+            sourdough composite object. One imported component must be Manager
+            or a subclass.
+        name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
@@ -56,17 +56,6 @@ class Project(sourdough.Element, collections.abc.Iterable):
             the '_get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
-            an instance of Settings or a str or pathlib.Path containing the 
-            file path where a file of a supported file type with settings for a 
-            Settings instance is located. Defaults to None.
-        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
-            Filer or a str or pathlib.Path containing the full path of where the 
-            root folder should be located for file input and output. A Filer
-            instance contains all file path and import/export methods for use 
-            throughout sourdough. Defaults to None.
-        role (str): type of role for the project's composite object.
-            Defaults to 'tree'.
         identification (str): a unique identification name for a 
             Project instance. The name is used for creating file folders
             related to the 'Project'. If not provided, a string is created from
@@ -76,10 +65,8 @@ class Project(sourdough.Element, collections.abc.Iterable):
         automatic (bool): whether to automatically advance 'contents' (True) or 
             whether the contents must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
-        roles (ClassVar[sourdough.Catalog]): a class attribute storing
-            composite role options.            
-        options (ClassVar[sourdough.Catalog]): a class attribute storing
-            elements of a composite role.
+        data (object): any data object for the project to be applied.         
+
     
     Attributes:
         manager (sourdough.Worker): the iterable composite object created by
@@ -94,21 +81,14 @@ class Project(sourdough.Element, collections.abc.Iterable):
     """
     settings: Union['sourdough.Settings', str, pathlib.Path] = None
     filer: Union['sourdough.Filer', str, pathlib.Path] = None
-    manager: 'sourdough.Manager' = sourdough.Manager
     workflow: Union[
         'sourdough.Workflow',
-        Sequence['sourdough.Workflow'],
-        Sequence[str]] = sourdough.Workflow
-    role: 'sourdough.Role' = sourdough.Role
-    component: 'sourdough.Component' = sourdough.Component
+        Sequence[Union['sourdough.Workflow', str]]] = sourdough.Workflow
+    components: 'sourdough.Component' = sourdough.Component
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    structures: ClassVar[Mapping[str, sourdough.Component]] = {
-        'worker': sourdough.Worker, 
-        'task': sourdough.Task, 
-        'technique': sourdough.Technique}
 
     """ Initialization Methods """
 
@@ -121,13 +101,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._set_identification()
         # Validates various attributes or converts them to the proper type.
-        attributes = [
-            'settings', 
-            'filer', 
-            'workflow', 
-            'role', 
-            'manager', 
-            'component']
+        attributes = ['settings', 'filer', 'workflow', 'roles', 'components']
         for attribute in attributes :
             getattr(self, f'_validate_{attribute}')()
         # Adds 'general' section attributes from 'settings'.
@@ -182,32 +156,40 @@ class Project(sourdough.Element, collections.abc.Iterable):
                 and all(isinstance(w, sourdough.Workflow) 
                     for w in self.workflow)):
             raise TypeError('workflow must be Workflow or its subclass')
-
-    def _validate_role(self) -> None:
-        """Validates 'role' as Role or its subclass."""
-        if not (inspect.isclass(self.role) 
-                and (issubclass(self.role, sourdough.Role)
-                     or self.Role == sourdough.Role)):
-            raise TypeError('role must be Role or its subclass')
-
-    def _validate_manager(self) -> None:
-        """Initializes a Manager instance for the 'manager' attribute."""
-        if (inspect.isclass(self.manager) 
-                and (issubclass(self.manager, sourdough.Manager)
-                     or self.manager == sourdough.Manager)):
-            self.manager = self.manager(
-                name = self.name,
-                identification = self.identification)
-        elif not isinstance(self.manager, sourdough.Manager):
-            raise TypeError('manager must be a Manager type')
         return self
 
-    def _validate_component(self) -> None:
+    def _validate_roles(self) -> None:
+        """Validates 'role' as Role or its subclass."""
+        if not (inspect.isclass(self.roles) 
+                and (issubclass(self.roles, sourdough.Role)
+                     or self.roles == sourdough.Role)):
+            raise TypeError('roles must be Role or its subclass')
+        return self
+
+    def _validate_components(self) -> None:
         """Validates 'component' as Component or its subclass."""
-        if not (inspect.isclass(self.component) 
-                and (issubclass(self.component, sourdough.Component)
-                     or self.Role == sourdough.Component)):
-            raise TypeError('component must be Component or its subclass')
+        if not (inspect.isclass(self.components) 
+                and (issubclass(self.components, sourdough.Component)
+                     or self.components == sourdough.Component)):
+            raise TypeError('components must be Component or its subclass')
+        else:
+            self.manager = self._get_manager()
+        return self
+  
+    def _get_manager(self) -> None:
+        """Returns a Manager instance from 'component' attribute."""
+        managers = self.components._get_values_by_type(sourdough.Manager)
+        if len(managers) == 0:
+            raise ValueError(
+                'There must a Manager or Manager subclass imported')
+        elif len(managers) > 1:
+            raise ValueError(
+                'There cannot be more than one Manager or Manager subclass ' 
+                'imported')            
+        else:
+            return managers[0](
+                name = self.name,
+                identification = self.identification)       
                      
     def _auto_contents(self, 
             manager: 'sourdough.Manager') -> 'sourdough.Manager':
@@ -229,4 +211,3 @@ class Project(sourdough.Element, collections.abc.Iterable):
             print('test manager', manager.contents)
             # print('test stage overview', manager.overview)
         return manager
-    

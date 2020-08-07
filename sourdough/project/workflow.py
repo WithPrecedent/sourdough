@@ -28,12 +28,14 @@ class Workflow(sourdough.RegistryMixin, abc.ABC):
     
     Args:
         project (sourdough.Project): the related Project instance.
-    
+        
     """
+    project: 'sourdough.Project' = None
     name: str = None
     registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         defaults = ['draft', 'publish', 'apply'], 
         stored_types = ('Workflow'))
+    roles: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
     
     """ Required Subclass Methods """
     
@@ -45,6 +47,24 @@ class Workflow(sourdough.RegistryMixin, abc.ABC):
         
         """
         pass
+
+    """ Private Class Methods """
+    
+    @classmethod
+    def _get_role(cls, role: str) -> 'sourdough.Role':
+        """[summary]
+
+        Args:
+            role (str): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        try:
+            return cls.roles[role]
+        except KeyError:
+            cls.roles[role] = cls.project.roles.build(role)
+            return cls.roles[role]
 
 
 @dataclasses.dataclass
@@ -66,6 +86,10 @@ class Draft(Workflow):
             worker (sourdough.Worker): Manager instance to create and organize
                 based on the information in 'settings'.
 
+        Raises:
+            ValueError: if a section in 'project.settings' contains workers and
+                other types of components.
+
         Returns:
             sourdough.Worker: an instance with contents organized.
                 
@@ -75,28 +99,42 @@ class Draft(Workflow):
         # Divides settings into different subsections.
         worker_settings, component_settings, attributes = self._divide_settings(
             settings = self.project.settings[worker.name]) 
-        # Finds and sets the 'role' of 'worker'.
-        worker = self._validate_role(worker = worker)
-        # Organizes 'contents' of 'worker' according to its 'role'.
-        worker.role.organize(
-            settings = component_settings, 
-            project = self.project)
-        # Adds an extra settings as attributes to worker.
-        for key, value in attributes.items():
-            setattr(worker, key, value)
+        # Adds extra settings as attributes to worker.
+        worker = self._add_attributes(
+            component = worker, 
+            attributes = attributes)
         # Recursively calls method if other 'workers' are listed.
-        if len(worker_settings) > 0: 
+        if len(worker_settings) == 1: 
             new_workers = list(worker_settings.values())[0]
-            print('test new workers', new_workers)
             for new_worker in new_workers:
+                instance = self._create_component(
+                    name = new_worker, 
+                    base = 'worker')
+                
                 # Checks if special prebuilt class exists.
                 try:
-                    component = self.project.component.build(key = new_worker)
+                    component = self.project.components.build(key = new_worker)
                 # Otherwise uses the appropriate generic type.
                 except KeyError:
-                    component = self.project.structures['worker'](
-                        name = new_worker)
+                    key = self.project.components._get_keys_by_type(
+                        sourdough.Worker)[0]
+                    component = self.project.components.build(key = key)
                 worker.add(self.create(worker = component))
+        elif len(component_settings) > 0:
+            # Finds and sets the 'role' of 'worker'.
+            worker = self._validate_role(worker = worker)
+            # Organizes 'contents' of 'worker' according to its 'role'.
+            worker.role.organize(
+                settings = component_settings, 
+                project = self.project)
+        elif len(worker_settings) > 1:
+            raise ValueError(
+                'A section in settings cannot contain two different sets of '
+                'workers')            
+        else:
+            raise ValueError(
+                'A section in settings can either contain workers or other' 
+                'components, but not both')
         return worker          
 
     """ Private Methods """
@@ -117,17 +155,64 @@ class Draft(Workflow):
         worker_settings = {}
         component_settings = {}
         attributes = {}
-        structures = self.project.structures.keys()
+        component_suffixes = tuple(self.project.components._suffixify().keys())
         for key, value in settings.items():
-            if key.endswith('_workers'):
+            if key.endswith(self._get_suffixes(component = sourdough.Worker)):
                 worker_settings[key] = sourdough.utilities.listify(value)
-            elif any(key.endswith(f'_{s}s') for s in structures):
+            elif any(key.endswith(component_suffixes)):
                 component_settings[key] = sourdough.utilities.listify(value)       
             elif not key.endswith('_role'):
                 attributes[key] = value
         return worker_settings, component_settings, attributes
+
+    def _add_attributes(self, 
+            component: 'sourdough.Component',
+            attributes: Mapping[str, Any]) -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        for key, value in attributes.items():
+            setattr(component, key, value)
+        return component   
+
+    def _create_component(self, 
+            name: str, 
+            base: str,
+            **kwargs) -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        # Checks if special prebuilt class exists.
+        try:
+            component = self.project.components.build(key = name, **kwargs)
+        # Otherwise uses the appropriate generic type.
+        except KeyError:
+            generic = self.project.components.registry[base]
+            kwargs.update({'name': name})
+            component = generic(**kwargs)
+        return component
+     
+    def _get_suffixes(self, component: 'sourdough.Component') -> Sequence[str]:
+        """[summary]
+
+        Args:
+            component (sourdough.Component): [description]
+
+        Returns:
+            Sequence[str]: [description]
+            
+        """
+        components = self.project.components._get_keys_by_type(component)
+        components = sourdough.utilities.add_suffix(components, 's')
+        return tuple(sourdough.utilities.add_prefix(components, '_'))
     
-    def _validate_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def _add_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """
         """ 
         key = f'{worker.name}_role'
@@ -135,7 +220,8 @@ class Draft(Workflow):
             worker.role = self.project.settings[worker.name][key]
         except KeyError:
             pass
-        return self.project.role.validate(worker = worker)
+        worker.role = self._get_role(role = worker.role)
+        return worker
                 
         
 @dataclasses.dataclass

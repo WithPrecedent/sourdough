@@ -21,7 +21,6 @@ Contents:
 """
 import abc
 import dataclasses
-import inspect
 from typing import (
     Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
@@ -66,32 +65,75 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
                 'Component',
                 Sequence[str],
                 Sequence['Component']]) -> Union[
+                    str,
                     'Component',
+                    Sequence[str],
                     Sequence['Component']]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents()
+            contents(Union[str, Component, Sequence[str], Sequence[Component]]):
+                str(s) or Component(s).
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-   
+            Union[str, Component, Sequence[str], Sequence[Component]]: item(s)
+                check against valid data types in from the 'contains' attribute.
+                
         """
         if len(self.contains) > 0:
-            new_contents = []
-            valid_types = (v for k, v in self.registry if k in self.contains)
+            valid_types = [v for k, v in self.registry if k in self.contains]
+            valid_types = tuple(valid_types.append(str))
             if not isinstance(contents, list):
                 contents = sourdough.utilities.listify(contents)
-            
-                raise TypeError(
-                    'contents must be a list containing Task instances, '
-                    'Worker instances, or Tuples of two str types')
+            if all(isinstance(c, valid_types) for c in contents):
+                if len(contents) == 1:
+                    return contents[0]
+                else:
+                    return contents
             else:
-                raise TypeError('contents must be a list')
-        return new_contents         
+                raise TypeError(
+                    f'contents must only include {valid_types} types')
+        else:
+            return contents      
+
+    """ Private Class Methods """
+
+    @classmethod
+    def _get_keys_by_type(cls, 
+            component: 'Component') -> Sequence['Component']:
+        """[summary]
+
+        Returns:
+        
+            [type]: [description]
+            
+        """
+        return [k for k, v in cls.registry.items() if issubclass(v, component)]
+
+    @classmethod
+    def _get_values_by_type(cls, 
+            component: 'Component') -> Sequence['Component']:
+        """[summary]
+
+        Returns:
+        
+            [type]: [description]
+            
+        """
+        return [v for k, v in cls.registry.items() if issubclass(v, component)]
    
+    @classmethod
+    def _suffixify(cls) -> Mapping[str, 'sourdough.Component']:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        return {f'_{k}s': v for k, v in cls.registry.items()}   
+    
     
 @dataclasses.dataclass
 class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
@@ -137,8 +179,7 @@ class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
     name: str = None
     contains: ClassVar[Sequence[str]] = []
     containers: ClassVar[Sequence[str]] = ['task', 'worker', 'manager']
-    _loaded: ClassVar[Mapping[Any, Any]] = dataclasses.field(
-        default_factory = dict)
+    _loaded: ClassVar[Mapping[Any, Any]] = {}
         
     """ Public Methods """
     
@@ -234,11 +275,11 @@ class Task(sourdough.Action, Component):
         Args:
             attribute (str): name of attribute to return.
 
-        Returns:
-            Any: matching attribute.
-
         Raises:
             AttributeError: if 'attribute' is not found in 'technique'.
+
+        Returns:
+            Any: matching attribute.
 
         """
         try:
@@ -250,8 +291,8 @@ class Task(sourdough.Action, Component):
             
 
 @dataclasses.dataclass
-class Worker(sourdough.Hybrid, sourdough.Component):
-    """A lightweight container for describing a portion of a sourdough project.
+class Worker(sourdough.Hybrid, Component):
+    """A lightweight container for a sourdough project.
 
     Worker inherits all of the differences between a Hybrid and a python list.
     
@@ -262,13 +303,16 @@ class Worker(sourdough.Hybrid, sourdough.Component):
             of the various parts of the tree objects. It doesn't include the
             hierarchy itself. Rather, it includes lists of all the types of
             sourdough.Component objects.
+        3) It has 'contains' and 'containers' class attributes inherited from
+            Component which describe permissible relationships with other
+            Component subclasses.
         
     Args:
-        contents (Sequence[sourdough.Component]]): stored iterable of Action
+        contents (Sequence[sourdough.Component]]): stored iterable of Component
             subclasses. Defaults to an empty list.
-        role (Union[sourdough.Role, str]): role for the 
-            organization, iteration, and composition of 'contents' or a str
-            corresponding to an option in 'Role.registry'.
+        role (Union[sourdough.Role, str]): role for the organization, iteration, 
+            and composition of 'contents' or a str corresponding to an option in 
+            'Role.registry'.
         name (str): creates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -298,8 +342,7 @@ class Worker(sourdough.Hybrid, sourdough.Component):
             'contents' to the console or a file.
             
     """
-    contents: Sequence[Union['sourdough.Task', 'Worker']] = dataclasses.field(
-        default_factory = list)
+    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
     role: Union['sourdough.Role', str] = 'obey'
     name: str = None
     contains: ClassVar[Sequence[str]] = ['worker', 'task', 'technique']
@@ -315,63 +358,7 @@ class Worker(sourdough.Hybrid, sourdough.Component):
             sourdough.Overview: based on the stored 'contents' of an instance.
         
         """
-        return sourdough.Overview(worker = self)
-    
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Union['Technique', 'Task', 'Worker', Sequence[Union[
-                'Technique', 
-                'Task', 
-                'Worker']]]) -> Sequence[Union['Technique', 'Task', 'Worker']]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents()
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-
-                
-        """
-        new_contents = []
-        if not isinstance(contents, list):
-            contents = sourdough.utilities.listify(contents)
-        if all(contents: )
-            if isinstance(item, ())
-            if (isinstance(item, tuple)
-                    and len(item) == 2
-                    and all(isinstance(item, str) for i in item)):
-                new_contents.append(
-                    sourdough.Task(name = item[0], technique = item[1]))
-            elif isinstance(item, (sourdough.Task, Worker)):
-                new_contents.append(item)
-            else:
-                raise TypeError(
-                    'contents must be a list containing Task instances, '
-                    'Worker instances, or Tuples of two str types')
-        else:
-            raise TypeError('contents must be a list')
-        return new_contents
-
-    def add(self, 
-            contents: Union[
-                Tuple[str, str],
-                'sourdough.Task',
-                'Worker',
-                Sequence[Union[
-                    Tuple[str, str],
-                    'sourdough.Task',
-                    'Worker']]]) -> None:
-        """Extends 'contents' argument to 'contents' attribute.
-        
-        Args:
-
-        """
-        super().add(contents = contents)
-        return self    
+        return sourdough.Overview(worker = self)   
   
     """ Dunder Methods """
     
@@ -404,18 +391,20 @@ class Worker(sourdough.Hybrid, sourdough.Component):
 
 @dataclasses.dataclass
 class Manager(Worker):
-    """A lightweight container for describing a sourdough project.
-
-    An Manager inherits the differences between a Hybrid and an ordinary python
-    list.
-    
-    An Manager differs from a Hybrid in 2 significant ways:
-        1) It only stores Task instances and other Manager instances.
-        2)
+    """A lightweight container for a sourdough project with metadata.
     
     Args:
-        contents (Tuple[str, str]): stored dictionary. Defaults to an empty 
-            dict.
+        contents (Sequence[sourdough.Component]]): stored iterable of Component
+            subclasses. Defaults to an empty list.
+        role (Union[sourdough.Role, str]): role for the organization, iteration, 
+            and composition of 'contents' or a str corresponding to an option in 
+            'Role.registry'.
+        identification (str): a unique identification name for a 
+            Project instance. The name is used for creating file folders
+            related to the 'Project'. If not provided, a string is created from
+            'name' and the date and time. This is a notable difference
+            between an ordinary Worker instancce and a Project instance. Other
+            Workers are not given unique identification. Defaults to None.  
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -435,11 +424,9 @@ class Manager(Worker):
             'worker' and 'manager'. 
                           
     """
-    contents: Sequence[Union['sourdough.Task', 'Worker']] = dataclasses.field(
-        default_factory = list)
+    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
     role: Union['sourdough.Role', str] = 'obey'
     identification: str = None
-    data: object = None
     name: str = None
     contains: ClassVar[Sequence[str]] = ['worker', 'task', 'technique']
     containers: ClassVar[Sequence[str]] = []                           

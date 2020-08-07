@@ -172,30 +172,6 @@ class Settings(sourdough.Lexicon):
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: str) -> Union[Mapping[Any, Any], Any]:
-        """Returns a section of the active dictionary or key within a section.
-
-        Args:
-            key (str): the name of the dictionary key for which the value is
-                sought.
-
-        Returns:
-            Union[Mapping[Any, Any], Any]: dict if 'key' matches a section in
-                the active dictionary. If 'key' matches a key within a section,
-                the value, which can be any of the supported datatypes is
-                returned.
-
-        """
-        try:
-            return self.contents[key]
-        except KeyError:
-            for section in list(self.contents.keys()):
-                try:
-                    return self.contents[section][key]
-                except KeyError:
-                    pass
-            raise KeyError(f'{key} is not found in {self.__class__.__name__}')
-
     def __setitem__(self, key: str, value: Mapping[Any, Any]) -> None:
         """Creates new key/value pair(s) in a section of the active dictionary.
 
