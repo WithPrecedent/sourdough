@@ -23,7 +23,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.RegistryMixin, abc.ABC):
+class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
     """Base class for sourdough object creators.
     
     Args:
@@ -32,10 +32,20 @@ class Workflow(sourdough.RegistryMixin, abc.ABC):
     """
     project: 'sourdough.Project' = None
     name: str = None
+    roles: 'sourdough.Role' = sourdough.Role
     registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         defaults = ['draft', 'publish', 'apply'], 
         stored_types = ('Workflow'))
-    roles: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    _loaded_roles: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Validates 'roles'.
+        self._validate_roles()
     
     """ Required Subclass Methods """
     
@@ -51,7 +61,7 @@ class Workflow(sourdough.RegistryMixin, abc.ABC):
     """ Private Class Methods """
     
     @classmethod
-    def _get_role(cls, role: str) -> 'sourdough.Role':
+    def _get_role(cls, name: str) -> 'sourdough.Role':
         """[summary]
 
         Args:
@@ -61,11 +71,21 @@ class Workflow(sourdough.RegistryMixin, abc.ABC):
             [type]: [description]
         """
         try:
-            return cls.roles[role]
+            return cls._loaded_roles[name]
         except KeyError:
-            cls.roles[role] = cls.project.roles.build(role)
-            return cls.roles[role]
+            cls._loaded_roles[name] = cls.roles.build(name, workflow = cls)
+            return cls._loaded_roles[name]
 
+    """ Private Methods """
+    
+    def _validate_roles(self) -> None:
+        """Validates 'role' as Role or its subclass."""
+        if not (inspect.isclass(self.roles) 
+                and (issubclass(self.roles, sourdough.Role)
+                     or self.roles == sourdough.Role)):
+            raise TypeError('roles must be Role or its subclass')
+        return self
+    
 
 @dataclasses.dataclass
 class Draft(Workflow):
@@ -97,50 +117,28 @@ class Draft(Workflow):
         # Creates an empty dict of attributes to add to 'worker'.
         attributes = {}
         # Divides settings into different subsections.
-        worker_settings, component_settings, attributes = self._divide_settings(
+        role, settings, attributes = self._divide_settings(
             settings = self.project.settings[worker.name]) 
+        # If 'role' is found in the relevant settings, it is added to 'worker'.
+        if role:
+            worker.role = role
         # Adds extra settings as attributes to worker.
         worker = self._add_attributes(
             component = worker, 
             attributes = attributes)
-        # Recursively calls method if other 'workers' are listed.
-        if len(worker_settings) == 1: 
-            new_workers = list(worker_settings.values())[0]
-            for new_worker in new_workers:
-                instance = self._create_component(
-                    name = new_worker, 
-                    base = 'worker')
-                
-                # Checks if special prebuilt class exists.
-                try:
-                    component = self.project.components.build(key = new_worker)
-                # Otherwise uses the appropriate generic type.
-                except KeyError:
-                    key = self.project.components._get_keys_by_type(
-                        sourdough.Worker)[0]
-                    component = self.project.components.build(key = key)
-                worker.add(self.create(worker = component))
-        elif len(component_settings) > 0:
-            # Finds and sets the 'role' of 'worker'.
-            worker = self._validate_role(worker = worker)
-            # Organizes 'contents' of 'worker' according to its 'role'.
-            worker.role.organize(
-                settings = component_settings, 
-                project = self.project)
-        elif len(worker_settings) > 1:
-            raise ValueError(
-                'A section in settings cannot contain two different sets of '
-                'workers')            
-        else:
-            raise ValueError(
-                'A section in settings can either contain workers or other' 
-                'components, but not both')
+        # Gets a dict of all components identified in 'settings'.
+        components = self._get_components(settings = settings)
+        # Organizes the 'components' and adds them to 'worker' based on 
+        # 'worker.role'.
+        role = self._get_role(name = worker.role)
+        worker = role.organize(worker = worker, components = components)
         return worker          
 
     """ Private Methods """
 
     def _divide_settings(self,
             settings: Mapping[Any, Any]) -> Tuple[
+                str,
                 Mapping[Any, Any],
                 Mapping[Any, Any]]:
         """Divides 'settings' into component and attribute related settings.
@@ -152,19 +150,33 @@ class Draft(Workflow):
             Tuple[Mapping[Any, Any], Mapping[Any, Any]]:
         
         """
-        worker_settings = {}
+        role = None
         component_settings = {}
         attributes = {}
-        component_suffixes = tuple(self.project.components._suffixify().keys())
+        # Gets names of suffixes for available Component subclasses.
+        suffixes = tuple(self._get_container_suffixes())
         for key, value in settings.items():
-            if key.endswith(self._get_suffixes(component = sourdough.Worker)):
-                worker_settings[key] = sourdough.utilities.listify(value)
-            elif any(key.endswith(component_suffixes)):
+            if key.endswith('_role'):
+                role = value
+            elif key.endswith(suffixes):
                 component_settings[key] = sourdough.utilities.listify(value)       
-            elif not key.endswith('_role'):
+            else:
                 attributes[key] = value
-        return worker_settings, component_settings, attributes
+        return role, component_settings, attributes
+     
+    def _get_container_suffixes(self) -> Sequence[str]:
+        """[summary]
 
+        Args:
+            component (sourdough.Component): [description]
+
+        Returns:
+            Sequence[str]: [description]
+            
+        """
+        components = self.project.components._suffixify()
+        return [k for k, v in components.items() if v.contains]
+    
     def _add_attributes(self, 
             component: 'sourdough.Component',
             attributes: Mapping[str, Any]) -> 'sourdough.Component':
@@ -177,6 +189,39 @@ class Draft(Workflow):
         for key, value in attributes.items():
             setattr(component, key, value)
         return component   
+
+    def _get_components(self, 
+            settings: Mapping[str, Sequence[str]]) -> Mapping[
+                Tuple[str, str], 
+                Sequence['sourdough.Component']]:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        components = {}
+        bases = {}
+        for key, value in settings.items():
+            prefix, base = self._divide_key(key = key)
+            for item in value:
+                bases[prefix] = base
+                components[prefix] = self._create_component(
+                    name = item, 
+                    base = base)
+        return components   
+
+    def _divide_key(self, key: str) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            Tuple[str, str]: [description]
+        """
+        suffix = key.split('_')[-1][:-1]
+        prefix = key[:-len(suffix) - 2]
+        return prefix, suffix
 
     def _create_component(self, 
             name: str, 
@@ -197,31 +242,6 @@ class Draft(Workflow):
             kwargs.update({'name': name})
             component = generic(**kwargs)
         return component
-     
-    def _get_suffixes(self, component: 'sourdough.Component') -> Sequence[str]:
-        """[summary]
-
-        Args:
-            component (sourdough.Component): [description]
-
-        Returns:
-            Sequence[str]: [description]
-            
-        """
-        components = self.project.components._get_keys_by_type(component)
-        components = sourdough.utilities.add_suffix(components, 's')
-        return tuple(sourdough.utilities.add_prefix(components, '_'))
-    
-    def _add_role(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
-        """
-        """ 
-        key = f'{worker.name}_role'
-        try:    
-            worker.role = self.project.settings[worker.name][key]
-        except KeyError:
-            pass
-        worker.role = self._get_role(role = worker.role)
-        return worker
                 
         
 @dataclasses.dataclass

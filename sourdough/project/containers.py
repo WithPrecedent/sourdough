@@ -19,6 +19,40 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Outline(sourdough.Lexicon):
+    
+    contents: Mapping[str, Sequence[str]] = dataclasses.field(
+        default_factory = dict)
+    generics: Mapping[str, str] = dataclasses.field(default_factory = dict)
+    name: str = None
+        
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Mapping[str, Sequence[str]]) -> Mapping[
+                str, 
+                Sequence[str]]:
+        """Validates 'contents' or converts 'contents' to a dict.
+        
+        Args:
+            contents (Any): variable to validate as compatible with an instance.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Mapping[Any, Any]: validated or converted argument that is 
+                compatible with an instance.
+        
+        """
+        if (isinstance(contents, Mapping) 
+                and all(isinstance(c, Sequence) for c in contents)):
+            return contents
+        else:
+            raise TypeError('contents must be a dict type')
+
+
+@dataclasses.dataclass
 class Inventory(sourdough.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 

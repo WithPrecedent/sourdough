@@ -101,7 +101,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._set_identification()
         # Validates various attributes or converts them to the proper type.
-        attributes = ['settings', 'filer', 'workflow', 'roles', 'components']
+        attributes = ['settings', 'filer', 'workflow', 'components']
         for attribute in attributes :
             getattr(self, f'_validate_{attribute}')()
         # Adds 'general' section attributes from 'settings'.
@@ -156,14 +156,6 @@ class Project(sourdough.Element, collections.abc.Iterable):
                 and all(isinstance(w, sourdough.Workflow) 
                     for w in self.workflow)):
             raise TypeError('workflow must be Workflow or its subclass')
-        return self
-
-    def _validate_roles(self) -> None:
-        """Validates 'role' as Role or its subclass."""
-        if not (inspect.isclass(self.roles) 
-                and (issubclass(self.roles, sourdough.Role)
-                     or self.roles == sourdough.Role)):
-            raise TypeError('roles must be Role or its subclass')
         return self
 
     def _validate_components(self) -> None:

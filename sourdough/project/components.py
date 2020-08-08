@@ -343,6 +343,7 @@ class Worker(sourdough.Hybrid, Component):
             
     """
     contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    outline: 'sourdough.Outline' = sourdough.Outline()
     role: Union['sourdough.Role', str] = 'obey'
     name: str = None
     contains: ClassVar[Sequence[str]] = ['worker', 'task', 'technique']
@@ -362,31 +363,31 @@ class Worker(sourdough.Hybrid, Component):
   
     """ Dunder Methods """
     
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents' based upon 'role'.
+    # def __iter__(self) -> Iterable:
+    #     """Returns iterable of 'contents' based upon 'role'.
         
-        If 'role' has not been initialized, this method returns the default
-        python 'iter' method of 'contents'. This should not happen as long as
-        the '__post_init__' method from Hybrid is not overwritten without 
-        calling 'super().__post_init__'.
+    #     If 'role' has not been initialized, this method returns the default
+    #     python 'iter' method of 'contents'. This should not happen as long as
+    #     the '__post_init__' method from Hybrid is not overwritten without 
+    #     calling 'super().__post_init__'.
         
-        Returns:
-            Iterable: of 'contents'.
+    #     Returns:
+    #         Iterable: of 'contents'.
             
-        """
-        try:
-            return iter(self.role)
-        except (AttributeError, TypeError):
-            return iter(self.contents)
+    #     """
+    #     try:
+    #         return iter(self.role)
+    #     except (AttributeError, TypeError):
+    #         return iter(self.contents)
         
     """ Private Methods """
     
-    def _initial_validation(self) -> None:
-        """Validates passed 'contents' on class initialization."""
-        super()._initial_validation()
-        # Validates or converts 'role'.
-        self = sourdough.Role.validate(worker = self)
-        return self
+    # def _initial_validation(self) -> None:
+    #     """Validates passed 'contents' on class initialization."""
+    #     super()._initial_validation()
+    #     # Validates or converts 'role'.
+    #     self = sourdough.Role.validate(worker = self)
+    #     return self
 
 
 @dataclasses.dataclass
@@ -425,6 +426,7 @@ class Manager(Worker):
                           
     """
     contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    outline: 'sourdough.Outline' = sourdough.Outline()
     role: Union['sourdough.Role', str] = 'obey'
     identification: str = None
     name: str = None

@@ -48,6 +48,7 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
+from sourdough.project.containers import Outline
 from sourdough.project.containers import Inventory
 from sourdough.project.containers import Overview
 from sourdough.project.components import Component
@@ -55,14 +56,14 @@ from sourdough.project.components import Technique
 from sourdough.project.components import Task
 from sourdough.project.components import Worker
 from sourdough.project.components import Manager
-from sourdough.project.workflow import Workflow
-from sourdough.project.workflow import Draft
-from sourdough.project.workflow import Publish
-from sourdough.project.workflow import Apply
 from sourdough.project.roles import Role
 from sourdough.project.roles import Obey
 from sourdough.project.roles import Compare
 from sourdough.project.roles import Survey
+from sourdough.project.workflow import Workflow
+from sourdough.project.workflow import Draft
+from sourdough.project.workflow import Publish
+from sourdough.project.workflow import Apply
 from sourdough.project.project import Project
 
 

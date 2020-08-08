@@ -26,13 +26,12 @@ import sourdough
 class Role(
         sourdough.RegistryMixin, 
         sourdough.Element, 
-        collections.abc.Iterable,
         abc.ABC):
     """Base class related to constructing and iterating Worker instances.
     
     """
-    worker: 'sourdough.Worker' = None
     name: str = None
+    workflow: 'sourdough.Workflow' = None
     registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         stored_types = ('Role'))
 
@@ -48,13 +47,15 @@ class Role(
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def organize(self, 
-            settings: Mapping[Any, Any], 
-            project: 'sourdough.Project') -> None:
+    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         pass
  
     @abc.abstractmethod
-    def finalize(self) -> None:
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        pass
+ 
+    @abc.abstractmethod
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         pass
     
     """ Class Methods """
@@ -75,24 +76,41 @@ class Role(
             
         """
         if isinstance(worker.role, str):
-            worker.role = cls.registry[worker.role](worker = worker)
+            worker.role = cls.registry[worker.role]()
         elif (inspect.isclass(worker.role) 
                 and issubclass(worker.role, cls)):
-            worker.role = worker.role(worker = worker) 
+            worker.role = worker.role() 
         elif isinstance(worker.role, cls):
-            worker.role.worker = worker
             worker.role.__post_init__()
         else:
             raise TypeError(
                 f'The role attribute of worker must be a str or {cls} type')
         return worker
 
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        return itertools.chain.from_iterable(self.worker.contents)
-    
     """ Private Methods """
+
+    def _contain_components(self, 
+            components: Mapping[
+                Tuple[str, str], 
+                Sequence['sourdough.Component']]) -> 'sourdough.Worker':
+        """[summary]
+
+            
+        """
+        print('test components with organize', components)
+        for key, value in components.items():
+            for item in value:
+                if isinstance(item, sourdough.Worker):
+                    component = self.workflow.create(worker = item)
+                elif item.contains:
+                    for containee in item.contains:
+                        
+                    
+        return self
+
+    def _find_containees(self, name: str) -> Mapping[
+            Tuple[str, str], 
+            Sequence['sourdough.Component']]:
   
     def _get_settings_suffixes(self, 
             settings: Mapping[str, Sequence[str]]) -> Sequence[str]: 
@@ -129,18 +147,6 @@ class Role(
             
         return {k: v for k, v in project.components.registry.items()}
 
-    def _divide_key(self, key: str) -> Tuple[str, str]:
-        """[summary]
-
-        Args:
-            key (str): [description]
-
-        Returns:
-            Tuple[str, str]: [description]
-        """
-        suffix = key.split('_')[-1][:-1]
-        prefix = key[:-len(suffix) - 2]
-        return prefix, suffix
     
     def _build_wrapper(self,
             key: str, 
@@ -190,140 +196,151 @@ class Role(
             component = generic(**kwargs)
         self.worker.add(component)
         return self  
-          
+
+
+@dataclasses.dataclass
+class SerialRole(Role, abc.ABC):
+    
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
+
+    """ Public Methods """
+    
+    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        """[summary]
+
+        Args:
+            settings (Mapping[Any, Any]): [description]
+            
+        """
+        if container is None:
+            container = sourdough.Worker
+        steps = components.pop([components.keys()[0]])
+        possible = list(components.values())
+        permutations = list(map(list, itertools.product(*possible)))
+        for i, contained in enumerate(permutations):
+            container = container()
+            
+            instance = container(contents = tuple(zip(steps, contained)))
+        return worker
+ 
+    @abc.abstractmethod
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        pass
+     
+    @abc.abstractmethod
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        pass
+           
       
 @dataclasses.dataclass
-class Obey(Role):
+class Obey(SerialRole):
     
-    worker: 'sourdough.Worker' = None
     name: str = None
+    workflow: 'sourdough.Workflow' = None
     
     """ Public Methods """
+
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        return more_itertools.collapse(worker.contents)
     
-    def organize(self, 
-            settings: Mapping[Any, Any], 
-            project: 'sourdough.Project') -> None:
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        pass
+
+      
+@dataclasses.dataclass
+class Repeat(SerialRole):
+    
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
+    
+    """ Public Methods """
+
+    def iterate(self, 
+            worker: 'sourdough.Worker', 
+            iterations: int = None) -> Iterable:
+        if iterations is None:
+            iterations = 2
+        return itertools.repeat(worker.contents, iterations)
+        
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        pass
+
+        
+@dataclasses.dataclass
+class ParallelRole(Role, abc.ABC):
+    
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
+
+    """ Public Methods """
+    
+    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         """[summary]
 
         Args:
             settings (Mapping[Any, Any]): [description]
             
         """
-        settings = {
-            k: sourdough.utilities.listify(v) for k, v in settings.items()}
-        settings_suffixes = self._get_settings_suffixes(settings = settings)
-        if len(settings_suffixes) == 1:
-            for key, value in settings.items():
-                prefix, suffix = self._divide_key(key = key)
-                generic = project.components.registry[suffix]
-                for item in value:
-                    self._build_component(
-                        key = item,
-                        generic = generic,
-                        project = project)
-        else:
-            container_key = settings.keys()[0]
-            prefix, suffix = self._divide_key(key = container_key)
-            generic = project.components.registry[suffix]
-            for item in settings[wrapper_key]:
-                self._build_container(
-                    key = item,
-                    generic = generic,
-                    settings = settings,
-                    project = project)
-        return self
-    
-    def finalize(self) -> None:
+        steps = components.pop([components.keys()[0]])
+        possible = list(components.values())
+        permutations = list(map(list, itertools.product(*possible)))
+        for i, contained in enumerate(permutations):
+            instance = sourdough.Worker(
+                _components = tuple(zip(steps, contained)))
+        return worker
+
+    @abc.abstractmethod
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
         pass
-    
+ 
+    @abc.abstractmethod
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        pass
+       
          
 @dataclasses.dataclass
-class Compare(Role):
+class Compare(ParallelRole):
     
-    worker: 'sourdough.Worker' = None
-    name: str = None 
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
 
     """ Public Methods """
-    
-    def organize(self, 
-            settings: Mapping[Any, Any], 
-            project: 'sourdough.Project') -> None:
-        """[summary]
 
-        Args:
-            settings (Mapping[Any, Any]): [description]
-            
-        """
-        settings = {
-            k: sourdough.utilities.listify(v) for k, v in settings.items()}
-        structures = self._get_structures(
-            settings = settings, 
-            project = project)
-        wrapped = []
-        for key, value in settings.items():
-            prefix, suffix = self._divide_key(key = key)
-            generic = project.components.registry[suffix]
-            for item in value:
-                if generic.contains:
-                    wrapped.append(generic.contains)
-                    self._build_wrapper(
-                        key = item,
-                        generic = generic,
-                        wrapped = structures[generic.contains],
-                        project = project)
-                elif suffix not in wrapped:
-                    self._build_component(
-                        key = item,
-                        generic = generic,
-                        project = project)
-        return self
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        return itertools.chain(worker.contents)
     
-    def finalize(self) -> None:
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         pass
 
+         
+@dataclasses.dataclass
+class Judge(ParallelRole):
+    
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
+
+    """ Public Methods """
+
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        return itertools.chain(worker.contents)
+    
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+        pass
+    
 
 @dataclasses.dataclass
-class Survey(Role):
+class Survey(ParallelRole):
     
-    worker: 'sourdough.Worker' = None
-    name: str = None 
+    name: str = None
+    workflow: 'sourdough.Workflow' = None
     
     """ Public Methods """
-    
-    def organize(self, 
-            settings: Mapping[Any, Any], 
-            project: 'sourdough.Project') -> None:
-        """[summary]
 
-        Args:
-            settings (Mapping[Any, Any]): [description]
-            
-        """
-        settings = {
-            k: sourdough.utilities.listify(v) for k, v in settings.items()}
-        structures = self._get_structures(
-            settings = settings, 
-            project = project)
-        wrapped = []
-        for key, value in settings.items():
-            prefix, suffix = self._divide_key(key = key)
-            generic = project.components.registry[suffix]
-            for item in value:
-                if generic.contains:
-                    wrapped.append(generic.contains)
-                    self._build_wrapper(
-                        key = item,
-                        generic = generic,
-                        wrapped = structures[generic.contains],
-                        project = project)
-                elif suffix not in wrapped:
-                    self._build_component(
-                        key = item,
-                        generic = generic,
-                        project = project)
-        return self
+    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+        return itertools.chain(worker.contents)
     
-    def finalize(self) -> None:
+    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
         pass
 
 
