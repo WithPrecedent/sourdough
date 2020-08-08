@@ -21,8 +21,9 @@ Contents:
 """
 import abc
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+import typing
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
 
@@ -42,62 +43,72 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
             '__post_init__' of Element is called, 'name' is set based upon
             the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        contains (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can be stored in this component. Defaults to 'all'.
-        containers (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can store this component. Defaults to 'all'.  
+            snake case version of the class name ('__class__.__name__'). 
         registry (ClassVar[sourdough.Inventory]): the instance which 
             automatically stores any subclass of Component.
               
     """
+    contents: Any = None
     name: str = None
-    contains: ClassVar[Sequence[str]] = ['all']
-    containers: ClassVar[Sequence[str]] = ['all']
     registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
         stored_types = ('Component'))
 
+    """ Properties """
+    
+    @property
+    def contains(self) -> Sequence[Any]:
+        try:
+            return typing.get_args(self.__annotations__['contents'])
+        except AttributeError:
+            return (sourdough.Component, str)
+
     """ Public Methods """
     
-    def validate(self, 
-            contents: Union[
-                str,
-                'Component',
-                Sequence[str],
-                Sequence['Component']]) -> Union[
-                    str,
-                    'Component',
-                    Sequence[str],
-                    Sequence['Component']]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents(Union[str, Component, Sequence[str], Sequence[Component]]):
-                str(s) or Component(s).
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Union[str, Component, Sequence[str], Sequence[Component]]: item(s)
-                check against valid data types in from the 'contains' attribute.
-                
-        """
-        if len(self.contains) > 0:
-            valid_types = [v for k, v in self.registry if k in self.contains]
-            valid_types = tuple(valid_types.append(str))
-            if not isinstance(contents, list):
-                contents = sourdough.utilities.listify(contents)
-            if all(isinstance(c, valid_types) for c in contents):
-                if len(contents) == 1:
-                    return contents[0]
-                else:
-                    return contents
-            else:
-                raise TypeError(
-                    f'contents must only include {valid_types} types')
+    def validate(self, contents: Any) -> Any:
+        if isinstance(contents, self.contains):
+            return contents
         else:
-            return contents      
+            raise TypeError(f'contents must be {str(self.contains)} types') 
+    
+    # def validate(self, 
+    #         contents: Union[
+    #             str,
+    #             'Component',
+    #             Sequence[str],
+    #             Sequence['Component']]) -> Union[
+    #                 str,
+    #                 'Component',
+    #                 Sequence[str],
+    #                 Sequence['Component']]:
+    #     """Validates 'contents' or converts 'contents' to proper type.
+        
+    #     Args:
+    #         contents(Union[str, Component, Sequence[str], Sequence[Component]]):
+    #             str(s) or Component(s).
+            
+    #     Raises:
+    #         TypeError: if 'contents' argument is not of a supported datatype.
+            
+    #     Returns:
+    #         Union[str, Component, Sequence[str], Sequence[Component]]: item(s)
+    #             check against valid data types in from the 'contains' attribute.
+                
+    #     """
+    #     if len(self.contains) > 0:
+    #         valid_types = [v for k, v in self.registry if k in self.contains]
+    #         valid_types = tuple(valid_types.append(str))
+    #         if not isinstance(contents, list):
+    #             contents = sourdough.utilities.listify(contents)
+    #         if all(isinstance(c, valid_types) for c in contents):
+    #             if len(contents) == 1:
+    #                 return contents[0]
+    #             else:
+    #                 return contents
+    #         else:
+    #             raise TypeError(
+    #                 f'contents must only include {valid_types} types')
+    #     else:
+    #         return contents      
 
     """ Private Class Methods """
 
@@ -139,17 +150,17 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
 class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
     """Base class for primitive objects in a sourdough composite object.
     
-    The 'algorithm' and 'parameters' attributes are combined at the last moment
+    The 'contents' and 'parameters' attributes are combined at the last moment
     to allow for runtime alterations.
     
     Args:
-        algorithm (object): core object used by the 'perform' method. Defaults 
+        contents (object): core object used by the 'perform' method. Defaults 
             to None.
         parameters (Mapping[Any, Any]]): parameters to be attached to
-            'algorithm' when the 'perform' method is called. Defaults to an 
+            'contents' when the 'perform' method is called. Defaults to an 
             empty dict.
         modules Union[str, Sequence[str]]: name(s) of module(s) where the 
-            algorithm to load is/are located. Defaults to an empty list.
+            contents to load is/are located. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -161,48 +172,64 @@ class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contains (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can be stored in this component. Defaults to an empty
-            list.
-        containers (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can store this component. Defaults to a list containing
-            'task', 'worker', and 'manager'. 
         _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
             loaded objects. This is checked first by the 'load' method to avoid
             unnecessary re-importation. Defaults to an empty dict.
                                     
     """
-    algorithm: object = None
+    contents: object = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    contains: ClassVar[Sequence[str]] = []
-    containers: ClassVar[Sequence[str]] = ['task', 'worker', 'manager']
     _loaded: ClassVar[Mapping[Any, Any]] = {}
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'registry'.
+        if not hasattr(cls, '_base'):
+            cls._base = cls
+
+    """ Properties """
+    
+    @property
+    def algorithm(self) -> Union[object, str]:
+        return self.contents
+    
+    @algorithm.setter
+    def algorithm(self, value: Union[object, str]) -> None:
+        self.contents = value
+        return self
+    
+    @algorithm.deleter
+    def algorithm(self) -> None:
+        self.contents = None
+        return self
         
     """ Public Methods """
     
     def perform(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'algorithm' with 'parameters'.
+        """Applies stored 'contents' with 'parameters'.
         
         Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
+            data (object): optional object to apply 'contents' to. Defaults to
                 None.
                 
         Returns:
-            object: with any modifications made by 'algorithm'. If data is not
+            object: with any modifications made by 'contents'. If data is not
                 passed, nothing is returned.        
         
         """
-        self.algorithm = self.load(key = self.name)
+        self.contents = self.load(key = self.name)
         if data is None:
-            self.algorithm.perform(**self.parameters, **kwargs)
+            self.contents.perform(**self.parameters, **kwargs)
             return self
         else:
-            return self.algorithm.perform(data, **self.parameters, **kwargs)
-        
-            
+            return self.contents.perform(data, **self.parameters, **kwargs)
+
+             
 @dataclasses.dataclass
 class Task(sourdough.Action, Component):
     """Wrapper for a Technique.
@@ -237,10 +264,32 @@ class Task(sourdough.Action, Component):
             'worker' and 'manager'. 
                         
     """
-    technique: Union[Technique, str] = None
+    contents: Union['Technique', str] = None
     name: str = None
-    contains: ClassVar[Sequence[str]] = ['technique']
-    containers: ClassVar[Sequence[str]] = ['worker', 'manager']
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'registry'.
+        if not hasattr(cls, '_base'):
+            cls._base = cls
+                
+    """ Properties """
+    
+    @property
+    def technique(self) -> Union['Technique', str]:
+        return self.contents
+    
+    @technique.setter
+    def technique(self, value: Union['Technique', str]) -> None:
+        self.contents = value
+        return self
+    
+    @technique.deleter
+    def technique(self) -> None:
+        self.contents = None
+        return self
     
     """ Public Methods """
     
@@ -250,44 +299,44 @@ class Task(sourdough.Action, Component):
         The code below outlines a basic method that a subclass should build on
         for a properly functioning Task.
         
-        Applies stored 'algorithm' with 'parameters'.
+        Applies stored 'contents' with 'parameters'.
         
         Args:
-            data (object): optional object to apply 'algorithm' to. Defaults to
+            data (object): optional object to apply 'contents' to. Defaults to
                 None.
                 
         Returns:
-            object: with any modifications made by 'algorithm'. If data is not
+            object: with any modifications made by 'contents'. If data is not
                 passed, nothing is returned.        
         
         """
         if data is None:
-            self.technique.perform(**kwargs)
+            self.contents.perform(**kwargs)
             return self
         else:
-            return self.technique.perform(item = data, **kwargs)
+            return self.contents.perform(item = data, **kwargs)
 
     """ Dunder Methods """
 
     def __getattr__(self, attribute: str) -> Any:
-        """Looks for 'attribute' in 'technique'.
+        """Looks for 'attribute' in 'contents'.
 
         Args:
             attribute (str): name of attribute to return.
 
         Raises:
-            AttributeError: if 'attribute' is not found in 'technique'.
+            AttributeError: if 'attribute' is not found in 'contents'.
 
         Returns:
             Any: matching attribute.
 
         """
         try:
-            return getattr(self.technique, attribute)
+            return getattr(self.contents, attribute)
         except AttributeError:
             raise AttributeError(
                 f'{attribute} neither found in {self.name} nor '
-                f'{self.technique}')
+                f'{self.contents}')
             
 
 @dataclasses.dataclass
@@ -324,12 +373,6 @@ class Worker(sourdough.Hybrid, Component):
             the 'get_name' method in sourdough.Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contains (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can be stored in this component. Defaults to a list
-            containing 'worker', 'task', and 'technique'.
-        containers (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can store this component. Defaults to a list containing
-            'worker' and 'manager'. 
 
     Attributes:
         contents (Sequence[sourdough.Component]): all objects in 'contents' must 
@@ -342,13 +385,23 @@ class Worker(sourdough.Hybrid, Component):
             'contents' to the console or a file.
             
     """
-    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    contents: Sequence[Union[
+        'Worker', 
+        'Task', 
+        'Technique', 
+        str]] = dataclasses.field(default_factory = list)
     outline: 'sourdough.Outline' = sourdough.Outline()
     role: Union['sourdough.Role', str] = 'obey'
     name: str = None
-    contains: ClassVar[Sequence[str]] = ['worker', 'task', 'technique']
-    containers: ClassVar[Sequence[str]] = ['worker', 'manager']
-          
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'registry'.
+        if not hasattr(cls, '_base'):
+            cls._base = cls
+                      
     """ Properties """
     
     @property
@@ -417,22 +470,25 @@ class Manager(Worker):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contains (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can be stored in this component. Defaults to a list
-            containing 'technique'.
-        containers (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can store this component. Defaults to a list containing
-            'worker' and 'manager'. 
                           
     """
-    contents: Sequence['Component'] = dataclasses.field(default_factory = list)
+    contents: Sequence[Union[
+        'Worker', 
+        'Task', 
+        'Technique', 
+        str]] = dataclasses.field(default_factory = list)
     outline: 'sourdough.Outline' = sourdough.Outline()
     role: Union['sourdough.Role', str] = 'obey'
     identification: str = None
-    name: str = None
-    contains: ClassVar[Sequence[str]] = ['worker', 'task', 'technique']
-    containers: ClassVar[Sequence[str]] = []                           
+    name: str = None                    
+
+    """ Initialization Methods """
     
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'registry'.
+        if not hasattr(cls, '_base'):
+            cls._base = cls    
 
 # BASE_TYPES = {'technique': Technique,
 #               'task': Task,

@@ -46,10 +46,10 @@ class Outline(sourdough.Lexicon):
         
         """
         if (isinstance(contents, Mapping) 
-                and all(isinstance(c, Sequence) for c in contents)):
+                and all(isinstance(c, Sequence) for c in contents.values())):
             return contents
         else:
-            raise TypeError('contents must be a dict type')
+            raise TypeError('contents must be a dict type with list values')
 
 
 @dataclasses.dataclass

@@ -85,7 +85,27 @@ class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
                      or self.roles == sourdough.Role)):
             raise TypeError('roles must be Role or its subclass')
         return self
-    
+
+    def _create_component(self, 
+            name: str, 
+            base: str,
+            **kwargs) -> 'sourdough.Component':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        # Checks if special prebuilt class exists.
+        try:
+            component = self.project.components.build(key = name, **kwargs)
+        # Otherwise uses the appropriate generic type.
+        except KeyError:
+            generic = self.project.components.registry[base]
+            kwargs.update({'name': name})
+            component = generic(**kwargs)
+        return component
+        
 
 @dataclasses.dataclass
 class Draft(Workflow):
@@ -126,12 +146,20 @@ class Draft(Workflow):
         worker = self._add_attributes(
             component = worker, 
             attributes = attributes)
-        # Gets a dict of all components identified in 'settings'.
-        components = self._get_components(settings = settings)
+        # # Gets a dict of all components identified in 'settings'.
+        # components = self._get_components(settings = settings)
         # Organizes the 'components' and adds them to 'worker' based on 
         # 'worker.role'.
-        role = self._get_role(name = worker.role)
-        worker = role.organize(worker = worker, components = components)
+        # role = self._get_role(name = worker.role)
+        worker = self._add_outline(
+            worker = worker,
+            settings = settings)
+        first_suffix = settings.keys()[0]
+        first_components = settings[first_suffix]
+        if first_suffix.split('_')[-1] in self._get_worker_suffixes():
+            self._create_workers(workers = settings[first_suffix])
+            
+        # worker = role.organize(worker = worker, components = components)
         return worker          
 
     """ Private Methods """
@@ -190,6 +218,64 @@ class Draft(Workflow):
             setattr(component, key, value)
         return component   
 
+    def _add_outline(self, 
+            worker: 'sourdough.Worker',
+            settings: Mapping[str, Sequence[str]]) -> 'sourdough.Worker':
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        outline = sourdough.Outline(name = name)
+        for key, value in settings.items():
+            prefix, base = self._divide_key(key = key)
+            for item in value:
+                bases[prefix] = base
+                components[prefix] = self._create_component(
+                    name = item, 
+                    base = base)
+        return components  
+
+    def _create_workers(self, 
+            workers: Sequence[str],
+            suffix: str,
+            **kwargs) -> Sequence['sourdough.Worker']:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        new_workers = []
+        for worker in workers:
+            # Checks if special prebuilt class exists.
+            try:
+                component = self.project.components.build(
+                    key = worker, 
+                    **kwargs)
+            # Otherwise uses the appropriate generic type.
+            except KeyError:
+                generic = self.project.components._suffixify()[suffix]
+                kwargs.update({'name': worker})
+                component = generic(**kwargs)
+            component = self.create(worker = component)
+            new_workers.append(component)
+        return new_workers
+        
+
+    def _get_worker_suffixes(self) -> Sequence[str]:
+        """[summary]
+
+        Args:
+            component (sourdough.Component): [description]
+
+        Returns:
+            Sequence[str]: [description]
+            
+        """
+        components = self.project.components._suffixify()
+        return [
+            k for k, v in components.items() if isinstance(v, sourdough.Worker)]
+
     def _get_components(self, 
             settings: Mapping[str, Sequence[str]]) -> Mapping[
                 Tuple[str, str], 
@@ -222,26 +308,6 @@ class Draft(Workflow):
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
-
-    def _create_component(self, 
-            name: str, 
-            base: str,
-            **kwargs) -> 'sourdough.Component':
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        # Checks if special prebuilt class exists.
-        try:
-            component = self.project.components.build(key = name, **kwargs)
-        # Otherwise uses the appropriate generic type.
-        except KeyError:
-            generic = self.project.components.registry[base]
-            kwargs.update({'name': name})
-            component = generic(**kwargs)
-        return component
                 
         
 @dataclasses.dataclass

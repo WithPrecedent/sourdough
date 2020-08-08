@@ -13,12 +13,94 @@ import collections.abc
 import dataclasses
 import inspect
 import pathlib
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 import warnings
 
 import sourdough
 
- 
+
+@dataclasses.dataclass
+class ComponentBase(sourdough.Inventory):
+    """Catalog subclass with a more limiting 'validate' method.
+
+    Args:
+        contents (Union[Element, Sequence[Element], Mapping[Any, 
+            Element]]): Element(s) to validate or convert to a dict. If 
+            'contents' is a Sequence or a Element, the key for storing 
+            'contents' is the 'name' attribute of each Element.
+        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
+            used to return items when 'default' is sought. If not passed, 
+            'default' will be set to all keys.
+        always_return_list (bool]): whether to return a list even when
+            the key passed is not a list or special access key (True) or to 
+            return a list only when a list or special acces key is used (False). 
+            Defaults to False.
+        stored_types (Tuple[Callable]):
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').  
+                     
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default = {
+        'manager': sourdough.Manager,
+        'worker': sourdough.Worker,
+        'task': sourdough.Task,
+        'technique': sourdough.Technique})
+    defaults: Sequence[str] = dataclasses.field(default_factory = list)
+    always_return_list: bool = False
+    stored_types: Tuple[Callable] = (sourdough.Component)
+    name: str = None  
+
+
+# @dataclasses.dataclass
+# class GraphBase(sourdough.Inventory):
+#     """Catalog subclass with a more limiting 'validate' method.
+
+#     Args:
+#         contents (Union[Element, Sequence[Element], Mapping[Any, 
+#             Element]]): Element(s) to validate or convert to a dict. If 
+#             'contents' is a Sequence or a Element, the key for storing 
+#             'contents' is the 'name' attribute of each Element.
+#         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
+#             used to return items when 'default' is sought. If not passed, 
+#             'default' will be set to all keys.
+#         always_return_list (bool]): whether to return a list even when
+#             the key passed is not a list or special access key (True) or to 
+#             return a list only when a list or special acces key is used (False). 
+#             Defaults to False.
+#         stored_types (Tuple[Callable]):
+#         name (str): designates the name of a class instance that is used for 
+#             internal referencing throughout sourdough. For example if a 
+#             sourdough instance needs settings from a Settings instance, 'name' 
+#             should match the appropriate section name in the Settings instance. 
+#             When subclassing, it is sometimes a good idea to use the same 'name' 
+#             attribute as the base class for effective coordination between 
+#             sourdough classes. Defaults to None. If 'name' is None and 
+#             '__post_init__' of Element is called, 'name' is set based upon
+#             the 'get_name' method in Element. If that method is not 
+#             overridden by a subclass instance, 'name' will be assigned to the 
+#             snake case version of the class name ('__class__.__name__').  
+                     
+#     """
+#     contents: Mapping[str, Any] = dataclasses.field(default = {
+#         'manager': sourdough.Manager,
+#         'node': sourdough.Node,
+#         'edge': sourdough.Edge})
+#     defaults: Sequence[str] = dataclasses.field(default_factory = list)
+#     always_return_list: bool = False
+#     stored_types: Tuple[Callable] = (sourdough.Component)
+#     name: str = None     
+      
+
 @dataclasses.dataclass
 class Project(sourdough.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
@@ -89,6 +171,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
     identification: str = None
     automatic: bool = True
     data: object = None
+    base: ClassVar['sourdough.Inventory'] = ComponentBase()
 
     """ Initialization Methods """
 

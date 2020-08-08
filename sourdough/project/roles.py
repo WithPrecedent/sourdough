@@ -88,29 +88,6 @@ class Role(
         return worker
 
     """ Private Methods """
-
-    def _contain_components(self, 
-            components: Mapping[
-                Tuple[str, str], 
-                Sequence['sourdough.Component']]) -> 'sourdough.Worker':
-        """[summary]
-
-            
-        """
-        print('test components with organize', components)
-        for key, value in components.items():
-            for item in value:
-                if isinstance(item, sourdough.Worker):
-                    component = self.workflow.create(worker = item)
-                elif item.contains:
-                    for containee in item.contains:
-                        
-                    
-        return self
-
-    def _find_containees(self, name: str) -> Mapping[
-            Tuple[str, str], 
-            Sequence['sourdough.Component']]:
   
     def _get_settings_suffixes(self, 
             settings: Mapping[str, Sequence[str]]) -> Sequence[str]: 

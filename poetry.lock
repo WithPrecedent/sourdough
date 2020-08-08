@@ -123,7 +123,7 @@ six = "*"
 
 [[package]]
 category = "main"
-description = "Powerful data roles for data analysis, time series, and statistics"
+description = "Powerful data structures for data analysis, time series, and statistics"
 name = "pandas"
 optional = false
 python-versions = ">=3.6.1"
