@@ -7,7 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
 
 """
-
+from __future__ import annotations
 import abc
 import collections.abc
 import copy
@@ -15,9 +15,8 @@ import dataclasses
 import inspect
 import itertools
 import more_itertools
-from typing import (
-    Any, Callable, ClassVar, Iterable, Iterator, Mapping, Sequence, Tuple, 
-    Union)
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
              
@@ -31,8 +30,8 @@ class Role(
     
     """
     name: str = None
-    workflow: 'sourdough.Workflow' = None
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    workflow: sourdough.Workflow = None
+    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
         stored_types = ('Role'))
 
     """ Initialization Methods """
@@ -47,21 +46,21 @@ class Role(
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
  
     @abc.abstractmethod
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         pass
  
     @abc.abstractmethod
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
     
     """ Class Methods """
 
     @classmethod
-    def validate(cls, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def validate(cls, worker: sourdough.Worker) -> sourdough.Worker:
         """Returns a Role instance based upon 'role'.
         
         Args:
@@ -104,7 +103,7 @@ class Role(
     
     def _get_suffixes(self, 
             settings: Mapping[str, Sequence[str]], 
-            project: 'sourdough.Project') -> Mapping[
+            project: sourdough.Project) -> Mapping[
                 str, Mapping[str, Sequence[str]]]:
         """[summary]
 
@@ -127,9 +126,9 @@ class Role(
     
     def _build_wrapper(self,
             key: str, 
-            generic: 'sourdough.Component',
+            generic: sourdough.Component,
             wrapped: Mapping[str, Sequence[str]],
-            project: 'sourdough.Project',
+            project: sourdough.Project,
             **kwargs) -> None:
         """[summary]
 
@@ -159,8 +158,8 @@ class Role(
 
     def _build_component(self,
             key: str, 
-            generic: 'sourdough.Component',
-            project: 'sourdough.Project',
+            generic: sourdough.Component,
+            project: sourdough.Project,
             **kwargs) -> None:
         """[summary]
         """
@@ -179,11 +178,11 @@ class Role(
 class SerialRole(Role, abc.ABC):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
 
     """ Public Methods """
     
-    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
 
         Args:
@@ -202,11 +201,11 @@ class SerialRole(Role, abc.ABC):
         return worker
  
     @abc.abstractmethod
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         pass
      
     @abc.abstractmethod
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
            
       
@@ -214,14 +213,14 @@ class SerialRole(Role, abc.ABC):
 class Obey(SerialRole):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
     
     """ Public Methods """
 
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         return more_itertools.collapse(worker.contents)
     
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
       
@@ -229,18 +228,18 @@ class Obey(SerialRole):
 class Repeat(SerialRole):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
     
     """ Public Methods """
 
     def iterate(self, 
-            worker: 'sourdough.Worker', 
+            worker: sourdough.Worker, 
             iterations: int = None) -> Iterable:
         if iterations is None:
             iterations = 2
         return itertools.repeat(worker.contents, iterations)
         
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
         
@@ -248,11 +247,11 @@ class Repeat(SerialRole):
 class ParallelRole(Role, abc.ABC):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
 
     """ Public Methods """
     
-    def organize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
 
         Args:
@@ -268,11 +267,11 @@ class ParallelRole(Role, abc.ABC):
         return worker
 
     @abc.abstractmethod
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         pass
  
     @abc.abstractmethod
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
        
          
@@ -280,14 +279,14 @@ class ParallelRole(Role, abc.ABC):
 class Compare(ParallelRole):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
 
     """ Public Methods """
 
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         return itertools.chain(worker.contents)
     
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
          
@@ -295,14 +294,14 @@ class Compare(ParallelRole):
 class Judge(ParallelRole):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
 
     """ Public Methods """
 
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         return itertools.chain(worker.contents)
     
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
     
 
@@ -310,14 +309,14 @@ class Judge(ParallelRole):
 class Survey(ParallelRole):
     
     name: str = None
-    workflow: 'sourdough.Workflow' = None
+    workflow: sourdough.Workflow = None
     
     """ Public Methods """
 
-    def iterate(self, worker: 'sourdough.Worker') -> Iterable:
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
         return itertools.chain(worker.contents)
     
-    def finalize(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
 
@@ -348,9 +347,9 @@ class Survey(ParallelRole):
 # class Tree(Role):
     
 #     name: str = None
-#     worker: 'sourdough.Worker' = None
+#     worker: sourdough.Worker = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
-#     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+#     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
 #         contents = {
 #             'task': sourdough.Task,
 #             'technique': sourdough.Technique,
@@ -361,22 +360,22 @@ class Survey(ParallelRole):
 # class Graph(Role):
     
 #     name: str = None
-#     worker: 'sourdough.Worker' = None
+#     worker: sourdough.Worker = None
 #     iterator: Union[str, Callable] = 'iterator'    
-#     options: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+#     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
 #         contents = {
 #             'edge': sourdough.Edge,
 #             'node': sourdough.Node})
         
-    # contents: Sequence[Union['sourdough.Component', str]] = dataclasses.field(
+    # contents: Sequence[Union[sourdough.Component, str]] = dataclasses.field(
     #     default_factory = list)
     # design: str = 'chained'
     # identification: str = None
     # data: Any = None    
-    # edges: Union[Sequence['sourdough.Edge'],
+    # edges: Union[Sequence[sourdough.Edge],
     #     Sequence[Sequence[str]], 
     #     Mapping[Any, Sequence[str]]] = dataclasses.field(default_factory = list)
-    # options: ClassVar['sourdough.Inventory'] = sourdough.Inventory()  
+    # options: ClassVar[sourdough.Inventory] = sourdough.Inventory()  
 
     # """ Initialization Methods """
     
@@ -427,7 +426,7 @@ class Survey(ParallelRole):
           
     # def add_node(self,
     #         name: str = None,
-    #         element: 'sourdough.Component' = None) -> None:
+    #         element: sourdough.Component = None) -> None:
     #     """Adds a node to the graph."""
     #     if element and not name:
     #         name = element.name
@@ -567,7 +566,7 @@ class Survey(ParallelRole):
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: 'sourdough.Worker') -> Sequence['sourdough.Component']:
+    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -581,9 +580,9 @@ class Survey(ParallelRole):
     #         searched = searched)
         
     # def _topological_descend(self, 
-    #         graph: 'sourdough.Worker', 
-    #         node: 'sourdough.Component',
-    #         searched: list[str]) -> Sequence['sourdough.Component']: 
+    #         graph: sourdough.Worker, 
+    #         node: sourdough.Component,
+    #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -601,7 +600,7 @@ class Survey(ParallelRole):
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: 'sourdough.Worker') -> Sequence['sourdough.Component']:
+    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -615,9 +614,9 @@ class Survey(ParallelRole):
     #         searched = searched)
         
     # def _dfs_descend(self, 
-    #         graph: 'sourdough.Worker', 
-    #         node: 'sourdough.Component',
-    #         searched: list[str]) -> Sequence['sourdough.Component']: 
+    #         graph: sourdough.Worker, 
+    #         node: sourdough.Component,
+    #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -635,7 +634,7 @@ class Survey(ParallelRole):
     #     """ Properties """
     
     # @property
-    # def root(self) -> 'sourdough.Component':
+    # def root(self) -> sourdough.Component:
     #     """[summary]
 
     #     Raises:
@@ -654,7 +653,7 @@ class Survey(ParallelRole):
     #         return rootless[0]
  
     # @property
-    # def endpoints(self) -> Sequence['sourdough.Component']:
+    # def endpoints(self) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -666,8 +665,8 @@ class Survey(ParallelRole):
     # """ Public Methods """
         
     # def get_sorted(self, 
-    #         graph: 'sourdough.Worker' = None,
-    #         return_elements: bool = False) -> Sequence['sourdough.Component']:
+    #         graph: sourdough.Worker = None,
+    #         return_elements: bool = False) -> Sequence[sourdough.Component]:
     #     """Performs a topological sort on 'graph'.
         
     #     If 'graph' is not passed, the 'contents' attribute is used instead.
@@ -683,7 +682,7 @@ class Survey(ParallelRole):
     #     else:
     #         return sorted_queue
 
-    # def validate(self, graph: 'sourdough.Worker') -> None:
+    # def validate(self, graph: sourdough.Worker) -> None:
     #     """
         
 

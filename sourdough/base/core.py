@@ -16,7 +16,7 @@ Contents:
         instances with both dict and list interfaces and methods.
 
 """
-
+from __future__ import annotations
 import abc
 import collections.abc
 import copy
@@ -24,8 +24,8 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
 
@@ -254,7 +254,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
                 
     def subsetify(self, 
             subset: Union[str, Sequence[str]], 
-            **kwargs) -> 'Lexicon':
+            **kwargs) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
         Args:
@@ -597,9 +597,9 @@ class Hybrid(Element, collections.abc.MutableSequence):
         
     """
     contents: Union[
-        'Element',
-        Mapping[Any, 'Element'], 
-        Sequence['Element']] = dataclasses.field(default_factory = list)
+        Element,
+        Mapping[Any, Element], 
+        Sequence[Element]] = dataclasses.field(default_factory = list)
     name: str = None
 
     """ Initialization Methods """
@@ -617,9 +617,9 @@ class Hybrid(Element, collections.abc.MutableSequence):
     
     def validate(self, 
             contents: Union[
-                'Element',
-                Mapping[Any, 'Element'], 
-                Sequence['Element']]) -> Sequence['Element']:
+                Element,
+                Mapping[Any, Element], 
+                Sequence[Element]]) -> Sequence[Element]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
@@ -660,9 +660,9 @@ class Hybrid(Element, collections.abc.MutableSequence):
 
     def add(self, 
             contents: Union[
-                'Element',
-                Mapping[Any, 'Element'], 
-                Sequence['Element']]) -> None:
+                Element,
+                Mapping[Any, Element], 
+                Sequence[Element]]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
@@ -677,9 +677,9 @@ class Hybrid(Element, collections.abc.MutableSequence):
 
     def append(self, 
             contents: Union[
-                'Element',
-                Mapping[Any, 'Element'], 
-                Sequence['Element']]) -> None:
+                Element,
+                Mapping[Any, Element], 
+                Sequence[Element]]) -> None:
         """Appends 'element' to 'contents'.
         
         Args:
@@ -732,9 +732,9 @@ class Hybrid(Element, collections.abc.MutableSequence):
    
     def extend(self, 
             contents: Union[
-                'Element',
-                Mapping[Any, 'Element'], 
-                Sequence['Element']]) -> None:
+                Element,
+                Mapping[Any, Element], 
+                Sequence[Element]]) -> None:
         """Extends 'element' to 'contents'.
         
         Args:
@@ -753,8 +753,8 @@ class Hybrid(Element, collections.abc.MutableSequence):
     def find(self, 
             tool: Callable, 
             recursive: bool = True, 
-            matches: Sequence['Element'] = None,
-            **kwargs) -> Sequence['Element']:
+            matches: Sequence[Element] = None,
+            **kwargs) -> Sequence[Element]:
         """Finds items in 'contents' that match criteria in 'tool'.
         
         Args:
@@ -787,8 +787,8 @@ class Hybrid(Element, collections.abc.MutableSequence):
     
     def get(self, 
             key: Union[str, int]) -> Union[
-                'Element', 
-                Sequence['Element']]:
+                Element, 
+                Sequence[Element]]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
         Args:
@@ -796,7 +796,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
                 'contents'.
                 
         Returns:
-            Union['Element', Sequence['Element']]: items in 'contents' or 
+            Union[Element, Sequence[Element]]: items in 'contents' or 
                 value in '_default' attribute. 
         """
         try:
@@ -804,7 +804,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
         except KeyError:
             return self._default
             
-    def insert(self, index: int, element: 'Element') -> None:
+    def insert(self, index: int, element: Element) -> None:
         """Inserts 'element' at 'index' in 'contents'.
 
         Args:
@@ -821,7 +821,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
             raise TypeError('element must be a Element type')
         return self
 
-    def items(self) -> Tuple[str, 'Element']:
+    def items(self) -> Tuple[str, Element]:
         """Emulates python dict 'items' method.
         
         Returns:
@@ -834,7 +834,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
         """Emulates python dict 'keys' method.
         
         Returns:
-            Sequence['Element']: list of names of Elements stored in 
+            Sequence[Element]: list of names of Elements stored in 
                 'contents'
             
         """
@@ -845,8 +845,8 @@ class Hybrid(Element, collections.abc.MutableSequence):
 
     def pop(self, 
             key: Union[str, int]) -> Union[
-                'Element', 
-                Sequence['Element']]:
+                Element, 
+                Sequence[Element]]:
         """Pops item(s) from 'contents'.
 
         Args:
@@ -854,7 +854,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
                 'contents'.
                 
         Returns:
-            Union['Element', Sequence['Element']]: items popped from 
+            Union[Element, Sequence[Element]]: items popped from 
                 'contents'.
             
         """
@@ -905,8 +905,8 @@ class Hybrid(Element, collections.abc.MutableSequence):
      
     def update(self, 
             contents: Union[
-                Mapping[Any, 'Element'], 
-                Sequence['Element']]) -> None:
+                Mapping[Any, Element], 
+                Sequence[Element]]) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
@@ -934,18 +934,18 @@ class Hybrid(Element, collections.abc.MutableSequence):
                 'elements must be a dict or list containing Elements')
         return self
 
-    def values(self) -> Sequence['Element']:
+    def values(self) -> Sequence[Element]:
         """Emulates python dict 'values' method.
         
         Returns:
-            Sequence['Element']: list of Elements stored in 'contents'
+            Sequence[Element]: list of Elements stored in 'contents'
             
         """
         return self.contents
           
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[str, int]) -> 'Element':
+    def __getitem__(self, key: Union[str, int]) -> Element:
         """Returns value(s) for 'key' in 'contents'.
         
         If 'key' is a str type, this method looks for a matching 'name'
@@ -984,7 +984,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
             
     def __setitem__(self, 
             key: Union[str, int], 
-            value: 'Element') -> None:
+            value: Element) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:

@@ -99,7 +99,7 @@ def test_project():
 # @dataclasses.dataclass
 # class AWorker(sourdough.Worker):
     
-#     options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {'new': NewAction()},
 #         always_return_list = True)
   

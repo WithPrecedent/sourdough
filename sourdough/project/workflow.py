@@ -13,11 +13,12 @@ Contents:
         in the Apply instance and/or passed data object.
 
 """
-
+from __future__ import annotations
 import abc
 import dataclasses
 import inspect
-from typing import Any, ClassVar, Iterable, Mapping, Sequence, Tuple, Union
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
 
@@ -30,13 +31,10 @@ class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
         project (sourdough.Project): the related Project instance.
         
     """
-    project: 'sourdough.Project' = None
+    project: sourdough.Project = None
     name: str = None
-    roles: 'sourdough.Role' = sourdough.Role
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
-        defaults = ['draft', 'publish', 'apply'], 
-        stored_types = ('Workflow'))
-    _loaded_roles: ClassVar['sourdough.Inventory'] = sourdough.Inventory()
+    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
+        defaults = ['draft', 'publish', 'apply'])
 
     """ Initialization Methods """
 
@@ -58,38 +56,12 @@ class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
         """
         pass
 
-    """ Private Class Methods """
-    
-    @classmethod
-    def _get_role(cls, name: str) -> 'sourdough.Role':
-        """[summary]
-
-        Args:
-            role (str): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        try:
-            return cls._loaded_roles[name]
-        except KeyError:
-            cls._loaded_roles[name] = cls.roles.build(name, workflow = cls)
-            return cls._loaded_roles[name]
-
     """ Private Methods """
-    
-    def _validate_roles(self) -> None:
-        """Validates 'role' as Role or its subclass."""
-        if not (inspect.isclass(self.roles) 
-                and (issubclass(self.roles, sourdough.Role)
-                     or self.roles == sourdough.Role)):
-            raise TypeError('roles must be Role or its subclass')
-        return self
 
     def _create_component(self, 
             name: str, 
             base: str,
-            **kwargs) -> 'sourdough.Component':
+            **kwargs) -> sourdough.Component:
         """[summary]
 
         Returns:
@@ -101,9 +73,8 @@ class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
             component = self.project.components.build(key = name, **kwargs)
         # Otherwise uses the appropriate generic type.
         except KeyError:
-            generic = self.project.components.registry[base]
             kwargs.update({'name': name})
-            component = generic(**kwargs)
+            component = self.project.components.build(key = base, **kwargs)
         return component
         
 
@@ -115,11 +86,11 @@ class Draft(Workflow):
         project (sourdough.Project): the related Project instance.
     
     """
-    project: 'sourdough.Project' = None  
+    project: sourdough.Project = None  
     
     """ Public Methods """
     
-    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
         """Drafts a Manager of a sourdough Project.
         
         Args:
@@ -206,8 +177,8 @@ class Draft(Workflow):
         return [k for k, v in components.items() if v.contains]
     
     def _add_attributes(self, 
-            component: 'sourdough.Component',
-            attributes: Mapping[str, Any]) -> 'sourdough.Component':
+            component: sourdough.Component,
+            attributes: Mapping[str, Any]) -> sourdough.Component:
         """[summary]
 
         Returns:
@@ -218,28 +189,28 @@ class Draft(Workflow):
             setattr(component, key, value)
         return component   
 
-    def _add_outline(self, 
-            worker: 'sourdough.Worker',
-            settings: Mapping[str, Sequence[str]]) -> 'sourdough.Worker':
-        """[summary]
+    # def _add_outline(self, 
+    #         worker: sourdough.Worker,
+    #         settings: Mapping[str, Sequence[str]]) -> sourdough.Worker:
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
-        """
-        outline = sourdough.Outline(name = name)
-        for key, value in settings.items():
-            prefix, base = self._divide_key(key = key)
-            for item in value:
-                bases[prefix] = base
-                components[prefix] = self._create_component(
-                    name = item, 
-                    base = base)
-        return components  
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     outline = sourdough.Outline(name = name)
+    #     for key, value in settings.items():
+    #         prefix, base = self._divide_key(key = key)
+    #         for item in value:
+    #             bases[prefix] = base
+    #             components[prefix] = self._create_component(
+    #                 name = item, 
+    #                 base = base)
+    #     return components  
 
     def _create_workers(self, 
             workers: Sequence[str],
             suffix: str,
-            **kwargs) -> Sequence['sourdough.Worker']:
+            **kwargs) -> Sequence[sourdough.Worker]:
         """[summary]
 
         Returns:
@@ -279,7 +250,7 @@ class Draft(Workflow):
     def _get_components(self, 
             settings: Mapping[str, Sequence[str]]) -> Mapping[
                 Tuple[str, str], 
-                Sequence['sourdough.Component']]:
+                Sequence[sourdough.Component]]:
         """[summary]
 
         Returns:
@@ -318,11 +289,11 @@ class Publish(Workflow):
         project (sourdough.Project): the related Project instance.
     
     """    
-    project: 'sourdough.Project' = None  
+    project: sourdough.Project = None  
 
     """ Public Methods """
  
-    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
         """Finalizes a worker with 'parameters' added.
         
         Args:
@@ -341,8 +312,8 @@ class Publish(Workflow):
     """ Private Methods """
     
     def _get_techniques(self, 
-            component: 'sourdough.Component',
-            **kwargs) -> 'sourdough.Component':
+            component: sourdough.Component,
+            **kwargs) -> sourdough.Component:
         """
         
         """
@@ -355,15 +326,15 @@ class Publish(Workflow):
         return component   
 
     def _get_technique(self, 
-            technique: 'sourdough.Technique',
-            **kwargs) -> 'sourdough.Technique':
+            technique: sourdough.Technique,
+            **kwargs) -> sourdough.Technique:
         """
         
         """
         return self.project.component.build(technique, **kwargs)
        
     def _set_parameters(self, 
-            component: 'sourdough.Component') -> 'sourdough.Component':
+            component: sourdough.Component) -> sourdough.Component:
         """
         
         """
@@ -375,7 +346,7 @@ class Publish(Workflow):
             return component
     
     def _set_technique_parameters(self, 
-            technique: 'sourdough.Technique') -> 'sourdough.Technique':
+            technique: sourdough.Technique) -> sourdough.Technique:
         """
         
         """
@@ -383,7 +354,7 @@ class Publish(Workflow):
             technique = self._get_settings(technique = technique)
         return technique
     
-    def _set_task_parameters(self, task: 'sourdough.Task') -> 'sourdough.Task':
+    def _set_task_parameters(self, task: sourdough.Task) -> sourdough.Task:
         """
         
         """
@@ -399,10 +370,10 @@ class Publish(Workflow):
             
     def _get_settings(self,
             technique: Union[
-                'sourdough.Technique', 
-                'sourdough.Task']) -> Union[
-                    'sourdough.Technique', 
-                    'sourdough.Task']:
+                sourdough.Technique, 
+                sourdough.Task]) -> Union[
+                    sourdough.Technique, 
+                    sourdough.Task]:
         """Acquires parameters from 'settings' of 'project'.
 
         Args:
@@ -423,9 +394,9 @@ class Publish(Workflow):
 @dataclasses.dataclass
 class Apply(Workflow):
     
-    project: 'sourdough.Project' = None  
+    project: sourdough.Project = None  
     
-    def create(self, worker: 'sourdough.Worker') -> 'sourdough.Worker':
+    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
 
         Returns:
@@ -446,7 +417,7 @@ class Apply(Workflow):
     """ Private Methods """
         
     def _get_algorithms(self, 
-            component: 'sourdough.Component') -> 'sourdough.Component':
+            component: sourdough.Component) -> sourdough.Component:
         """
         
         """

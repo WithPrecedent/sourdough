@@ -17,13 +17,14 @@ Contents:
         attribute by using the 'proxify' method.
 
 """
+from __future__ import annotations
 import abc
 import dataclasses
 # import inspect
 # import pathlib
 # import pyclbr
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
-
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 import sourdough
 
     
@@ -41,7 +42,7 @@ class LibraryMixin(abc.ABC):
     Namespaces: 'library', 'borrow'.
 
     """
-    library: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    library: ClassVar[sourdough.Catalog] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -91,7 +92,7 @@ class RegistryMixin(abc.ABC):
     
     """
     # register_from_disk: bool = False
-    registry: ClassVar['sourdough.Catalog'] = sourdough.Catalog()
+    registry: ClassVar[sourdough.Catalog] = sourdough.Catalog()
     
     """ Initialization Methods """
     
@@ -185,7 +186,7 @@ class RegistryMixin(abc.ABC):
     #     return module_spec.loader.exec_module(module)
     
     # def _get_subclasses(self, 
-    #         module: object) -> Sequence['sourdough.Element']:
+    #         module: object) -> Sequence[sourdough.Element]:
     #     """Returns a list of subclasses in 'module'.
         
     #     Args:
@@ -220,7 +221,7 @@ class OptionsMixin(abc.ABC):
     Namespaces: 'options', 'select'
 
     """
-    options: ClassVar['sourdough.Catalog'] = sourdough.Catalog(
+    options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
         always_return_list = True)
     
     """ Public Methods """
@@ -287,7 +288,10 @@ class LoaderMixin(abc.ABC):
     
     """ Public Methods """
 
-    def load(self, key: str, check_attributes: bool = False) -> object:
+    def load(self, 
+            key: str, 
+            check_attributes: bool = False, 
+            **kwargs) -> object:
         """Returns object named by 'key'.
 
         Args:
@@ -298,6 +302,7 @@ class LoaderMixin(abc.ABC):
             object: imported from a python module.
 
         """
+        imported = None
         if key in self._loaded:
             imported = self._loaded[key]
         else:
@@ -306,7 +311,6 @@ class LoaderMixin(abc.ABC):
                     key = getattr(self, key)
                 except AttributeError:
                     pass
-            imported = None
             for module in sourdough.utilities.listify(self.modules):
                 try:
                     imported = sourdough.utilities.importify(
@@ -317,8 +321,12 @@ class LoaderMixin(abc.ABC):
                     pass
         if imported is None:
             raise ImportError(f'{key} was not found in {self.modules}')
+        elif kwargs:
+            self._loaded[key] = imported(**kwargs)
+            return self._loaded[key]
         else:
-            return imported
+            self._loaded[key] = imported
+            return self._loaded[key]
             
     
 @dataclasses.dataclass

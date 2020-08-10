@@ -8,14 +8,14 @@ Contents:
     Filer: interface for sourdough file management classes and methods.
 
 """
-
+from __future__ import annotations
 import abc
 import csv
 import dataclasses
 import datetime
 import pathlib
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
-
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 import sourdough
 
 
@@ -46,7 +46,7 @@ class Filer(object):
             'root_folder'. Defaults to 'output'.
 
     """
-    settings: 'sourdough.Settings' = None
+    settings: sourdough.Settings = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -397,7 +397,7 @@ class Distributor(abc.ABC):
     """ Private Methods """
 
     def _check_required_parameters(self,
-            file_format: 'FileFormat',
+            file_format: FileFormat,
             passed_kwargs: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Adds requited parameters if not passed.
 
@@ -418,7 +418,7 @@ class Distributor(abc.ABC):
         return new_kwargs
 
     def _check_shared_parameters(self,
-            file_format: 'FileFormat',
+            file_format: FileFormat,
             passed_kwargs: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Selects kwargs for particular methods.
 
@@ -464,7 +464,7 @@ class Distributor(abc.ABC):
             raise TypeError('file_format must be a str or FileFormat type')
 
     def _get_parameters(self,
-            file_format: 'FileFormat',
+            file_format: FileFormat,
             **kwargs) -> Mapping[Any, Any]:
         """Creates complete parameters for a file input/output method.
 

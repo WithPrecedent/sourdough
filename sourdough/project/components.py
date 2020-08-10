@@ -19,6 +19,7 @@ Contents:
         Manager subclass per composite object.
 
 """
+from __future__ import annotations
 import abc
 import dataclasses
 import typing
@@ -50,7 +51,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar['sourdough.Inventory'] = sourdough.Inventory(
+    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
         stored_types = ('Component'))
 
     """ Properties """
@@ -114,7 +115,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
 
     @classmethod
     def _get_keys_by_type(cls, 
-            component: 'Component') -> Sequence['Component']:
+            component: Component) -> Sequence[Component]:
         """[summary]
 
         Returns:
@@ -126,7 +127,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
 
     @classmethod
     def _get_values_by_type(cls, 
-            component: 'Component') -> Sequence['Component']:
+            component: Component) -> Sequence[Component]:
         """[summary]
 
         Returns:
@@ -137,7 +138,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
         return [v for k, v in cls.registry.items() if issubclass(v, component)]
    
     @classmethod
-    def _suffixify(cls) -> Mapping[str, 'sourdough.Component']:
+    def _suffixify(cls) -> Mapping[str, Component]:
         """[summary]
 
         Returns:
@@ -390,8 +391,8 @@ class Worker(sourdough.Hybrid, Component):
         'Task', 
         'Technique', 
         str]] = dataclasses.field(default_factory = list)
-    outline: 'sourdough.Outline' = sourdough.Outline()
-    role: Union['sourdough.Role', str] = 'obey'
+    outline: sourdough.Outline = sourdough.Outline()
+    role: Union[sourdough.Role, str] = 'obey'
     name: str = None
 
     """ Initialization Methods """
@@ -405,7 +406,7 @@ class Worker(sourdough.Hybrid, Component):
     """ Properties """
     
     @property
-    def overview(self) -> 'sourdough.Overview':
+    def overview(self) -> sourdough.Overview:
         """Returns a dict snapshot of a Worker subclass instance.
         
         Returns:
@@ -477,8 +478,8 @@ class Manager(Worker):
         'Task', 
         'Technique', 
         str]] = dataclasses.field(default_factory = list)
-    outline: 'sourdough.Outline' = sourdough.Outline()
-    role: Union['sourdough.Role', str] = 'obey'
+    outline: sourdough.Outline = sourdough.Outline()
+    role: Union[sourdough.Role, str] = 'obey'
     identification: str = None
     name: str = None                    
 
@@ -515,8 +516,8 @@ class Manager(Worker):
 #         weight (float): a weight value assigned to this edge. Defaults to None.
 
 #     """
-#     start: 'sourdough.Node' = None
-#     stop: 'sourdough.Node' = None
+#     start: sourdough.Node = None
+#     stop: sourdough.Node = None
 #     directed: bool = False
 #     weight: float = 1.0
 #     name: str = None

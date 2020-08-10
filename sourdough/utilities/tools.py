@@ -5,13 +5,14 @@
 :copyright: 2020
 :license: Apache-2.0
 """
-
+from __future__ import annotations
 import datetime
 import importlib
 import inspect
 import pathlib
 import re
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import more_itertools
 

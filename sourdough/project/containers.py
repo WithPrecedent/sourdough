@@ -8,12 +8,13 @@ Contents:
 
 
 """
+from __future__ import annotations
 import abc
 import dataclasses
 import inspect
 import textwrap
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
 
@@ -92,10 +93,10 @@ class Inventory(sourdough.Catalog):
 
     def validate(self, 
             contents: Union[
-                'sourdough.Element',
-                Mapping[Any, 'sourdough.Element'],
-                Sequence['sourdough.Element']]) -> Mapping[
-                    str, 'sourdough.Element']:
+                sourdough.Element,
+                Mapping[Any, sourdough.Element],
+                Sequence[sourdough.Element]]) -> Mapping[
+                    str, sourdough.Element]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
@@ -169,7 +170,7 @@ class Overview(sourdough.Lexicon):
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
-    worker: 'sourdough.Worker' = None
+    worker: sourdough.Worker = None
     
     """ Initialization Methods """
     
@@ -214,9 +215,8 @@ class Overview(sourdough.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: 'sourdough.Element', 
-            element: 'sourdough.Element') -> Sequence[
-                'sourdough.Element']: 
+            item: sourdough.Element, 
+            element: sourdough.Element) -> Sequence[sourdough.Element]: 
         """[summary]
 
         Args:

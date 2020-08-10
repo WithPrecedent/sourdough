@@ -5,8 +5,10 @@
 :copyright: 2020
 :license: Apache-2.0
 """
-
+from __future__ import annotations
 import dataclasses
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 
 def add_slots(cls) -> object:

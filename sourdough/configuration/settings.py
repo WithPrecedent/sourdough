@@ -9,14 +9,15 @@ Contents:
         from disk or by the passed arguments.
 
 """
+from __future__ import annotations
 import configparser
 import dataclasses
 import importlib
 import json
 import pathlib
 import toml
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
-
+from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
+                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 import sourdough
 
 
