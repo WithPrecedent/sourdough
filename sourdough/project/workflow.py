@@ -24,7 +24,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
+class Workflow(sourdough.RegistryMixin, sourdough.Action, abc.ABC):
     """Base class for sourdough object creators.
     
     Args:
@@ -48,7 +48,7 @@ class Workflow(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, item: object = None, **kwargs) -> object:
+    def perform(self, item: object = None, **kwargs) -> object:
         """Performs some action related to passed 'item'.
         
         Subclasses must provide their own methods.
@@ -90,7 +90,7 @@ class Draft(Workflow):
     
     """ Public Methods """
     
-    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
         """Drafts a Manager of a sourdough Project.
         
         Args:
@@ -293,7 +293,7 @@ class Publish(Workflow):
 
     """ Public Methods """
  
-    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
         """Finalizes a worker with 'parameters' added.
         
         Args:
@@ -396,7 +396,7 @@ class Apply(Workflow):
     
     project: sourdough.Project = None  
     
-    def create(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
 
         Returns:

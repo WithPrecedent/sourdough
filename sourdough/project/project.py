@@ -224,7 +224,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
         for stage in self:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
-            manager = stage.create(worker = manager)
+            manager = stage.perform(worker = manager)
             print('test manager', manager.contents)
             # print('test stage overview', manager.overview)
         return manager
