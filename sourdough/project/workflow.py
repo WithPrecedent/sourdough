@@ -14,9 +14,7 @@ Contents:
 
 """
 from __future__ import annotations
-import abc
 import dataclasses
-import inspect
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
                     Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
@@ -24,17 +22,18 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.RegistryMixin, sourdough.Action, abc.ABC):
+class Workflow(sourdough.RegistryMixin, sourdough.Hybrid):
     """Base class for sourdough object creators.
     
     Args:
         project (sourdough.Project): the related Project instance.
         
     """
+    contents: Sequence[sourdough.Action] = dataclasses.field(
+        default_factory = list)
     project: sourdough.Project = None
     name: str = None
-    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
-        defaults = ['draft', 'publish', 'apply'])
+    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
 
     """ Initialization Methods """
 
@@ -45,17 +44,16 @@ class Workflow(sourdough.RegistryMixin, sourdough.Action, abc.ABC):
         # Validates 'roles'.
         self._validate_roles()
     
-    """ Required Subclass Methods """
+    """ Public Methods """
     
-    @abc.abstractmethod
-    def perform(self, item: object = None, **kwargs) -> object:
-        """Performs some action related to passed 'item'.
-        
-        Subclasses must provide their own methods.
-        
+    def validate(self, contents: Any) -> Any:
         """
-        pass
-
+        """
+        if isinstance(contents, self.contains):
+            return contents
+        else:
+            raise TypeError(f'contents must be {str(self.contains)} types') 
+    
     """ Private Methods """
 
     def _create_component(self, 
@@ -79,18 +77,21 @@ class Workflow(sourdough.RegistryMixin, sourdough.Action, abc.ABC):
         
 
 @dataclasses.dataclass
-class Draft(Workflow):
+class Draft(sourdough.Action):
     """Constructs composite objects from user settings.
     
     Args:
         project (sourdough.Project): the related Project instance.
     
     """
-    project: sourdough.Project = None  
+    workflow: Workflow = None
+    name: str = None 
     
     """ Public Methods """
     
-    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def perform(self, 
+            worker: sourdough.Worker,
+            settings: sourdough.Settings) -> sourdough.Worker:
         """Drafts a Manager of a sourdough Project.
         
         Args:
@@ -282,14 +283,15 @@ class Draft(Workflow):
                 
         
 @dataclasses.dataclass
-class Publish(Workflow):
+class Publish(sourdough.Action):
     """Finalizes a composite object from user settings.
     
     Args:
         project (sourdough.Project): the related Project instance.
     
     """    
-    project: sourdough.Project = None  
+    workflow: Workflow = None
+    name: str = None 
 
     """ Public Methods """
  
@@ -392,9 +394,10 @@ class Publish(Workflow):
 
 
 @dataclasses.dataclass
-class Apply(Workflow):
+class Apply(sourdough.Action):
     
-    project: sourdough.Project = None  
+    workflow: Workflow = None
+    name: str = None 
     
     def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
@@ -428,4 +431,53 @@ class Apply(Workflow):
             component.technique.algorithm = self.project.component.registry[
                 component.technique.algorithm]
         return component   
+
+
+@dataclasses.dataclass
+class Editor(Workflow):
+    """Three-step workflow that allows user editing and easy serialization.
+    
+    Args:
+        contents (Union[Element, Mapping[Any, Element], 
+            Sequence[Element]]): Element subclasses or Element subclass 
+            instances to store in a list. If a dict is passed, the keys will be 
+            ignored and only the values will be added to 'contents'. Defaults to 
+            an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the '_get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
         
+    """
+    contents: Sequence[sourdough.Action] = [Draft, Publish, Apply]
+    project: sourdough.Project = None 
+    name: str = None
+     
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        # Validates 'roles'.
+        self._validate_roles()
+
+    """ Public Methods """
+    
+    def perform(self, item: object = None, **kwargs) -> object:
+        """Performs some action related to passed 'item'.
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass
+  
+    """ Private Methods """
+    

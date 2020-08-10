@@ -51,8 +51,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
-        stored_types = ('Component'))
+    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
 
     """ Properties """
     

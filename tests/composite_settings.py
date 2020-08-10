@@ -1,5 +1,7 @@
 settings = {
-    'general': {'verbose': True, 'seed': 43},
+    'general': {
+        'verbose': True,
+        'seed': 43},
     'files': {
         'source_format': 'csv',
         'interim_format': 'csv',
@@ -8,7 +10,8 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workers': ['parser', 'munger'],
-        'cool_project_role': 'obey'},
+        'cool_project_role': 'obey',
+        'workflow': 'editor'},
     'parser': {
         'parser_role': 'compare',
         'parser_tasks': ['divide'],

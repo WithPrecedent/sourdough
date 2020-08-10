@@ -590,10 +590,6 @@ class Hybrid(Element, collections.abc.MutableSequence):
             the '_get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-
-    Attributes:
-        _default (Any): default value to use when there is a KeyError using the
-            'get' method.
         
     """
     contents: Union[

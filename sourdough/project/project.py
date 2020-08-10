@@ -94,11 +94,9 @@ class Project(sourdough.Element, collections.abc.Iterable):
     """
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
-    workflow: Union[
-        sourdough.Workflow,
-        Sequence[Union[sourdough.Workflow, str]]] = sourdough.Workflow
     components: sourdough.Component = sourdough.Component
     roles: sourdough.Role = sourdough.Role
+    workflow: str = 'editor'
     name: str = None
     identification: str = None
     automatic: bool = True

@@ -9,7 +9,6 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -31,6 +30,7 @@ class Role(
     """
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 1
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
         stored_types = ('Role'))
 
@@ -47,10 +47,6 @@ class Role(
 
     @abc.abstractmethod
     def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
-        pass
- 
-    @abc.abstractmethod
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
         pass
  
     @abc.abstractmethod
@@ -85,6 +81,11 @@ class Role(
             raise TypeError(
                 f'The role attribute of worker must be a str or {cls} type')
         return worker
+
+    """ Public Methods """
+    
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
+        return more_itertools.collapse(worker.contents)
 
     """ Private Methods """
   
@@ -122,7 +123,6 @@ class Role(
                 k: v for k, v in settings.items() if k.endswith(suffix)} 
             
         return {k: v for k, v in project.components.registry.items()}
-
     
     def _build_wrapper(self,
             key: str, 
@@ -172,91 +172,60 @@ class Role(
             component = generic(**kwargs)
         self.worker.add(component)
         return self  
-
-
-@dataclasses.dataclass
-class SerialRole(Role, abc.ABC):
-    
-    name: str = None
-    workflow: sourdough.Workflow = None
-
-    """ Public Methods """
-    
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
-        """[summary]
-
-        Args:
-            settings (Mapping[Any, Any]): [description]
-            
-        """
-        if container is None:
-            container = sourdough.Worker
-        steps = components.pop([components.keys()[0]])
-        possible = list(components.values())
-        permutations = list(map(list, itertools.product(*possible)))
-        for i, contained in enumerate(permutations):
-            container = container()
-            
-            instance = container(contents = tuple(zip(steps, contained)))
-        return worker
- 
-    @abc.abstractmethod
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        pass
-     
-    @abc.abstractmethod
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
-        pass
            
       
 @dataclasses.dataclass
-class Obey(SerialRole):
+class Obey(Role):
     
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 1
     
     """ Public Methods """
 
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return more_itertools.collapse(worker.contents)
-    
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+        pass
+
     def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
       
 @dataclasses.dataclass
-class Repeat(SerialRole):
+class Repeat(Role):
     
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 2
     
     """ Public Methods """
 
-    def iterate(self, 
-            worker: sourdough.Worker, 
-            iterations: int = None) -> Iterable:
-        if iterations is None:
-            iterations = 2
-        return itertools.repeat(worker.contents, iterations)
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+        pass
+    
+    def iterate(self, worker: sourdough.Worker) -> Iterable:
+        return itertools.repeat(worker.contents, self.iterations)
         
     def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
-
-        
+       
+         
 @dataclasses.dataclass
-class ParallelRole(Role, abc.ABC):
+class Compare(Role):
     
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 1
 
     """ Public Methods """
-    
+
     def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
         """[summary]
 
         Args:
-            settings (Mapping[Any, Any]): [description]
-            
+            worker (sourdough.Worker): [description]
+
+        Returns:
+            sourdough.Worker: [description]
         """
         steps = components.pop([components.keys()[0]])
         possible = list(components.values())
@@ -265,56 +234,38 @@ class ParallelRole(Role, abc.ABC):
             instance = sourdough.Worker(
                 _components = tuple(zip(steps, contained)))
         return worker
-
-    @abc.abstractmethod
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        pass
- 
-    @abc.abstractmethod
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
-        pass
-       
-         
-@dataclasses.dataclass
-class Compare(ParallelRole):
-    
-    name: str = None
-    workflow: sourdough.Workflow = None
-
-    """ Public Methods """
-
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return itertools.chain(worker.contents)
     
     def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
 
          
 @dataclasses.dataclass
-class Judge(ParallelRole):
+class Judge(Role):
     
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 10
 
     """ Public Methods """
 
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return itertools.chain(worker.contents)
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+        pass
     
     def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass
     
 
 @dataclasses.dataclass
-class Survey(ParallelRole):
+class Survey(Role):
     
     name: str = None
     workflow: sourdough.Workflow = None
+    iterations: int = 10
     
     """ Public Methods """
 
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return itertools.chain(worker.contents)
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+        pass
     
     def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
         pass

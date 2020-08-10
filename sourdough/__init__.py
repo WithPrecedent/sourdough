@@ -61,9 +61,7 @@ from sourdough.project.roles import Obey
 from sourdough.project.roles import Compare
 from sourdough.project.roles import Survey
 from sourdough.project.workflow import Workflow
-from sourdough.project.workflow import Draft
-from sourdough.project.workflow import Publish
-from sourdough.project.workflow import Apply
+from sourdough.project.workflow import Editor
 from sourdough.project.project import Project
 
 
