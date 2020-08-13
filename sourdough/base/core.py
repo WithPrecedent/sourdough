@@ -532,7 +532,156 @@ class Catalog(Lexicon):
 
         
 @dataclasses.dataclass
-class Hybrid(Element, collections.abc.MutableSequence):
+class Slate(Element, collections.abc.MutableSequence):
+    """Basic sourdough list replacement
+    
+    A Slate differs from a python list in 3 significant ways:
+        1) It includes a 'name' attribute which is used for internal referencing
+            in sourdough. This is inherited from Element.
+        2) It includes an 'add' method which allows different datatypes to be 
+            passed and added to the 'contents' of a Slate instance. 
+        3) It uses a 'validate' method to validate or convert the passed 
+            'contents' argument. It will convert all supported datatypes to 
+            a list. The 'validate' method is automatically called when a
+            Slate is instanced and when the 'add' method is called.
+
+    Args:
+        contents (Union[Element, Mapping[Any, Element], 
+            Sequence[Element]]): Element subclasses or Element subclass 
+            instances to store in a list. If a dict is passed, the keys will be 
+            ignored and only the values will be added to 'contents'. Defaults to 
+            an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the '_get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+        
+    """
+    contents: Union[Any] = dataclasses.field(default_factory = list)
+    name: str = None
+  
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
+        # Validates 'contents' or converts it to appropriate iterable.
+        self._initial_validation()  
+    
+    """ Public Methods """
+    
+    def validate(self, contents: Sequence[Any]) -> Sequence[Any]:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Args:
+            contents (Sequence[Any]): items to validate or convert to a list.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Sequence[Any]: validated or converted argument that is compatible 
+                with an instance.
+        
+        """
+        if isinstance(contents, Sequence):
+            return contents
+        else:
+            raise TypeError('contents must be a list')
+
+    def add(self, contents: Sequence[Any]) -> None:
+        """Extends 'contents' argument to 'contents' attribute.
+        
+        Args:
+            contents (Sequence[Any]): items to add to the 'contents' attribute.
+
+        """
+        contents = self.validate(contents = contents)
+        self.contents.extend(contents)
+        return self  
+        
+    """ Dunder Methods """
+
+    def __getitem__(self, key: int) -> Any:
+        """Returns value(s) for 'key' in 'contents'.
+
+        Args:
+            key (int): index to search for in 'contents'.
+
+        Returns:
+            Any: item stored in 'contents' at key.
+
+        """
+        return self.contents[key]
+            
+    def __setitem__(self, key: int, value: Any) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (int): index to set 'value' to in 'contents'.
+            value (Any): value to be set at 'key' in 'contents'.
+
+        """
+        self.contents[key] = value
+
+    def __delitem__(self, key: Union[str, int]) -> None:
+        """Deletes item at 'key' index in 'contents'.
+
+        Args:
+            key (int): index in 'contents' to delete.
+
+        """
+        del self.contents[key]
+
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: generic ordered iterable of 'contents'.
+               
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents'.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+    """ Private Methods """
+    
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        new_contents = copy.deepcopy(self.contents)
+        new_contents = self.validate(contents = new_contents)
+        self.contents = []
+        self.add(contents = new_contents)
+        return self
+    
+    
+@dataclasses.dataclass
+class Hybrid(Slate):
     """Base class for ordered iterables in sourdough.
     
     Hybrid combines the functionality and interfaces of python dicts and lists.
@@ -553,7 +702,7 @@ class Hybrid(Element, collections.abc.MutableSequence):
             Element subclass instances. 
         4) It uses a 'validate' method to validate or convert the passed 
             'contents' argument. It will convert all supported datatypes to 
-            a dict. The 'validate' method is automatically called when a
+            a list. The 'validate' method is automatically called when a
             Hybrid is instanced and when the 'add' method is called.
         5) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
             subclass instance with only the items with 'name' attributes 
@@ -597,17 +746,6 @@ class Hybrid(Element, collections.abc.MutableSequence):
         Mapping[Any, Element], 
         Sequence[Element]] = dataclasses.field(default_factory = list)
     name: str = None
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()        
-        # Validates 'contents' or converts it to appropriate iterable.
-        self._initial_validation()  
-        # Sets default for default value using the 'get' method.
-        self._default = None
 
     """ Public Methods """
     

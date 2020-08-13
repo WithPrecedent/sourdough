@@ -1,5 +1,5 @@
 """
-roles: composite object designs and iterators
+structures: composite object designs and iterators
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -57,29 +57,29 @@ class Role(
 
     @classmethod
     def validate(cls, worker: sourdough.Worker) -> sourdough.Worker:
-        """Returns a Role instance based upon 'role'.
+        """Returns a Role instance based upon 'structure'.
         
         Args:
-            worker (sourdough.Worker): Hybrid instance with 'role' attribute
+            worker (sourdough.Worker): Hybrid instance with 'structure' attribute
                 to be validated.
                 
         Raises:
-            TypeError: if 'worker.role' is neither a str nor Role type.
+            TypeError: if 'worker.structure' is neither a str nor Role type.
             
         Returns:
-            sourdough.Worker: with a validated 'role' attribute.
+            sourdough.Worker: with a validated 'structure' attribute.
             
         """
-        if isinstance(worker.role, str):
-            worker.role = cls.registry[worker.role]()
-        elif (inspect.isclass(worker.role) 
-                and issubclass(worker.role, cls)):
-            worker.role = worker.role() 
-        elif isinstance(worker.role, cls):
-            worker.role.__post_init__()
+        if isinstance(worker.structure, str):
+            worker.structure = cls.registry[worker.structure]()
+        elif (inspect.isclass(worker.structure) 
+                and issubclass(worker.structure, cls)):
+            worker.structure = worker.structure() 
+        elif isinstance(worker.structure, cls):
+            worker.structure.__post_init__()
         else:
             raise TypeError(
-                f'The role attribute of worker must be a str or {cls} type')
+                f'The structure attribute of worker must be a str or {cls} type')
         return worker
 
     """ Public Methods """

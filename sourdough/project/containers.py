@@ -20,37 +20,105 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Outline(sourdough.Lexicon):
+class Details(sourdough.Slate):
+    """Basic characteristics of a group of sourdough Components.
     
-    contents: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
-    generics: Mapping[str, str] = dataclasses.field(default_factory = dict)
-    name: str = None
+    Args:
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__'). 
         
+    """
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
+    generic: str = None
+    structure: str = None
+    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    
     """ Public Methods """
     
-    def validate(self, 
-            contents: Mapping[str, Sequence[str]]) -> Mapping[
-                str, 
-                Sequence[str]]:
-        """Validates 'contents' or converts 'contents' to a dict.
+    def validate(self, contents: Union[str, Sequence[str]]) -> Sequence[str]:
+        """Validates 'contents' or converts 'contents' to a list.
         
         Args:
-            contents (Any): variable to validate as compatible with an instance.
+            contents (Sequence[str]): variable to validate as compatible with 
+                an instance.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-            Mapping[Any, Any]: validated or converted argument that is 
+            Sequence[str]: validated or converted argument that is compatible 
+                with an instance.
+        
+        """
+        if isinstance(contents, str):
+            return sourdough.utilities.listify(contents)
+        elif (isinstance(contents, Sequence) 
+                and all(isinstance(c, str) for c in contents)):
+            return contents
+        else:
+            raise TypeError('contents must be a str of list of str types')
+
+
+@dataclasses.dataclass
+class Outline(sourdough.Lexicon):
+    """Base class for pieces of sourdough composite objects.
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__'). 
+        registry (ClassVar[sourdough.Inventory]): the instance which 
+            automatically stores any subclass of Component.
+              
+    """
+    contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
+    generic: str = None
+    name: str = None
+        
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Mapping[str, Details]) -> Mapping[str, Details]:
+        """Validates 'contents' or converts 'contents' to a dict.
+        
+        Args:
+            contents (Mapping[str, Details]): variable to validate as compatible 
+                with an instance.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Mapping[str, Details]: validated or converted argument that is 
                 compatible with an instance.
         
         """
         if (isinstance(contents, Mapping) 
-                and all(isinstance(c, Sequence) for c in contents.values())):
+                and all(isinstance(c, Details) for c in contents.values())):
             return contents
         else:
-            raise TypeError('contents must be a dict type with list values')
+            raise TypeError(
+                'contents must be a dict type with Details type values')
 
 
 @dataclasses.dataclass
@@ -178,11 +246,11 @@ class Overview(sourdough.Lexicon):
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
         super().__post_init__()
-        if self.worker.role is not None:
+        if self.worker.structure is not None:
             self.add({
                 'name': self.worker.name, 
-                'role': self.worker.role.name})
-            for key, value in self.worker.role.options.items():
+                'structure': self.worker.structure.name})
+            for key, value in self.worker.structure.options.items():
                 matches = self.worker.find(
                     self._get_type, 
                     element = value)
@@ -190,7 +258,7 @@ class Overview(sourdough.Lexicon):
                     self.contents[f'{key}s'] = matches
         else:
             raise ValueError(
-                'role must be a Role for an overview to be created.')
+                'structure must be a Role for an overview to be created.')
         return self          
     
     """ Dunder Methods """

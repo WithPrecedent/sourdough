@@ -346,7 +346,7 @@ class Worker(sourdough.Hybrid, Component):
     Worker inherits all of the differences between a Hybrid and a python list.
     
     A Worker differs from a Hybrid in 3 significant ways:
-        1) It has a 'role' attribute which indicates how the contained 
+        1) It has a 'structure' attribute which indicates how the contained 
             iterator should be ordered. 
         2) An 'overview' property is added which returns a dict of the names
             of the various parts of the tree objects. It doesn't include the
@@ -359,7 +359,7 @@ class Worker(sourdough.Hybrid, Component):
     Args:
         contents (Sequence[sourdough.Component]]): stored iterable of Component
             subclasses. Defaults to an empty list.
-        role (Union[sourdough.Role, str]): role for the organization, iteration, 
+        structure (Union[sourdough.Role, str]): structure for the organization, iteration, 
             and composition of 'contents' or a str corresponding to an option in 
             'Role.registry'.
         name (str): creates the name of a class instance that is used for 
@@ -391,7 +391,7 @@ class Worker(sourdough.Hybrid, Component):
         'Technique', 
         str]] = dataclasses.field(default_factory = list)
     outline: sourdough.Outline = sourdough.Outline()
-    role: Union[sourdough.Role, str] = 'obey'
+    structure: Union[sourdough.Role, str] = 'obey'
     name: str = None
 
     """ Initialization Methods """
@@ -417,9 +417,9 @@ class Worker(sourdough.Hybrid, Component):
     """ Dunder Methods """
     
     # def __iter__(self) -> Iterable:
-    #     """Returns iterable of 'contents' based upon 'role'.
+    #     """Returns iterable of 'contents' based upon 'structure'.
         
-    #     If 'role' has not been initialized, this method returns the default
+    #     If 'structure' has not been initialized, this method returns the default
     #     python 'iter' method of 'contents'. This should not happen as long as
     #     the '__post_init__' method from Hybrid is not overwritten without 
     #     calling 'super().__post_init__'.
@@ -429,7 +429,7 @@ class Worker(sourdough.Hybrid, Component):
             
     #     """
     #     try:
-    #         return iter(self.role)
+    #         return iter(self.structure)
     #     except (AttributeError, TypeError):
     #         return iter(self.contents)
         
@@ -438,7 +438,7 @@ class Worker(sourdough.Hybrid, Component):
     # def _initial_validation(self) -> None:
     #     """Validates passed 'contents' on class initialization."""
     #     super()._initial_validation()
-    #     # Validates or converts 'role'.
+    #     # Validates or converts 'structure'.
     #     self = sourdough.Role.validate(worker = self)
     #     return self
 
@@ -450,7 +450,7 @@ class Manager(Worker):
     Args:
         contents (Sequence[sourdough.Component]]): stored iterable of Component
             subclasses. Defaults to an empty list.
-        role (Union[sourdough.Role, str]): role for the organization, iteration, 
+        structure (Union[sourdough.Role, str]): structure for the organization, iteration, 
             and composition of 'contents' or a str corresponding to an option in 
             'Role.registry'.
         identification (str): a unique identification name for a 
@@ -478,7 +478,7 @@ class Manager(Worker):
         'Technique', 
         str]] = dataclasses.field(default_factory = list)
     outline: sourdough.Outline = sourdough.Outline()
-    role: Union[sourdough.Role, str] = 'obey'
+    structure: Union[sourdough.Role, str] = 'obey'
     identification: str = None
     name: str = None                    
 

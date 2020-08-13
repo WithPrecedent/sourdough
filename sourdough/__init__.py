@@ -34,9 +34,10 @@ from sourdough import utilities
 # Imports of core base classes and mixins.
 from sourdough.base.core import Element
 from sourdough.base.core import Action
-from sourdough.base.core import Hybrid
 from sourdough.base.core import Lexicon
 from sourdough.base.core import Catalog
+from sourdough.base.core import Slate
+from sourdough.base.core import Hybrid
 from sourdough.base.mixins import LibraryMixin
 from sourdough.base.mixins import RegistryMixin
 from sourdough.base.mixins import OptionsMixin
@@ -56,10 +57,10 @@ from sourdough.project.components import Technique
 from sourdough.project.components import Task
 from sourdough.project.components import Worker
 from sourdough.project.components import Manager
-from sourdough.project.roles import Role
-from sourdough.project.roles import Obey
-from sourdough.project.roles import Compare
-from sourdough.project.roles import Survey
+from sourdough.project.structures import Role
+from sourdough.project.structures import Obey
+from sourdough.project.structures import Compare
+from sourdough.project.structures import Survey
 from sourdough.project.workflow import Workflow
 from sourdough.project.workflow import Editor
 from sourdough.project.project import Project
@@ -84,7 +85,7 @@ __author__ = 'Corey Rayburn Yung'
 #     'ProxyMixin',
 #     'Settings',
 #     'Filer',
-#     'roles',
+#     'structures',
 #     'Role',
 #     'Technique',
 #     'Task',

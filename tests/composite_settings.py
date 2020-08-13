@@ -10,10 +10,10 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workers': ['parser', 'munger'],
-        'cool_project_role': 'obey',
+        'cool_project_structure': 'obey',
         'workflow': 'editor'},
     'parser': {
-        'parser_role': 'compare',
+        'parser_structure': 'compare',
         'parser_tasks': ['divide'],
         'divide_techniques': ['slice', 'dice']},
     'munger': {

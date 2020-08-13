@@ -229,36 +229,6 @@ class ParallelComposite(Composite, sourdough.Component, abc.ABC):
     def finalize(self, **kwargs) -> Iterator:
         pass
 
-    
-@dataclasses.dataclass
-class Outline(sourdough.Component):
-    """Base class for pieces of sourdough composite objects.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__'). 
-        registry (ClassVar[sourdough.Inventory]): the instance which 
-            automatically stores any subclass of Component.
-              
-    """
-    contents: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
-    generics: Tuple[str, str] = None
-    name: str = None
-    _excess_attributes: ClassVar[Sequence[str]] = [
-        'registry', 
-        'generic',
-        '_exceess_attributes']
-
 
 @dataclasses.dataclass
 class Contest(ParallelComposite):

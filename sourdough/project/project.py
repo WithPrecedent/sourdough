@@ -30,7 +30,7 @@ COMPONENT_BASE = {
     # 'manager': sourdough.Manager,
     # 'node': sourdough.Node,
     # 'edge': sourdough.Edge} 
-      
+
 
 @dataclasses.dataclass
 class Project(sourdough.Element, collections.abc.Iterable):
@@ -95,7 +95,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
     components: sourdough.Component = sourdough.Component
-    roles: sourdough.Role = sourdough.Role
+    structures: sourdough.Role = sourdough.Role
     workflow: str = 'editor'
     name: str = None
     identification: str = None
@@ -116,7 +116,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._set_identification()
         # Validates various attributes or converts them to the proper type.
-        attributes = ['settings', 'filer', 'workflow', 'components', 'roles']
+        attributes = ['settings', 'filer', 'workflow', 'components', 'structures']
         for attribute in attributes :
             getattr(self, f'_validate_{attribute}')()
         # Adds 'general' section attributes from 'settings'.
@@ -183,12 +183,12 @@ class Project(sourdough.Element, collections.abc.Iterable):
             self.manager = self._get_manager()
         return self
     
-    def _validate_roles(self) -> None:
-        """Validates 'role' as Role or its subclass."""
-        if not (inspect.isclass(self.roles) 
-                and (issubclass(self.roles, sourdough.Role)
-                     or self.roles == sourdough.Role)):
-            raise TypeError('roles must be Role or its subclass')
+    def _validate_structures(self) -> None:
+        """Validates 'structure' as Role or its subclass."""
+        if not (inspect.isclass(self.structures) 
+                and (issubclass(self.structures, sourdough.Role)
+                     or self.structures == sourdough.Role)):
+            raise TypeError('structures must be Role or its subclass')
         return self
       
     def _get_manager(self) -> None:
