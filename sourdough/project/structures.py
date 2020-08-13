@@ -11,6 +11,8 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
+import itertools
+import more_itertools
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
                     Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
@@ -35,13 +37,21 @@ class Composite(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
             the 'get_name' method in Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-    
+        registry (ClassVar[sourdough.Inventory]): An Inventory instance which 
+            will automatically store all subclasses.
+        _excess_attributes (ClassVar[Sequence[str]]): a list of names of 
+            attributes that should be removed before serialization of this
+            object. This just simplifies the serialized file with less clutter
+            in the saved object.
+                
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
-    _excess_attributes: Sequence[str] = ['registry', '_exceess_attributes']
+    _excess_attributes: ClassVar[Sequence[str]] = [
+        'registry', 
+        '_exceess_attributes']
 
     """ Initialization Methods """
     
@@ -83,6 +93,7 @@ class Aggregation(Composite, sourdough.Component):
     Distinguishing characteristics of an Aggregation:
         1) Order doesn't matter.
         2) All stored Components must be of the same type.
+        3) Stored Components do not need to be connected.
         
     Args:
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
@@ -103,10 +114,10 @@ class Aggregation(Composite, sourdough.Component):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-   
+       
 
 @dataclasses.dataclass
-class SerialComposite(Composite, sourdough.Component):
+class SerialComposite(Composite, sourdough.Component, abc.ABC):
     """Base class for serial composite objects in sourdough projects.
         
     Args:
@@ -128,7 +139,21 @@ class SerialComposite(Composite, sourdough.Component):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-         
+             
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def iterate(self, **kwargs) -> Iterator:
+        pass
+    
+    @abc.abstractmethod
+    def activate(self, **kwargs) -> Iterator:
+        pass    
+    
+    @abc.abstractmethod
+    def finalize(self, **kwargs) -> Iterator:
+        pass
+            
     
 @dataclasses.dataclass
 class Pipeline(SerialComposite):
@@ -137,6 +162,7 @@ class Pipeline(SerialComposite):
     Distinguishing characteristics of a Contest:
         1) Follows a sequence of instructions (serial structure).
         2) It may pass data or other arguments to the next step in the sequence.
+        3) Only one connection or path exists between each object.
         
     Args:
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
@@ -160,7 +186,7 @@ class Pipeline(SerialComposite):
             
 
 @dataclasses.dataclass
-class ParallelComposite(Composite, sourdough.Component):
+class ParallelComposite(Composite, sourdough.Component, abc.ABC):
     """Base class for parallel composite objects in sourdough projects.
         
     Args:
@@ -182,7 +208,56 @@ class ParallelComposite(Composite, sourdough.Component):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     iterations: int = 10
+    criteria: str = None
     name: str = None
+            
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def organize(self, **kwargs) -> Iterator:
+        pass
+    
+    @abc.abstractmethod
+    def iterate(self, **kwargs) -> Iterator:
+        pass
+    
+    @abc.abstractmethod
+    def activate(self, **kwargs) -> Iterator:
+        pass    
+    
+    @abc.abstractmethod
+    def finalize(self, **kwargs) -> Iterator:
+        pass
+
+    
+@dataclasses.dataclass
+class Outline(sourdough.Component):
+    """Base class for pieces of sourdough composite objects.
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__'). 
+        registry (ClassVar[sourdough.Inventory]): the instance which 
+            automatically stores any subclass of Component.
+              
+    """
+    contents: Mapping[str, Sequence[str]] = dataclasses.field(
+        default_factory = dict)
+    generics: Tuple[str, str] = None
+    name: str = None
+    _excess_attributes: ClassVar[Sequence[str]] = [
+        'registry', 
+        'generic',
+        '_exceess_attributes']
 
 
 @dataclasses.dataclass
@@ -192,6 +267,9 @@ class Contest(ParallelComposite):
     Distinguishing characteristics of a Contest:
         1) Repeats a Pipeline with different options (parallel structure).
         2) Chooses the best option based upon selected criteria.
+        3) Each stored Component is only attached to the Contest with exactly 
+            one connection (these connections are not defined separately - they
+            are simply part of the parallel structure).
         
     Args:
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
@@ -225,7 +303,10 @@ class Study(ParallelComposite):
         1) Repeats a Pipeline with different options (parallel structure).
         2) Maintains all of the repetitions without selecting or averaging the 
             results.
-           
+        3) Each stored Component is only attached to the Study with exactly 
+            one connection (these connections are not defined separately - they
+            are simply part of the parallel structure).
+                      
     Args:
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
@@ -242,12 +323,43 @@ class Study(ParallelComposite):
             snake case version of the class name ('__class__.__name__').
     
     """
-    contents: Sequence[Union[
-        Tuple[str, str], 
-        sourdough.Pipeline]] = dataclasses.field(default_factory = list)
+    contents: Union[
+        sourdough.Outline,
+        sourdough.Pipeline] = dataclasses.field(default_factory = list)
     iterations: int = None
     name: str = None
+
+    """ Public Methods """
     
+    def organize(self, settings: sourdough.Settings) -> None:
+        """[summary]
+
+        Args:
+            worker (sourdough.Worker): [description]
+
+        Returns:
+            sourdough.Worker: [description]
+        """
+        new_contents = []
+        steps = list(self.contents.keys())
+        possible = list(self.contents.values())
+        permutations = list(map(list, itertools.product(*possible)))
+        for pipeline in permutations:
+            instance = Pipeline()
+            for item in pipeline:
+                if isinstance(item, Sequence):
+                    
+                else:
+                    
+                component = self._get_component(
+                    key = item, 
+                    generic = self.contents.generic)
+                if isinstance(item, Composite):
+                    self.organize()
+            new_contents.append(instance)
+        self.contents = new_contents
+        return self
+        
     
 @dataclasses.dataclass
 class Survey(ParallelComposite):
@@ -257,7 +369,10 @@ class Survey(ParallelComposite):
         1) Repeats a Pipeline with different options (parallel structure).
         2) Averages or otherwise combines the results based upon selected 
             criteria.
-            
+        3) Each stored Component is only attached to the Survey with exactly 
+            one connection (these connections are not defined separately - they
+            are simply part of the parallel structure).    
+                    
     Args:
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
@@ -291,7 +406,7 @@ class Survey(ParallelComposite):
 #         1) Iteration is not defined by ordering of contents.
 #         2) Incorporates Edges as part of its structure.
 #         3) All Components must be connected (sourdough does not presently
-#             support graphs with unconnected objects).
+#             support graphs with unconnected graphs).
             
 #     Args:
 #         contents (Sequence[Union[str, sourdough.Component]]): a list of str or

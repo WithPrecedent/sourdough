@@ -144,7 +144,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
             [type]: [description]
         """
         return {f'_{k}s': v for k, v in cls.registry.items()}   
-    
+
     
 @dataclasses.dataclass
 class Technique(sourdough.LoaderMixin, sourdough.Action, Component):

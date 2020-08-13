@@ -20,7 +20,7 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
-# import inspect
+import inspect
 # import pathlib
 # import pyclbr
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
@@ -101,7 +101,8 @@ class RegistryMixin(abc.ABC):
         # Adds new subclass to 'registry'.
         if not hasattr(cls, '_registry_base'):
             cls._registry_base = cls
-        if not (hasattr(super(), 'registry') or cls == cls._registry_base):
+        if (not (hasattr(super(), 'registry') or cls == cls._registry_base)
+                and not inspect.isabstract(cls)):
             name = sourdough.utilities.snakify(cls.__name__)
             cls._registry_base.registry[name] = cls
 

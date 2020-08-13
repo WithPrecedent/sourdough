@@ -456,7 +456,8 @@ class Editor(Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.Action] = [Draft, Publish, Apply]
+    contents: Sequence[sourdough.Action] = dataclasses.field(
+        default_factory = lambda: [Draft, Publish, Apply])
     project: sourdough.Project = None 
     name: str = None
      
