@@ -42,7 +42,16 @@ class Composite(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
     name: str = None
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
     _excess_attributes: Sequence[str] = ['registry', '_exceess_attributes']
+
+    """ Initialization Methods """
     
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
+        # Initializes 'index' for iteration.
+        self.index = -1
+            
     """ Required Subclass Methods """
     
     @abc.abstractmethod
@@ -60,7 +69,11 @@ class Composite(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
     """ Dunder Methods """
     
     def __iter__(self) -> Iterator:
-        return self.iterate()
+        if self.index + 1 < len(self.contents):
+            self.index += 1
+            yield self.iterate()
+        else:
+            raise StopIteration
 
     
 @dataclasses.dataclass
