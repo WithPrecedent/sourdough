@@ -14,6 +14,7 @@ Contents:
 
 """
 from __future__ import annotations
+import copy
 import dataclasses
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
                     Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
@@ -150,54 +151,113 @@ class Draft(sourdough.Flow):
 
         
 @dataclasses.dataclass
-class Publish(sourdough.project.workflow.Flow)):
+class Publish(sourdough.project.workflow.Flow):
     """Finalizes a composite object from user settings.
     
     Args:
         project (sourdough.Project): the related Project instance.
     
     """    
-    workflow: Workflow = None
     name: str = None 
-
+    needs: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['project']) 
+    
     """ Public Methods """
  
-    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
-        """Finalizes a worker with 'parameters' added.
-        
+    def perform(self, project: sourdough.Project) -> sourdough.Composition:
+        """Drafts an Outline instance based on 'settings'.
+
         Args:
-            worker (sourdough.Worker): instance to finalize the objects in
-                its 'contents'.
+            settings (sourdough.Settings): [description]
 
         Returns:
-            sourdough.Worker: an instance with its 'contents' finalized and
-                ready for application.
-                
-        """
-        worker.apply(tool = self._get_techniques)
-        worker.apply(tool = self._set_parameters)
-        return worker
-
-    """ Private Methods """
-    
-    def _create_component(self, 
-            name: str, 
-            base: str,
-            **kwargs) -> sourdough.Component:
-        """[summary]
-
-        Returns:
-            [type]: [description]
+            sourdough.Outline: [description]
             
         """
-        # Checks if special prebuilt class exists.
+        root_key = project.outline.keys()[0]
+        root_value = project.outline[root_key]
+        return self._create_composite(
+            name = root_key,
+            details = root_value,
+            project = project)
+            
+
+    """ Private Methods """
+
+    def _create_composite(self,
+            name: str, 
+            details: sourdough.project.containers.Details,
+            project: sourdough.Project) -> sourdough.Component:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            details (sourdough.project.containers.Details): [description]
+            outline (sourdough.Outline): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Component: [description]
+        """
+        base = self._create_component(
+            name = name,
+            generic = details.generic,
+            project = project)
+        base = self._add_attributes(
+            component = base, 
+            attributes = details.attributes)
+        base.organize()
+        for item in details:
+            if item in project.outline:
+                value = project.outline[item]
+                generic = project.components.registry[value.generic]
+                if issubclass(generic, sourdough.project.structures.Composition):
+                    instance = self._create_composite(
+                        name = item,
+                        details = value,
+                        project = project)
+                else:
+                    instance = self._create_clones(
+                        name = item,
+                        details = value,
+                        project = project)
+            else:
+                instance = self._create_component(
+                    name = item,
+                    generic = details.generic,
+                    project = project)
+            base.add(instance)
+        return base
+
+    def _create_component(self,
+            name: str, 
+            generic: str,
+            project: sourdough.Project) -> sourdough.Component:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            details (sourdough.project.containers.Details): [description]
+            project (sourdough.Project): [description]
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            sourdough.Component: [description]
+            
+        """
         try:
-            component = self.project.components.build(key = name, **kwargs)
-        # Otherwise uses the appropriate generic type.
+            instance = project.components.build(key = name)
         except KeyError:
-            kwargs.update({'name': name})
-            component = self.project.components.build(key = base, **kwargs)
-        return component
+            try:
+                instance = project.structures.build(
+                    key = generic, 
+                    name = name)
+            except KeyError:
+                raise KeyError(
+                    f'No Component or Structure was found matching {name}')
+        return instance  
     
     def _add_attributes(self, 
             component: sourdough.Component,
@@ -212,6 +272,10 @@ class Publish(sourdough.project.workflow.Flow)):
             setattr(component, key, value)
         return component   
     
+    
+    
+    
+
     def _get_techniques(self, 
             component: sourdough.Component,
             **kwargs) -> sourdough.Component:
@@ -331,7 +395,7 @@ class Publish(sourdough.project.workflow.Flow)):
         return [
             k for k, v in components.items() if isinstance(v, sourdough.Worker)]
 
-    def _get_components(self, 
+    def _create_composite(self, 
             settings: Mapping[str, Sequence[str]]) -> Mapping[
                 Tuple[str, str], 
                 Sequence[sourdough.Component]]:

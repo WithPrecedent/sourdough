@@ -27,7 +27,7 @@ class Flow(
     
     """
     name: str = None
-    needs: Sequence[str] = dataclasses.field(default_factory = list) 
+    needs: ClassVar[Sequence[str]] = dataclasses.field(default_factory = list) 
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
 
     """ Required Subclass Methods """
@@ -54,7 +54,6 @@ class Workflow(
     """
     contents: Sequence[Union[str, sourdough.Flow]] = dataclasses.field(
         default_factory = list)
-    results: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
      
@@ -95,18 +94,20 @@ class Workflow(
         Returns:
             sourdough.Project: [description]
         """
-        self.results['project'] = project
         for step in self.contents:
             instance = step()
-            parameters = self._get_flow_parameters(flow = step)
+            parameters = self._get_flow_parameters(
+                flow = step, 
+                project = project)
             result = instance.perform(**parameters)
-            self.results[result.name] = result
-        del self.results['project']
-        return self.results
+            setattr(project, result.name, result)
+        return project
     
     """ Private Methods """
     
-    def _get_flow_parameters(self, flow: sourdough.Flow) -> Mapping[str, Any]:
+    def _get_flow_parameters(self, 
+            flow: sourdough.Flow,
+            project: sourdough.Project) -> Mapping[str, Any]:
         """[summary]
 
         Args:
@@ -118,6 +119,9 @@ class Workflow(
         """
         parameters = {}
         for need in flow.needs:
-             parameters[need] = self.results[need]
+            if need in ['project']:
+                parameters['project'] = project
+            else:
+                parameters[need] = getattr(project, need)
         return parameters
            

@@ -15,7 +15,7 @@ Contents:
         structures such as Compare and Survey.
     Worker (Component, Hybrid): iterable container in composite objects.
     Manager (Worker): a subclass of Worker which stores metadata and the rest 
-        of the sourdough Composite object. There should be only one Manager or
+        of the sourdough Composition object. There should be only one Manager or
         Manager subclass per composite object.
 
 """
@@ -68,47 +68,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
         if isinstance(contents, self.contains):
             return contents
         else:
-            raise TypeError(f'contents must be {str(self.contains)} types') 
-    
-    # def validate(self, 
-    #         contents: Union[
-    #             str,
-    #             'Component',
-    #             Sequence[str],
-    #             Sequence['Component']]) -> Union[
-    #                 str,
-    #                 'Component',
-    #                 Sequence[str],
-    #                 Sequence['Component']]:
-    #     """Validates 'contents' or converts 'contents' to proper type.
-        
-    #     Args:
-    #         contents(Union[str, Component, Sequence[str], Sequence[Component]]):
-    #             str(s) or Component(s).
-            
-    #     Raises:
-    #         TypeError: if 'contents' argument is not of a supported datatype.
-            
-    #     Returns:
-    #         Union[str, Component, Sequence[str], Sequence[Component]]: item(s)
-    #             check against valid data types in from the 'contains' attribute.
-                
-    #     """
-    #     if len(self.contains) > 0:
-    #         valid_types = [v for k, v in self.registry if k in self.contains]
-    #         valid_types = tuple(valid_types.append(str))
-    #         if not isinstance(contents, list):
-    #             contents = sourdough.utilities.listify(contents)
-    #         if all(isinstance(c, valid_types) for c in contents):
-    #             if len(contents) == 1:
-    #                 return contents[0]
-    #             else:
-    #                 return contents
-    #         else:
-    #             raise TypeError(
-    #                 f'contents must only include {valid_types} types')
-    #     else:
-    #         return contents      
+            raise TypeError(f'contents must be {str(self.contains)} types')     
 
     """ Private Class Methods """
 
@@ -490,11 +450,6 @@ class Manager(Worker):
         if not hasattr(cls, '_base'):
             cls._base = cls    
 
-# BASE_TYPES = {'technique': Technique,
-#               'task': Task,
-#               'worker': Worker,
-#               'manager': Manager}
-   
             
 # @dataclasses.dataclass
 # class Edge(Component):

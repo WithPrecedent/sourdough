@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Composite(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
+class Composition(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
         
     Args:
@@ -87,7 +87,7 @@ class Composite(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
 
     
 @dataclasses.dataclass
-class Aggregation(Composite, sourdough.Component):
+class Aggregation(Composition, sourdough.Component):
     """Base class for composite objects in sourdough projects.
     
     Distinguishing characteristics of an Aggregation:
@@ -117,7 +117,7 @@ class Aggregation(Composite, sourdough.Component):
        
 
 @dataclasses.dataclass
-class SerialComposite(Composite, sourdough.Component, abc.ABC):
+class SerialComposition(Composition, sourdough.Component, abc.ABC):
     """Base class for serial composite objects in sourdough projects.
         
     Args:
@@ -156,7 +156,7 @@ class SerialComposite(Composite, sourdough.Component, abc.ABC):
             
     
 @dataclasses.dataclass
-class Pipeline(SerialComposite):
+class Pipeline(SerialComposition):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -186,7 +186,7 @@ class Pipeline(SerialComposite):
             
 
 @dataclasses.dataclass
-class ParallelComposite(Composite, sourdough.Component, abc.ABC):
+class ParallelComposition(Composition, sourdough.Component, abc.ABC):
     """Base class for parallel composite objects in sourdough projects.
         
     Args:
@@ -231,7 +231,7 @@ class ParallelComposite(Composite, sourdough.Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Contest(ParallelComposite):
+class Contest(ParallelComposition):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -266,7 +266,7 @@ class Contest(ParallelComposite):
     
     
 @dataclasses.dataclass
-class Study(ParallelComposite):
+class Study(ParallelComposition):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Study:
@@ -324,7 +324,7 @@ class Study(ParallelComposite):
                 component = self._get_component(
                     key = item, 
                     generic = self.contents.generic)
-                if isinstance(item, Composite):
+                if isinstance(item, Composition):
                     self.organize()
             new_contents.append(instance)
         self.contents = new_contents
@@ -332,7 +332,7 @@ class Study(ParallelComposite):
         
     
 @dataclasses.dataclass
-class Survey(ParallelComposite):
+class Survey(ParallelComposition):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Survey:
@@ -369,7 +369,7 @@ class Survey(ParallelComposite):
         
 
 # @dataclasses.dataclass
-# class Graph(Composite, sourdough.Component):
+# class Graph(Composition, sourdough.Component):
 #     """Base class for composite objects in sourdough projects.
 
 #     Distinguishing characteristics of a Graph:
