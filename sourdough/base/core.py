@@ -12,8 +12,10 @@ Contents:
         with additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
         'create' method for instancing and/or validating stored objects.
-    Hybrid (Element, MutableSequence): iterable containing Element subclass 
-        instances with both dict and list interfaces and methods.
+    Slate (Element, MutableSequence): sourdough drop-in replacement for list
+        with additional functionality.
+    Hybrid (Slate): iterable containing Element subclass instances with both 
+        dict and list interfaces and methods.
 
 """
 from __future__ import annotations
@@ -62,7 +64,7 @@ class Element(abc.ABC):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
-        self.name = self.name or self.get_name()
+        self.name = self.get_name()
 
     """ Class Methods """
 
@@ -85,8 +87,10 @@ class Element(abc.ABC):
         """
         if inspect.isclass(cls):
             return sourdough.utilities.snakify(cls.__name__)
-        else:
+        elif cls.name is None:
             return sourdough.utilities.snakify(cls.__class__.__name__)
+        else:
+            return cls.name
 
     """ Dunder Methods """
 
@@ -130,8 +134,7 @@ class Element(abc.ABC):
 class Action(Element, abc.ABC):
     """Base class for performing actions on other objects in sourdough.
     
-    All Action subclasses must have 'perform' methods which have 'item' as their
-    first parameters.
+    All Action subclasses must have 'perform' methods.
     
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -153,7 +156,7 @@ class Action(Element, abc.ABC):
     
     @abc.abstractmethod
     def perform(self, item: object = None, **kwargs) -> object:
-        """Performs some action related to passed 'item'.
+        """Performs some action, possibly related to passed 'item'.
         
         Subclasses must provide their own methods.
         
@@ -246,7 +249,9 @@ class Lexicon(Element, collections.abc.MutableMapping):
         Args:
             contents (Mapping[Any, Any]): items to add to 'contents' attribute.
                 Element.
-
+            kwargs: allows subclasses to send additional parameters to this 
+                method.
+                
         """
         contents = self.validate(contents = contents)
         self.contents.update(contents)
@@ -270,6 +275,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
         subset = sourdough.utilities.listify(subset)
         return self.__class__(
             contents = {k: self.contents[k] for k in subset},
+            name = self.name,
             **kwargs)
 
     """ Dunder Methods """
@@ -419,9 +425,8 @@ class Catalog(Lexicon):
         instances.
         
         Args:
-            key (str): key to desired Element in 'contents'.
-            kwargs: arguments to pass to the selected Element when it is
-                instanced.
+            key (str): key to desired item in 'contents'.
+            kwargs: arguments to pass to the selected item when it is instanced.
                     
         Returns:
             object: that has been instanced with kwargs as arguments if it 
@@ -434,13 +439,17 @@ class Catalog(Lexicon):
         except TypeError:
             return self.contents[key] 
         
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Catalog':
+    def subsetify(self, 
+            subset: Union[str, Sequence[str]], 
+            **kwargs) -> 'Catalog':
         """Returns a subset of 'contents'.
 
         Args:
             subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
                 from 'contents'.
-
+            kwargs: allows subclasses to send additional parameters to this 
+                method.
+                
         Returns:
             Catalog: with only keys in 'subset'.
 
@@ -452,7 +461,8 @@ class Catalog(Lexicon):
         return super().subsetify(
             subset = subset,
             defaults = new_defaults,
-            always_return_list = self.always_return_list)
+            always_return_list = self.always_return_list,
+            **kwargs)
 
     """ Dunder Methods """
 
@@ -533,7 +543,7 @@ class Catalog(Lexicon):
         
 @dataclasses.dataclass
 class Slate(Element, collections.abc.MutableSequence):
-    """Basic sourdough list replacement
+    """Basic sourdough list replacement.
     
     A Slate differs from a python list in 3 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
@@ -546,11 +556,8 @@ class Slate(Element, collections.abc.MutableSequence):
             Slate is instanced and when the 'add' method is called.
 
     Args:
-        contents (Union[Element, Mapping[Any, Element], 
-            Sequence[Element]]): Element subclasses or Element subclass 
-            instances to store in a list. If a dict is passed, the keys will be 
-            ignored and only the values will be added to 'contents'. Defaults to 
-            an empty list.
+        contents (Sequence[Any]): items to store in a list. Defaults to an empty 
+            list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -564,7 +571,7 @@ class Slate(Element, collections.abc.MutableSequence):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Union[Any] = dataclasses.field(default_factory = list)
+    contents: Sequence[Any] = dataclasses.field(default_factory = list)
     name: str = None
   
     """ Initialization Methods """
@@ -692,22 +699,15 @@ class Hybrid(Slate):
     Hybrid is the primary iterable base class used in sourdough composite 
     objects.
     
-    A Hybrid differs from a python list in 7 significant ways:
-        1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Element.
-        2) It only stores Element subclasses or subclass instances.
-        3) It includes an 'add' method which allows different datatypes to be 
-            passed and added to the 'contents' of a Hybrid instance. The base
-            class allows Mappings and Sequences of Element subclasses and
-            Element subclass instances. 
-        4) It uses a 'validate' method to validate or convert the passed 
-            'contents' argument. It will convert all supported datatypes to 
-            a list. The 'validate' method is automatically called when a
-            Hybrid is instanced and when the 'add' method is called.
-        5) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
+    A Hybrid inherits the differences between a Slate and an ordinary python 
+    list.
+    
+    A Hybrid differs from a Slate in 4 significant ways:
+        1) It only stores Element subclasses or subclass instances.
+        2) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
             subclass instance with only the items with 'name' attributes 
             matching items in the 'subset' argument.
-        6) Hybrid has an interface of both a dict and a list, but stores a list. 
+        3) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
             Element instances. A 'name' acts as a key to create the facade of 
             a dictionary with the items in the stored list serving as values. 
@@ -717,17 +717,16 @@ class Hybrid(Slate):
             used if a high volume of access calls is not anticipated. 
             Ordinarily, the loss of lookup speed should have negligible effect 
             on overall performance.
-        7) It includes 'apply' and 'find' methods which traverse items in
+        4) It includes 'apply' and 'find' methods which traverse items in
             'contents' (recursively, if the 'recursive' argument is True), to
             either 'apply' a callable or 'find' items matching criteria in a
             callable. 
 
     Args:
-        contents (Union[Element, Mapping[Any, Element], 
-            Sequence[Element]]): Element subclasses or Element subclass 
-            instances to store in a list. If a dict is passed, the keys will be 
-            ignored and only the values will be added to 'contents'. Defaults to 
-            an empty list.
+        contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
+            Element subclasses or Element subclass instances to store in a list. 
+            If a dict is passed, the keys will be ignored and only the values 
+            will be added to 'contents'. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -746,7 +745,16 @@ class Hybrid(Slate):
         Mapping[Any, Element], 
         Sequence[Element]] = dataclasses.field(default_factory = list)
     name: str = None
-
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
+        # Sets initial default value for the 'get' method.
+        self._default = None
+        
     """ Public Methods """
     
     def validate(self, 
@@ -757,9 +765,8 @@ class Hybrid(Slate):
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], 
-                Sequence[Element]]): items to validate or convert to a list of
-                Element instances.
+            contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
+                items to validate or convert to a list of Element instances.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
@@ -789,8 +796,8 @@ class Hybrid(Slate):
             return list(contents.values())
         else:
             raise TypeError(
-                'contents must be a list of Elements, dict with ' 
-                'Element values, or Element type')
+                'contents must be a list of Elements, dict with Element values,'
+                'or Element type')
 
     def add(self, 
             contents: Union[
@@ -800,9 +807,8 @@ class Hybrid(Slate):
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], 
-                Sequence[Element]]): Element instance(s) to add to the
-                'contents' attribute.
+            contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
+                Element instance(s) to add to the 'contents' attribute.
 
         """
         contents = self.validate(contents = contents)
@@ -1157,19 +1163,6 @@ class Hybrid(Slate):
                     c for c in self.contents if c.get_name() != key]
         return self
 
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
-        
-        Hybrid subclasses can be restrucuted to support different iterators at
-        runtime. This is done by the Role subclasses that are part of the
-        'project' subpackage.
-     
-        Returns:
-            Iterable: generic ordered iterable of 'contents'.
-               
-        """
-        return iter(self.contents)
-
     def __len__(self) -> int:
         """Returns length of collapsed 'contents'.
 
@@ -1178,26 +1171,6 @@ class Hybrid(Slate):
 
         """
         return len(list(more_itertools.collapse(self.contents)))
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(other)
-        return self
-
-    """ Private Methods """
-    
-    def _initial_validation(self) -> None:
-        """Validates passed 'contents' on class initialization."""
-        new_contents = copy.deepcopy(self.contents)
-        new_contents = self.validate(contents = new_contents)
-        self.contents = []
-        self.add(contents = new_contents)
-        return self
         
 
 """ 
