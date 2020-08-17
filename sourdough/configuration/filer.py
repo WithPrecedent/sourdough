@@ -96,7 +96,7 @@ class Filer(object):
 
         Raises:
             TypeError: if 'path' is neither a str nor Path.
-            FileNotFoundError: if the validated path does not exist and 'perform'
+            FileNotFoundError: if the validated path does not exist and 'create'
                 is False.
 
         Returns:
@@ -474,7 +474,8 @@ class Distributor(abc.ABC):
             kwargs: additional parameters to pass to an input/output method.
 
         Returns:
-            Mapping[Any, Any]: parameters to be passed to an input/output method.
+            Mapping[Any, Any]: parameters to be passed to an input/output 
+                method.
 
         """
         parameters = self._check_required_parameters(
@@ -642,7 +643,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.LoaderMixin, sourdough.Element):
+class FileFormat(sourdough.LoaderMixin, sourdough.base.Element):
     """File format information.
 
     Args:

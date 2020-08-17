@@ -17,7 +17,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Flow(
+class Stage(
         sourdough.base.mixins.RegistryMixin, 
         sourdough.base.core.Action, 
         abc.ABC):
@@ -52,7 +52,7 @@ class Workflow(
     Args:
         
     """
-    contents: Sequence[Union[str, sourdough.Flow]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
         default_factory = list)
     name: str = None
     registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
@@ -60,29 +60,29 @@ class Workflow(
     """ Public Methods """
     
     def validate(self, 
-            contents: Sequence[Union[str, sourdough.Flow]]) -> Sequence[Flow]:
+            contents: Sequence[Union[str, sourdough.Stage]]) -> Sequence[Stage]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Sequence[Union[str, sourdough.Flow]]): items to validate 
-                or convert to a list of Flow instances.
+            contents (Sequence[Union[str, sourdough.Stage]]): items to validate 
+                or convert to a list of Stage instances.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-            Sequence[Flow]: validated or converted argument that is 
+            Sequence[Stage]: validated or converted argument that is 
                 compatible with an instance.
         
         """
         new_contents = []
         for item in contents:
             if isinstance(item, str):
-                new_contents.append(Flow.build(key = item))
-            elif isinstance(item, Flow):
+                new_contents.append(Stage.build(key = item))
+            elif isinstance(item, Stage):
                 new_contents.append(item)
             else:
-                raise TypeError('contents must be a list of Flow or str types')
+                raise TypeError('contents must be a list of Stage or str types')
         return new_contents
 
     def perform(self, project: sourdough.Project) -> sourdough.Project:
@@ -106,12 +106,12 @@ class Workflow(
     """ Private Methods """
     
     def _get_flow_parameters(self, 
-            flow: sourdough.Flow,
+            flow: sourdough.Stage,
             project: sourdough.Project) -> Mapping[str, Any]:
         """[summary]
 
         Args:
-            flow (sourdough.Flow): [description]
+            flow (sourdough.Stage): [description]
 
         Returns:
             Mapping[str, Any]: [description]

@@ -1,5 +1,5 @@
 """
-manager: interface for sourdough project construction and iteration
+project: interface for sourdough project construction and iteration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,20 +20,8 @@ import warnings
 import sourdough
 
 
-COMPONENT_BASE = {
-    'manager': sourdough.Manager,
-    'worker': sourdough.Worker,
-    'task': sourdough.Task,
-    'technique': sourdough.Technique}
-
-# GRAPH_BASE = {
-    # 'manager': sourdough.Manager,
-    # 'node': sourdough.Node,
-    # 'edge': sourdough.Edge} 
-
-
 @dataclasses.dataclass
-class Project(sourdough.Element, collections.abc.Iterable):
+class Project(sourdough.base.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
@@ -52,7 +40,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
             Workflow.registry. These classes are used for the construction and
             application of a sourdough project. Defaults to sourdough.Workflow
             which will use the default subclasses of Draft, Publish, Apply.
-        components (sourdough.Component): base class for the pieces of the 
+        design (sourdough.Component): base class for the pieces of the 
             project's composite object. Defaults to sourdough.Component.
             Component.registry will automatically contain all imported 
             subclasses and those will be the only permitted pieces of a 
@@ -75,14 +63,14 @@ class Project(sourdough.Element, collections.abc.Iterable):
             'name' and the date and time. This is a notable difference
             between an ordinary Worker instancce and a Project instance. Other
             Workers are not given unique identification. Defaults to None.   
-        automatic (bool): whether to automatically advance 'contents' (True) or 
-            whether the contents must be changed manually by using the 'advance' 
+        automatic (bool): whether to automatically advance 'workflow' (True) or 
+            whether the workflow must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
         data (object): any data object for the project to be applied.         
 
     
     Attributes:
-        manager (sourdough.Worker): the iterable composite object created by
+        design (sourdough.Composition): the iterable composite object created by
             Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
@@ -94,16 +82,12 @@ class Project(sourdough.Element, collections.abc.Iterable):
     """
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
-    components: sourdough.Component = sourdough.Component
-    structures: sourdough.Role = sourdough.Role
-    workflow: str = 'editor'
+    workflow: Union[str, sourdough.Workflow] = 'editor'
+    design: Union[str, sourdough.Composition] = 'pipeline'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    base: ClassVar[sourdough.Inventory] = sourdough.Inventory(
-        contents = COMPONENT_BASE,
-        stored_types = sourdough.Component)
 
     """ Initialization Methods """
 
@@ -114,27 +98,102 @@ class Project(sourdough.Element, collections.abc.Iterable):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Sets unique project 'identification', if not passed.
-        self.identification = self.identification or self._set_identification()
+        self.identification = self._get_identification()
         # Validates various attributes or converts them to the proper type.
-        attributes = ['settings', 'filer', 'workflow', 'components', 'structures']
-        for attribute in attributes :
+        attributes = ['settings', 'filer', 'workflow', 'design']
+        for attribute in attributes:
             getattr(self, f'_validate_{attribute}')()
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
-        # Advances through 'contents' if 'automatic' is True.
+        # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
-            self.manager = self._auto_contents(manager = self.manager)
+            self.design = self._auto_workflow(design = self.design)
 
+    """ Public Methods """
+    
+    def advance(self, stage: str = None) -> None:
+        """Advances to next item in 'workflow' or to 'stage' argument.
+        
+        This method only needs to be called manually if 'automatic' is False.
+        Otherwise, this method is automatically called when the class is 
+        instanced.
+        
+        Args:
+            stage (str): name of item in 'workflow'. Defaults to None. 
+                If not passed, the method goes to the next item in workflow.
+                
+        Raises:
+            ValueError: if 'stage' is neither None nor in 'workflow'.
+            IndexError: if 'advance' is called at the last stage in 'workflow'.
+            
+        """
+        if stage is None:
+            try:
+                new_stage = self.workflow[self.index + 1]
+            except IndexError:
+                raise IndexError(f'{self.name} cannot advance further')
+        else:
+            try:
+                new_stage = self.workflow[stage]
+            except KeyError:
+                raise ValueError(f'{stage} is not a recognized stage')
+        self.index += 1
+        self.previous_stage: str = self.stage
+        self.stage = new_stage
+        return self
+
+    def iterate(self, 
+            manager: 'sourdough.Manager') -> (
+                'sourdough.Manager'):
+        """Advances to next stage and applies that stage to 'manager'.
+        Args:
+            manager (sourdough.Manager): instance to apply the next 
+                stage's methods to.
+                
+        Raises:
+            IndexError: if this instance is already at the last stage.
+        Returns:
+            sourdough.Manager: with the last stage applied.
+            
+        """
+        if self.index == len(self.workflow) - 1:
+            raise IndexError(
+                f'{self.name} is at the last stage and cannot further iterate')
+        else:
+            self.advance()
+            self.workflow[self.index].create(manager = manager)
+        return manager
+            
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        return iter(self.workflow)
+        """Returns iterable of methods of 'workflow'.
+        
+        Returns:
+            Iterable: 'create' methods of 'workflow'.
+            
+        """
+        return iter([getattr(s, 'create') for s in self.workflow])
+
+    def __next__(self) -> Callable:
+        """Returns next method after method matching 'item'.
+        
+        Returns:
+            Callable: next method corresponding to those listed in 'options'.
+            
+        """
+        if self.index < len(self.workflow):
+            self.advance()
+            return getattr(self.workflow[self.index], 'create')
+        else:
+            raise StopIteration()
 
     """ Private Methods """
 
-    def _set_identification(self) -> None:
+    def _get_identification(self) -> None:
         """Sets unique 'identification' str based upon date and time."""
-        return sourdough.utilities.datetime_string(prefix = self.name)
+        if self.identification is None:
+            return sourdough.utilities.datetime_string(prefix = self.name)
     
     def _validate_settings(self) -> None:
         """Validates 'settings' or converts it to a Settings instance."""
@@ -206,7 +265,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
                 name = self.name,
                 identification = self.identification)       
                      
-    def _auto_contents(self, 
+    def _auto_workflow(self, 
             manager: sourdough.Manager) -> sourdough.Manager:
         """Advances through the stored Workflow instances.
 
@@ -223,6 +282,6 @@ class Project(sourdough.Element, collections.abc.Iterable):
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
             manager = stage.perform(worker = manager)
-            print('test manager', manager.contents)
+            print('test manager', manager.workflow)
             # print('test stage overview', manager.overview)
         return manager

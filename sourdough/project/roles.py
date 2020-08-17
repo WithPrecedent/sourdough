@@ -23,7 +23,7 @@ import sourdough
 @dataclasses.dataclass
 class Role(
         sourdough.RegistryMixin, 
-        sourdough.Element, 
+        sourdough.base.Element, 
         abc.ABC):
     """Base class related to constructing and iterating Worker instances.
     
@@ -286,7 +286,7 @@ class Survey(Role):
 # class Compare(LazyIterator):
     
     
-#     def generator(self, *args) -> sourdough.Action:
+#     def generator(self, *args) -> sourdough.base.Action:
 #         pools = [tuple(pool) for pool in args]
 #         result = [[]]
 #         for pool in pools:

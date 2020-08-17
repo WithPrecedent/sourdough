@@ -23,7 +23,109 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Draft(sourdough.Flow):
+class Details(sourdough.base.Slate):
+    """Basic characteristics of a group of sourdough Components.
+    
+    Args:
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__'). 
+        
+    """
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
+    generic: str = None
+    structure: str = None
+    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    
+    """ Public Methods """
+    
+    def validate(self, contents: Union[str, Sequence[str]]) -> Sequence[str]:
+        """Validates 'contents' or converts 'contents' to a list.
+        
+        Args:
+            contents (Sequence[str]): variable to validate as compatible with 
+                an instance.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Sequence[str]: validated or converted argument that is compatible 
+                with an instance.
+        
+        """
+        if isinstance(contents, str):
+            return sourdough.utilities.listify(contents)
+        elif (isinstance(contents, Sequence) 
+                and all(isinstance(c, str) for c in contents)):
+            return contents
+        else:
+            raise TypeError('contents must be a str of list of str types')
+
+
+@dataclasses.dataclass
+class Outline(sourdough.base.Lexicon):
+    """Base class for pieces of sourdough composite objects.
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__'). 
+        registry (ClassVar[sourdough.Inventory]): the instance which 
+            automatically stores any subclass of Component.
+              
+    """
+    contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
+    generic: str = None
+    name: str = None
+        
+    """ Public Methods """
+    
+    def validate(self, 
+            contents: Mapping[str, Details]) -> Mapping[str, Details]:
+        """Validates 'contents' or converts 'contents' to a dict.
+        
+        Args:
+            contents (Mapping[str, Details]): variable to validate as compatible 
+                with an instance.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Mapping[str, Details]: validated or converted argument that is 
+                compatible with an instance.
+        
+        """
+        if (isinstance(contents, Mapping) 
+                and all(isinstance(c, Details) for c in contents.values())):
+            return contents
+        else:
+            raise TypeError(
+                'contents must be a dict type with Details type values')
+
+
+@dataclasses.dataclass
+class Draft(sourdough.Stage):
     """Constructs an Outline instance from a project's settings.
     
     Args:
@@ -151,7 +253,7 @@ class Draft(sourdough.Flow):
 
         
 @dataclasses.dataclass
-class Publish(sourdough.project.workflow.Flow):
+class Publish(sourdough.project.workflow.Stage):
     """Finalizes a composite object from user settings.
     
     Args:
@@ -418,9 +520,9 @@ class Publish(sourdough.project.workflow.Flow):
                 
 
 @dataclasses.dataclass
-class Apply(sourdough.project.workflow.Flow)):
+class Apply(sourdough.project.workflow.Stage)):
     
-    workflow: Workflow = None
+    workflow: sourdough.Workflow = None
     name: str = None 
     
     def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
@@ -480,7 +582,8 @@ class Editor(sourdough.Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.Action] = dataclasses.field(
+    contents: Sequence[sourdough.base.Action] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
-    results: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    results: Mapping[str, Any] = dataclasses.field(
+        default_factory = sourdough.Inventory)
     name: str = None

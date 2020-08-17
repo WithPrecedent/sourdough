@@ -24,7 +24,7 @@ second-level access.
 For example:
 
     Instead of acccesing Element via sourdough.base.core.Element,
-    you can just use: sourdough.Element
+    you can just use: sourdough.base.Element
     
 """
 
@@ -32,65 +32,23 @@ For example:
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
-from sourdough.base.core import Element
-from sourdough.base.core import Action
-from sourdough.base.core import Lexicon
-from sourdough.base.core import Catalog
-from sourdough.base.core import Slate
-from sourdough.base.core import Hybrid
-from sourdough.base.mixins import LibraryMixin
-from sourdough.base.mixins import RegistryMixin
-from sourdough.base.mixins import OptionsMixin
-from sourdough.base.mixins import LoaderMixin
-from sourdough.base.mixins import ProxyMixin
+from sourdough import base
 
 # Imports of configuration and file management classes.
 from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project.containers import Outline
 from sourdough.project.containers import Inventory
-from sourdough.project.containers import Overview
 from sourdough.project.components import Component
-from sourdough.project.components import Technique
-from sourdough.project.components import Task
-from sourdough.project.components import Worker
-from sourdough.project.components import Manager
-from sourdough.project.structures import Role
-from sourdough.project.structures import Obey
-from sourdough.project.structures import Compare
-from sourdough.project.structures import Survey
+from sourdough.project.compositions import Composition
 from sourdough.project.workflow import Workflow
-from sourdough.project.workflow import Editor
 from sourdough.project.project import Project
+from sourdough import project
 
 
 __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
-# __all__ = [
-#     'utilities',
-#     'Element',
-#     'Action',
-#     'Hybrid',
-#     'Action',
-#     'Lexicon',
-#     'Catalog',
-#     'LibraryMixin',
-#     'RegistryMixin',
-#     'OptionsMixin',
-#     'LoaderMixin',
-#     'ProxyMixin',
-#     'Settings',
-#     'Filer',
-#     'structures',
-#     'Role',
-#     'Technique',
-#     'Task',
-#     'Edge',
-#     'Node',
-#     'workflow',
-#     'Worker',
-#     'Manager']
+# __all__ = []

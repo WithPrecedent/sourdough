@@ -13,7 +13,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class NewAction(sourdough.Action):
+class NewAction(sourdough.base.Action):
     
     def perform(self, data: object) -> object:
         data.new_value = 7

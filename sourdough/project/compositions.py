@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Composition(sourdough.RegistryMixin, sourdough.Hybrid, abc.ABC):
+class Composition(sourdough.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
         
     Args:

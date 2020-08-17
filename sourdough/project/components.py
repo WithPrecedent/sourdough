@@ -30,7 +30,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
+class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
     """Base class for pieces of sourdough composite objects.
     
     Args:
@@ -107,7 +107,7 @@ class Component(sourdough.RegistryMixin, sourdough.Element, abc.ABC):
 
     
 @dataclasses.dataclass
-class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
+class Technique(sourdough.LoaderMixin, sourdough.base.Action, Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -191,7 +191,7 @@ class Technique(sourdough.LoaderMixin, sourdough.Action, Component):
 
              
 @dataclasses.dataclass
-class Task(sourdough.Action, Component):
+class Task(sourdough.base.Action, Component):
     """Wrapper for a Technique.
 
     Subclasses of Task can store additional methods and attributes to apply to 
@@ -300,7 +300,7 @@ class Task(sourdough.Action, Component):
             
 
 @dataclasses.dataclass
-class Worker(sourdough.Hybrid, Component):
+class Worker(sourdough.base.Hybrid, Component):
     """A lightweight container for a sourdough project.
 
     Worker inherits all of the differences between a Hybrid and a python list.

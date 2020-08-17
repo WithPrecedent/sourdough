@@ -851,7 +851,7 @@ class Hybrid(Slate):
         """
         new_contents = []
         for item in iter(self.contents):
-            if isinstance(item, sourdough.Hybrid):
+            if isinstance(item, sourdough.base.Hybrid):
                 if recursive:
                     new_item = item.apply(
                         tool = tool, 
@@ -916,7 +916,7 @@ class Hybrid(Slate):
             matches = []
         for item in iter(self.contents):
             matches.extend(sourdough.utilities.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.Hybrid):
+            if isinstance(item, sourdough.base.Hybrid):
                 if recursive:
                     matches.extend(item.find(
                         tool = tool, 
@@ -1275,7 +1275,7 @@ presently fit with the sourdough workflow. However, the code should still work.
 #         element (Union[str, Sequence[str]]: name of sourdough element(s) to 
 #             return. 'element' must correspond to key(s) in 'options'. Defaults 
 #             to None.
-#         options (ClassVar[sourdough.Catalog]): a dict of available options 
+#         options (ClassVar[sourdough.base.Catalog]): a dict of available options 
 #             for object creation. Defaults to an empty Catalog instance.
 
 #     Raises:
