@@ -171,7 +171,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
     Lexicon subclasses can serve as drop in replacements for dicts with added
     features.
     
-    A Lexicon differs from a python dict in 4 significant ways:
+    A Lexicon differs from a python dict in 5 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
             in sourdough. This is inherited from Element.
         2) It includes an 'add' method which allows different datatypes to
