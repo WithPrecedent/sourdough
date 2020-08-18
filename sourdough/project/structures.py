@@ -8,6 +8,7 @@ Contents:
 
 
 """
+
 from __future__ import annotations
 import abc
 import dataclasses
@@ -18,76 +19,9 @@ from typing import (Any, Callable, ClassVar, Container, Generic, Iterable,
 
 import sourdough
 
-
-@dataclasses.dataclass
-class Composition(sourdough.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
-    """Base class for composite objects in sourdough projects.
-        
-    Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        registry (ClassVar[sourdough.Inventory]): An Inventory instance which 
-            will automatically store all subclasses.
-        _excess_attributes (ClassVar[Sequence[str]]): a list of names of 
-            attributes that should be removed before serialization of this
-            object. This just simplifies the serialized file with less clutter
-            in the saved object.
-                
-    """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
-    _excess_attributes: ClassVar[Sequence[str]] = [
-        'registry', 
-        '_exceess_attributes']
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()        
-        # Initializes 'index' for iteration.
-        self.index = -1
-            
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterator:
-        pass
-    
-    @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterator:
-        pass    
-    
-    @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterator:
-        pass
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterator:
-        if self.index + 1 < len(self.contents):
-            self.index += 1
-            yield self.iterate()
-        else:
-            raise StopIteration
-
     
 @dataclasses.dataclass
-class Aggregation(Composition, sourdough.Component):
+class Aggregation(sourdough.Structure, sourdough.Component):
     """Base class for composite objects in sourdough projects.
     
     Distinguishing characteristics of an Aggregation:
@@ -117,7 +51,7 @@ class Aggregation(Composition, sourdough.Component):
        
 
 @dataclasses.dataclass
-class SerialComposition(Composition, sourdough.Component, abc.ABC):
+class SerialStructure(sourdough.Structure, sourdough.Component, abc.ABC):
     """Base class for serial composite objects in sourdough projects.
         
     Args:
@@ -156,7 +90,7 @@ class SerialComposition(Composition, sourdough.Component, abc.ABC):
             
     
 @dataclasses.dataclass
-class Pipeline(SerialComposition):
+class Pipeline(SerialStructure):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -186,7 +120,7 @@ class Pipeline(SerialComposition):
             
 
 @dataclasses.dataclass
-class ParallelComposition(Composition, sourdough.Component, abc.ABC):
+class ParallelStructure(sourdough.Structure, sourdough.Component, abc.ABC):
     """Base class for parallel composite objects in sourdough projects.
         
     Args:
@@ -231,7 +165,7 @@ class ParallelComposition(Composition, sourdough.Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Contest(ParallelComposition):
+class Contest(ParallelStructure):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -266,7 +200,7 @@ class Contest(ParallelComposition):
     
     
 @dataclasses.dataclass
-class Study(ParallelComposition):
+class Study(ParallelStructure):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Study:
@@ -324,7 +258,7 @@ class Study(ParallelComposition):
                 component = self._get_component(
                     key = item, 
                     generic = self.contents.generic)
-                if isinstance(item, Composition):
+                if isinstance(item, sourdough.Structure):
                     self.organize()
             new_contents.append(instance)
         self.contents = new_contents
@@ -332,7 +266,7 @@ class Study(ParallelComposition):
         
     
 @dataclasses.dataclass
-class Survey(ParallelComposition):
+class Survey(ParallelStructure):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Survey:
@@ -369,7 +303,7 @@ class Survey(ParallelComposition):
         
 
 # @dataclasses.dataclass
-# class Graph(Composition, sourdough.Component):
+# class Graph(sourdough.Structure, sourdough.Component):
 #     """Base class for composite objects in sourdough projects.
 
 #     Distinguishing characteristics of a Graph:

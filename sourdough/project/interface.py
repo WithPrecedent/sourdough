@@ -21,6 +21,91 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Overview(sourdough.base.Lexicon):
+    """Dictionary of different Element types in a Worker instance.
+    
+    Args:
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not 
+            overridden by a subclass instance, 'name' will be assigned to the 
+            snake case version of the class name ('__class__.__name__').
+              
+    """
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    worker: sourdough.Worker = None
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()
+        if self.worker.structure is not None:
+            self.add({
+                'name': self.worker.name, 
+                'structure': self.worker.structure.name})
+            for key, value in self.worker.structure.options.items():
+                matches = self.worker.find(
+                    self._get_type, 
+                    element = value)
+                if len(matches) > 0:
+                    self.contents[f'{key}s'] = matches
+        else:
+            raise ValueError(
+                'structure must be a Role for an overview to be created.')
+        return self          
+    
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        """Returns pretty string representation of an instance.
+        
+        Returns:
+            str: pretty string representation of an instance.
+            
+        """
+        new_line = '\n'
+        representation = [f'sourdough {self.get_name}']
+        for key, value in self.contents.items():
+            if isinstance(value, Sequence):
+                names = [v.name for v in value]
+                representation.append(f'{key}: {", ".join(names)}')
+            else:
+                representation.append(f'{key}: {value}')
+        return new_line.join(representation)    
+
+    """ Private Methods """
+
+    def _get_type(self, 
+            item: sourdough.base.Element, 
+            element: sourdough.base.Element) -> Sequence[sourdough.base.Element]: 
+        """[summary]
+
+        Args:
+            item (self.stored_types): [description]
+            self.stored_types (self.stored_types): [description]
+
+        Returns:
+            Sequence[self.stored_types]:
+            
+        """
+        if isinstance(item, element):
+            return [item]
+        else:
+            return []
+
+   
+@dataclasses.dataclass
 class Project(sourdough.base.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
@@ -70,7 +155,7 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
 
     
     Attributes:
-        design (sourdough.Composition): the iterable composite object created by
+        design (sourdough.Structure): the iterable composite object created by
             Project.
         index (int): the current index of the iterator in the instance. It is
             set to -1 in the '__post_init__' method.
@@ -83,7 +168,7 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
     workflow: Union[str, sourdough.Workflow] = 'editor'
-    design: Union[str, sourdough.Composition] = 'pipeline'
+    design: Union[str, sourdough.Structure] = 'pipeline'
     name: str = None
     identification: str = None
     automatic: bool = True
@@ -103,8 +188,6 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
         attributes = ['settings', 'filer', 'workflow', 'design']
         for attribute in attributes:
             getattr(self, f'_validate_{attribute}')()
-        # Adds 'general' section attributes from 'settings'.
-        self.settings.inject(instance = self)
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self.design = self._auto_workflow(design = self.design)
@@ -198,7 +281,20 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
     def _validate_settings(self) -> None:
         """Validates 'settings' or converts it to a Settings instance."""
         if not isinstance(self.settings, sourdough.Settings):
-            self.settings = sourdough.Settings(contents = self.settings)
+            self.settings = sourdough.Settings(
+                contents = self.settings,
+                defaults = {
+                    'general': {
+                        'verbose': True,
+                        'early_validation': True,
+                        'conserve_memery': False},
+                    'files': {
+                        'source_format': 'csv',
+                        'interim_format': 'csv',
+                        'final_format': 'csv',
+                        'file_encoding': 'windows-1252'}})
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
         return self
 
     def _validate_filer(self) -> None:

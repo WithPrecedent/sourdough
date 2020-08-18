@@ -39,11 +39,12 @@ from sourdough.configuration.settings import Settings
 from sourdough.configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project.containers import Inventory
-from sourdough.project.components import Component
-from sourdough.project.compositions import Composition
-from sourdough.project.workflow import Workflow
-from sourdough.project.project import Project
+from sourdough.project.framework import Component
+from sourdough.project.framework import Structure
+from sourdough.project.framework import Stage
+from sourdough.project.framework import Workflow
+from sourdough.project.framework import Inventory
+from sourdough.project.interface import Project
 from sourdough import project
 
 

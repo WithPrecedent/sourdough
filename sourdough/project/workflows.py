@@ -266,7 +266,7 @@ class Publish(sourdough.project.workflow.Stage):
     
     """ Public Methods """
  
-    def perform(self, project: sourdough.Project) -> sourdough.Composition:
+    def perform(self, project: sourdough.Project) -> sourdough.Structure:
         """Drafts an Outline instance based on 'settings'.
 
         Args:
@@ -313,7 +313,7 @@ class Publish(sourdough.project.workflow.Stage):
             if item in project.outline:
                 value = project.outline[item]
                 generic = project.components.registry[value.generic]
-                if issubclass(generic, sourdough.project.structures.Composition):
+                if issubclass(generic, sourdough.project.structures.Structure):
                     instance = self._create_composite(
                         name = item,
                         details = value,

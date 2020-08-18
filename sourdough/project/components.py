@@ -15,95 +15,16 @@ Contents:
         structures such as Compare and Survey.
     Worker (Component, Hybrid): iterable container in composite objects.
     Manager (Worker): a subclass of Worker which stores metadata and the rest 
-        of the sourdough Composition object. There should be only one Manager or
+        of the sourdough Structure object. There should be only one Manager or
         Manager subclass per composite object.
 
 """
 from __future__ import annotations
-import abc
 import dataclasses
-import typing
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
                     Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 
 import sourdough
-
-
-@dataclasses.dataclass
-class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
-    """Base class for pieces of sourdough composite objects.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__'). 
-        registry (ClassVar[sourdough.Inventory]): the instance which 
-            automatically stores any subclass of Component.
-              
-    """
-    contents: Any = None
-    name: str = None
-    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory()
-
-    """ Properties """
-    
-    @property
-    def contains(self) -> Sequence[Any]:
-        try:
-            return typing.get_args(self.__annotations__['contents'])
-        except AttributeError:
-            return (sourdough.Component, str)
-
-    """ Public Methods """
-    
-    def validate(self, contents: Any) -> Any:
-        if isinstance(contents, self.contains):
-            return contents
-        else:
-            raise TypeError(f'contents must be {str(self.contains)} types')     
-
-    """ Private Class Methods """
-
-    @classmethod
-    def _get_keys_by_type(cls, 
-            component: Component) -> Sequence[Component]:
-        """[summary]
-
-        Returns:
-        
-            [type]: [description]
-            
-        """
-        return [k for k, v in cls.registry.items() if issubclass(v, component)]
-
-    @classmethod
-    def _get_values_by_type(cls, 
-            component: Component) -> Sequence[Component]:
-        """[summary]
-
-        Returns:
-        
-            [type]: [description]
-            
-        """
-        return [v for k, v in cls.registry.items() if issubclass(v, component)]
-   
-    @classmethod
-    def _suffixify(cls) -> Mapping[str, Component]:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        return {f'_{k}s': v for k, v in cls.registry.items()}   
 
     
 @dataclasses.dataclass
@@ -320,7 +241,7 @@ class Worker(sourdough.base.Hybrid, Component):
         contents (Sequence[sourdough.Component]]): stored iterable of Component
             subclasses. Defaults to an empty list.
         structure (Union[sourdough.Role, str]): structure for the organization, iteration, 
-            and composition of 'contents' or a str corresponding to an option in 
+            and structure of 'contents' or a str corresponding to an option in 
             'Role.registry'.
         name (str): creates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -411,7 +332,7 @@ class Manager(Worker):
         contents (Sequence[sourdough.Component]]): stored iterable of Component
             subclasses. Defaults to an empty list.
         structure (Union[sourdough.Role, str]): structure for the organization, iteration, 
-            and composition of 'contents' or a str corresponding to an option in 
+            and structure of 'contents' or a str corresponding to an option in 
             'Role.registry'.
         identification (str): a unique identification name for a 
             Project instance. The name is used for creating file folders

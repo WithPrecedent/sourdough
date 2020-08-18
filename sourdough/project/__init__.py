@@ -20,12 +20,12 @@ from .containers import Outline
 from .containers import Overview
 from .components import Technique
 from .components import Task
-from .compositions import Aggregation
-from .compositions import Pipeline
-from .compositions import Contest
-from .compositions import Study
-from .compositions import Survey
-# from .compositions import Graph
+from .structures import Aggregation
+from .structures import Pipeline
+from .structures import Contest
+from .structures import Study
+from .structures import Survey
+# from .structures import Graph
 from .editor import Editor
 
 
