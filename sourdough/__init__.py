@@ -43,7 +43,6 @@ from sourdough.project.framework import Component
 from sourdough.project.framework import Structure
 from sourdough.project.framework import Stage
 from sourdough.project.framework import Workflow
-from sourdough.project.framework import Inventory
 from sourdough.project.interface import Project
 from sourdough import project
 
