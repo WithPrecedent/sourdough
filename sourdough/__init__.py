@@ -23,8 +23,8 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Element via sourdough.base.core.Element,
-    you can just use: sourdough.base.Element
+    Instead of acccesing Element via sourdough.core.Element,
+    you can just use: sourdough.core.Element
     
 """
 
@@ -32,7 +32,8 @@ For example:
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
-from sourdough import base
+from sourdough.base import core as core
+from sourdough.base import mixins as mixins
 
 # Imports of configuration and file management classes.
 from sourdough.configuration.settings import Settings

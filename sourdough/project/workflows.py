@@ -22,7 +22,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Details(sourdough.base.Slate):
+class Details(sourdough.core.Slate):
     """Basic characteristics of a group of sourdough Components.
     
     Args:
@@ -74,7 +74,7 @@ class Details(sourdough.base.Slate):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.base.Lexicon):
+class Outline(sourdough.core.Lexicon):
     """Base class for pieces of sourdough composite objects.
     
     Args:
@@ -581,7 +581,7 @@ class Editor(sourdough.Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.base.Action] = dataclasses.field(
+    contents: Sequence[sourdough.core.Action] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Inventory)

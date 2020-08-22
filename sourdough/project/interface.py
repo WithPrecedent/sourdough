@@ -21,7 +21,7 @@ import sourdough
 
    
 @dataclasses.dataclass
-class Project(sourdough.base.Element, collections.abc.Iterable):
+class Project(sourdough.core.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:

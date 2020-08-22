@@ -16,6 +16,7 @@ Contents:
 
 from __future__ import annotations
 import abc
+import collections.abc
 import dataclasses
 import inspect
 import typing
@@ -25,8 +26,15 @@ from typing import (Any, Callable, ClassVar, Container, Generic, Iterable,
 import sourdough
 
 
+ComponentContainer = TypeVar(
+    'ComponentContainer',
+    'Component', 
+    Mapping[str, 'Component'], 
+    Sequence['Component'])
+
+
 @dataclasses.dataclass
-class Inventory(sourdough.base.Catalog):
+class Inventory(sourdough.core.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Args:
@@ -68,16 +76,12 @@ class Inventory(sourdough.base.Catalog):
         # Calls parent initialization method(s).
         super().__post_init__()
         # Sets 'stored_types' if not passed.
-        self.stored_types = self.stored_types or (Component)
+        self.stored_types = self.stored_types or ('Component')
         
     """ Public Methods """
 
     def validate(self, 
-            contents: Union[
-                Component,
-                Mapping[Any, Component],
-                Sequence[Component]]) -> Mapping[
-                    str, Component]:
+            contents: ComponentContainer) -> Mapping[str, Component]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
@@ -129,7 +133,10 @@ class Inventory(sourdough.base.Catalog):
  
  
 @dataclasses.dataclass
-class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
+class Component(
+        sourdough.mixins.RegistryMixin, 
+        sourdough.core.Element, 
+        collections.abc.Container):
     """Base class for all pieces of sourdough composite objects.
     
     Args:
@@ -153,15 +160,6 @@ class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
     name: str = None
     registry: ClassVar[Inventory] = Inventory()
 
-    """ Properties """
-    
-    @property
-    def contains(self) -> Sequence[Any]:
-        try:
-            return typing.get_args(self.__annotations__['contents'])
-        except AttributeError:
-            return (Component, str)
-
     """ Public Methods """
     
     def validate(self, contents: Any) -> Any:
@@ -169,6 +167,14 @@ class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
             return contents
         else:
             raise TypeError(f'contents must be {str(self.contains)} types')     
+
+    """ Dunder Methods """
+    
+    def __contains__(self, item: Any) -> bool:
+        try:
+            return item in typing.get_args(self.__annotations__['contents'])
+        except AttributeError:
+            return item in (Component, str)
 
     """ Private Class Methods """
 
@@ -205,7 +211,7 @@ class Component(sourdough.RegistryMixin, sourdough.base.Element, abc.ABC):
 
 
 @dataclasses.dataclass
-class Structure(sourdough.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
+class Structure(sourdough.mixins.RegistryMixin, sourdough.core.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
         
     Args:
@@ -267,8 +273,8 @@ class Structure(sourdough.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
 
 @dataclasses.dataclass
 class Stage(
-        sourdough.base.mixins.RegistryMixin, 
-        sourdough.base.core.Action, 
+        sourdough.mixins.RegistryMixin, 
+        sourdough.core.Action, 
         abc.ABC):
     """Base class for a stage in a Workflow.
     
@@ -276,7 +282,7 @@ class Stage(
     
     """
     name: str = None
-    needs: ClassVar[Sequence[str]] = dataclasses.field(default_factory = list) 
+    needs: ClassVar[Sequence[str]] = []
     registry: ClassVar[Inventory] = Inventory()
 
     """ Required Subclass Methods """
@@ -293,8 +299,8 @@ class Stage(
 
 @dataclasses.dataclass
 class Workflow(
-        sourdough.base.mixins.RegistryMixin, 
-        sourdough.base.core.Hybrid, 
+        sourdough.mixins.RegistryMixin, 
+        sourdough.core.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     
@@ -373,4 +379,3 @@ class Workflow(
             else:
                 parameters[need] = getattr(project, need)
         return parameters
- 

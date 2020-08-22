@@ -81,7 +81,7 @@ def test_project():
     return
 
 # @dataclasses.dataclass
-# class NewAction(sourdough.base.Action):
+# class NewAction(sourdough.core.Action):
     
 #     def perform(self, data: object) -> object:
 #         data.new_value = 7
@@ -89,7 +89,7 @@ def test_project():
         
 
 # @dataclasses.dataclass
-# class OtherAction(sourdough.base.Action):
+# class OtherAction(sourdough.core.Action):
     
 #     def perform(self, data: object) -> object:
 #         data.other_value = 'something'
@@ -99,7 +99,7 @@ def test_project():
 # @dataclasses.dataclass
 # class AWorker(sourdough.Worker):
     
-#     options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
+#     options: ClassVar[sourdough.core.Catalog] = sourdough.core.Catalog(
 #         contents = {'new': NewAction()},
 #         always_return_list = True)
   

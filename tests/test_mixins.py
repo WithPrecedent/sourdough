@@ -13,8 +13,8 @@ import sourdough
 @dataclasses.dataclass
 class AComponent(
     sourdough.LibraryMixin,
-    sourdough.RegistryMixin,
-    sourdough.base.Element):
+    sourdough.mixins.RegistryMixin,
+    sourdough.core.Element):
     pass
 
 
@@ -26,7 +26,7 @@ class OtherComponent(AComponent):
 @dataclasses.dataclass
 class AnotherComponent(sourdough.OptionsMixin, OtherComponent):
     
-    options = sourdough.base.Catalog(contents = {
+    options = sourdough.core.Catalog(contents = {
         'base': AComponent(),
         'other': OtherComponent()})
  

@@ -21,7 +21,7 @@ class AnotherComponent(sourdough.Component):
 
 
 def test_hybrid():
-    worker = sourdough.base.Hybrid()
+    worker = sourdough.core.Hybrid()
     worker.setdefault('default value')
     a_element = AComponent(name = 'test_name')
     another_element = AnotherComponent()
@@ -49,7 +49,7 @@ def test_hybrid():
         'test_name', 
         'test_name']
     assert worker.pop(1) == another_element
-    assert worker.pop('test_name') == sourdough.base.Hybrid(
+    assert worker.pop('test_name') == sourdough.core.Hybrid(
         contents = [a_element, a_element])
     worker.update({'new_worker': a_element})
     assert worker.keys() == [
@@ -60,7 +60,7 @@ def test_hybrid():
     worker.setdefault(None)  
     assert worker.get('nothing') == None
     worker['crazy_element'] = AnotherComponent(name = 'crazy')
-    worker.append(sourdough.base.Hybrid(
+    worker.append(sourdough.core.Hybrid(
         name = 'nested', 
         contents = [another_element, some_element]))
     assert worker.keys() == [
