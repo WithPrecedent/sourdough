@@ -9,7 +9,7 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_workers': ['parser', 'munger'],
+        'cool_project_Structures': ['parser', 'munger'],
         'cool_project_structure': 'obey',
         'workflow': 'editor'},
     'parser': {

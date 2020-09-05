@@ -13,8 +13,8 @@ Contents:
     Task (Component, Action): wrapper for Technique which performs some action 
         (optional). Task can be useful when using Role subclasses with parallel
         structures such as Compare and Survey.
-    Worker (Component, Hybrid): iterable container in composite objects.
-    Manager (Worker): a subclass of Worker which stores metadata and the rest 
+    Structure (Component, Hybrid): iterable container in composite objects.
+    Manager (Structure): a subclass of Structure which stores metadata and the rest 
         of the sourdough Structure object. There should be only one Manager or
         Manager subclass per composite object.
 
@@ -117,14 +117,14 @@ class Task(sourdough.core.Action, Component):
 
     Subclasses of Task can store additional methods and attributes to apply to 
     all possible technique instances that could be used. This is often useful 
-    when creating 'comparative' Worker instances which test a variety of 
+    when creating 'comparative' Structure instances which test a variety of 
     strategies with similar or identical parameters and/or methods.
 
     A Task instance will try to return attributes from 'technique' if the
     attribute is not found in the Task instance. 
 
     Args:
-        technique (Technique): technique object for this Worker in a sourdough
+        technique (Technique): technique object for this Structure in a sourdough
             sequence. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -142,7 +142,7 @@ class Task(sourdough.core.Action, Component):
             containing 'technique'.
         containers (ClassVar[Sequence[str]]): list of snake-named base class
             types that can store this component. Defaults to a list containing
-            'worker' and 'manager'. 
+            'Structure' and 'manager'. 
                         
     """
     contents: Union['Technique', str] = None
@@ -221,12 +221,12 @@ class Task(sourdough.core.Action, Component):
             
 
 @dataclasses.dataclass
-class Worker(sourdough.core.Hybrid, Component):
+class Structure(sourdough.core.Hybrid, Component):
     """A lightweight container for a sourdough project.
 
-    Worker inherits all of the differences between a Hybrid and a python list.
+    Structure inherits all of the differences between a Hybrid and a python list.
     
-    A Worker differs from a Hybrid in 3 significant ways:
+    A Structure differs from a Hybrid in 3 significant ways:
         1) It has a 'structure' attribute which indicates how the contained 
             iterator should be ordered. 
         2) An 'overview' property is added which returns a dict of the names
@@ -262,12 +262,12 @@ class Worker(sourdough.core.Hybrid, Component):
             'get' method.    
 
     ToDo:
-        draw: a method for producting a diagram of a Worker instance's 
+        draw: a method for producting a diagram of a Structure instance's 
             'contents' to the console or a file.
             
     """
     contents: Sequence[Union[
-        'Worker', 
+        'Structure', 
         'Task', 
         'Technique', 
         str]] = dataclasses.field(default_factory = list)
@@ -287,13 +287,13 @@ class Worker(sourdough.core.Hybrid, Component):
     
     @property
     def overview(self) -> sourdough.Overview:
-        """Returns a dict snapshot of a Worker subclass instance.
+        """Returns a dict snapshot of a Structure subclass instance.
         
         Returns:
             sourdough.Overview: based on the stored 'contents' of an instance.
         
         """
-        return sourdough.Overview(worker = self)   
+        return sourdough.Overview(Structure = self)   
   
     """ Dunder Methods """
     
@@ -320,12 +320,12 @@ class Worker(sourdough.core.Hybrid, Component):
     #     """Validates passed 'contents' on class initialization."""
     #     super()._initial_validation()
     #     # Validates or converts 'structure'.
-    #     self = sourdough.Role.validate(worker = self)
+    #     self = sourdough.Role.validate(Structure = self)
     #     return self
 
 
 @dataclasses.dataclass
-class Manager(Worker):
+class Manager(Structure):
     """A lightweight container for a sourdough project with metadata.
     
     Args:
@@ -338,8 +338,8 @@ class Manager(Worker):
             Project instance. The name is used for creating file folders
             related to the 'Project'. If not provided, a string is created from
             'name' and the date and time. This is a notable difference
-            between an ordinary Worker instancce and a Project instance. Other
-            Workers are not given unique identification. Defaults to None.  
+            between an ordinary Structure instancce and a Project instance. Other
+            Structures are not given unique identification. Defaults to None.  
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -354,7 +354,7 @@ class Manager(Worker):
                           
     """
     contents: Sequence[Union[
-        'Worker', 
+        'Structure', 
         'Task', 
         'Technique', 
         str]] = dataclasses.field(default_factory = list)

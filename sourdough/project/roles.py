@@ -25,7 +25,7 @@ class Role(
         sourdough.mixins.RegistryMixin, 
         sourdough.core.Element, 
         abc.ABC):
-    """Base class related to constructing and iterating Worker instances.
+    """Base class related to constructing and iterating Structure instances.
     
     """
     name: str = None
@@ -40,52 +40,52 @@ class Role(
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
         super().__post_init__()
-        # Sets 'index' for current location in 'worker' for the iterator.
+        # Sets 'index' for current location in 'Structure' for the iterator.
         self.index: int = -1
 
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
  
     @abc.abstractmethod
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
     
     """ Class Methods """
 
     @classmethod
-    def validate(cls, worker: sourdough.Worker) -> sourdough.Worker:
+    def validate(cls, Structure: sourdough.Structure) -> sourdough.Structure:
         """Returns a Role instance based upon 'structure'.
         
         Args:
-            worker (sourdough.Worker): Hybrid instance with 'structure' attribute
+            Structure (sourdough.Structure): Hybrid instance with 'structure' attribute
                 to be validated.
                 
         Raises:
-            TypeError: if 'worker.structure' is neither a str nor Role type.
+            TypeError: if 'Structure.structure' is neither a str nor Role type.
             
         Returns:
-            sourdough.Worker: with a validated 'structure' attribute.
+            sourdough.Structure: with a validated 'structure' attribute.
             
         """
-        if isinstance(worker.structure, str):
-            worker.structure = cls.registry[worker.structure]()
-        elif (inspect.isclass(worker.structure) 
-                and issubclass(worker.structure, cls)):
-            worker.structure = worker.structure() 
-        elif isinstance(worker.structure, cls):
-            worker.structure.__post_init__()
+        if isinstance(Structure.structure, str):
+            Structure.structure = cls.registry[Structure.structure]()
+        elif (inspect.isclass(Structure.structure) 
+                and issubclass(Structure.structure, cls)):
+            Structure.structure = Structure.structure() 
+        elif isinstance(Structure.structure, cls):
+            Structure.structure.__post_init__()
         else:
             raise TypeError(
-                f'The structure attribute of worker must be a str or {cls} type')
-        return worker
+                f'The structure attribute of Structure must be a str or {cls} type')
+        return Structure
 
     """ Public Methods """
     
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return more_itertools.collapse(worker.contents)
+    def iterate(self, Structure: sourdough.Structure) -> Iterable:
+        return more_itertools.collapse(Structure.contents)
 
     """ Private Methods """
   
@@ -148,12 +148,12 @@ class Role(
                 print('test item in wrapped', item)
                 kwargs.update({generic.contains: key})
                 component = project.component.build(key = key, **kwargs)
-                self.worker.add(component) 
+                self.Structure.add(component) 
         # Otherwise uses the appropriate generic type.
         else:
             for item in wrapped:
                 kwargs.update({'name': key, generic.contains: key})
-                self.worker.add(generic(**kwargs)) 
+                self.Structure.add(generic(**kwargs)) 
         return self   
 
     def _build_component(self,
@@ -170,7 +170,7 @@ class Role(
         except KeyError:
             kwargs.update({'name': key})
             component = generic(**kwargs)
-        self.worker.add(component)
+        self.Structure.add(component)
         return self  
            
       
@@ -183,10 +183,10 @@ class Obey(Role):
     
     """ Public Methods """
 
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
 
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
 
       
@@ -199,13 +199,13 @@ class Repeat(Role):
     
     """ Public Methods """
 
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
     
-    def iterate(self, worker: sourdough.Worker) -> Iterable:
-        return itertools.repeat(worker.contents, self.iterations)
+    def iterate(self, Structure: sourdough.Structure) -> Iterable:
+        return itertools.repeat(Structure.contents, self.iterations)
         
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
        
          
@@ -218,24 +218,24 @@ class Compare(Role):
 
     """ Public Methods """
 
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         """[summary]
 
         Args:
-            worker (sourdough.Worker): [description]
+            Structure (sourdough.Structure): [description]
 
         Returns:
-            sourdough.Worker: [description]
+            sourdough.Structure: [description]
         """
         steps = components.pop([components.keys()[0]])
         possible = list(components.values())
         permutations = list(map(list, itertools.product(*possible)))
         for i, contained in enumerate(permutations):
-            instance = sourdough.Worker(
+            instance = sourdough.Structure(
                 _components = tuple(zip(steps, contained)))
-        return worker
+        return Structure
     
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
 
          
@@ -248,10 +248,10 @@ class Judge(Role):
 
     """ Public Methods """
 
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
     
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
     
 
@@ -264,10 +264,10 @@ class Survey(Role):
     
     """ Public Methods """
 
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
     
-    def finalize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
         pass
 
 
@@ -298,20 +298,20 @@ class Survey(Role):
 # class Tree(Role):
     
 #     name: str = None
-#     worker: sourdough.Worker = None
+#     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
 #         contents = {
 #             'task': sourdough.Task,
 #             'technique': sourdough.Technique,
-#             'worker': sourdough.Worker})
+#             'Structure': sourdough.Structure})
   
 
 # @dataclasses.dataclass
 # class Graph(Role):
     
 #     name: str = None
-#     worker: sourdough.Worker = None
+#     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = 'iterator'    
 #     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
 #         contents = {
@@ -517,7 +517,7 @@ class Survey(Role):
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Structure) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -531,7 +531,7 @@ class Survey(Role):
     #         searched = searched)
         
     # def _topological_descend(self, 
-    #         graph: sourdough.Worker, 
+    #         graph: sourdough.Structure, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -551,7 +551,7 @@ class Survey(Role):
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Structure) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -565,7 +565,7 @@ class Survey(Role):
     #         searched = searched)
         
     # def _dfs_descend(self, 
-    #         graph: sourdough.Worker, 
+    #         graph: sourdough.Structure, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -616,7 +616,7 @@ class Survey(Role):
     # """ Public Methods """
         
     # def get_sorted(self, 
-    #         graph: sourdough.Worker = None,
+    #         graph: sourdough.Structure = None,
     #         return_elements: bool = False) -> Sequence[sourdough.Component]:
     #     """Performs a topological sort on 'graph'.
         
@@ -633,7 +633,7 @@ class Survey(Role):
     #     else:
     #         return sorted_queue
 
-    # def validate(self, graph: sourdough.Worker) -> None:
+    # def validate(self, graph: sourdough.Structure) -> None:
     #     """
         
 

@@ -1030,7 +1030,7 @@ class Hybrid(Slate):
                 instances with matching 'name' attributes from 'contents'.
 
         Returns:
-            Worker: with only items with 'name' attributes in 'subset'.
+            Hybrid: with only items with 'name' attributes in 'subset'.
 
         """
         subset = sourdough.utilities.listify(subset)

@@ -456,33 +456,33 @@ class Publish(sourdough.project.workflow.Stage):
             pass
         return technique
 
-    def _create_workers(self, 
-            workers: Sequence[str],
+    def _create_Structures(self, 
+            Structures: Sequence[str],
             suffix: str,
-            **kwargs) -> Sequence[sourdough.Worker]:
+            **kwargs) -> Sequence[sourdough.Structure]:
         """[summary]
 
         Returns:
             [type]: [description]
         """
-        new_workers = []
-        for worker in workers:
+        new_Structures = []
+        for Structure in Structures:
             # Checks if special prebuilt class exists.
             try:
                 component = self.project.components.build(
-                    key = worker, 
+                    key = Structure, 
                     **kwargs)
             # Otherwise uses the appropriate generic type.
             except KeyError:
                 generic = self.project.components._suffixify()[suffix]
-                kwargs.update({'name': worker})
+                kwargs.update({'name': Structure})
                 component = generic(**kwargs)
-            component = self.create(worker = component)
-            new_workers.append(component)
-        return new_workers
+            component = self.create(Structure = component)
+            new_Structures.append(component)
+        return new_Structures
         
 
-    def _get_worker_suffixes(self) -> Sequence[str]:
+    def _get_Structure_suffixes(self) -> Sequence[str]:
         """[summary]
 
         Args:
@@ -494,7 +494,7 @@ class Publish(sourdough.project.workflow.Stage):
         """
         components = self.project.components._suffixify()
         return [
-            k for k, v in components.items() if isinstance(v, sourdough.Worker)]
+            k for k, v in components.items() if isinstance(v, sourdough.Structure)]
 
     def _create_composite(self, 
             settings: Mapping[str, Sequence[str]]) -> Mapping[
@@ -524,7 +524,7 @@ class Apply(sourdough.project.workflow.Stage)):
     workflow: sourdough.Workflow = None
     name: str = None 
     
-    def perform(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def perform(self, Structure: sourdough.Structure) -> sourdough.Structure:
         """[summary]
 
         Returns:
@@ -532,15 +532,15 @@ class Apply(sourdough.project.workflow.Stage)):
             
         """
         new_contents = []
-        for item in worker:
-            if isinstance(item, sourdough.Worker):
-                instance = self.create(worker = item)
+        for item in Structure:
+            if isinstance(item, sourdough.Structure):
+                instance = self.create(Structure = item)
             else:
                 instance = item.perform(data = self.project.data)
             instance.structure.finalize()
             new_contents.append(instance)
-        worker.contents = new_contents
-        return worker
+        Structure.contents = new_contents
+        return Structure
 
     """ Private Methods """
         

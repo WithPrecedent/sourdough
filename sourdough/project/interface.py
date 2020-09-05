@@ -61,8 +61,8 @@ class Project(sourdough.core.Element, collections.abc.Iterable):
             Project instance. The name is used for creating file folders
             related to the 'Project'. If not provided, a string is created from
             'name' and the date and time. This is a notable difference
-            between an ordinary Worker instancce and a Project instance. Other
-            Workers are not given unique identification. Defaults to None.   
+            between an ordinary Structure instancce and a Project instance. Other
+            Structures are not given unique identification. Defaults to None.   
         automatic (bool): whether to automatically advance 'workflow' (True) or 
             whether the workflow must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
@@ -292,7 +292,7 @@ class Project(sourdough.core.Element, collections.abc.Iterable):
         for stage in self:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
-            manager = stage.perform(worker = manager)
+            manager = stage.perform(Structure = manager)
             print('test manager', manager.workflow)
             # print('test stage overview', manager.overview)
         return manager
