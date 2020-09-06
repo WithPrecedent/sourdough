@@ -6,6 +6,7 @@
 :license: Apache-2.0
 """
 from __future__ import annotations
+import collections.abc
 import datetime
 import importlib
 import inspect
@@ -407,7 +408,20 @@ def drop_suffix(
     except AttributeError:
         return [item.rstrip(suffix) for item in iterable]
 
-def is_nested(dictionary: Mapping[Any, Any]) -> bool:
+def isiterable(item: Any) -> bool:
+    """Returns if 'item' is iterable but is NOT a str type.
+
+    Args:
+        item (Any): object to be tested.
+
+    Returns:
+        bool: indicating whether 'item' is iterable but is not a str.
+
+    """
+    return (isinstance(item, collections.abc.Iterable) 
+            and not isinstance(item, str))
+
+def isnested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
 
     Args:

@@ -28,6 +28,25 @@ For example:
     
 """
 
+import importlib
+
+
+__all__ = ['base', 'configuration', 'project', 'utilities']
+
+
+def __getattr__(name: str) -> object:
+    """Lazily imports object from a subpackage.
+    
+    This code is adapted from PEP 562: https://www.python.org/dev/peps/pep-0562/
+    
+    
+    
+    """
+    
+    if name in __all__:
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 # Imports of select functions and decorators for use throughout sourdough.
 from sourdough import utilities
 
@@ -52,4 +71,4 @@ __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
-# __all__ = []
+

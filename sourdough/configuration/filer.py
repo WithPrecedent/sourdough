@@ -13,11 +13,56 @@ import abc
 import csv
 import dataclasses
 import datetime
+import importlib
 import pathlib
+import sys
 from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
                     Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
 import sourdough
 
+
+def importify(
+        module: str, 
+        file_path: Union[pathlib.Path, str] = None, 
+        key: str = None) -> object:
+    """Lazily loads 'module' or object from 'module'.
+
+    If 'file_path' is passed, this function will import the python module from
+    that path.
+
+    Args:
+        module (str): name of module holding object that is sought.
+        file_path (pathlib.Path, str): file path where the python module is
+            located. Defaults to None.
+        key (str): name of object within 'module' that is sought. Defaults to 
+            None.
+
+    Raises:
+        ImportError: if 'key' is not found in 'module'.
+
+    Returns:
+        object: class, function, or variable in 'module'.
+        
+    """
+    if file_path:
+        try:
+            spec = importlib.util.spec_from_file_location(module, file_path)
+            loaded = importlib.util.module_from_spec(spec)
+            sys.modules[module] = loaded
+            spec.loader.exec_module(loaded)
+        except (ImportError, AttributeError):
+            raise ImportError(f'failed to load {module} in {file_path}')   
+    else:
+        try:
+            loaded = importlib.import_module(module)
+        except (ImportError, AttributeError):
+            raise ImportError(f'failed to load {key} in {module}')
+    if key:
+        try:
+            loaded = getattr(loaded, key)
+        except AttributeError:
+            raise ImportError(f'{key} not found in {module}')
+    return loaded
 
 @dataclasses.dataclass
 class Filer(object):
