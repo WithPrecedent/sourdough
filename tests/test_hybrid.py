@@ -21,61 +21,61 @@ class AnotherComponent(sourdough.Component):
 
 
 def test_hybrid():
-    Structure = sourdough.core.Hybrid()
-    Structure.setdefault('default value')
+    structure = sourdough.core.Hybrid()
+    structure.setdefault('default value')
     a_element = AComponent(name = 'test_name')
     another_element = AnotherComponent()
     some_element = AnotherComponent(name = 'some_element')
-    Structure.add(a_element)
-    Structure.add(another_element)
-    Structure.extend([a_element, another_element])
-    Structure.insert(3, some_element)
-    assert Structure.keys() == [
+    structure.add(a_element)
+    structure.add(another_element)
+    structure.extend([a_element, another_element])
+    structure.insert(3, some_element)
+    assert structure.keys() == [
         'test_name', 
         'another_element', 
         'test_name', 
         'some_element',
         'another_element']
-    assert Structure.values() == [
+    assert structure.values() == [
         a_element,
         another_element,
         a_element,
         some_element,
         another_element]
-    for key, value in Structure.items():
+    for key, value in structure.items():
         pass
-    subset_Structure = Structure.subsetify(subset = ['test_name'])
-    assert subset_Structure.keys() == [
+    subset_structure = structure.subsetify(subset = ['test_name'])
+    assert subset_structure.keys() == [
         'test_name', 
         'test_name']
-    assert Structure.pop(1) == another_element
-    assert Structure.pop('test_name') == sourdough.core.Hybrid(
+    assert structure.pop(1) == another_element
+    assert structure.pop('test_name') == sourdough.core.Hybrid(
         contents = [a_element, a_element])
-    Structure.update({'new_Structure': a_element})
-    assert Structure.keys() == [
+    structure.update({'new_structure': a_element})
+    assert structure.keys() == [
         'some_element',
         'another_element',
-        'new_Structure']
-    assert Structure.get('nothing') == 'default value'
-    Structure.setdefault(None)  
-    assert Structure.get('nothing') == None
-    Structure['crazy_element'] = AnotherComponent(name = 'crazy')
-    Structure.append(sourdough.core.Hybrid(
+        'new_structure']
+    assert structure.get('nothing') == 'default value'
+    structure.setdefault(None)  
+    assert structure.get('nothing') == None
+    structure['crazy_element'] = AnotherComponent(name = 'crazy')
+    structure.append(sourdough.core.Hybrid(
         name = 'nested', 
         contents = [another_element, some_element]))
-    assert Structure.keys() == [
+    assert structure.keys() == [
         'some_element', 
         'another_element',
-        'new_Structure', 
+        'new_structure', 
         'crazy',
         'nested']
-    assert len(Structure) == 6
-    Structure.clear()
-    assert len(Structure) == 0
-    Structure += another_element
-    assert len(Structure) == 1
-    Structure.remove(0)
-    assert len(Structure) == 0
+    assert len(structure) == 6
+    structure.clear()
+    assert len(structure) == 0
+    structure += another_element
+    assert len(structure) == 1
+    structure.remove(0)
+    assert len(structure) == 0
     return
 
 

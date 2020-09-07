@@ -28,47 +28,57 @@ For example:
     
 """
 
-import importlib
-
-
-__all__ = ['base', 'configuration', 'project', 'utilities']
-
-
-def __getattr__(name: str) -> object:
-    """Lazily imports object from a subpackage.
-    
-    This code is adapted from PEP 562: https://www.python.org/dev/peps/pep-0562/
-    
-    
-    
-    """
-    
-    if name in __all__:
-        return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 # Imports of select functions and decorators for use throughout sourdough.
 from sourdough import utilities
 
 # Imports of core base classes and mixins.
-from sourdough.base import core as core
-from sourdough.base import mixins as mixins
+from .base import core as core
+from .base import mixins as mixins
 
 # Imports of configuration and file management classes.
-from sourdough.configuration.settings import Settings
-from sourdough.configuration.filer import Filer
+from .configuration.settings import Settings
+from .configuration.filer import Filer
 
 # Imports for sourdough projects.
-from sourdough.project.framework import Component
-from sourdough.project.framework import Structure
-from sourdough.project.framework import Stage
-from sourdough.project.framework import Workflow
-from sourdough.project.interface import Project
-from sourdough import project
+from .project.framework import Inventory
+from .project.framework import Component
+from .project.framework import Structure
+from .project.framework import Stage
+from .project.framework import Workflow
+from .project.components import Aggregation
+from .project.components import Pipeline
+from .project.components import Contest
+from .project.components import Study
+from .project.components import Survey
+from .project.components import Technique 
+from .project.components import Task
+from .project.workflow import Editor
+from .project.interface import Project
 
 
 __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
-
+__all__ = [
+    'utilities',
+    'core',
+    'mixins',
+    'Settings',
+    'Filer',
+    'Inventory',
+    'Component',
+    'Structure',
+    'Stage',
+    'Workflow',
+    'Aggregation', 
+    'Pipeline', 
+    'Contest', 
+    'Study', 
+    'Survey', 
+    'Technique', 
+    'Task', 
+    'Details', 
+    'Outline', 
+    'Editor', 
+    'Project']

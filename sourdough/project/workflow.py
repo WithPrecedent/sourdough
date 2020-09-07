@@ -252,7 +252,7 @@ class Draft(sourdough.Stage):
 
         
 @dataclasses.dataclass
-class Publish(sourdough.project.workflow.Stage):
+class Publish(sourdough.Stage):
     """Finalizes a composite object from user settings.
     
     Args:
@@ -519,7 +519,7 @@ class Publish(sourdough.project.workflow.Stage):
                 
 
 @dataclasses.dataclass
-class Apply(sourdough.project.workflow.Stage)):
+class Apply(sourdough.Stage):
     
     workflow: sourdough.Workflow = None
     name: str = None 
