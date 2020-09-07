@@ -29,11 +29,13 @@ For example:
 """
 
 # Imports of select functions and decorators for use throughout sourdough.
-from sourdough import utilities
+from .utilities import tools
+from .utilities import decorators
+from .utilities import memory
 
 # Imports of core base classes and mixins.
-from .base import core as core
-from .base import mixins as mixins
+from .base import core
+from .base import mixins
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
@@ -61,7 +63,9 @@ __version__ = '0.1.1'
 __author__ = 'Corey Rayburn Yung'
 
 __all__ = [
-    'utilities',
+    'tools',
+    'decorators',
+    'memory',
     'core',
     'mixins',
     'Settings',

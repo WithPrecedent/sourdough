@@ -100,7 +100,7 @@ class Role(
             Sequence[str]: [description]
         """
         suffixes = [k.split('_')[-1] for k in settings.keys()]
-        return sourdough.utilities.deduplicate(suffixes)
+        return sourdough.tools.deduplicate(suffixes)
     
     def _get_suffixes(self, 
             settings: Mapping[str, Sequence[str]], 

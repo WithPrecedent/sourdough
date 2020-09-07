@@ -103,7 +103,7 @@ class RegistryMixin(abc.ABC):
             cls._registry_base = cls
         if (not (hasattr(super(), 'registry') or cls == cls._registry_base)
                 and not inspect.isabstract(cls)):
-            name = sourdough.utilities.snakify(cls.__name__)
+            name = sourdough.tools.snakify(cls.__name__)
             cls._registry_base.registry[name] = cls
 
     # def __post_init__(self) -> None:
@@ -163,7 +163,7 @@ class RegistryMixin(abc.ABC):
     #             subclasses = self._get_subclasses(module = module)
     #             for subclass in subclasses:
     #                 self.add({
-    #                     sourdough.utilities.snakify(subclass.__name__): subclass})    
+    #                     sourdough.tools.snakify(subclass.__name__): subclass})    
     #     return self
        
     # """ Private Methods """
@@ -312,9 +312,9 @@ class LoaderMixin(abc.ABC):
                     key = getattr(self, key)
                 except AttributeError:
                     pass
-            for module in sourdough.utilities.listify(self.modules):
+            for module in sourdough.tools.listify(self.modules):
                 try:
-                    imported = sourdough.utilities.importify(
+                    imported = sourdough.tools.importify(
                         module = module, 
                         key = key)
                     break

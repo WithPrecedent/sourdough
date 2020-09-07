@@ -65,7 +65,7 @@ class Details(sourdough.core.Slate):
         
         """
         if isinstance(contents, str):
-            return sourdough.utilities.listify(contents)
+            return sourdough.tools.listify(contents)
         elif (isinstance(contents, Sequence) 
                 and all(isinstance(c, str) for c in contents)):
             return contents
@@ -169,7 +169,7 @@ class Draft(sourdough.Stage):
         for section in project.settings.values():
             for key, value in section.items():
                 if key.startswith(key) and key.endswith(suffixes):
-                    component_names[key] = sourdough.utilities.listify(value)
+                    component_names[key] = sourdough.tools.listify(value)
         return component_names
         
     def _create_outline(self, 

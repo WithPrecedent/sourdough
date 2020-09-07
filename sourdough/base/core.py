@@ -86,9 +86,9 @@ class Element(abc.ABC):
         
         """
         if inspect.isclass(cls):
-            return sourdough.utilities.snakify(cls.__name__)
+            return sourdough.tools.snakify(cls.__name__)
         elif cls.name is None:
-            return sourdough.utilities.snakify(cls.__class__.__name__)
+            return sourdough.tools.snakify(cls.__class__.__name__)
         else:
             return cls.name
 
@@ -272,7 +272,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
             Lexicon: with only key/value pairs with keys in 'subset'.
 
         """
-        subset = sourdough.utilities.listify(subset)
+        subset = sourdough.tools.listify(subset)
         return self.__class__(
             contents = {k: self.contents[k] for k in subset},
             name = self.name,
@@ -519,7 +519,7 @@ class Catalog(Lexicon):
 
         """
         if key in ['default', ['default'], 'defaults', ['defaults']]:
-            self.defaults = sourdough.utilities.listify(value)
+            self.defaults = sourdough.tools.listify(value)
         else:
             try:
                 self.contents[key] = value
@@ -537,7 +537,7 @@ class Catalog(Lexicon):
         """
         self.contents = {
             i: self.contents[i]
-            for i in self.contents if i not in sourdough.utilities.listify(key)}
+            for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
 
         
@@ -915,7 +915,7 @@ class Hybrid(Slate):
         if matches is None:
             matches = []
         for item in iter(self.contents):
-            matches.extend(sourdough.utilities.listify(tool(item, **kwargs)))
+            matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
             if isinstance(item, sourdough.core.Hybrid):
                 if recursive:
                     matches.extend(item.find(
@@ -1033,7 +1033,7 @@ class Hybrid(Slate):
             Hybrid: with only items with 'name' attributes in 'subset'.
 
         """
-        subset = sourdough.utilities.listify(subset)
+        subset = sourdough.tools.listify(subset)
         try:
             return self.__class__(
                 name = self.name,

@@ -191,7 +191,7 @@ class Project(sourdough.core.Element, collections.abc.Iterable):
     def _get_identification(self) -> None:
         """Sets unique 'identification' str based upon date and time."""
         if self.identification is None:
-            return sourdough.utilities.datetime_string(prefix = self.name)
+            return sourdough.tools.datetime_string(prefix = self.name)
     
     def _validate_settings(self) -> None:
         """Validates 'settings' or converts it to a Settings instance."""

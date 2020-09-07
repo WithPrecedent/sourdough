@@ -157,7 +157,7 @@ class Settings(sourdough.core.Lexicon):
         except AttributeError:
             pass
         if additional:
-            sections.extend(sourdough.utilities.listify(additional))
+            sections.extend(sourdough.tools.listify(additional))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
@@ -333,11 +333,11 @@ class Settings(sourdough.core.Lexicon):
         for key, value in contents.items():
             if isinstance(value, dict):
                 inner_bundle = {
-                    inner_key: sourdough.utilities.typify(inner_value)
+                    inner_key: sourdough.tools.typify(inner_value)
                     for inner_key, inner_value in value.items()}
                 new_contents[key] = inner_bundle
             else:
-                new_contents[key] = sourdough.utilities.typify(value)
+                new_contents[key] = sourdough.tools.typify(value)
         return new_contents
 
     def _add_defaults(self,
