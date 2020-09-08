@@ -103,7 +103,7 @@ class RegistryMixin(abc.ABC):
             cls._registry_base = cls
         if (not (hasattr(super(), 'registry') or cls == cls._registry_base)
                 and not inspect.isabstract(cls)):
-            name = sourdough.tools.snakify(cls.__name__)
+            name = sourdough.tools.snakify(cls.get_name())
             cls._registry_base.registry[name] = cls
 
     # def __post_init__(self) -> None:

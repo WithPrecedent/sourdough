@@ -11,21 +11,21 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AComponent(sourdough.Component):
+class AElement(sourdough.core.Element):
     pass
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.Component):
+class AnotherElement(sourdough.core.Element):
     pass
 
 
 def test_hybrid():
     structure = sourdough.core.Hybrid()
     structure.setdefault('default value')
-    a_element = AComponent(name = 'test_name')
-    another_element = AnotherComponent()
-    some_element = AnotherComponent(name = 'some_element')
+    a_element = AElement(name = 'test_name')
+    another_element = AnotherElement()
+    some_element = AnotherElement(name = 'some_element')
     structure.add(a_element)
     structure.add(another_element)
     structure.extend([a_element, another_element])
@@ -59,7 +59,7 @@ def test_hybrid():
     assert structure.get('nothing') == 'default value'
     structure.setdefault(None)  
     assert structure.get('nothing') == None
-    structure['crazy_element'] = AnotherComponent(name = 'crazy')
+    structure['crazy_element'] = AnotherElement(name = 'crazy')
     structure.append(sourdough.core.Hybrid(
         name = 'nested', 
         contents = [another_element, some_element]))

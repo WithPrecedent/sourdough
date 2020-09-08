@@ -64,7 +64,7 @@ class Element(abc.ABC):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
-        self.name = self.get_name()
+        self.name = self.name or self.get_name()
 
     """ Class Methods """
 
@@ -87,10 +87,8 @@ class Element(abc.ABC):
         """
         if inspect.isclass(cls):
             return sourdough.tools.snakify(cls.__name__)
-        elif cls.name is None:
-            return sourdough.tools.snakify(cls.__class__.__name__)
         else:
-            return cls.name
+            return sourdough.tools.snakify(cls.__class__.__name__)
 
     """ Dunder Methods """
 

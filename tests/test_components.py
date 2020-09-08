@@ -31,11 +31,10 @@ class OtherComponent(sourdough.Component):
 def test_element():
     new_operator = NewAction()
     other_element= OtherComponent(name = 'something')
-    print('test name', other_element.name)
     another_operator = OtherComponent
     assert new_operator.name == 'new_action'
     assert other_element.name == 'something'
-    assert another_operator.get_name() == 'other_element'
+    assert another_operator.get_name() == 'other_component'
     assert str(new_operator) == '\n'.join(
         ['sourdough NewAction', 'name: new_action'])
     return
