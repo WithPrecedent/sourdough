@@ -38,23 +38,23 @@ class Element(abc.ABC):
 
     A Element has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Element instances can be used 
-    to create a variety of tree data designs such as trees and graphs. 
+    to create a variety of composite data structures such as trees and graphs. 
 
     The mixins included with sourdough are all compatible, individually and
     collectively, with Element and its subclasses.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     name: str = None
@@ -775,8 +775,7 @@ class Hybrid(Slate):
         
         """
         if (isinstance(contents, Element) or 
-                (inspect.isclass(contents) 
-                    and issubclass(contents, Element))):
+                (inspect.isclass(contents) and issubclass(contents, Element))):
             if isinstance(contents, Sequence):
                 return contents
             else:
