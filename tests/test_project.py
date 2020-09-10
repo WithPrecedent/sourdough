@@ -70,7 +70,6 @@ class Dynamite(sourdough.Technique):
         return 
     
 
-
 def test_project():
     print('test registry', sourdough.Component.registry)
     assert 'parser' in sourdough.Component.registry

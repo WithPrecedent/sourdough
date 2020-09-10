@@ -14,8 +14,8 @@ import dataclasses
 import inspect
 import itertools
 import more_itertools
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
              

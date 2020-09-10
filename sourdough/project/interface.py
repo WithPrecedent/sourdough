@@ -13,8 +13,8 @@ import collections.abc
 import dataclasses
 import inspect
 import pathlib
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 import warnings
 
 import sourdough

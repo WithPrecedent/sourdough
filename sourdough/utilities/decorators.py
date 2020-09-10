@@ -10,8 +10,8 @@ import datetime
 import functools
 import time
 import types
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 
 def timer(process: str = None) -> Callable:

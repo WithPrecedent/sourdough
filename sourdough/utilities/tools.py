@@ -12,8 +12,8 @@ import importlib
 import inspect
 import pathlib
 import re
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import more_itertools
 

@@ -6,8 +6,10 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Element: abstract base class for core sourdough objects.
-    Action (Element): abstract base class for storing action methods. Action 
-        subclasses must have a 'perform' method.
+    Elemental: annotation type for all classes that contain Elements.
+    mapify: function that converts Elementals to Mapping types.
+    sequencify: function that converts Elementals to Sequence types.
+    verify: function that confirms a variable is an Elemental.
     Lexicon (Element, MutableMapping): sourdough drop-in replacement for dict
         with additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
@@ -26,8 +28,8 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
@@ -85,7 +87,9 @@ class Element(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        if inspect.isclass(cls):
+        if isinstance(cls, Element):
+            return cls.name
+        elif inspect.isclass(cls):
             return sourdough.tools.snakify(cls.__name__)
         else:
             return sourdough.tools.snakify(cls.__class__.__name__)
@@ -128,39 +132,113 @@ class Element(abc.ABC):
         return new_line.join(representation)    
 
 
-@dataclasses.dataclass
-class Action(Element, abc.ABC):
-    """Base class for performing actions on other objects in sourdough.
+Elemental = Union['Element', Mapping[str, 'Element'], Sequence['Element']]
+
+def mapify(self, 
+        element: Elemental, 
+        output: Mapping[str, Element] = None) -> Mapping[str, Element]:
+    """Converts 'element' to a Mapping type.
     
-    All Action subclasses must have 'perform' methods.
+    If 'output' is passed, it must have a 'contents' attribute which is where
+    the converted 'element' will be passed. If it is not passed, 'element' will
+    be converted to an ordinary dict.
+    
+    If 'element' is already a Mapping, it is not converted. However, it still 
+    will be placed inside 'output' if 'output' is passed.
     
     Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+        element (Elemental): an object containing one or more Element
+            subclasses or Element subclass instances.
+        output (Mapping[str, Element]): a Mapping with a 'contents' attribute.
+            Defaults to None.
     
+    Raises:
+        TypeError: if 'element' is not an Elemental.
+             
+    Returns:
+        Mapping[str, Element]: converted 'element'.
+        
     """
-    name: str = None
+    if isinstance(element, Mapping):
+        converted = element
+    elif isinstance(element, Sequence) or isinstance(element, Element):
+        converted = {}
+        for item in sourdough.tools.listify(element):
+            try:
+                converted[item.name] = item
+            except AttributeError:
+                converted[item.get_name()] = item
+    else:
+        raise TypeError(f'element must be {Elemental} type')
+    if output:
+        converted = output(contents = converted)
+    return converted
+
+
+def sequencify(self, 
+        element: Elemental, 
+        output: Sequence[Element] = None) -> Sequence[Element]:
+    """Converts 'element' to a Sequence type.
     
-    """ Required Subclass Methods """
+    If 'output' is passed, it must have a 'contents' attribute which is where
+    the converted 'element' will be passed. If it is not passed, 'element' will
+    be converted to an ordinary list.
     
-    @abc.abstractmethod
-    def perform(self, item: object = None, **kwargs) -> object:
-        """Performs some action, possibly related to passed 'item'.
+    If 'element' is already a Sequence, it is not converted. However, it still 
+    will be placed inside 'output' if 'output' is passed.
+    
+    Args:
+        element (Elemental): an object containing one or more Element
+            subclasses or Element subclass instances.
+        output (Sequence[str, Element]): a Sequence with a 'contents' attribute.
+            Defaults to None.
+    
+    Raises:
+        TypeError: if 'element' is not an Elemental.
+             
+    Returns:
+        Sequence[Element]: converted 'element'.
         
-        Subclasses must provide their own methods.
-        
-        """
-        pass
-    
+    """    
+    if isinstance(element, Mapping):
+        converted = list(element.values())
+    elif isinstance(element, Sequence):
+        converted = element
+    elif isinstance(element, Element):
+        converted = [element]
+    else:
+        raise TypeError(f'element must be {Elemental} type')
+    if output:
+        converted = output(contents = converted)
+    return converted
+
+
+def verify(element: Elemental) -> Elemental:
+    """[summary]
+
+    Args:
+        element (Elemental): [description]
+
+    Raises:
+        TypeError: [description]
+
+    Returns:
+        Elemental: [description]
+    """
+    if not ((isinstance(element, Element) 
+             or (inspect.isclass(element) and issubclass(element, Element)))
+        or (isinstance(element, Sequence) 
+            and (all(isinstance(c, Element) for c in element)
+                or (all(inspect.isclass(c) for c in element)
+                    and all(issubclass(c, Element) for c in element))))
+        or (isinstance(element, Mapping)
+            and (all(isinstance(c, Element) for c in element.values())
+                or (all(inspect.isclass(c) for c in element.values())
+                    and all(
+                        issubclass(c, Element) for c in element.values()))))):
+        raise TypeError(f'element must be a {Elemental} type')  
+    return element
+       
 
 @dataclasses.dataclass
 class Lexicon(Element, collections.abc.MutableMapping):
@@ -192,16 +270,16 @@ class Lexicon(Element, collections.abc.MutableMapping):
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
@@ -218,7 +296,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
         
     """ Public Methods """
     
-    def validate(self, contents: Any) -> Mapping[Any, Any]:
+    def validate(self, contents: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         This method simply confirms that 'contents' is a Mapping. Subclasses
@@ -226,7 +304,8 @@ class Lexicon(Element, collections.abc.MutableMapping):
         any type conversion techniques that are necessary.
         
         Args:
-            contents (Any): variable to validate as compatible with an instance.
+            contents (Mapping[Any, Any]:) variable to validate as compatible 
+                with an instance.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
@@ -378,7 +457,7 @@ class Catalog(Lexicon):
             class or return a stored instance.
 
     Args:
-        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
             dict.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
@@ -388,19 +467,19 @@ class Catalog(Lexicon):
             return a list only when a list or special acces key is used (False). 
             Defaults to False.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').  
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').  
                      
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     name: str = None
@@ -439,7 +518,7 @@ class Catalog(Lexicon):
         
     def subsetify(self, 
             subset: Union[str, Sequence[str]], 
-            **kwargs) -> 'Catalog':
+            **kwargs) -> Catalog:
         """Returns a subset of 'contents'.
 
         Args:
@@ -721,10 +800,9 @@ class Hybrid(Slate):
             callable. 
 
     Args:
-        contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
-            Element subclasses or Element subclass instances to store in a list. 
-            If a dict is passed, the keys will be ignored and only the values 
-            will be added to 'contents'. Defaults to an empty list.
+        contents (Elemental): Element subclasses or Element subclass 
+            instances to store in a list. If a dict is passed, the keys will 
+            be ignored and only the values will be added to 'contents'. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -737,11 +815,11 @@ class Hybrid(Slate):
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
         
+    Attributes:
+        contents (Sequence[Element]): stored Element classes or instances.
+            
     """
-    contents: Union[
-        Element,
-        Mapping[Any, Element], 
-        Sequence[Element]] = dataclasses.field(default_factory = list)
+    contents: Elemental = dataclasses.field(default_factory = list)
     name: str = None
     
     """ Initialization Methods """
@@ -755,16 +833,12 @@ class Hybrid(Slate):
         
     """ Public Methods """
     
-    def validate(self, 
-            contents: Union[
-                Element,
-                Mapping[Any, Element], 
-                Sequence[Element]]) -> Sequence[Element]:
+    def validate(self, contents: Elemental) -> Sequence[Element]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
-                items to validate or convert to a list of Element instances.
+            contents (Elemental): item(s) to validate or convert to a list of 
+                Element instances.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
@@ -774,49 +848,22 @@ class Hybrid(Slate):
                 compatible with an instance.
         
         """
-        if (isinstance(contents, Element) or 
-                (inspect.isclass(contents) and issubclass(contents, Element))):
-            if isinstance(contents, Sequence):
-                return contents
-            else:
-                return [contents]
-        elif (isinstance(contents, Sequence) 
-            and (all(isinstance(c, Element) for c in contents)
-                or (all(inspect.isclass(c) for c in contents)
-                    and all(issubclass(c, Element) for c in contents)))):
-            return contents
-        elif (isinstance(contents, Mapping)
-            and (all(isinstance(c, Element) for c in contents.values())
-                or (all(inspect.isclass(c) for c in contents.values())
-                    and all(
-                        issubclass(c, Element) for c in contents.values())))):
-            return list(contents.values())
-        else:
-            raise TypeError(
-                'contents must be a list of Elements, dict with Element values,'
-                'or Element type')
+        contents = verify(contents = contents)
+        return sequencify(element = contents)
 
-    def add(self, 
-            contents: Union[
-                Element,
-                Mapping[Any, Element], 
-                Sequence[Element]]) -> None:
+    def add(self, contents: Elemental) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], Sequence[Element]]): 
-                Element instance(s) to add to the 'contents' attribute.
+            contents (Elemental): Elemental instance(s) to add to the 'contents' 
+                attribute.
 
         """
         contents = self.validate(contents = contents)
         self.contents.extend(contents)
         return self    
 
-    def append(self, 
-            contents: Union[
-                Element,
-                Mapping[Any, Element], 
-                Sequence[Element]]) -> None:
+    def append(self, contents: Elemental) -> None:
         """Appends 'element' to 'contents'.
         
         Args:
@@ -867,17 +914,12 @@ class Hybrid(Slate):
         self.contents = []
         return self
    
-    def extend(self, 
-            contents: Union[
-                Element,
-                Mapping[Any, Element], 
-                Sequence[Element]]) -> None:
+    def extend(self, contents: Elemental) -> None:
         """Extends 'element' to 'contents'.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], 
-                Sequence[Element]]): Element instance(s) to add to the
-                'contents' attribute.
+            contents (Elemental): Elemental instance(s) to add to the 'contents' 
+                attribute.
 
         Raises:
             TypeError: if 'element' does not have a name attribute.
@@ -922,10 +964,7 @@ class Hybrid(Slate):
                         **kwargs))
         return matches
     
-    def get(self, 
-            key: Union[str, int]) -> Union[
-                Element, 
-                Sequence[Element]]:
+    def get(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
         Args:
@@ -933,8 +972,8 @@ class Hybrid(Slate):
                 'contents'.
                 
         Returns:
-            Union[Element, Sequence[Element]]: items in 'contents' or 
-                value in '_default' attribute. 
+            Union[Element, Sequence[Element]]: items in 'contents' or value in 
+                '_default' attribute. 
         """
         try:
             return self[key]
@@ -980,10 +1019,7 @@ class Hybrid(Slate):
         except AttributeError:
             return [c.get_name() for c in self.contents]
 
-    def pop(self, 
-            key: Union[str, int]) -> Union[
-                Element, 
-                Sequence[Element]]:
+    def pop(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
         """Pops item(s) from 'contents'.
 
         Args:
@@ -1019,7 +1055,7 @@ class Hybrid(Slate):
         """
         self._default = value 
      
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> 'Hybrid':
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> Hybrid:
         """Returns a subset of 'contents'.
 
         Args:
@@ -1040,35 +1076,29 @@ class Hybrid(Slate):
                 name = self.name,
                 contents = [c for c in self.contents if c.get_name() in subset])    
      
-    def update(self, 
-            contents: Union[
-                Mapping[Any, Element], 
-                Sequence[Element]]) -> None:
+    def update(self, contents: Elemental) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            contents (Union[Mapping[Any, Element], Sequence[Element]]): 
-                Element instances to add to the 'contents' attribute. If a 
-                Mapping is passed, the values are added to 'contents' and the
-                keys become the 'name' attributes of those avalues. To mimic 
-                'update', the passed 'elements' are added to 'contents' by the 
-                'extend' method.
+            contents (Elemental): Elemental instances to add to the 'contents' 
+                attribute. If a Mapping is passed, the values are added to 
+                'contents' and the keys become the 'name' attributes of those 
+                values. To mimic 'update', the passed 'elements' are added to 
+                'contents' by the 'extend' method.
  
         Raises:
             TypeError: if any of 'elements' do not have a name attribute or
                 if 'elements is not a dict.               
         
         """
+        contents = verify(element = contents)
         if isinstance(contents, Mapping):
             for key, value in contents.items():
                 new_element = value
                 new_element.name = key
                 self.extend(contents = new_element)
-        elif all(isinstance(c, Element) for c in contents):
-            self.extend(contents = contents)
         else:
-            raise TypeError(
-                'elements must be a dict or list containing Elements')
+            self.extend(contents = contents)
         return self
 
     def values(self) -> Sequence[Element]:

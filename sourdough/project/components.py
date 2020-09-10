@@ -17,8 +17,8 @@ import abc
 import dataclasses
 import itertools
 import more_itertools
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
@@ -31,16 +31,16 @@ class Overview(sourdough.core.Lexicon):
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
@@ -121,16 +121,16 @@ class Aggregation(sourdough.Structure, sourdough.Component):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
@@ -146,16 +146,16 @@ class SerialStructure(sourdough.Structure, sourdough.Component, abc.ABC):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
@@ -190,16 +190,16 @@ class Pipeline(SerialStructure):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
@@ -215,16 +215,16 @@ class ParallelStructure(sourdough.Structure, sourdough.Component, abc.ABC):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
@@ -267,16 +267,16 @@ class Contest(ParallelStructure):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[
@@ -303,16 +303,16 @@ class Study(ParallelStructure):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Union[
@@ -369,16 +369,16 @@ class Survey(ParallelStructure):
         contents (Sequence[Union[str, sourdough.Component]]): a list of str or
             Components. 
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
     
     """
     contents: Sequence[Union[

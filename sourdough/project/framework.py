@@ -20,18 +20,22 @@ import collections.abc
 import dataclasses
 import inspect
 import typing
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import sourdough
 
 
-ComponentContainer = TypeVar(
-    'ComponentContainer',
+ComponentContainer = Union[
     'Component', 
     Mapping[str, 'Component'], 
-    Sequence['Component'])
+    Sequence['Component']]
 
+def dictify(self, 
+        item: ComponentContainer, 
+        output: Mapping[str, Component] = None) -> Mapping[str, Component]:
+    
+    if isinstance(item, )
 
 @dataclasses.dataclass
 class Inventory(sourdough.core.Catalog):
@@ -51,16 +55,16 @@ class Inventory(sourdough.core.Catalog):
             Defaults to False.
         stored_types (Tuple[Callable]): stored Component subclasses.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').  
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').  
                      
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
@@ -142,16 +146,16 @@ class Component(
     Args:
         contents (Any): a stored object.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__'). 
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__'). 
         registry (ClassVar[Inventory]): the instance which automatically stores 
             any subclass of Component.
               
@@ -218,16 +222,16 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.core.Hybrid, abc.ABC):
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
             Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
             '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
         registry (ClassVar[Inventory]): An Inventory instance which 
             will automatically store all subclasses.
                 

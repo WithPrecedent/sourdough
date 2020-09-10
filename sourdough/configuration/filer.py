@@ -16,8 +16,8 @@ import datetime
 import importlib
 import pathlib
 import sys
-from typing import (Any, Callable, ClassVar, Container, Generic, Iterable, 
-                    Iterator, Mapping, Sequence, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 import sourdough
 
 
