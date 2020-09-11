@@ -134,6 +134,7 @@ class Element(abc.ABC):
 
 Elemental = Union['Element', Mapping[str, 'Element'], Sequence['Element']]
 
+
 def mapify(self, 
         element: Elemental, 
         output: Mapping[str, Element] = None) -> Mapping[str, Element]:
@@ -213,30 +214,32 @@ def sequencify(self,
     return converted
 
 
-def verify(element: Elemental) -> Elemental:
-    """[summary]
+def verify(element: Elemental, kind: Element = Element) -> Elemental:
+    """Verifies that 'element' is or contains the type 'kind'.
 
     Args:
-        element (Elemental): [description]
+        element (Elemental): item to verify its type.
+        kind (Element): the specific class type which 'element' must be or 
+            'contain'. Defaults to Element.
 
     Raises:
-        TypeError: [description]
+        TypeError: if 'element' is not or does not contain 'kind'.
 
     Returns:
-        Elemental: [description]
+        Elemental: the original 'element'.
+        
     """
-    if not ((isinstance(element, Element) 
-             or (inspect.isclass(element) and issubclass(element, Element)))
+    if not ((isinstance(element, kind) 
+             or (inspect.isclass(element) and issubclass(element, kind)))
         or (isinstance(element, Sequence) 
-            and (all(isinstance(c, Element) for c in element)
-                or (all(inspect.isclass(c) for c in element)
-                    and all(issubclass(c, Element) for c in element))))
+                and (all(isinstance(c, kind) for c in element)
+            or (all(inspect.isclass(c) for c in element)
+                and all(issubclass(c, kind) for c in element))))
         or (isinstance(element, Mapping)
-            and (all(isinstance(c, Element) for c in element.values())
-                or (all(inspect.isclass(c) for c in element.values())
-                    and all(
-                        issubclass(c, Element) for c in element.values()))))):
-        raise TypeError(f'element must be a {Elemental} type')  
+                and (all(isinstance(c, kind) for c in element.values())
+            or (all(inspect.isclass(c) for c in element.values())
+                and all(issubclass(c, kind) for c in element.values()))))):
+        raise TypeError(f'element must be or conttain {kind} type(s)')  
     return element
        
 
