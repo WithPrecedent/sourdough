@@ -25,7 +25,7 @@ def test_catalog():
     another_element = AnotherComponent()
     test_mapping = {'a_key': AComponent(), 'another_key': AnotherComponent()}
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
-    catalog = sourdough.core.Catalog(contents = {
+    catalog = sourdough.base.Catalog(contents = {
         'test' : test_element,
         'another': another_element})
     assert catalog['all'] == [test_element, another_element]

@@ -13,15 +13,14 @@ import collections.abc
 import dataclasses
 import inspect
 import pathlib
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import warnings
 
 import sourdough
 
    
 @dataclasses.dataclass
-class Project(sourdough.core.Element, collections.abc.Iterable):
+class Project(sourdough.base.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:

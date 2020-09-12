@@ -15,14 +15,13 @@ Contents:
 """
 from __future__ import annotations
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Details(sourdough.core.Slate):
+class Details(sourdough.base.Slate):
     """Basic characteristics of a group of sourdough Components.
     
     Args:
@@ -74,7 +73,7 @@ class Details(sourdough.core.Slate):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.core.Lexicon):
+class Outline(sourdough.base.Lexicon):
     """Base class for pieces of sourdough composite objects.
     
     Args:
@@ -200,14 +199,15 @@ class Draft(sourdough.Stage):
             outline.add({name: details})
         return outline
     
-    def _divide_key(self, key: str) -> Tuple[str, str]:
+    def _divide_key(self, key: str) -> Sequence[str, str]:
         """[summary]
 
         Args:
             key (str): [description]
 
         Returns:
-            Tuple[str, str]: [description]
+            
+            Sequence[str, str]: [description]
         """
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
@@ -498,7 +498,7 @@ class Publish(sourdough.Stage):
 
     def _create_composite(self, 
             settings: Mapping[str, Sequence[str]]) -> Mapping[
-                Tuple[str, str], 
+                Sequence[str, str], 
                 Sequence[sourdough.Component]]:
         """[summary]
 
@@ -581,7 +581,7 @@ class Editor(sourdough.Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.core.Action] = dataclasses.field(
+    contents: Sequence[sourdough.base.Action] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Inventory)

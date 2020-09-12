@@ -14,8 +14,7 @@ import dataclasses
 import inspect
 import itertools
 import more_itertools
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
              
@@ -23,7 +22,7 @@ import sourdough
 @dataclasses.dataclass
 class Role(
         sourdough.mixins.RegistryMixin, 
-        sourdough.core.Element, 
+        sourdough.base.Element, 
         abc.ABC):
     """Base class related to constructing and iterating Structure instances.
     
@@ -273,20 +272,20 @@ class Survey(Role):
 
 
 # @dataclasses.dataclass
-# class LazyIterator(collections.abc.Iterator, sourdough.Component, abc.ABC):
+# class LazyIterable(collections.abc.Iterable, sourdough.Component, abc.ABC):
     
     
 #     @abc.abstractmethod
-#     def generator(self, *args) -> Iterator:
+#     def generator(self, *args) -> Iterable:
 #         pass
         
     
 
 # @dataclasses.dataclass
-# class Compare(LazyIterator):
+# class Compare(LazyIterable):
     
     
-#     def generator(self, *args) -> sourdough.core.Action:
+#     def generator(self, *args) -> sourdough.base.Action:
 #         pools = [tuple(pool) for pool in args]
 #         result = [[]]
 #         for pool in pools:

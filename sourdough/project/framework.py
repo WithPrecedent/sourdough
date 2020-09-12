@@ -20,8 +20,7 @@ import collections.abc
 import dataclasses
 import inspect
 import typing
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -31,14 +30,9 @@ ComponentContainer = Union[
     Mapping[str, 'Component'], 
     Sequence['Component']]
 
-def dictify(self, 
-        item: ComponentContainer, 
-        output: Mapping[str, Component] = None) -> Mapping[str, Component]:
-    
-    if isinstance(item, )
 
 @dataclasses.dataclass
-class Inventory(sourdough.core.Catalog):
+class Inventory(sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Args:
@@ -53,7 +47,6 @@ class Inventory(sourdough.core.Catalog):
             the key passed is not a list or special access key (True) or to 
             return a list only when a list or special acces key is used (False). 
             Defaults to False.
-        stored_types (Tuple[Callable]): stored Component subclasses.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -70,7 +63,6 @@ class Inventory(sourdough.core.Catalog):
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
-    stored_types: Tuple[Callable] = None
     name: str = None
 
     """ Initialization Methods """
@@ -139,7 +131,7 @@ class Inventory(sourdough.core.Catalog):
 @dataclasses.dataclass
 class Component(
         sourdough.mixins.RegistryMixin, 
-        sourdough.core.Element, 
+        sourdough.base.Element, 
         collections.abc.Container):
     """Base class for all pieces of sourdough composite objects.
     
@@ -215,7 +207,7 @@ class Component(
 
 
 @dataclasses.dataclass
-class Structure(sourdough.mixins.RegistryMixin, sourdough.core.Hybrid, abc.ABC):
+class Structure(sourdough.mixins.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
         
     Args:
@@ -254,20 +246,20 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.core.Hybrid, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterator:
+    def iterate(self, **kwargs) -> Iterable:
         pass
     
     @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterator:
+    def activate(self, **kwargs) -> Iterable:
         pass    
     
     @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterator:
+    def finalize(self, **kwargs) -> Iterable:
         pass
     
     """ Dunder Methods """
     
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterable:
         if self.index + 1 < len(self.contents):
             self.index += 1
             yield self.iterate()
@@ -278,7 +270,7 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.core.Hybrid, abc.ABC):
 @dataclasses.dataclass
 class Stage(
         sourdough.mixins.RegistryMixin, 
-        sourdough.core.Action, 
+        sourdough.base.Action, 
         abc.ABC):
     """Base class for a stage in a Workflow.
     
@@ -304,7 +296,7 @@ class Stage(
 @dataclasses.dataclass
 class Workflow(
         sourdough.mixins.RegistryMixin, 
-        sourdough.core.Hybrid, 
+        sourdough.base.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     

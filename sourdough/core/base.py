@@ -1,5 +1,5 @@
 """
-elements: sourdough core base classes
+core: sourdough core base classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -7,9 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     Element: abstract base class for core sourdough objects.
     Elemental: annotation type for all classes that contain Elements.
-    mapify: function that converts Elementals to Mapping types.
-    sequencify: function that converts Elementals to Sequence types.
-    verify: function that confirms a variable is an Elemental.
+    Validator (Container): class for type validation and conversion.
     Lexicon (Element, MutableMapping): sourdough drop-in replacement for dict
         with additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
@@ -28,8 +26,7 @@ import dataclasses
 import inspect
 import more_itertools
 import textwrap
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
@@ -135,114 +132,6 @@ class Element(abc.ABC):
 Elemental = Union['Element', Mapping[str, 'Element'], Sequence['Element']]
 
 
-def mapify(self, 
-        element: Elemental, 
-        output: Mapping[str, Element] = None) -> Mapping[str, Element]:
-    """Converts 'element' to a Mapping type.
-    
-    If 'output' is passed, it must have a 'contents' attribute which is where
-    the converted 'element' will be passed. If it is not passed, 'element' will
-    be converted to an ordinary dict.
-    
-    If 'element' is already a Mapping, it is not converted. However, it still 
-    will be placed inside 'output' if 'output' is passed.
-    
-    Args:
-        element (Elemental): an object containing one or more Element
-            subclasses or Element subclass instances.
-        output (Mapping[str, Element]): a Mapping with a 'contents' attribute.
-            Defaults to None.
-    
-    Raises:
-        TypeError: if 'element' is not an Elemental.
-             
-    Returns:
-        Mapping[str, Element]: converted 'element'.
-        
-    """
-    if isinstance(element, Mapping):
-        converted = element
-    elif isinstance(element, Sequence) or isinstance(element, Element):
-        converted = {}
-        for item in sourdough.tools.listify(element):
-            try:
-                converted[item.name] = item
-            except AttributeError:
-                converted[item.get_name()] = item
-    else:
-        raise TypeError(f'element must be {Elemental} type')
-    if output:
-        converted = output(contents = converted)
-    return converted
-
-
-def sequencify(self, 
-        element: Elemental, 
-        output: Sequence[Element] = None) -> Sequence[Element]:
-    """Converts 'element' to a Sequence type.
-    
-    If 'output' is passed, it must have a 'contents' attribute which is where
-    the converted 'element' will be passed. If it is not passed, 'element' will
-    be converted to an ordinary list.
-    
-    If 'element' is already a Sequence, it is not converted. However, it still 
-    will be placed inside 'output' if 'output' is passed.
-    
-    Args:
-        element (Elemental): an object containing one or more Element
-            subclasses or Element subclass instances.
-        output (Sequence[str, Element]): a Sequence with a 'contents' attribute.
-            Defaults to None.
-    
-    Raises:
-        TypeError: if 'element' is not an Elemental.
-             
-    Returns:
-        Sequence[Element]: converted 'element'.
-        
-    """    
-    if isinstance(element, Mapping):
-        converted = list(element.values())
-    elif isinstance(element, Sequence):
-        converted = element
-    elif isinstance(element, Element):
-        converted = [element]
-    else:
-        raise TypeError(f'element must be {Elemental} type')
-    if output:
-        converted = output(contents = converted)
-    return converted
-
-
-def verify(element: Elemental, kind: Element = Element) -> Elemental:
-    """Verifies that 'element' is or contains the type 'kind'.
-
-    Args:
-        element (Elemental): item to verify its type.
-        kind (Element): the specific class type which 'element' must be or 
-            'contain'. Defaults to Element.
-
-    Raises:
-        TypeError: if 'element' is not or does not contain 'kind'.
-
-    Returns:
-        Elemental: the original 'element'.
-        
-    """
-    if not ((isinstance(element, kind) 
-             or (inspect.isclass(element) and issubclass(element, kind)))
-        or (isinstance(element, Sequence) 
-                and (all(isinstance(c, kind) for c in element)
-            or (all(inspect.isclass(c) for c in element)
-                and all(issubclass(c, kind) for c in element))))
-        or (isinstance(element, Mapping)
-                and (all(isinstance(c, kind) for c in element.values())
-            or (all(inspect.isclass(c) for c in element.values())
-                and all(issubclass(c, kind) for c in element.values()))))):
-        raise TypeError(f'element must be or conttain {kind} type(s)')  
-    return element
-       
-
 @dataclasses.dataclass
 class Lexicon(Element, collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
@@ -287,6 +176,7 @@ class Lexicon(Element, collections.abc.MutableMapping):
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
+    validator: Validator = Validator(accepts = Mapping, stores = Mapping)
       
     """ Initialization Methods """
     
@@ -898,7 +788,7 @@ class Hybrid(Slate):
         """
         new_contents = []
         for item in iter(self.contents):
-            if isinstance(item, sourdough.core.Hybrid):
+            if isinstance(item, sourdough.base.Hybrid):
                 if recursive:
                     new_item = item.apply(
                         tool = tool, 
@@ -958,7 +848,7 @@ class Hybrid(Slate):
             matches = []
         for item in iter(self.contents):
             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.core.Hybrid):
+            if isinstance(item, sourdough.base.Hybrid):
                 if recursive:
                     matches.extend(item.find(
                         tool = tool, 
@@ -1000,11 +890,11 @@ class Hybrid(Slate):
             raise TypeError('element must be a Element type')
         return self
 
-    def items(self) -> Tuple[str, Element]:
+    def items(self) -> Iterable:
         """Emulates python dict 'items' method.
         
         Returns:
-            Tuple[str, Element]: tuple of Element names and Elements.
+            Iterable: tuple of Element names and Elements.
             
         """
         return tuple(zip(self.keys(), self.values()))
@@ -1292,71 +1182,5 @@ isn't included in the uploaded package build.
 #             value: key for key, value in self.contents.items()}
 #         return self
 
-""" 
-Factory is currently omitted from the sourdough build because its design doesn't
-presently fit with the sourdough workflow. However, the code should still work.
-"""
 
-# @dataclasses.dataclass
-# class Factory(Element, abc.ABC):
-#     """The Factory interface instances a class from available options.
-
-#     Args:
-#         element (Union[str, Sequence[str]]: name of sourdough element(s) to 
-#             return. 'element' must correspond to key(s) in 'options'. Defaults 
-#             to None.
-#         options (ClassVar[sourdough.core.Catalog]): a dict of available options 
-#             for object creation. Defaults to an empty Catalog instance.
-
-#     Raises:
-#         TypeError: if 'element' is neither a str nor Sequence of str.
-
-#     Returns:
-#         Any: the factory uses the '__new__' method to return a different object 
-#             product instance with kwargs as the parameters.
-
-#     """
-#     element: Union[str, Sequence[str]] = None
-#     options: ClassVar['Catalog'] = Catalog()
-#     name: str = None
-
-#     """ Initialization Methods """
-    
-#     def __new__(cls, element: str = None, **kwargs) -> Any:
-#         """Returns an instance from 'options'.
-
-#         Args:
-#             element (str): name of sourdough element(s) to return. 
-#                 'element' must correspond to key(s) in 'options'. Defaults to 
-#                 None.
-#             kwargs (MutableMapping[Any, Any]): parameters to pass to the object 
-#                 being created.
-
-#         Returns:
-#             Any: an instance of an object stored in 'options'.
-        
-#         """
-#         if isinstance(element, str):
-#             return cls.options[element](**kwargs)
-#         elif isinstance(element, Sequence):
-#             instances = []
-#             for match in cls.options[element]:
-#                 instances.append(match(**kwargs))
-#             return instances
-#         else:
-#             raise TypeError('element must be a str or list type')
-    
-#     """ Class Methods """
-    
-#     @classmethod
-#     def add(cls, key: str, option: Any) -> None:
-#         """Adds 'option' to 'options' at 'key'.
-        
-#         Args:
-#             key (str): name of key to link to 'option'.
-#             option (Any): object to store in 'options'.
-            
-#         """
-#         cls.options[key] = option
-#         return cls
    

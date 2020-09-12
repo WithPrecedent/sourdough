@@ -23,8 +23,8 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Element via sourdough.core.Element,
-    you can just use: sourdough.core.Element
+    Instead of acccesing Element via sourdough.base.Element,
+    you can just use: sourdough.base.Element
     
 """
 

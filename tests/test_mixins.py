@@ -14,7 +14,7 @@ import sourdough
 class AComponent(
     sourdough.mixins.LibraryMixin,
     sourdough.mixins.RegistryMixin,
-    sourdough.core.Element):
+    sourdough.base.Element):
     pass
 
 
@@ -26,7 +26,7 @@ class OtherComponent(AComponent):
 @dataclasses.dataclass
 class AnotherComponent(sourdough.mixins.OptionsMixin, OtherComponent):
     
-    options = sourdough.core.Catalog(contents = {
+    options = sourdough.base.Catalog(contents = {
         'base': AComponent(),
         'other': OtherComponent()})
  

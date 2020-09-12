@@ -16,8 +16,7 @@ import datetime
 import importlib
 import pathlib
 import sys
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import sourdough
 
 
@@ -688,7 +687,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.mixins.LoaderMixin, sourdough.core.Element):
+class FileFormat(sourdough.mixins.LoaderMixin, sourdough.base.Element):
     """File format information.
 
     Args:

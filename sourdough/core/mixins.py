@@ -23,8 +23,8 @@ import dataclasses
 import inspect
 # import pathlib
 # import pyclbr
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+
 import sourdough
 
     
@@ -36,13 +36,13 @@ class LibraryMixin(abc.ABC):
     instance, super().__post_init__() should be called by that subclass.
 
     Args:
-        library (ClassVar[sourdough.core.Catalog]): dictionary which stores 
+        library (ClassVar[sourdough.base.Catalog]): dictionary which stores 
             subclass instances.
             
     Namespaces: 'library', 'borrow'.
 
     """
-    library: ClassVar[sourdough.core.Catalog] = sourdough.core.Catalog()
+    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
 
     """ Initialization Methods """
     
@@ -80,7 +80,7 @@ class RegistryMixin(abc.ABC):
         register_from_disk (bool): whether to look in the current working
             folder and subfolders for subclasses of the Element class for 
             which this class is a mixin. Defaults to False.
-        registry (ClassVar[sourdough.core.Catalog]): the instance which stores 
+        registry (ClassVar[sourdough.base.Catalog]): the instance which stores 
             subclass in a Catalog instance.
 
     Namespaces: 'registry', 'register_from_disk', 'build', '_registry_base',
@@ -92,7 +92,7 @@ class RegistryMixin(abc.ABC):
     
     """
     # register_from_disk: bool = False
-    registry: ClassVar[sourdough.core.Catalog] = sourdough.core.Catalog()
+    registry: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
     
     """ Initialization Methods """
     
@@ -187,7 +187,7 @@ class RegistryMixin(abc.ABC):
     #     return module_spec.loader.exec_module(module)
     
     # def _get_subclasses(self, 
-    #         module: object) -> Sequence[sourdough.core.Element]:
+    #         module: object) -> Sequence[sourdough.base.Element]:
     #     """Returns a list of subclasses in 'module'.
         
     #     Args:
@@ -201,7 +201,7 @@ class RegistryMixin(abc.ABC):
     #     matches = []
     #     for item in pyclbr.readmodule(module):
     #         # Adds direct subclasses.
-    #         if inspect.issubclass(item, sourdough.core.Element):
+    #         if inspect.issubclass(item, sourdough.base.Element):
     #             matches.append[item]
     #         else:
     #             # Adds subclasses of other subclasses.
@@ -216,13 +216,13 @@ class OptionsMixin(abc.ABC):
     """Mixin which stores classes or instances in 'options'.
 
     Args:
-        options (ClassVar[sourdough.core.Catalog]): the instance which stores 
+        options (ClassVar[sourdough.base.Catalog]): the instance which stores 
             subclass in a Catalog instance.
             
     Namespaces: 'options', 'select'
 
     """
-    options: ClassVar[sourdough.core.Catalog] = sourdough.core.Catalog(
+    options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
         always_return_list = True)
     
     """ Public Methods """

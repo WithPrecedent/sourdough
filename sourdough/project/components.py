@@ -17,14 +17,13 @@ import abc
 import dataclasses
 import itertools
 import more_itertools
-from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Overview(sourdough.core.Lexicon):
+class Overview(sourdough.base.Lexicon):
     """Dictionary of different Element types in a Structure instance.
     
     Args:
@@ -90,8 +89,8 @@ class Overview(sourdough.core.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: sourdough.core.Element, 
-            element: sourdough.core.Element) -> Sequence[sourdough.core.Element]: 
+            item: sourdough.base.Element, 
+            element: sourdough.base.Element) -> Sequence[sourdough.base.Element]: 
         """[summary]
 
         Args:
@@ -165,15 +164,15 @@ class SerialStructure(sourdough.Structure, sourdough.Component, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterator:
+    def iterate(self, **kwargs) -> Iterable:
         pass
     
     @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterator:
+    def activate(self, **kwargs) -> Iterable:
         pass    
     
     @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterator:
+    def finalize(self, **kwargs) -> Iterable:
         pass
             
     
@@ -236,19 +235,19 @@ class ParallelStructure(sourdough.Structure, sourdough.Component, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def organize(self, **kwargs) -> Iterator:
+    def organize(self, **kwargs) -> Iterable:
         pass
     
     @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterator:
+    def iterate(self, **kwargs) -> Iterable:
         pass
     
     @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterator:
+    def activate(self, **kwargs) -> Iterable:
         pass    
     
     @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterator:
+    def finalize(self, **kwargs) -> Iterable:
         pass
 
 
@@ -279,9 +278,8 @@ class Contest(ParallelStructure):
             version of the class name ('__class__.__name__').
     
     """
-    contents: Sequence[Union[
-        Tuple[str, str], 
-        sourdough.Pipeline]] = dataclasses.field(default_factory = list)
+    contents: Sequence[sourdough.Pipeline] = dataclasses.field(
+        default_factory = list)
     iterations: int = 10
     criteria: str = None
     name: str = None
@@ -381,9 +379,8 @@ class Survey(ParallelStructure):
             version of the class name ('__class__.__name__').
     
     """
-    contents: Sequence[Union[
-        Tuple[str, str], 
-        sourdough.Pipeline]] = dataclasses.field(default_factory = list)
+    contents: Sequence[sourdough.Pipeline] = dataclasses.field(d
+                                                               efault_factory = list)
     iterations: int = 10
     criteria: str = None
     name: str = None
