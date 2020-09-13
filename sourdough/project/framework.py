@@ -25,12 +25,6 @@ from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 import sourdough
 
 
-ComponentContainer = Union[
-    'Component', 
-    Mapping[str, 'Component'], 
-    Sequence['Component']]
-
-
 @dataclasses.dataclass
 class Inventory(sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
@@ -77,7 +71,7 @@ class Inventory(sourdough.base.Catalog):
     """ Public Methods """
 
     def validate(self, 
-            contents: ComponentContainer) -> Mapping[str, Component]:
+            contents: sourdough.base.Elemental) -> Mapping[str, Component]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:

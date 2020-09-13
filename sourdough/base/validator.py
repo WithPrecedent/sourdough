@@ -1,21 +1,11 @@
 """
-elements: sourdough core base classes
+validator: sourdough type validator and converter.
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Element: abstract base class for core sourdough objects.
-    Elemental: annotation type for all classes that contain Elements.
     Validator (Container): class for type validation and conversion.
-    Lexicon (Element, MutableMapping): sourdough drop-in replacement for dict
-        with additional functionality.
-    Catalog (Lexicon): list and wildcard accepting dict replacement with a 
-        'create' method for instancing and/or validating stored objects.
-    Slate (Element, MutableSequence): sourdough drop-in replacement for list
-        with additional functionality.
-    Hybrid (Slate): iterable containing Element subclass instances with both 
-        dict and list interfaces and methods.
 
 """
 from __future__ import annotations
@@ -24,7 +14,6 @@ import collections.abc
 import copy
 import dataclasses
 import inspect
-import more_itertools
 import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
@@ -32,7 +21,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Validator(collections.abc.Container):
+class Validator(sourdough.base.Factory):
     """Validates and/or converts object types.
     
     Validator is primary used to convert Element subclasses to and from single
@@ -47,7 +36,8 @@ class Validator(collections.abc.Container):
             convert types.
             
     """
-    accepts: Any = None
+    accepts: Union[Sequence[Callable], Callable] = dataclasses.field(
+        default_factory = list)
     stores: Callable = None
     converters: ClassVar[Mapping[Any, str]] = {
         Mapping: 'mapify', 
@@ -55,11 +45,11 @@ class Validator(collections.abc.Container):
 
     """ Public Methods """
 
-    def convert(self, element: Elemental) -> Any:
+    def convert(self, element: sourdough.base.Elemental) -> Any:
         """Converts 'element' to the appropriate type based on 'converters'.
         
         Args:
-            element (Elemental): an object containing one or more Element
+            element (sourdough.base.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
@@ -80,7 +70,7 @@ class Validator(collections.abc.Container):
         except (KeyError, AttributeError):
             raise TypeError(f'no matching converter for {self.stroes}')
         
-    def mapify(self, element: Elemental) -> Mapping[str, Element]:
+    def mapify(self, element: sourdough.base.Elemental) -> Mapping[str, Element]:
         """Converts 'element' to a Mapping type.
         
         If 'stores' is not None, it must have a 'contents' attribute which is 
@@ -91,11 +81,11 @@ class Validator(collections.abc.Container):
         still will be placed inside a 'stores' instance if 'stores' is not None.
         
         Args:
-            element (Elemental): an object containing one or more Element
+            element (sourdough.base.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'element' is not an Elemental.
+            TypeError: if 'element' is not an sourdough.base.Elemental.
                 
         Returns:
             Mapping[str, Element]: converted 'element'.
@@ -111,12 +101,12 @@ class Validator(collections.abc.Container):
                 except AttributeError:
                     converted[item.get_name()] = item
         else:
-            raise TypeError(f'element must be {Elemental} type')
+            raise TypeError(f'element must be {sourdough.base.Elemental} type')
         if self.stores:
             converted = self.stores(contents = converted)
         return converted
 
-    def sequencify(self, element: Elemental) -> Sequence[Element]:
+    def sequencify(self, element: sourdough.base.Elemental) -> Sequence[Element]:
         """Converts 'element' to a Sequence type.
         
         If 'stores' is not None, it must have a 'contents' attribute which is 
@@ -127,11 +117,11 @@ class Validator(collections.abc.Container):
         still will be placed inside a 'stores' instance if 'stores' is not None.
         
         Args:
-            element (Elemental): an object containing one or more Element
+            element (sourdough.base.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'element' is not an Elemental.
+            TypeError: if 'element' is not an sourdough.base.Elemental.
                 
         Returns:
             Sequence[Element]: converted 'element'.
@@ -144,16 +134,16 @@ class Validator(collections.abc.Container):
         elif isinstance(element, Element):
             converted = [element]
         else:
-            raise TypeError(f'element must be {Elemental} type')
+            raise TypeError(f'element must be {sourdough.base.Elemental} type')
         if self.stores:
             converted = self.stores(contents = converted)
         return converted
 
-    def verify(element: Elemental, kind: Element = Element) -> Elemental:
+    def verify(element: sourdough.base.Elemental, kind: Element = Element) -> sourdough.base.Elemental:
         """Verifies that 'element' is or contains the type 'kind'.
 
         Args:
-            element (Elemental): item to verify its type.
+            element (sourdough.base.Elemental): item to verify its type.
             kind (Element): the specific class type which 'element' must be or 
                 'contain'. Defaults to Element.
 
@@ -161,7 +151,7 @@ class Validator(collections.abc.Container):
             TypeError: if 'element' is not or does not contain 'kind'.
 
         Returns:
-            Elemental: the original 'element'.
+            sourdough.base.Elemental: the original 'element'.
             
         """
         if not ((isinstance(element, kind) 
