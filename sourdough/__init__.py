@@ -23,8 +23,8 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Element via sourdough.base.Element,
-    you can just use: sourdough.base.Element
+    Instead of acccesing Element via sourdough.base.core.Element,
+    you can just use: sourdough.Element
     
 """
 
@@ -34,8 +34,13 @@ from .utilities import decorators
 from .utilities import memory
 
 # Imports of core base classes and mixins.
-from .base import core
+from .base.core import Element
+from .base.core import Elemental
+# from .base import creators
+# from .base import validators
+from .base import containers
 from .base import mixins
+from .base import iterables
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
@@ -66,7 +71,12 @@ __all__ = [
     'tools',
     'decorators',
     'memory',
-    'core',
+    'Element',
+    'Elemental',
+    'creators',
+    'validators',
+    'containers',
+    'composites',
     'mixins',
     'Settings',
     'Filer',

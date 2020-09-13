@@ -26,7 +26,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Inventory(sourdough.base.Catalog):
+class Inventory(sourdough.containers.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Args:
@@ -66,12 +66,12 @@ class Inventory(sourdough.base.Catalog):
         # Calls parent initialization method(s).
         super().__post_init__()
         # Sets 'stored_types' if not passed.
-        self.stored_types = self.stored_types or ('Component')
+        # self.stored_types = self.stored_types or ('Component')
         
     """ Public Methods """
 
     def validate(self, 
-            contents: sourdough.base.Elemental) -> Mapping[str, Component]:
+            contents: sourdough.Elemental) -> Mapping[str, Component]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
@@ -90,42 +90,42 @@ class Inventory(sourdough.base.Catalog):
                 from passed 'contents'.
             
         """
-        if (isinstance(contents, Mapping)
-            and (all(isinstance(c, self.stored_types) 
-                    for c in contents.values())
-                or all(issubclass(c, self.stored_types)
-                         for c in contents.values()))):
-            return contents
-        elif isinstance(contents, self.stored_types):
-            return {contents.name: contents}
-        elif (inspect.isclass(contents) 
-                and issubclass(contents, self.stored_types)):
-            return {contents.get_name(): contents}
-        elif isinstance(contents, Sequence):
-            new_contents = {}
-            for element in contents:
-                if (isinstance(contents, self.stored_types) or 
-                        (inspect.isclass(contents) 
-                            and issubclass(contents, self.stored_types))):
-                    try:
-                        new_contents[element.name] = element
-                    except AttributeError:
-                        new_contents[element.get_name()] = element
-                else:
-                    raise TypeError(
-                        'contents must contain all Component subclasses or '
-                        'subclass instances')  
-            return new_contents
-        else:
-            raise TypeError(
-                f'contents must a dict with {self.stored_types} values, '
-                f'{self.stored_types}, or a list of {self.stored_types}')    
+        # if (isinstance(contents, Mapping)
+        #     and (all(isinstance(c, self.stored_types) 
+        #             for c in contents.values())
+        #         or all(issubclass(c, self.stored_types)
+        #                  for c in contents.values()))):
+        #     return contents
+        # elif isinstance(contents, self.stored_types):
+        #     return {contents.name: contents}
+        # elif (inspect.isclass(contents) 
+        #         and issubclass(contents, self.stored_types)):
+        #     return {contents.get_name(): contents}
+        # elif isinstance(contents, Sequence):
+        #     new_contents = {}
+        #     for element in contents:
+        #         if (isinstance(contents, self.stored_types) or 
+        #                 (inspect.isclass(contents) 
+        #                     and issubclass(contents, self.stored_types))):
+        #             try:
+        #                 new_contents[element.name] = element
+        #             except AttributeError:
+        #                 new_contents[element.get_name()] = element
+        #         else:
+        #             raise TypeError(
+        #                 'contents must contain all Component subclasses or '
+        #                 'subclass instances')  
+        #     return new_contents
+        # else:
+        #     raise TypeError(
+        #         f'contents must a dict with {self.stored_types} values, '
+        #         f'{self.stored_types}, or a list of {self.stored_types}')    
  
  
 @dataclasses.dataclass
 class Component(
         sourdough.mixins.RegistryMixin, 
-        sourdough.base.Element, 
+        sourdough.Element, 
         collections.abc.Container):
     """Base class for all pieces of sourdough composite objects.
     

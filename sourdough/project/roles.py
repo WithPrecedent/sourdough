@@ -22,7 +22,7 @@ import sourdough
 @dataclasses.dataclass
 class Role(
         sourdough.mixins.RegistryMixin, 
-        sourdough.base.Element, 
+        sourdough.Element, 
         abc.ABC):
     """Base class related to constructing and iterating Structure instances.
     

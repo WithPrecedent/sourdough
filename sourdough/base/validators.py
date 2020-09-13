@@ -21,7 +21,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Validator(sourdough.base.Factory):
+class Validator(sourdough.creators.Factory):
     """Validates and/or converts object types.
     
     Validator is primary used to convert Element subclasses to and from single
@@ -36,20 +36,21 @@ class Validator(sourdough.base.Factory):
             convert types.
             
     """
+    products: str
     accepts: Union[Sequence[Callable], Callable] = dataclasses.field(
         default_factory = list)
     stores: Callable = None
-    converters: ClassVar[Mapping[Any, str]] = {
-        Mapping: 'mapify', 
-        Sequence: 'sequencify'}
+    options: ClassVar[Mapping[Any, str]] = {
+        'mapping': 'mapify', 
+        'sequence': 'sequencify'}
 
     """ Public Methods """
 
-    def convert(self, element: sourdough.base.Elemental) -> Any:
+    def convert(self, element: sourdough.Elemental) -> Any:
         """Converts 'element' to the appropriate type based on 'converters'.
         
         Args:
-            element (sourdough.base.Elemental): an object containing one or more Element
+            element (sourdough.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
@@ -70,7 +71,7 @@ class Validator(sourdough.base.Factory):
         except (KeyError, AttributeError):
             raise TypeError(f'no matching converter for {self.stroes}')
         
-    def mapify(self, element: sourdough.base.Elemental) -> Mapping[str, Element]:
+    def mapify(self, element: sourdough.Elemental) -> Mapping[str, Element]:
         """Converts 'element' to a Mapping type.
         
         If 'stores' is not None, it must have a 'contents' attribute which is 
@@ -81,11 +82,11 @@ class Validator(sourdough.base.Factory):
         still will be placed inside a 'stores' instance if 'stores' is not None.
         
         Args:
-            element (sourdough.base.Elemental): an object containing one or more Element
+            element (sourdough.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'element' is not an sourdough.base.Elemental.
+            TypeError: if 'element' is not an sourdough.Elemental.
                 
         Returns:
             Mapping[str, Element]: converted 'element'.
@@ -101,12 +102,12 @@ class Validator(sourdough.base.Factory):
                 except AttributeError:
                     converted[item.get_name()] = item
         else:
-            raise TypeError(f'element must be {sourdough.base.Elemental} type')
+            raise TypeError(f'element must be {sourdough.Elemental} type')
         if self.stores:
             converted = self.stores(contents = converted)
         return converted
 
-    def sequencify(self, element: sourdough.base.Elemental) -> Sequence[Element]:
+    def sequencify(self, element: sourdough.Elemental) -> Sequence[Element]:
         """Converts 'element' to a Sequence type.
         
         If 'stores' is not None, it must have a 'contents' attribute which is 
@@ -117,11 +118,11 @@ class Validator(sourdough.base.Factory):
         still will be placed inside a 'stores' instance if 'stores' is not None.
         
         Args:
-            element (sourdough.base.Elemental): an object containing one or more Element
+            element (sourdough.Elemental): an object containing one or more Element
                 subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'element' is not an sourdough.base.Elemental.
+            TypeError: if 'element' is not an sourdough.Elemental.
                 
         Returns:
             Sequence[Element]: converted 'element'.
@@ -134,16 +135,18 @@ class Validator(sourdough.base.Factory):
         elif isinstance(element, Element):
             converted = [element]
         else:
-            raise TypeError(f'element must be {sourdough.base.Elemental} type')
+            raise TypeError(f'element must be {sourdough.Elemental} type')
         if self.stores:
             converted = self.stores(contents = converted)
         return converted
 
-    def verify(element: sourdough.base.Elemental, kind: Element = Element) -> sourdough.base.Elemental:
+    def verify(
+            element: sourdough.Elemental, 
+            kind: sourdough.Element = sourdough.Element) -> sourdough.Elemental:
         """Verifies that 'element' is or contains the type 'kind'.
 
         Args:
-            element (sourdough.base.Elemental): item to verify its type.
+            element (sourdough.Elemental): item to verify its type.
             kind (Element): the specific class type which 'element' must be or 
                 'contain'. Defaults to Element.
 
@@ -151,7 +154,7 @@ class Validator(sourdough.base.Factory):
             TypeError: if 'element' is not or does not contain 'kind'.
 
         Returns:
-            sourdough.base.Elemental: the original 'element'.
+            sourdough.Elemental: the original 'element'.
             
         """
         if not ((isinstance(element, kind) 

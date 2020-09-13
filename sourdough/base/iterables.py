@@ -1,139 +1,35 @@
 """
-elements: sourdough base classes for composite objects
+iterables: sourdough base classes for composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Element: abstract base class for sourdough objects that are part of 
+    sourdough.Element: abstract base class for sourdough objects that are part of 
         composite structures.
-    Elemental: annotation type for all classes that contain Elements.
-    Slate (Element, MutableSequence): sourdough drop-in replacement for list
+    sourdough.Elemental: annotation type for all classes that contain sourdough.Elements.
+    Slate (sourdough.Element, MutableSequence): sourdough drop-in replacement for list
         with additional functionality.
-    Hybrid (Slate): iterable containing Element subclass instances with both 
+    Hybrid (Slate): iterable containing sourdough.Element subclass instances with both 
         dict and list interfaces and methods.
 
 """
 from __future__ import annotations
-import abc
 import collections.abc
 import copy
 import dataclasses
-import inspect
-import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
-
-@dataclasses.dataclass
-class Element(abc.ABC):
-    """Base class for core sourdough objects.
-
-    A Element has a 'name' attribute for internal referencing and to allow 
-    sourdough iterables to function propertly. Element instances can be used 
-    to create a variety of composite data structures such as trees and graphs. 
-
-    The mixins included with sourdough are all compatible, individually and
-    collectively, with Element and its subclasses.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
-    
-    """
-    name: str = None
-
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets 'name' to the default value if it is not passed.
-        self.name = self.name or self.get_name()
-
-    """ Class Methods """
-
-    @classmethod
-    def get_name(cls) -> str:
-        """Returns 'name' of class for use throughout sourdough.
-        
-        The method is a classmethod so that a 'name' can properly derived even
-        before a class is instanced. It can also be called after a subclass is
-        instanced (as is the case in '__post_init__').
-        
-        This method converts the class name from CapitalCase to snake_case.
-        
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        if isinstance(cls, Element):
-            return cls.name
-        elif inspect.isclass(cls):
-            return sourdough.tools.snakify(cls.__name__)
-        else:
-            return sourdough.tools.snakify(cls.__class__.__name__)
-
-    """ Dunder Methods """
-
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-        
-    def __str__(self) -> str:
-        """Returns pretty string representation of an instance.
-        
-        Returns:
-            str: pretty string representation of an instance.
-            
-        """
-        new_line = '\n'
-        representation = [f'sourdough {self.__class__.__name__}']
-        attributes = [a for a in self.__dict__ if not a.startswith('_')]
-        for attribute in attributes:
-            value = getattr(self, attribute)
-            if (isinstance(value, Element) 
-                    and isinstance(value, (Sequence, Mapping))):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value.contents), '    ')}''')            
-            elif (isinstance(value, (Sequence, Mapping)) 
-                    and not isinstance(value, str)):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value), '    ')}''')
-            else:
-                representation.append(f'{attribute}: {str(value)}')
-        return new_line.join(representation)    
-
-
-Elemental = Union['Element', Mapping[str, 'Element'], Sequence['Element']]
-
      
 @dataclasses.dataclass
-class Slate(Element, collections.abc.MutableSequence):
+class Slate(sourdough.Element, collections.abc.MutableSequence):
     """Basic sourdough list replacement.
     
     A Slate differs from a python list in 3 significant ways:
         1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Element.
+            in sourdough. This is inherited from sourdough.Element.
         2) It includes an 'add' method which allows different datatypes to be 
             passed and added to the 'contents' of a Slate instance. 
         3) It uses a 'validate' method to validate or convert the passed 
@@ -151,8 +47,8 @@ class Slate(Element, collections.abc.MutableSequence):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the '_get_name' method in Element. If that method is not 
+            '__post_init__' of sourdough.Element is called, 'name' is set based upon
+            the '_get_name' method in sourdough.Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
         
@@ -280,7 +176,7 @@ class Hybrid(Slate):
     Hybrid combines the functionality and interfaces of python dicts and lists.
     It allows duplicate keys and list-like iteration while supporting the easier
     access methods of dictionaries. In order to support this hybrid approach to
-    iterables, Hybrid can only store Element subclasses.
+    iterables, Hybrid can only store sourdough.Element subclasses.
     
     Hybrid is the primary iterable base class used in sourdough composite 
     objects.
@@ -289,13 +185,13 @@ class Hybrid(Slate):
     list.
     
     A Hybrid differs from a Slate in 4 significant ways:
-        1) It only stores Element subclasses or subclass instances.
+        1) It only stores sourdough.Element subclasses or subclass instances.
         2) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
             subclass instance with only the items with 'name' attributes 
             matching items in the 'subset' argument.
         3) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
-            Element instances. A 'name' acts as a key to create the facade of 
+            sourdough.Element instances. A 'name' acts as a key to create the facade of 
             a dictionary with the items in the stored list serving as values. 
             This allows for duplicate keys for storing class instances, easier 
             iteration, and returning multiple matching items. This design comes 
@@ -309,7 +205,7 @@ class Hybrid(Slate):
             callable. 
 
     Args:
-        contents (sourdough.Elemental): Element subclasses or Element subclass 
+        contents (sourdough.sourdough.Elemental): sourdough.Element subclasses or sourdough.Element subclass 
             instances to store in a list. If a dict is passed, the keys will 
             be ignored and only the values will be added to 'contents'. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
@@ -319,16 +215,16 @@ class Hybrid(Slate):
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the '_get_name' method in Element. If that method is not 
+            '__post_init__' of sourdough.Element is called, 'name' is set based upon
+            the '_get_name' method in sourdough.Element. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
         
     Attributes:
-        contents (Sequence[Element]): stored Element classes or instances.
+        contents (Sequence[sourdough.Element]): stored sourdough.Element classes or instances.
             
     """
-    contents: sourdough.Elemental = dataclasses.field(default_factory = list)
+    contents: sourdough.sourdough.Elemental = dataclasses.field(default_factory = list)
     name: str = None
     
     """ Initialization Methods """
@@ -342,29 +238,29 @@ class Hybrid(Slate):
         
     """ Public Methods """
     
-    def validate(self, contents: sourdough.Elemental) -> Sequence[Element]:
+    def validate(self, contents: sourdough.sourdough.Elemental) -> Sequence[sourdough.Element]:
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (sourdough.Elemental): item(s) to validate or convert to a list of 
-                Element instances.
+            contents (sourdough.sourdough.Elemental): item(s) to validate or convert to a list of 
+                sourdough.Element instances.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-            Sequence[Element]: validated or converted argument that is 
+            Sequence[sourdough.Element]: validated or converted argument that is 
                 compatible with an instance.
         
         """
         contents = verify(contents = contents)
         return sequencify(element = contents)
 
-    def add(self, contents: sourdough.Elemental) -> None:
+    def add(self, contents: sourdough.sourdough.Elemental) -> None:
         """Extends 'contents' argument to 'contents' attribute.
         
         Args:
-            contents (sourdough.Elemental): sourdough.Elemental instance(s) to add to the 'contents' 
+            contents (sourdough.sourdough.Elemental): sourdough.sourdough.Elemental instance(s) to add to the 'contents' 
                 attribute.
 
         """
@@ -372,12 +268,12 @@ class Hybrid(Slate):
         self.contents.extend(contents)
         return self    
 
-    def append(self, contents: sourdough.Elemental) -> None:
+    def append(self, contents: sourdough.sourdough.Elemental) -> None:
         """Appends 'element' to 'contents'.
         
         Args:
-            contents (Union[Element, Mapping[Any, Element], 
-                Sequence[Element]]): Element instance(s) to add to the
+            contents (Union[sourdough.Element, Mapping[Any, sourdough.Element], 
+                Sequence[sourdough.Element]]): sourdough.Element instance(s) to add to the
                 'contents' attribute.
 
         Raises:
@@ -386,7 +282,7 @@ class Hybrid(Slate):
         """
         contents = self.validate(contents = contents)
         if (isinstance(contents, Sequence)
-                and not isinstance(contents, Element)):
+                and not isinstance(contents, sourdough.Element)):
             contents = self.__class__(contents)
         self.contents.append(contents)
         return self    
@@ -423,11 +319,11 @@ class Hybrid(Slate):
         self.contents = []
         return self
    
-    def extend(self, contents: sourdough.Elemental) -> None:
+    def extend(self, contents: sourdough.sourdough.Elemental) -> None:
         """Extends 'element' to 'contents'.
         
         Args:
-            contents (sourdough.Elemental): sourdough.Elemental instance(s) to add to the 'contents' 
+            contents (sourdough.sourdough.Elemental): sourdough.sourdough.Elemental instance(s) to add to the 'contents' 
                 attribute.
 
         Raises:
@@ -441,8 +337,8 @@ class Hybrid(Slate):
     def find(self, 
             tool: Callable, 
             recursive: bool = True, 
-            matches: Sequence[Element] = None,
-            **kwargs) -> Sequence[Element]:
+            matches: Sequence[sourdough.Element] = None,
+            **kwargs) -> Sequence[sourdough.Element]:
         """Finds items in 'contents' that match criteria in 'tool'.
         
         Args:
@@ -450,13 +346,13 @@ class Hybrid(Slate):
                 its first argument and any other arguments in kwargs.
             recursive (bool): whether to apply 'tool' to nested items in
                 'contents'. Defaults to True.
-            matches (Sequence[Element]): items matching the criteria
+            matches (Sequence[sourdough.Element]): items matching the criteria
                 in 'tool'. This should not be passed by an external call to
                 'find'. It is included to allow recursive searching.
             kwargs: additional arguments to pass when 'tool' is used.
             
         Returns:
-            Sequence[Element]: stored items matching the criteria
+            Sequence[sourdough.Element]: stored items matching the criteria
                 in 'tool'. 
         
         """
@@ -473,15 +369,15 @@ class Hybrid(Slate):
                         **kwargs))
         return matches
     
-    def get(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
+    def get(self, key: Union[str, int]) -> Union[sourdough.Element, Sequence[sourdough.Element]]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
         Args:
-            key (Union[str, int]): index or stored Element name to get from
+            key (Union[str, int]): index or stored sourdough.Element name to get from
                 'contents'.
                 
         Returns:
-            Union[Element, Sequence[Element]]: items in 'contents' or value in 
+            Union[sourdough.Element, Sequence[sourdough.Element]]: items in 'contents' or value in 
                 '_default' attribute. 
         """
         try:
@@ -489,28 +385,28 @@ class Hybrid(Slate):
         except KeyError:
             return self._default
             
-    def insert(self, index: int, element: Element) -> None:
+    def insert(self, index: int, element: sourdough.Element) -> None:
         """Inserts 'element' at 'index' in 'contents'.
 
         Args:
             index (int): index to insert 'element' at.
-            element (Element): object to be inserted.
+            element (sourdough.Element): object to be inserted.
 
         Raises:
-            TypeError: if 'element' is not a Element type.
+            TypeError: if 'element' is not a sourdough.Element type.
             
         """
-        if isinstance(element, Element):
+        if isinstance(element, sourdough.Element):
             self.contents.insert(index, element)
         else:
-            raise TypeError('element must be a Element type')
+            raise TypeError('element must be a sourdough.Element type')
         return self
 
     def items(self) -> Iterable:
         """Emulates python dict 'items' method.
         
         Returns:
-            Iterable: tuple of Element names and Elements.
+            Iterable: tuple of sourdough.Element names and sourdough.Elements.
             
         """
         return tuple(zip(self.keys(), self.values()))
@@ -519,7 +415,7 @@ class Hybrid(Slate):
         """Emulates python dict 'keys' method.
         
         Returns:
-            Sequence[Element]: list of names of Elements stored in 
+            Sequence[sourdough.Element]: list of names of sourdough.Elements stored in 
                 'contents'
             
         """
@@ -528,15 +424,15 @@ class Hybrid(Slate):
         except AttributeError:
             return [c.get_name() for c in self.contents]
 
-    def pop(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
+    def pop(self, key: Union[str, int]) -> Union[sourdough.Element, Sequence[sourdough.Element]]:
         """Pops item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored Element name to pop from
+            key (Union[str, int]): index or stored sourdough.Element name to pop from
                 'contents'.
                 
         Returns:
-            Union[Element, Sequence[Element]]: items popped from 
+            Union[sourdough.Element, Sequence[sourdough.Element]]: items popped from 
                 'contents'.
             
         """
@@ -548,7 +444,7 @@ class Hybrid(Slate):
         """Removes item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored Element name to remove from
+            key (Union[str, int]): index or stored sourdough.Element name to remove from
                 'contents'.
             
         """
@@ -568,7 +464,7 @@ class Hybrid(Slate):
         """Returns a subset of 'contents'.
 
         Args:
-            subset (Union[str, Sequence[str]]): key(s) to get Element 
+            subset (Union[str, Sequence[str]]): key(s) to get sourdough.Element 
                 instances with matching 'name' attributes from 'contents'.
 
         Returns:
@@ -585,11 +481,11 @@ class Hybrid(Slate):
                 name = self.name,
                 contents = [c for c in self.contents if c.get_name() in subset])    
      
-    def update(self, contents: sourdough.Elemental) -> None:
+    def update(self, contents: sourdough.sourdough.Elemental) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            contents (sourdough.Elemental): sourdough.Elemental instances to add to the 'contents' 
+            contents (sourdough.sourdough.Elemental): sourdough.sourdough.Elemental instances to add to the 'contents' 
                 attribute. If a Mapping is passed, the values are added to 
                 'contents' and the keys become the 'name' attributes of those 
                 values. To mimic 'update', the passed 'elements' are added to 
@@ -610,18 +506,18 @@ class Hybrid(Slate):
             self.extend(contents = contents)
         return self
 
-    def values(self) -> Sequence[Element]:
+    def values(self) -> Sequence[sourdough.Element]:
         """Emulates python dict 'values' method.
         
         Returns:
-            Sequence[Element]: list of Elements stored in 'contents'
+            Sequence[sourdough.Element]: list of sourdough.Elements stored in 'contents'
             
         """
         return self.contents
           
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[str, int]) -> Element:
+    def __getitem__(self, key: Union[str, int]) -> sourdough.Element:
         """Returns value(s) for 'key' in 'contents'.
         
         If 'key' is a str type, this method looks for a matching 'name'
@@ -630,7 +526,7 @@ class Hybrid(Slate):
         If 'key' is an int type, this method returns the stored element at the
         corresponding index.
         
-        If only one match is found, a single Element instance is returned. If
+        If only one match is found, a single sourdough.Element instance is returned. If
         more are found, a Hybrid or Hybrid subclass with the matching
         'name' attributes is returned.
 
@@ -638,7 +534,7 @@ class Hybrid(Slate):
             key (Union[str, int]): name or index to search for in 'contents'.
 
         Returns:
-            Element: value(s) stored in 'contents' that correspond 
+            sourdough.Element: value(s) stored in 'contents' that correspond 
                 to 'key'. If there is more than one match, the return is a
                 Hybrid or Hybrid subclass with that matching stored
                 elements.
@@ -660,7 +556,7 @@ class Hybrid(Slate):
             
     def __setitem__(self, 
             key: Union[str, int], 
-            value: Element) -> None:
+            value: sourdough.Element) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:

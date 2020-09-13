@@ -73,7 +73,7 @@ class Details(sourdough.base.Slate):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.base.Lexicon):
+class Outline(sourdough.containers.Lexicon):
     """Base class for pieces of sourdough composite objects.
     
     Args:

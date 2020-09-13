@@ -23,7 +23,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Overview(sourdough.base.Lexicon):
+class Overview(sourdough.containers.Lexicon):
     """Dictionary of different Element types in a Structure instance.
     
     Args:
@@ -89,8 +89,8 @@ class Overview(sourdough.base.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: sourdough.base.Element, 
-            element: sourdough.base.Element) -> Sequence[sourdough.base.Element]: 
+            item: sourdough.Element, 
+            element: sourdough.Element) -> Sequence[sourdough.Element]: 
         """[summary]
 
         Args:

@@ -1,12 +1,12 @@
 """
-lexicons: sourdough base dictionaries
+containers: sourdough base classes for storing classes and instances
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Lexicon (sourdough.Element, MutableMapping): sourdough drop-in replacement for dict
-        with additional functionality.
+    Lexicon (MutableMapping): sourdough drop-in replacement for dict with 
+        additional functionality.
     Catalog (Lexicon): list and wildcard accepting dict replacement with a 
         'create' method for instancing and/or validating stored objects.
 
@@ -28,20 +28,18 @@ class Lexicon(collections.abc.MutableMapping):
     features.
     
     A Lexicon differs from a python dict in 5 significant ways:
-        1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from sourdough.Element.
-        2) It includes an 'add' method which allows different datatypes to
+        1) It includes an 'add' method which allows different datatypes to
             be passed and added to a Lexicon instance. All of the normal dict 
             methods are also available. 'add' should be used to set default or 
             more complex methods of adding elements to the stored dict.
-        3) It uses a 'validate' method to validate or convert the passed 
+        2) It uses a 'validate' method to validate or convert the passed 
             'contents' argument. It will convert all supported datatypes to 
             a dict. The 'validate' method is automatically called when a
             Lexicon is instanced and when the 'add' method is called.
-        4) It includes a 'subsetify' method which will return a Lexicon or
+        3) It includes a 'subsetify' method which will return a Lexicon or
             Lexicon subclass instance with only the key/value pairs matching
             keys in the 'subset' argument.
-        5) It allows the '+' operator to be used to join a Lexicon instance
+        4) It allows the '+' operator to be used to join a Lexicon instance
             with another Lexicon instance or another Mapping. The '+' operator 
             calls the Lexicon 'add' method to implement how the added item(s) 
             is/are added to the Lexicon instance.
@@ -52,9 +50,9 @@ class Lexicon(collections.abc.MutableMapping):
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    validator: sourdough.Validator = sourdough.Validator(
-        accepts = Mapping,
-        stores = Mapping)
+    # validator: sourdough.validators.Validator = sourdough.validators.Validator(
+    #     products = 'mapping',                                                                               
+    #     accepts = Mapping)
       
     """ Initialization Methods """
     
@@ -373,3 +371,4 @@ class Catalog(Lexicon):
             i: self.contents[i]
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
+    

@@ -11,12 +11,12 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AElement(sourdough.base.Element):
+class AElement(sourdough.Element):
     pass
 
 
 @dataclasses.dataclass
-class AnotherElement(sourdough.base.Element):
+class AnotherElement(sourdough.Element):
     pass
 
 
