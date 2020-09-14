@@ -1,5 +1,5 @@
 """
-core: sourdough base classes for composite objects
+core: sourdough base class for composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -12,10 +12,9 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
-import copy
 import dataclasses
 import inspect
+import pprint
 import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
@@ -24,14 +23,12 @@ import sourdough
 
 @dataclasses.dataclass
 class Element(abc.ABC):
-    """Base class for core sourdough objects.
+    """Base class for parts of sourdough composite objects.
 
     A Element has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Element instances can be used 
-    to create a variety of composite data structures such as trees and graphs. 
-
-    The mixins included with sourdough are all compatible, individually and
-    collectively, with Element and its subclasses.
+    to create a variety of composite data structures such as trees, cycles, 
+    contests, studies, and graphs. 
 
     Args:
         name (str): designates the name of a class instance that is used for 

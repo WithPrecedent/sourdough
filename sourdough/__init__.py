@@ -8,7 +8,8 @@ Contents:
     base: core structural classes and mixins.
     configuration: classes related to configuration options and file management.
     project: classes applying 'base' to composite object projects.
-    utilities: classes and functions that make complex and tedious tasks easier.
+    utilities: functions and decorators that make complex and tedious tasks 
+        easier.
 
 In general, python files in sourdough are over-documented to allow beginning
 programmers to understand basic design choices that were made. If there is any
@@ -23,7 +24,7 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Element via sourdough.base.core.Element,
+    Instead of acccesing Element via sourdough.core.base.Element,
     you can just use: sourdough.Element
     
 """
@@ -34,13 +35,13 @@ from .utilities import decorators
 from .utilities import memory
 
 # Imports of core base classes and mixins.
-from .base.core import Element
-from .base.core import Elemental
-# from .base import creators
-# from .base import validators
-from .base import containers
-from .base import mixins
-from .base import iterables
+from .core.base import Element
+from .core.base import Elemental
+# from .core import creators
+# from .core import validators
+from .core import containers
+from .core import mixins
+from .core import iterables
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
