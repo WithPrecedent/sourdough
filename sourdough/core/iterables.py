@@ -52,7 +52,10 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)
     name: str = None
-  
+    validator: sourdough.validators.Validator = sourdough.validators.Validator(
+        products = 'sequence',                                                                               
+        accepts = list) 
+        
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
@@ -68,7 +71,7 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
         """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Sequence[Any]): items to validate or convert to a list.
+            contents (Sequence[Any]): item(s) to validate or convert to a list.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
@@ -78,10 +81,8 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
                 with an instance.
         
         """
-        if isinstance(contents, Sequence):
-            return contents
-        else:
-            raise TypeError('contents must be a list')
+        contents = self.validator.verify(contents = contents)
+        return self.validator.convert(element = contents)
 
     def add(self, contents: Sequence[Any]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
@@ -241,24 +242,24 @@ class Hybrid(Slate):
         
     """ Public Methods """
     
-    def validate(self, 
-            contents: sourdough.Elemental) -> Sequence[sourdough.Element]:
-        """Validates 'contents' or converts 'contents' to proper type.
+    # def validate(self, 
+    #         contents: sourdough.Elemental) -> Sequence[sourdough.Element]:
+    #     """Validates 'contents' or converts 'contents' to proper type.
         
-        Args:
-            contents (sourdough.Elemental): item(s) to validate or convert to a 
-                list of Element instances.
+    #     Args:
+    #         contents (sourdough.Elemental): item(s) to validate or convert to a 
+    #             list of Element instances.
             
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
+    #     Raises:
+    #         TypeError: if 'contents' argument is not of a supported datatype.
             
-        Returns:
-            Sequence[sourdough.Element]: validated or converted argument that is 
-                compatible with an instance.
+    #     Returns:
+    #         Sequence[sourdough.Element]: validated or converted argument that is 
+    #             compatible with an instance.
         
-        """
-        contents = self.validator.verify(contents = contents)
-        return self.validator.convert(element = contents)
+    #     """
+    #     contents = self.validator.verify(contents = contents)
+    #     return self.validator.convert(element = contents)
 
     def add(self, contents: sourdough.Elemental) -> None:
         """Extends 'contents' argument to 'contents' attribute.

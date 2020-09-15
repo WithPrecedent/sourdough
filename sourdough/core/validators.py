@@ -10,6 +10,7 @@ Contents:
 """
 from __future__ import annotations
 import abc
+from abc import abstractmethod
 import collections.abc
 import copy
 import dataclasses
@@ -21,7 +22,176 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Validator(sourdough.creators.Factory, abc.ABC):
+class ValidatorBase(abc.ABC):
+
+
+    @abc.abstractmethod
+    def verify(self, contents: Any) -> Any:
+        pass
+    
+    @abc.abstractmethod
+    def convert(self, contents: Any) -> Any:
+        pass   
+
+
+
+class Mapify(ValidatorBase):
+    
+    
+    def convert(self, 
+            contents: sourdough.Elemental) -> Mapping[str, sourdough.Element]:
+        """Converts 'contents' to a Mapping type.
+        
+        If 'stores' is not None, it must have a 'contents' attribute which is 
+        where the converted 'contents' will be passed. If it is not passed, 
+        'contents' will be converted to an ordinary dict.
+        
+        If 'contents' is already a Mapping, it is not converted. However, it 
+        still will be placed inside a 'stores' instance if 'stores' is not None.
+        
+        Args:
+            contents (sourdough.Elemental): an object containing one or more Element
+                subclasses or Element subclass instances.
+        
+        Raises:
+            TypeError: if 'contents' is not an sourdough.Elemental.
+                
+        Returns:
+            Mapping[str, Element]: converted 'contents'.
+            
+        """
+        if isinstance(contents, Mapping):
+            converted = contents
+        elif isinstance(contents, Sequence) or isinstance(contents, Element):
+            converted = {}
+            for item in sourdough.tools.listify(contents):
+                try:
+                    converted[item.name] = item
+                except AttributeError:
+                    converted[item.get_name()] = item
+        else:
+            raise TypeError(f'contents must be {sourdough.Elemental} type')
+        if self.stores:
+            converted = self.stores(contents = converted)
+        return converted
+    
+    
+class Sequencify(ValidatorBase):
+    
+
+    def convert(self, contents: sourdough.Elemental) -> Sequence[Element]:
+        """Converts 'contents' to a Sequence type.
+        
+        If 'stores' is not None, it must have a 'contents' attribute which is 
+        where the converted 'contents' will be passed. If it is not passed, 
+        'contents' will be converted to an ordinary list.
+        
+        If 'contents' is already a Sequence, it is not converted. However, it 
+        still will be placed inside a 'stores' instance if 'stores' is not None.
+        
+        Args:
+            contents (sourdough.Elemental): an object containing one or more Element
+                subclasses or Element subclass instances.
+        
+        Raises:
+            TypeError: if 'contents' is not an sourdough.Elemental.
+                
+        Returns:
+            Sequence[Element]: converted 'contents'.
+            
+        """    
+        if isinstance(contents, Mapping):
+            converted = list(contents.values())
+        elif isinstance(contents, Sequence):
+            converted = contents
+        elif isinstance(contents, Element):
+            converted = [contents]
+        else:
+            raise TypeError(f'contents must be {sourdough.Elemental} type')
+        if self.stores:
+            converted = self.stores(contents = converted)
+        return converted  
+
+
+
+
+    """ Public Methods """
+
+    def convert(self, contents: sourdough.Elemental) -> Any:
+        """Converts 'contents' to the appropriate type based on 'converters'.
+        
+        Args:
+            contents (sourdough.Elemental): an object containing one or more Element
+                subclasses or Element subclass instances.
+        
+        Raises:
+            ValueError: if 'stores' is None.
+            TypeError: if there is no converter method for the type in 'stores'.
+              
+        Returns:
+            Any: converted 'contents'.
+            
+        """
+        contents = self.verify(contents = contents, kind = self.stores)
+        if self.stores is None:
+            raise ValueError(
+                'Validator cannot convert without a value for stores')
+        try:
+            return getattr(self, self.converters[self.stores])(
+                contents = contents)
+        except (KeyError, AttributeError):
+            raise TypeError(f'no matching converter for {self.stroes}')
+        
+
+
+
+    def verify(
+            contents: sourdough.Elemental, 
+            kind: sourdough.Element = sourdough.Element) -> sourdough.Elemental:
+        """Verifies that 'contents' is or contains the type 'kind'.
+
+        Args:
+            contents (sourdough.Elemental): item to verify its type.
+            kind (Element): the specific class type which 'contents' must be or 
+                'contain'. Defaults to Element.
+
+        Raises:
+            TypeError: if 'contents' is not or does not contain 'kind'.
+
+        Returns:
+            sourdough.Elemental: the original 'contents'.
+            
+        """
+        if not ((isinstance(contents, kind) 
+                or (inspect.isclass(contents) and issubclass(contents, kind)))
+            or (isinstance(contents, Sequence) 
+                    and (all(isinstance(c, kind) for c in contents)
+                or (all(inspect.isclass(c) for c in contents)
+                    and all(issubclass(c, kind) for c in contents))))
+            or (isinstance(contents, Mapping)
+                    and (all(isinstance(c, kind) for c in contents.values())
+                or (all(inspect.isclass(c) for c in contents.values())
+                    and all(issubclass(c, kind) for c in contents.values()))))):
+            raise TypeError(f'contents must be or conttain {kind} type(s)')  
+        return contents
+       
+    """ Dunder Methods """
+    
+    def __contains__(self, item: Callable) -> bool:
+        """Returns whether 'item' is in 'stores'.
+        
+        Args:
+            item (Callable): item to check.
+            
+        Returns:
+            bool: if item is in the 'stores' attribute.
+            
+        """
+        return item in self.stores    
+    
+    
+@dataclasses.dataclass
+class Validator(sourdough.creators.Factory):
     """Base class for type validation and/or conversion.
     
     Validator is primary used to convert Element subclasses to and from single
@@ -41,147 +211,6 @@ class Validator(sourdough.creators.Factory, abc.ABC):
         default_factory = list)
     stores: Callable = None
     options: ClassVar[Mapping[Any, str]] = {
-        'mapping': 'mapify', 
-        'sequence': 'sequencify'}
+        'mapping': Mapify, 
+        'sequence': Sequencify}
 
-    """ Public Methods """
-
-    def convert(self, element: sourdough.Elemental) -> Any:
-        """Converts 'element' to the appropriate type based on 'converters'.
-        
-        Args:
-            element (sourdough.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
-        
-        Raises:
-            ValueError: if 'stores' is None.
-            TypeError: if there is no converter method for the type in 'stores'.
-              
-        Returns:
-            Any: converted 'element'.
-            
-        """
-        element = self.verify(element = element, kind = self.stores)
-        if self.stores is None:
-            raise ValueError(
-                'Validator cannot convert without a value for stores')
-        try:
-            return getattr(self, self.converters[self.stores])(
-                element = element)
-        except (KeyError, AttributeError):
-            raise TypeError(f'no matching converter for {self.stroes}')
-        
-    def mapify(self, element: sourdough.Elemental) -> Mapping[str, Element]:
-        """Converts 'element' to a Mapping type.
-        
-        If 'stores' is not None, it must have a 'contents' attribute which is 
-        where the converted 'element' will be passed. If it is not passed, 
-        'element' will be converted to an ordinary dict.
-        
-        If 'element' is already a Mapping, it is not converted. However, it 
-        still will be placed inside a 'stores' instance if 'stores' is not None.
-        
-        Args:
-            element (sourdough.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
-        
-        Raises:
-            TypeError: if 'element' is not an sourdough.Elemental.
-                
-        Returns:
-            Mapping[str, Element]: converted 'element'.
-            
-        """
-        if isinstance(element, Mapping):
-            converted = element
-        elif isinstance(element, Sequence) or isinstance(element, Element):
-            converted = {}
-            for item in sourdough.tools.listify(element):
-                try:
-                    converted[item.name] = item
-                except AttributeError:
-                    converted[item.get_name()] = item
-        else:
-            raise TypeError(f'element must be {sourdough.Elemental} type')
-        if self.stores:
-            converted = self.stores(contents = converted)
-        return converted
-
-    def sequencify(self, element: sourdough.Elemental) -> Sequence[Element]:
-        """Converts 'element' to a Sequence type.
-        
-        If 'stores' is not None, it must have a 'contents' attribute which is 
-        where the converted 'element' will be passed. If it is not passed, 
-        'element' will be converted to an ordinary list.
-        
-        If 'element' is already a Sequence, it is not converted. However, it 
-        still will be placed inside a 'stores' instance if 'stores' is not None.
-        
-        Args:
-            element (sourdough.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
-        
-        Raises:
-            TypeError: if 'element' is not an sourdough.Elemental.
-                
-        Returns:
-            Sequence[Element]: converted 'element'.
-            
-        """    
-        if isinstance(element, Mapping):
-            converted = list(element.values())
-        elif isinstance(element, Sequence):
-            converted = element
-        elif isinstance(element, Element):
-            converted = [element]
-        else:
-            raise TypeError(f'element must be {sourdough.Elemental} type')
-        if self.stores:
-            converted = self.stores(contents = converted)
-        return converted
-
-    def verify(
-            element: sourdough.Elemental, 
-            kind: sourdough.Element = sourdough.Element) -> sourdough.Elemental:
-        """Verifies that 'element' is or contains the type 'kind'.
-
-        Args:
-            element (sourdough.Elemental): item to verify its type.
-            kind (Element): the specific class type which 'element' must be or 
-                'contain'. Defaults to Element.
-
-        Raises:
-            TypeError: if 'element' is not or does not contain 'kind'.
-
-        Returns:
-            sourdough.Elemental: the original 'element'.
-            
-        """
-        if not ((isinstance(element, kind) 
-                or (inspect.isclass(element) and issubclass(element, kind)))
-            or (isinstance(element, Sequence) 
-                    and (all(isinstance(c, kind) for c in element)
-                or (all(inspect.isclass(c) for c in element)
-                    and all(issubclass(c, kind) for c in element))))
-            or (isinstance(element, Mapping)
-                    and (all(isinstance(c, kind) for c in element.values())
-                or (all(inspect.isclass(c) for c in element.values())
-                    and all(issubclass(c, kind) for c in element.values()))))):
-            raise TypeError(f'element must be or conttain {kind} type(s)')  
-        return element
-       
-    """ Dunder Methods """
-    
-    def __contains__(self, item: Callable) -> bool:
-        """Returns whether 'item' is in 'stores'.
-        
-        Args:
-            item (Callable): item to check.
-            
-        Returns:
-            bool: if item is in the 'stores' attribute.
-            
-        """
-        return item in self.stores    
-    
-    
