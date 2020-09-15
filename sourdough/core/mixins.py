@@ -36,13 +36,13 @@ class LibraryMixin(abc.ABC):
     instance, super().__post_init__() should be called by that subclass.
 
     Args:
-        library (ClassVar[sourdough.containers.Catalog]): dictionary which stores 
+        library (ClassVar[sourdough.base.Catalog]): dictionary which stores 
             subclass instances.
             
     Namespaces: 'library', 'borrow'.
 
     """
-    library: ClassVar[sourdough.containers.Catalog] = sourdough.containers.Catalog()
+    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
 
     """ Initialization Methods """
     
@@ -71,6 +71,66 @@ class LibraryMixin(abc.ABC):
         """
         return self.library[key]
   
+
+@dataclasses.dataclass
+class OptionsMixin(abc.ABC):
+    """Mixin which stores classes or instances in 'options'.
+
+    Args:
+        options (ClassVar[sourdough.base.Catalog]): the instance which stores 
+            subclass in a Catalog instance.
+            
+    Namespaces: 'options', 'select'
+
+    """
+    options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
+        always_return_list = True)
+    
+    """ Public Methods """
+        
+    def select(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
+            object, Sequence[object]]:
+        """Creates instance(s) of a class(es) stored in 'options'.
+
+        Args:
+            key (str): name matching a key in 'options' for which the value
+                is sought.
+
+        Raises:
+            TypeError: if 'option' is neither a str nor Sequence type.
+            
+        Returns:
+            Union[object, Sequence[object]]: instance(s) of a stored value(s).
+            
+        """
+        def _select_item(single_key: str) -> object:
+            """Nested function to return a single value in 'options'.
+        
+            A nested function is used to avoid cluttering the namespace of a
+            an object using the OptionsMixin.
+            
+            Args:
+                single_key (str): name of key for value to be returned.
+                
+            Returns:
+                object: instance of a stored value.
+            
+            """
+            if kwargs:
+                return self.options[single_key](**kwargs)
+            else:
+                return self.options[single_key]
+            
+        if isinstance(key, str):
+            return _select_item(single_key = key)
+        elif isinstance(key, Sequence):
+            instances = []
+            for k in key:
+                instances.append(_select_item(single_key = k))
+            return instances
+        else:
+            raise TypeError('option must be a str or list type')
+
       
 @dataclasses.dataclass
 class RegistryMixin(abc.ABC):
@@ -80,7 +140,7 @@ class RegistryMixin(abc.ABC):
         register_from_disk (bool): whether to look in the current working
             folder and subfolders for subclasses of the Element class for 
             which this class is a mixin. Defaults to False.
-        registry (ClassVar[sourdough.containers.Catalog]): the instance which stores 
+        registry (ClassVar[sourdough.base.Catalog]): the instance which stores 
             subclass in a Catalog instance.
 
     Namespaces: 'registry', 'register_from_disk', 'build', '_registry_base',
@@ -92,7 +152,7 @@ class RegistryMixin(abc.ABC):
     
     """
     # register_from_disk: bool = False
-    registry: ClassVar[sourdough.containers.Catalog] = sourdough.containers.Catalog()
+    registry: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
     
     """ Initialization Methods """
     
@@ -209,66 +269,6 @@ class RegistryMixin(abc.ABC):
     #                 if subclass(item, subclass):
     #                     matches.append[item]
     #     return matches
-
-
-@dataclasses.dataclass
-class OptionsMixin(abc.ABC):
-    """Mixin which stores classes or instances in 'options'.
-
-    Args:
-        options (ClassVar[sourdough.containers.Catalog]): the instance which stores 
-            subclass in a Catalog instance.
-            
-    Namespaces: 'options', 'select'
-
-    """
-    options: ClassVar[sourdough.containers.Catalog] = sourdough.containers.Catalog(
-        always_return_list = True)
-    
-    """ Public Methods """
-        
-    def select(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
-            object, Sequence[object]]:
-        """Creates instance(s) of a class(es) stored in 'options'.
-
-        Args:
-            key (str): name matching a key in 'options' for which the value
-                is sought.
-
-        Raises:
-            TypeError: if 'option' is neither a str nor Sequence type.
-            
-        Returns:
-            Union[object, Sequence[object]]: instance(s) of a stored value(s).
-            
-        """
-        def _select_item(single_key: str) -> object:
-            """Nested function to return a single value in 'options'.
-        
-            A nested function is used to avoid cluttering the namespace of a
-            an object using the OptionsMixin.
-            
-            Args:
-                single_key (str): name of key for value to be returned.
-                
-            Returns:
-                object: instance of a stored value.
-            
-            """
-            if kwargs:
-                return self.options[single_key](**kwargs)
-            else:
-                return self.options[single_key]
-            
-        if isinstance(key, str):
-            return _select_item(single_key = key)
-        elif isinstance(key, Sequence):
-            instances = []
-            for k in key:
-                instances.append(_select_item(single_key = k))
-            return instances
-        else:
-            raise TypeError('option must be a str or list type')
 
 
 @dataclasses.dataclass

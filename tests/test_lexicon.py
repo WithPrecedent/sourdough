@@ -27,7 +27,7 @@ def test_lexicon():
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
     
     # Tests Lexicon
-    lexicon = sourdough.containers.Lexicon()
+    lexicon = sourdough.base.Lexicon()
     try:
         lexicon.add(test_element)
         raise TypeError('TypeError message not properly triggered')

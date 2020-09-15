@@ -99,7 +99,7 @@ def test_project():
 # @dataclasses.dataclass
 # class AStructure(sourdough.Structure):
     
-#     options: ClassVar[sourdough.containers.Catalog] = sourdough.containers.Catalog(
+#     options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
 #         contents = {'new': NewAction()},
 #         always_return_list = True)
   

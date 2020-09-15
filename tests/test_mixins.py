@@ -26,7 +26,7 @@ class OtherComponent(AComponent):
 @dataclasses.dataclass
 class AnotherComponent(sourdough.mixins.OptionsMixin, OtherComponent):
     
-    options = sourdough.containers.Catalog(contents = {
+    options = sourdough.base.Catalog(contents = {
         'base': AComponent(),
         'other': OtherComponent()})
  

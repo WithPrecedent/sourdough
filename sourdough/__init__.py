@@ -35,11 +35,9 @@ from .utilities import decorators
 from .utilities import memory
 
 # Imports of core base classes and mixins.
+from .core import base
 from .core.base import Element
 from .core.base import Elemental
-# from .core import creators
-# from .core import validators
-from .core import containers
 from .core import mixins
 from .core import iterables
 
@@ -72,13 +70,11 @@ __all__ = [
     'tools',
     'decorators',
     'memory',
+    'base',
     'Element',
     'Elemental',
-    'creators',
-    'validators',
-    'containers',
-    'composites',
     'mixins',
+    'iterables',
     'Settings',
     'Filer',
     'Inventory',

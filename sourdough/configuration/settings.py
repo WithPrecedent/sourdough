@@ -21,7 +21,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(sourdough.containers.Lexicon):
+class Settings(sourdough.base.Lexicon):
     """Loads and Stores configuration settings.
 
     To create Settings instance, a user can pass a:

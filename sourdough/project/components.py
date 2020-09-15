@@ -23,7 +23,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Overview(sourdough.containers.Lexicon):
+class Overview(sourdough.base.Lexicon):
     """Dictionary of different Element types in a Structure instance.
     
     Args:

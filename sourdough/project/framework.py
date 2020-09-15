@@ -26,7 +26,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Inventory(sourdough.containers.Catalog):
+class Inventory(sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Args:
@@ -152,11 +152,22 @@ class Component(
 
     """ Public Methods """
     
-    def validate(self, contents: Any) -> Any:
-        if isinstance(contents, self.contains):
-            return contents
-        else:
-            raise TypeError(f'contents must be {str(self.contains)} types')     
+    def validate(self, contents: Sequence[Any]) -> Sequence[Any]:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Args:
+            contents (Sequence[Any]): item(s) to validate or convert to a list.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Sequence[Any]: validated or converted argument that is compatible 
+                with an instance.
+        
+        """
+        contents = self.validator.verify(contents = contents)
+        return self.validator.convert(element = contents)  
 
     """ Dunder Methods """
     
@@ -201,9 +212,14 @@ class Component(
 
 
 @dataclasses.dataclass
-class Structure(sourdough.mixins.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
+class Structure(sourdough.mixins.RegistryMixin, sourdough.iterables.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
-        
+      
+        3) It uses a 'validate' method to validate or convert the passed 
+            'contents' argument. It will convert all supported datatypes to 
+            a list. The 'validate' method is automatically called when a
+            Slate is instanced and when the 'add' method is called.  
+            
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
             Defaults to an empty list.
@@ -225,6 +241,9 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
     contents: Sequence[Union[str, Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
+    validator: ClassVar[sourdough.base.Validator] = sourdough.base.Validator(
+            products = 'sequence',                                                                               
+            accepts = sourdough.Elemental)
     registry: ClassVar[Inventory] = Inventory(stored_types = Component)
 
 
@@ -250,7 +269,26 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.base.Hybrid, abc.ABC):
     @abc.abstractmethod
     def finalize(self, **kwargs) -> Iterable:
         pass
+
+    """ Public Methods """
     
+    def validate(self, contents: Sequence[Any]) -> Sequence[Any]:
+        """Validates 'contents' or converts 'contents' to proper type.
+        
+        Args:
+            contents (Sequence[Any]): item(s) to validate or convert to a list.
+            
+        Raises:
+            TypeError: if 'contents' argument is not of a supported datatype.
+            
+        Returns:
+            Sequence[Any]: validated or converted argument that is compatible 
+                with an instance.
+        
+        """
+        contents = self.validator.verify(contents = contents)
+        return self.validator.convert(element = contents)
+  
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
@@ -290,7 +328,7 @@ class Stage(
 @dataclasses.dataclass
 class Workflow(
         sourdough.mixins.RegistryMixin, 
-        sourdough.base.Hybrid, 
+        sourdough.iterables.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     

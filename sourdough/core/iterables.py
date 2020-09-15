@@ -29,10 +29,6 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
             in sourdough. This is inherited from sourdough.Element.
         2) It includes an 'add' method which allows different datatypes to be 
             passed and added to the 'contents' of a Slate instance. 
-        3) It uses a 'validate' method to validate or convert the passed 
-            'contents' argument. It will convert all supported datatypes to 
-            a list. The 'validate' method is automatically called when a
-            Slate is instanced and when the 'add' method is called.
 
     Args:
         contents (Sequence[Any]): items to store in a list. Defaults to an empty 
@@ -52,9 +48,6 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)
     name: str = None
-    validator: sourdough.validators.Validator = sourdough.validators.Validator(
-        products = 'sequence',                                                                               
-        accepts = list) 
         
     """ Initialization Methods """
     
@@ -62,27 +55,8 @@ class Slate(sourdough.Element, collections.abc.MutableSequence):
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
         super().__post_init__()        
-        # Validates 'contents' or converts it to appropriate iterable.
-        self._initial_validation()  
     
     """ Public Methods """
-    
-    def validate(self, contents: Sequence[Any]) -> Sequence[Any]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents (Sequence[Any]): item(s) to validate or convert to a list.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Sequence[Any]: validated or converted argument that is compatible 
-                with an instance.
-        
-        """
-        contents = self.validator.verify(contents = contents)
-        return self.validator.convert(element = contents)
 
     def add(self, contents: Sequence[Any]) -> None:
         """Extends 'contents' argument to 'contents' attribute.
@@ -226,10 +200,7 @@ class Hybrid(Slate):
             
     """
     contents: sourdough.Elemental = dataclasses.field(default_factory = list)
-    name: str = None
-    validator: sourdough.validators.Validator = sourdough.validators.Validator(
-        products = 'sequence',                                                                               
-        accepts = sourdough.Elemental)    
+    name: str = None 
     
     """ Initialization Methods """
     
@@ -305,7 +276,7 @@ class Hybrid(Slate):
         """
         new_contents = []
         for item in iter(self.contents):
-            if isinstance(item, sourdough.base.Hybrid):
+            if isinstance(item, sourdough.iterables.Hybrid):
                 if recursive:
                     new_item = item.apply(
                         tool = tool, 
@@ -365,7 +336,7 @@ class Hybrid(Slate):
             matches = []
         for item in iter(self.contents):
             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.base.Hybrid):
+            if isinstance(item, sourdough.iterables.Hybrid):
                 if recursive:
                     matches.extend(item.find(
                         tool = tool, 
