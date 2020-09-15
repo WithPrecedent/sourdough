@@ -1,5 +1,5 @@
 """
-validator: sourdough type validator and converter.
+validators: sourdough type validators and converters.
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -21,8 +21,8 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Validator(sourdough.creators.Factory):
-    """Validates and/or converts object types.
+class Validator(sourdough.creators.Factory, abc.ABC):
+    """Base class for type validation and/or conversion.
     
     Validator is primary used to convert Element subclasses to and from single
     instances, Mappings of instances, and Sequences of instances. However, with
@@ -36,7 +36,7 @@ class Validator(sourdough.creators.Factory):
             convert types.
             
     """
-    products: str
+    products: Union[Sequence[str], str]
     accepts: Union[Sequence[Callable], Callable] = dataclasses.field(
         default_factory = list)
     stores: Callable = None

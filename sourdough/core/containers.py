@@ -63,29 +63,24 @@ class Lexicon(collections.abc.MutableMapping):
         
     """ Public Methods """
     
-    def validate(self, contents: Mapping[Any, Any]) -> Mapping[Any, Any]:
-        """Validates 'contents' or converts 'contents' to a dict.
-        
-        This method simply confirms that 'contents' is a Mapping. Subclasses
-        should overwrite this method to support more datatypes and implement
-        any type conversion techniques that are necessary.
+    def validate(self, 
+            contents: sourdough.Elemental) -> Mapping[str, sourdough.Element]:
+        """Validates 'contents' or converts 'contents' to proper type.
         
         Args:
-            contents (Mapping[Any, Any]:) variable to validate as compatible 
-                with an instance.
+            contents (sourdough.Elemental): item(s) to validate or convert to a 
+                dict of str keys and Element instances for values.
             
         Raises:
             TypeError: if 'contents' argument is not of a supported datatype.
             
         Returns:
-            Mapping[Any, Any]: validated or converted argument that is 
-                compatible with an instance.
+            Mapping[str, sourdough.Element]: validated or converted argument 
+                that is compatible with an instance.
         
         """
-        if isinstance(contents, Mapping):
-            return contents
-        else:
-            raise TypeError('contents must be a dict type')
+        contents = self.validator.verify(contents = contents)
+        return self.validator.convert(element = contents)
      
     def add(self, contents: Mapping[Any, Any], **kwargs) -> None:
         """Adds 'contents' to the 'contents' attribute.
