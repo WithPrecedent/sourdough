@@ -88,7 +88,7 @@ class Outline(sourdough.base.Lexicon):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        registry (ClassVar[sourdough.Inventory]): the instance which 
+        library (ClassVar[sourdough.Inventory]): the instance which 
             automatically stores any subclass of Component.
               
     """
@@ -311,7 +311,7 @@ class Publish(sourdough.Stage):
         for item in details:
             if item in project.outline:
                 value = project.outline[item]
-                generic = project.components.registry[value.generic]
+                generic = project.components.library[value.generic]
                 if issubclass(generic, sourdough.project.structures.Structure):
                     instance = self._create_composite(
                         name = item,
@@ -550,10 +550,10 @@ class Apply(sourdough.Stage):
         
         """
         if isinstance(component, sourdough.Technique):
-            component.algorithm = self.project.component.registry[
+            component.algorithm = self.project.component.library[
                 component.algorithm]
         elif isinstance(component, sourdough.Task):
-            component.technique.algorithm = self.project.component.registry[
+            component.technique.algorithm = self.project.component.library[
                 component.technique.algorithm]
         return component   
 

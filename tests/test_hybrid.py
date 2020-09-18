@@ -11,17 +11,17 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AElement(sourdough.Element):
+class AElement(sourdough.base.Element):
     pass
 
 
 @dataclasses.dataclass
-class AnotherElement(sourdough.Element):
+class AnotherElement(sourdough.base.Element):
     pass
 
 
 def test_hybrid():
-    structure = sourdough.iterables.Hybrid()
+    structure = sourdough.base.Hybrid()
     structure.setdefault('default value')
     a_element = AElement(name = 'test_name')
     another_element = AnotherElement()
@@ -49,7 +49,7 @@ def test_hybrid():
         'test_name', 
         'test_name']
     assert structure.pop(1) == another_element
-    assert structure.pop('test_name') == sourdough.iterables.Hybrid(
+    assert structure.pop('test_name') == sourdough.base.Hybrid(
         contents = [a_element, a_element])
     structure.update({'new_structure': a_element})
     assert structure.keys() == [
@@ -60,7 +60,7 @@ def test_hybrid():
     structure.setdefault(None)  
     assert structure.get('nothing') == None
     structure['crazy_element'] = AnotherElement(name = 'crazy')
-    structure.append(sourdough.iterables.Hybrid(
+    structure.append(sourdough.base.Hybrid(
         name = 'nested', 
         contents = [another_element, some_element]))
     assert structure.keys() == [

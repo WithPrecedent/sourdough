@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Inventory (Catalog): dictionary for storing Component options.
-    Component (Element, RegistryMixin): base class for all elements of a 
+    Component (Element, Registry): base class for all elements of a 
         sourdough composite object. If you want to create custom elements for
         composites, you must subclass Component or one of its subclasses for
         the auto-registration library to work.
@@ -18,7 +18,6 @@ from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-import inspect
 import typing
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
@@ -58,6 +57,7 @@ class Inventory(sourdough.base.Catalog):
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     name: str = None
+    validator: sourdough.Validator = sourdough.Validator(products = 'mapify')
 
     """ Initialization Methods """
     
@@ -71,7 +71,7 @@ class Inventory(sourdough.base.Catalog):
     """ Public Methods """
 
     def validate(self, 
-            contents: sourdough.Elemental) -> Mapping[str, Component]:
+            contents: sourdough.base.Elemental) -> Mapping[str, Component]:
         """Validates 'contents' or converts 'contents' to a dict.
         
         Args:
@@ -123,10 +123,7 @@ class Inventory(sourdough.base.Catalog):
  
  
 @dataclasses.dataclass
-class Component(
-        sourdough.mixins.RegistryMixin, 
-        sourdough.Element, 
-        collections.abc.Container):
+class Component(sourdough.base.Registry, sourdough.base.Element):
     """Base class for all pieces of sourdough composite objects.
     
     Args:
@@ -142,13 +139,13 @@ class Component(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        registry (ClassVar[Inventory]): the instance which automatically stores 
+        library (ClassVar[Inventory]): the instance which automatically stores 
             any subclass of Component.
               
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Inventory] = Inventory()
+    library: ClassVar[Inventory] = Inventory()
 
     """ Public Methods """
     
@@ -169,14 +166,6 @@ class Component(
         contents = self.validator.verify(contents = contents)
         return self.validator.convert(element = contents)  
 
-    """ Dunder Methods """
-    
-    def __contains__(self, item: Any) -> bool:
-        try:
-            return item in typing.get_args(self.__annotations__['contents'])
-        except AttributeError:
-            return item in (Component, str)
-
     """ Private Class Methods """
 
     @classmethod
@@ -188,7 +177,7 @@ class Component(
             [type]: [description]
             
         """
-        return [k for k, v in cls.registry.items() if issubclass(v, component)]
+        return [k for k, v in cls.library.items() if issubclass(v, component)]
 
     @classmethod
     def _get_values_by_type(cls, component: Component) -> Sequence[Component]:
@@ -199,7 +188,7 @@ class Component(
             [type]: [description]
             
         """
-        return [v for k, v in cls.registry.items() if issubclass(v, component)]
+        return [v for k, v in cls.library.items() if issubclass(v, component)]
    
     @classmethod
     def _suffixify(cls) -> Mapping[str, Component]:
@@ -208,11 +197,11 @@ class Component(
         Returns:
             [type]: [description]
         """
-        return {f'_{k}s': v for k, v in cls.registry.items()}   
+        return {f'_{k}s': v for k, v in cls.library.items()}   
 
 
 @dataclasses.dataclass
-class Structure(sourdough.mixins.RegistryMixin, sourdough.iterables.Hybrid, abc.ABC):
+class Structure(sourdough.base.Registry, sourdough.base.Hybrid, abc.ABC):
     """Base class for composite objects in sourdough projects.
       
         3) It uses a 'validate' method to validate or convert the passed 
@@ -234,7 +223,7 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.iterables.Hybrid, abc.
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').
-        registry (ClassVar[Inventory]): An Inventory instance which 
+        library (ClassVar[Inventory]): An Inventory instance which 
             will automatically store all subclasses.
                 
     """
@@ -243,9 +232,8 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.iterables.Hybrid, abc.
     name: str = None
     validator: ClassVar[sourdough.base.Validator] = sourdough.base.Validator(
             products = 'sequence',                                                                               
-            accepts = sourdough.Elemental)
-    registry: ClassVar[Inventory] = Inventory(stored_types = Component)
-
+            accepts = sourdough.base.Elemental)
+    library: ClassVar[Inventory] = Inventory(stored_types = Component)
 
     """ Initialization Methods """
     
@@ -301,7 +289,7 @@ class Structure(sourdough.mixins.RegistryMixin, sourdough.iterables.Hybrid, abc.
 
 @dataclasses.dataclass
 class Stage(
-        sourdough.mixins.RegistryMixin, 
+        sourdough.base.Registry, 
         sourdough.base.Action, 
         abc.ABC):
     """Base class for a stage in a Workflow.
@@ -311,7 +299,7 @@ class Stage(
     """
     name: str = None
     needs: ClassVar[Sequence[str]] = []
-    registry: ClassVar[Inventory] = Inventory()
+    library: ClassVar[Inventory] = Inventory()
 
     """ Required Subclass Methods """
     
@@ -327,8 +315,8 @@ class Stage(
 
 @dataclasses.dataclass
 class Workflow(
-        sourdough.mixins.RegistryMixin, 
-        sourdough.iterables.Hybrid, 
+        sourdough.base.Registry, 
+        sourdough.base.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     
@@ -338,7 +326,7 @@ class Workflow(
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    registry: ClassVar[Inventory] = Inventory(stored_types = Stage)
+    library: ClassVar[Inventory] = Inventory(stored_types = Stage)
      
     """ Public Methods """
     

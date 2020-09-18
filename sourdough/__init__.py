@@ -25,7 +25,7 @@ second-level access.
 For example:
 
     Instead of acccesing Element via sourdough.core.base.Element,
-    you can just use: sourdough.Element
+    you can just use: sourdough.base.Element
     
 """
 
@@ -36,21 +36,21 @@ from .utilities import memory
 
 # Imports of core base classes and mixins.
 from .core import base
-from .core.base import Element
-from .core.base import Elemental
-from .core import mixins
-from .core import iterables
+from .core import validators
+from .core.validators import Validator
+from .core import framework
+from .core.framework import Inventory
+from .core.framework import Component
+from .core.framework import Structure
+from .core.framework import Stage
+from .core.framework import Workflow
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
 from .configuration.filer import Filer
 
 # Imports for sourdough projects.
-from .project.framework import Inventory
-from .project.framework import Component
-from .project.framework import Structure
-from .project.framework import Stage
-from .project.framework import Workflow
+
 from .project.components import Aggregation
 from .project.components import Pipeline
 from .project.components import Contest
@@ -73,8 +73,7 @@ __all__ = [
     'base',
     'Element',
     'Elemental',
-    'mixins',
-    'iterables',
+    'creators',
     'Settings',
     'Filer',
     'Inventory',

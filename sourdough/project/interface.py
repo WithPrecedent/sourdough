@@ -20,7 +20,7 @@ import sourdough
 
    
 @dataclasses.dataclass
-class Project(sourdough.Element, collections.abc.Iterable):
+class Project(sourdough.base.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
@@ -36,12 +36,12 @@ class Project(sourdough.Element, collections.abc.Iterable):
         workflow (Union[sourdough.Workflow, Sequence[Union[sourdough.Workflow, 
             str]]]): base Workflow class, a list of Workflow subclasses, or 
             a list of str corresponding to Workflow subclasses in 
-            Workflow.registry. These classes are used for the construction and
+            Workflow.library. These classes are used for the construction and
             application of a sourdough project. Defaults to sourdough.Workflow
             which will use the default subclasses of Draft, Publish, Apply.
         design (sourdough.Component): base class for the pieces of the 
             project's composite object. Defaults to sourdough.Component.
-            Component.registry will automatically contain all imported 
+            Component.library will automatically contain all imported 
             subclasses and those will be the only permitted pieces of a 
             sourdough composite object. One imported component must be Manager
             or a subclass.
@@ -225,7 +225,7 @@ class Project(sourdough.Element, collections.abc.Iterable):
         if (inspect.isclass(self.workflow) 
                 and (issubclass(self.workflow, sourdough.Workflow)
                      or self.workflow == sourdough.Workflow)):
-            workflow = self.workflow.registry['default']
+            workflow = self.workflow.library['default']
             new_workflow = []
             for item in workflow:
                 new_workflow.append(item(project = self))

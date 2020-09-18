@@ -71,8 +71,8 @@ class Dynamite(sourdough.Technique):
     
 
 def test_project():
-    print('test registry', sourdough.Component.registry)
-    assert 'parser' in sourdough.Component.registry
+    print('test library', sourdough.Component.library)
+    assert 'parser' in sourdough.Component.library
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
@@ -117,7 +117,7 @@ def test_project():
 #     another_operator = OtherAction()
 #     some_data = SomeData()
 #     more_data = SomeData()
-#     # Tests OptionsMixin of a Structure instance.
+#     # Tests Options of a Structure instance.
 #     AStructure.options.add(contents = {'other_operator': other_operator})
 #     assert len(AStructure.options['all']) == 2
 #     assert len(AStructure.options['none']) == 0

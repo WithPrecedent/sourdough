@@ -5,21 +5,52 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Element: abstract base class for sourdough objects that are part of 
+    Element (ABC): abstract base class for sourdough objects that are part of 
         composite structures.
-    Elemental: annotation type for all classes that contain Elements.
-
+    Elemental: annotation type for all classes that contain Elements. This
+        includes any Element subclass, any Sequence of Elements or a Mapping
+        with Element values.
+    Slate (MutableSequence): sourdough drop-in replacement for list with 
+        additional functionality.
+    Lexicon (MutableMapping): sourdough's drop-in replacement for python dicts 
+        with some added functionality.
+    Hybrid (Element, Slate): iterable containing Element subclass instances 
+        with both dict and list interfaces and methods.
+    Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
+        storing different options and strategies.
+    Options (ABC): abstract base class for subclasses which store strategies 
+        or other options in a 'library' attribute. It provides subclasses with
+        a 'build' method for creating instances from stored options and a
+        'select' method which returns stored items as they are stored. A 
+        Options subclass can be linked to a Factory to automatically return
+        a stored object when a Factory subclass is instanced.
+    Registry (Options): abstract base class that automatically registers any 
+        subclasses and stores them in the 'library' class attribute. 
+    Repository (Options): abstract base class for automatically storing subclass
+        instances in a 'library' class attribute.
+    Strategies (Options): abstract base class  for storing strategies at runtime
+        (without automatic registration) in an 'library' class attribute.
+    Loader (ABC): lazy loader which uses a 'load' method to import python
+        classes, functions, and other items at runtime on demand. 
+    Factory (ABC): object factory which returns instances of one or more 
+        selected options. If multiple options are selected for creation, they 
+        are returned in a list. Factory must be linked to an Options subclass
+        via its 'options' attribute.
+    ProxyMixin (ABC): mixin which creates a python property which refers to 
+        another attribute by using the 'proxify' method.
+ 
 """
 from __future__ import annotations
 import abc
 import collections.abc
+import copy
 import dataclasses
 import inspect
-# import pathlib
-# import pyclbr
 import pprint
 import textwrap
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+
+import more_itertools
 
 import sourdough
 
@@ -120,7 +151,7 @@ class Element(abc.ABC):
         return new_line.join(representation)    
 
 
-Elemental = Union['Element', Mapping[str, 'Element'], Sequence['Element']]
+Elemental = Union[Element, Mapping[str, Element], Sequence[Element]]
 
 
 @dataclasses.dataclass
@@ -157,7 +188,7 @@ class Lexicon(collections.abc.MutableMapping):
         
         Args:
             contents (Mapping[Any, Any]): items to add to 'contents' attribute.
-                sourdough.Element.
+                Element.
             kwargs: allows subclasses to send additional parameters to this 
                 method.
                 
@@ -248,7 +279,533 @@ class Lexicon(collections.abc.MutableMapping):
         """
         self.add(other)
         return self
+
+  
+@dataclasses.dataclass
+class Slate(collections.abc.MutableSequence):
+    """Basic sourdough list replacement.
     
+    A Slate differs from a python list in 3 significant ways:
+        1) It includes a 'name' attribute which is used for internal referencing
+            in sourdough. This is inherited from Element.
+        2) It includes an 'add' method which allows different datatypes to be 
+            passed and added to the 'contents' of a Slate instance. 
+
+    Args:
+        contents (Sequence[Any]): items to store in a list. Defaults to an empty 
+            list.
+        
+    """
+    contents: Sequence[Any] = dataclasses.field(default_factory = list)
+        
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s), if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass     
+    
+    """ Public Methods """
+
+    def add(self, contents: Sequence[Any]) -> None:
+        """Extends 'contents' argument to 'contents' attribute.
+        
+        Args:
+            contents (Sequence[Any]): items to add to the 'contents' attribute.
+
+        """
+        self.contents.extend(contents)
+        return self  
+        
+    """ Dunder Methods """
+
+    def __getitem__(self, key: int) -> Any:
+        """Returns value(s) for 'key' in 'contents'.
+
+        Args:
+            key (int): index to search for in 'contents'.
+
+        Returns:
+            Any: item stored in 'contents' at key.
+
+        """
+        return self.contents[key]
+            
+    def __setitem__(self, key: int, value: Any) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (int): index to set 'value' to in 'contents'.
+            value (Any): value to be set at 'key' in 'contents'.
+
+        """
+        self.contents[key] = value
+
+    def __delitem__(self, key: Union[str, int]) -> None:
+        """Deletes item at 'key' index in 'contents'.
+
+        Args:
+            key (int): index in 'contents' to delete.
+
+        """
+        del self.contents[key]
+
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: generic ordered iterable of 'contents'.
+               
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents'.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+   
+@dataclasses.dataclass
+class Hybrid(Element, Slate):
+    """Base class for ordered iterables in sourdough composite objects.
+    
+    Hybrid combines the functionality and interfaces of python dicts and lists.
+    It allows duplicate keys and list-like iteration while supporting the easier
+    access methods of dictionaries. In order to support this hybrid approach to
+    iterables, Hybrid can only store Element subclasses.
+    
+    Hybrid is the primary iterable base class used in sourdough composite 
+    objects.
+    
+    A Hybrid inherits the differences between a Slate and an ordinary python 
+    list.
+    
+    A Hybrid differs from a Slate in 4 significant ways:
+        1) It only stores Element subclasses or subclass instances.
+        2) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
+            subclass instance with only the items with 'name' attributes 
+            matching items in the 'subset' argument.
+        3) Hybrid has an interface of both a dict and a list, but stores a list. 
+            Hybrid does this by taking advantage of the 'name' attribute of 
+            Element instances. A 'name' acts as a key to create the facade of 
+            a dictionary with the items in the stored list serving as values. 
+            This allows for duplicate keys for storing class instances, easier 
+            iteration, and returning multiple matching items. This design comes 
+            at the expense of lookup speed. As a result, Hybrid should only be 
+            used if a high volume of access calls is not anticipated. 
+            Ordinarily, the loss of lookup speed should have negligible effect 
+            on overall performance.
+        4) It includes 'apply' and 'find' methods which traverse items in
+            'contents' (recursively, if the 'recursive' argument is True), to
+            either 'apply' a callable or 'find' items matching criteria in a
+            callable. 
+
+    Args:
+        contents (Elemental): Element subclasses or Element subclass 
+            instances to store in a list. If a dict is passed, the keys will 
+            be ignored and only the values will be added to 'contents'. If a
+            single Element is passed, it will be placed in a list. Defaults to 
+            an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based 
+            upon the '_get_name' method in Element. If that method is 
+            not overridden by a subclass instance, 'name' will be assigned to 
+            the snake case version of the class name ('__class__.__name__').
+        
+    Attributes:
+        contents (Sequence[Element]): stored Element subclasses or 
+            subclass instances.
+            
+    """
+    contents: Elemental = dataclasses.field(default_factory = list)
+    name: str = None 
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
+        # Sets initial default value for the 'get' method.
+        self._default = None
+        
+    """ Public Methods """
+    
+    # def validate(self, 
+    #         contents: Elemental) -> Sequence[Element]:
+    #     """Validates 'contents' or converts 'contents' to proper type.
+        
+    #     Args:
+    #         contents (Elemental): item(s) to validate or convert to a 
+    #             list of Element instances.
+            
+    #     Raises:
+    #         TypeError: if 'contents' argument is not of a supported datatype.
+            
+    #     Returns:
+    #         Sequence[Element]: validated or converted argument that is 
+    #             compatible with an instance.
+        
+    #     """
+    #     contents = self.validator.verify(contents = contents)
+    #     return self.validator.convert(element = contents) 
+
+    def append(self, contents: Elemental) -> None:
+        """Appends 'element' to 'contents'.
+        
+        Args:
+            contents (Union[Element, Mapping[Any, Element], 
+                Sequence[Element]]): Element instance(s) to add to the
+                'contents' attribute.
+
+        Raises:
+            TypeError: if 'element' does not have a name attribute.
+            
+        """
+        if (isinstance(contents, Sequence)
+                and not isinstance(contents, Element)):
+            contents = self.__class__(contents)
+        self.contents.append(contents)
+        return self    
+    
+    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
+        """Maps 'tool' to items stored in 'contents'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'contents' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'contents'. Defaults to True.
+            kwargs: additional arguments to pass when 'tool' is used.
+        
+        """
+        new_contents = []
+        for item in iter(self.contents):
+            if isinstance(item, sourdough.base.Hybrid):
+                if recursive:
+                    new_item = item.apply(
+                        tool = tool, 
+                        recursive = True, 
+                        **kwargs)
+                else:
+                    new_item = item
+            else:
+                new_item = tool(item, **kwargs)
+            new_contents.append(new_item)
+        self.contents = new_contents
+        return self
+
+    def clear(self) -> None:
+        """Removes all items from 'contents'."""
+        self.contents = []
+        return self
+   
+    def extend(self, contents: Elemental) -> None:
+        """Extends 'element' to 'contents'.
+        
+        Args:
+            contents (Elemental): Elemental instance(s) to add to the 'contents' 
+                attribute.
+
+        Raises:
+            TypeError: if 'element' does not have a name attribute.
+            
+        """
+        self.contents.extend(contents)
+        return self  
+
+    def find(self, 
+            tool: Callable, 
+            recursive: bool = True, 
+            matches: Sequence[Element] = None,
+            **kwargs) -> Sequence[Element]:
+        """Finds items in 'contents' that match criteria in 'tool'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'contents' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'contents'. Defaults to True.
+            matches (Sequence[Element]): items matching the criteria
+                in 'tool'. This should not be passed by an external call to
+                'find'. It is included to allow recursive searching.
+            kwargs: additional arguments to pass when 'tool' is used.
+            
+        Returns:
+            Sequence[Element]: stored items matching the criteria
+                in 'tool'. 
+        
+        """
+        if matches is None:
+            matches = []
+        for item in iter(self.contents):
+            matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
+            if isinstance(item, sourdough.base.Hybrid):
+                if recursive:
+                    matches.extend(item.find(
+                        tool = tool, 
+                        recursive = True,
+                        matches = matches, 
+                        **kwargs))
+        return matches
+    
+    def get(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
+        """Returns value(s) in 'contents' or value in '_default' attribute.
+        
+        Args:
+            key (Union[str, int]): index or stored Element name to get from
+                'contents'.
+                
+        Returns:
+            Union[Element, Sequence[Element]]: items in 'contents' or value in 
+                '_default' attribute. 
+        """
+        try:
+            return self[key]
+        except KeyError:
+            return self._default
+            
+    def insert(self, index: int, element: Element) -> None:
+        """Inserts 'element' at 'index' in 'contents'.
+
+        Args:
+            index (int): index to insert 'element' at.
+            element (Element): object to be inserted.
+
+        Raises:
+            TypeError: if 'element' is not a Element type.
+            
+        """
+        if isinstance(element, Element):
+            self.contents.insert(index, element)
+        else:
+            raise TypeError('element must be a Element type')
+        return self
+
+    def items(self) -> Iterable:
+        """Emulates python dict 'items' method.
+        
+        Returns:
+            Iterable: tuple of Element names and Elements.
+            
+        """
+        return tuple(zip(self.keys(), self.values()))
+
+    def keys(self) -> Sequence[str]:
+        """Emulates python dict 'keys' method.
+        
+        Returns:
+            Sequence[Element]: list of names of Elements stored in 
+                'contents'
+            
+        """
+        try:
+            return [c.name for c in self.contents]
+        except AttributeError:
+            return [c.get_name() for c in self.contents]
+
+    def pop(self, key: Union[str, int]) -> Union[Element, Sequence[Element]]:
+        """Pops item(s) from 'contents'.
+
+        Args:
+            key (Union[str, int]): index or stored Element name to pop from
+                'contents'.
+                
+        Returns:
+            Union[Element, Sequence[Element]]: items popped from 
+                'contents'.
+            
+        """
+        popped = self[key]
+        del self[key]
+        return popped
+        
+    def remove(self, key: Union[str, int]) -> None:
+        """Removes item(s) from 'contents'.
+
+        Args:
+            key (Union[str, int]): index or stored Element name to remove from
+                'contents'.
+            
+        """
+        del self[key]
+        return self
+     
+    def setdefault(self, value: Any) -> None:
+        """Sets default value to return when 'get' method is used.
+        
+        Args:
+            value (Any): default value to return.
+            
+        """
+        self._default = value 
+     
+    def subsetify(self, subset: Union[str, Sequence[str]]) -> Hybrid:
+        """Returns a subset of 'contents'.
+
+        Args:
+            subset (Union[str, Sequence[str]]): key(s) to get Element 
+                instances with matching 'name' attributes from 'contents'.
+
+        Returns:
+            Hybrid: with only items with 'name' attributes in 'subset'.
+
+        """
+        subset = sourdough.tools.listify(subset)
+        try:
+            return self.__class__(
+                name = self.name,
+                contents = [c for c in self.contents if c.name in subset])  
+        except AttributeError:            
+            return self.__class__(
+                name = self.name,
+                contents = [c for c in self.contents if c.get_name() in subset])    
+     
+    def update(self, contents: Elemental) -> None:
+        """Mimics the dict 'update' method by appending 'contents'.
+        
+        Args:
+            contents (Elemental): Elemental instances to add to the 'contents' 
+                attribute. If a Mapping is passed, the values are added to 
+                'contents' and the keys become the 'name' attributes of those 
+                values. To mimic 'update', the passed 'elements' are added to 
+                'contents' by the 'extend' method.
+ 
+        Raises:
+            TypeError: if any of 'elements' do not have a name attribute or
+                if 'elements is not a dict.               
+        
+        """
+        if isinstance(contents, Mapping):
+            for key, value in contents.items():
+                new_element = value
+                new_element.name = key
+                self.extend(contents = new_element)
+        else:
+            self.extend(contents = contents)
+        return self
+
+    def values(self) -> Sequence[Element]:
+        """Emulates python dict 'values' method.
+        
+        Returns:
+            Sequence[Element]: list of Elements stored in 'contents'
+            
+        """
+        return self.contents
+          
+    """ Dunder Methods """
+
+    def __getitem__(self, key: Union[str, int]) -> Element:
+        """Returns value(s) for 'key' in 'contents'.
+        
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances.
+        
+        If 'key' is an int type, this method returns the stored element at the
+        corresponding index.
+        
+        If only one match is found, a single Element instance is returned. If
+        more are found, a Hybrid or Hybrid subclass with the matching
+        'name' attributes is returned.
+
+        Args:
+            key (Union[str, int]): name or index to search for in 'contents'.
+
+        Returns:
+            Element: value(s) stored in 'contents' that correspond 
+                to 'key'. If there is more than one match, the return is a
+                Hybrid or Hybrid subclass with that matching stored
+                elements.
+
+        """
+        if isinstance(key, int):
+            return self.contents[key]
+        else:
+            try:
+                matches = [c for c in self.contents if c.name == key]
+            except AttributeError:
+                matches = [c for c in self.contents if c.get_name() == key]
+            if len(matches) == 0:
+                raise KeyError(f'{key} is not in {self.name}')
+            elif len(matches) == 1:
+                return matches[0]
+            else:
+                return self.__class__(name = self.name, contents = matches)
+            
+    def __setitem__(self, 
+            key: Union[str, int], 
+            value: Element) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (Union[str, int]): if key is a string, it is ignored (since the
+                'name' attribute of the value will be acting as the key). In
+                such a case, the 'value' is added to the end of 'contents'. If
+                key is an int, 'value' is assigned at the that index number in
+                'contents'.
+            value (Any): value to be paired with 'key' in 'contents'.
+
+        """
+        if isinstance(key, int):
+            self.contents[key] = value
+        else:
+            self.add(value)
+        return self
+
+    def __delitem__(self, key: Union[str, int]) -> None:
+        """Deletes item matching 'key' in 'contents'.
+
+        If 'key' is a str type, this method looks for a matching 'name'
+        attribute in the stored instances and deletes all such items. If 'key'
+        is an int type, only the item at that index is deleted.
+
+        Args:
+            key (Union[str, int]): name or index in 'contents' to delete.
+
+        """
+        if isinstance(key, int):
+            del self.contents[key]
+        else:
+            try:
+                self.contents = [c for c in self.contents if c.name != key]
+            except AttributeError:
+                self.contents = [
+                    c for c in self.contents if c.get_name() != key]
+        return self
+
+    def __len__(self) -> int:
+        """Returns length of collapsed 'contents'.
+
+        Returns:
+            int: length of collapsed 'contents'.
+
+        """
+        return len(list(more_itertools.collapse(self.contents)))
+
 
 @dataclasses.dataclass
 class Catalog(Lexicon):
@@ -426,14 +983,236 @@ class Catalog(Lexicon):
 
 
 @dataclasses.dataclass
+class Options(abc.ABC):
+    """ Base class for stored options libraries.
+    
+    Options store strategies  or other options in a 'library' attribute. It 
+    provides subclasses with a 'build' method for creating instances from stored
+    options and a 'select' method which returns stored items as they are stored. A Options subclass can be linked to a Factory to 
+    automatically return a stored object when a Factory subclass is instanced.
+    
+    Args:
+        library (ClassVar[Catalog]): the instance which stores 
+            options or strategies in the 'library' class attribute.  
+    
+    Namespaces: 
+        'library', 'register_from_disk', 'add_option', 'build'
+        
+    """
+    library: ClassVar[Catalog] = Catalog()
+    
+    """ Class Methods """
+    
+    @classmethod
+    def add_option(cls, key: str, value: Any) -> None:
+        """Adds 'value' to 'library' at 'key'.
+        
+        Args:
+            key (str): name of key to link to 'value'.
+            value (Any): item to store in 'library'.
+            
+        """
+        cls.library[key] = value
+        return cls
+    
+    @classmethod
+    def build(cls, key: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Creates instance(s) of a class(es) stored in 'library'.
+
+        Args:
+            key (Union[str, Sequence[str]]): name matching a key in 'library' 
+                for which the value is sought.
+            kwargs: arguments to pass to any selected items from the 'library'.
+
+        Raises:
+            TypeError: if 'key' is neither a str nor Sequence type.
+            
+        Returns:
+            Any: instance(s) of a stored class(es) with kwargs passed as 
+                arguments.
+            
+        """
+        if isinstance(key, str):
+            return cls.library.create(key = key, **kwargs)
+        elif isinstance(key, Sequence):
+            instances = []
+            for item in key:
+                instances.append(cls.library.create(key = item, **kwargs))
+            return instances
+        else:
+            raise TypeError('key must be a str or list type')
+ 
+    @classmethod
+    def select(cls, key: Union[str, Sequence[str]]) -> object:
+        """Returns a value stored in 'library'.
+
+        Args:
+            key (Union[str, Sequence[str]]): key(s) to values in 'library' to
+                return.
+
+        Returns:
+            Any: value(s) stored in library.
+            
+        """
+        return cls.library[key]       
+
+
+@dataclasses.dataclass
+class Registry(Options, abc.ABC):
+    """ which stores subclasses in a 'library' class attribute.
+
+    Args:
+        register_from_disk (bool): whether to look in the current working
+            folder and subfolders for subclasses of the Element class for 
+            which this class is a mixin. Defaults to False.
+        library (ClassVar[Catalog]): the instance which stores 
+            subclasses in a Catalog instance.
+
+    Namespaces: 
+        'library', 'add_option', 'build', 'select', 'register_from_disk', 
+        '_library_base', 'find_subclasses', '_import_from_path', 
+        '_get_subclasses'
+        
+    To Do:
+        Fix 'find_subclasses' and related classes. Currently, 
+            importlib.util.module_from_spec returns None.
+    
+    """
+    # register_from_disk: bool = False
+    library: ClassVar[Catalog] = Catalog()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Adds new subclass to 'library'.
+        if not hasattr(cls, '_library_base'):
+            cls._library_base = cls
+        print('test registry', cls.__name__)
+        if (not (hasattr(super(), 'library') or cls == cls._library_base)
+                and not inspect.isabstract(cls)):
+            name = sourdough.tools.snakify(cls.get_name())
+            print('test name', name)
+            cls._library_base.library[name] = cls
+
+    # def __post_init__(self) -> None:
+    #     """Initializes class instance attributes."""
+    #     super().__post_init__()
+    #     # Adds subclasses from disk to 'library' if 'register_from_disk'.
+    #     if self.register_from_disk:
+    #         self.find_subclasses(folder = pathlib.Path.cwd())
+
+    # def find_subclasses(self, 
+    #         folder: Union[str, pathlib.Path], 
+    #         recursive: bool = True) -> None:
+    #     """Adds Element subclasses for python files in 'folder'.
+        
+    #     If 'recursive' is True, subfolders are searched as well.
+        
+    #     Args:
+    #         folder (Union[str, pathlib.Path]): folder to initiate search for 
+    #             Element subclasses.
+    #         recursive (bool]): whether to also search subfolders (True)
+    #             or not (False). Defaults to True.
+                
+    #     """
+    #     if recursive:
+    #         glob_method = 'rglob'
+    #     else:
+    #         glob_method = 'glob'
+    #     for file_path in getattr(pathlib.Path(folder), glob_method)('*.py'):
+    #         if not file_path.name.startswith('__'):
+    #             module = self._import_from_path(file_path = file_path)
+    #             subclasses = self._get_subclasses(module = module)
+    #             for subclass in subclasses:
+    #                 self.add({
+    #                     sourdough.tools.snakify(subclass.__name__): subclass})    
+    #     return self
+       
+    # """ Private Methods """
+    
+    # def _import_from_path(self, file_path: Union[pathlib.Path, str]) -> object:
+    #     """Returns an imported module from a file path.
+        
+    #     Args:
+    #         file_path (Union[pathlib.Path, str]): path of a python module.
+        
+    #     Returns:
+    #         object: an imported python module. 
+        
+    #     """
+    #     # file_path = str(file_path)
+    #     # file_path = pathlib.Path(file_path)
+    #     print('test file path', file_path)
+    #     module_spec = importlib.util.spec_from_file_location(file_path)
+    #     print('test module_spec', module_spec)
+    #     module = importlib.util.module_from_spec(module_spec)
+    #     return module_spec.loader.exec_module(module)
+    
+    # def _get_subclasses(self, 
+    #         module: object) -> Sequence[sourdough.base.Element]:
+    #     """Returns a list of subclasses in 'module'.
+        
+    #     Args:
+    #         module (object): an import python module.
+        
+    #     Returns:
+    #         Sequence[Element]: list of subclasses of Element. If none are 
+    #             found, an empty list is returned.
+                
+    #     """
+    #     matches = []
+    #     for item in pyclbr.readmodule(module):
+    #         # Adds direct subclasses.
+    #         if inspect.issubclass(item, sourdough.base.Element):
+    #             matches.append[item]
+    #         else:
+    #             # Adds subclasses of other subclasses.
+    #             for subclass in self.contents.values():
+    #                 if subclass(item, subclass):
+    #                     matches.append[item]
+    #     return matches
+
+   
+@dataclasses.dataclass
+class Repository(Options, abc.ABC):
+    """ which stores subclass instances in a 'library' class attribute.
+
+    In order to ensure that a subclass instance is added to the base 
+    Catalog instance, super().__post_init__() should be called by 
+    that subclass.
+
+    Args:
+        library (ClassVar[Catalog]): dict which stores subclass 
+            instances.
+            
+    Namespaces: 
+        'library', 'register_from_disk', 'add_option', 'build'
+
+    """
+    library: ClassVar[Catalog] = Catalog()
+
+    """ Initialization Methods """
+    
+    def __post_init__(self):
+        """Registers an instance with 'library'."""
+        # Calls initialization method of other inherited classes.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Adds this instance to the 'library' class variable.
+        self.library[self.name] = self
+
+
+@dataclasses.dataclass
 class Factory(abc.ABC):
-    """Instances a class from available Callables stored in 'options'.
+    """Returns class(es) from options stored in 'options.library'.
 
     Args:
         products (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'products' must correspond to key(s) in 'options'.
-        options (Mapping[str, Callable]): a dict of available options for object 
-            creation. Defaults to an empty dict.
+            'products' must correspond to key(s) in 'options.library'.
+        options (ClassVar[Options]): class which contains a 'library'.
 
     Raises:
         TypeError: if 'products' is neither a str nor Sequence of str.
@@ -444,94 +1223,299 @@ class Factory(abc.ABC):
 
     """
     products: Union[str, Sequence[str]]
-    options: ClassVar[Mapping[str, Any]] = {}
+    options: ClassVar[Options] = Options
 
     """ Initialization Methods """
     
-    def __new__(cls, products: str, **kwargs) -> Any:
-        """Returns an instance from 'options'.
+    def __new__(cls, products: Union[str, Sequence[str]], **kwargs) -> Any:
+        """Returns an instance from 'options.library'.
 
         Args:
-            products (str): name of sourdough products(s) to return. 'products' 
-                must correspond to key(s) in 'options'.
+        products (Union[str, Sequence[str]]: name(s) of objects to return. 
+            'products' must correspond to key(s) in 'options.library'.
             kwargs: parameters to pass to the object being created.
 
         Returns:
-            Any: an instance of a Callable stored in 'options'.
+            Any: an instance of a Callable stored in 'options.library'.
         
         """
-        if isinstance(products, str):
-            return cls.options[products](**kwargs)
-        elif isinstance(products, Sequence):
-            instances = []
-            for match in cls.options[products]:
-                instances.append(match(**kwargs))
-            return instances
-        else:
-            raise TypeError('products must be a str or list type')
+        return cls.options.build(key = products, **kwargs)
     
     """ Class Methods """
     
     @classmethod
-    def add(cls, key: str, value: Any) -> None:
-        """Adds 'option' to 'options' at 'key'.
+    def add_option(cls, key: str, value: Any) -> None:
+        """Adds 'value' to 'options.library' at 'key'.
         
         Args:
             key (str): name of key to link to 'value'.
-            value (Any): object to store in 'options'.
+            value (Any): item to store in 'options.library'.
             
         """
-        cls.options[key] = value
+        cls.options.add_option(key = key, value = value)
         return cls
-    
-
+       
+   
 @dataclasses.dataclass
-class Validator(Factory, abc.ABC):
-    """Factory for type validation and/or conversion class construction.
-    
-    Validator is primary used to convert Element subclasses to and from single
-    instances, Mappings of instances, and Sequences of instances. However, with
-    additional conversion methods, it can be extended to any validation or 
-    converstion task.
-    
-    Args:
-        accepts (Union[Sequence[Callable], Callable]): type(s) accepted by the
-            parent class.
-        stores (Callable): a single type accepted by the parent class. Defaults 
-            to None. If it is set to none, then an instance is only useful for 
-            validation and does not convert types.
-            
+class ProxyMixin(abc.ABC):
+    """ which creates a proxy name for a Element subclass attribute.
+
+    The 'proxify' method dynamically creates a property to access the stored
+    attribute. This allows class instances to customize names of stored
+    attributes while still maintaining the interface of the base sourdough
+    classes.
+
+    Only one proxy should be created per class. Otherwise, the created proxy
+    properties will all point to the same attribute.
+
+    Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
+        '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
+        the proxy property set by the user with the 'proxify' method.
+       
+    To Do:
+        Add property to class instead of instance to prevent return of property
+            object.
+        Implement '__set_name__' in a secondary class to simplify the code and
+            namespace usage.
+        
     """
-    products: Union[str, Sequence[str]]
-    accepts: Union[Sequence[Callable], Callable] = dataclasses.field(
-        default_factory = list)
-    stores: Callable = None
-    options: ClassVar[Catalog] = Catalog()
 
+    """ Public Methods """
 
+    def proxify(self,
+            proxy: str,
+            attribute: str,
+            default_value: Any = None,
+            proxify_methods: bool = True) -> None:
+        """Adds a proxy property to refer to class attribute.
+
+        Args:
+            proxy (str): name of proxy property to create.
+            attribute (str): name of attribute to link the proxy property to.
+            default_value (Any): default value to use when deleting 'attribute' 
+                with '__delitem__'. Defaults to None.
+            proxify_methods (bool): whether to create proxy methods replacing 
+                'attribute' in the original method name with the string passed 
+                in 'proxy'. So, for example, 'add_chapter' would become 
+                'add_recipe' if 'proxy' was 'recipe' and 'attribute' was
+                'chapter'. The original method remains as well as the proxy.
+                This does not change the rest of the signature of the method so
+                parameter names remain the same. Defaults to True.
+
+        """
+        self._proxied_attribute = attribute
+        self._default_proxy_value = default_value
+        self._proxify_attribute(proxy = proxy)
+        if proxify_methods:
+            self._proxify_methods(proxy = proxy)
+        return self
+
+    """ Proxy Property Methods """
+
+    def _proxy_getter(self) -> Any:
+        """Proxy getter for '_proxied_attribute'.
+
+        Returns:
+            Any: value stored at '_proxied_attribute'.
+
+        """
+        return getattr(self, self._proxied_attribute)
+
+    def _proxy_setter(self, value: Any) -> None:
+        """Proxy setter for '_proxied_attribute'.
+
+        Args:
+            value (Any): value to set attribute to.
+
+        """
+        setattr(self, self._proxied_attribute, value)
+        return self
+
+    def _proxy_deleter(self) -> None:
+        """Proxy deleter for '_proxied_attribute'."""
+        setattr(self, self._proxied_attribute, self._default_proxy_value)
+        return self
+
+    """ Other Private Methods """
+
+    def _proxify_attribute(self, proxy: str) -> None:
+        """Creates proxy property for '_proxied_attribute'.
+
+        Args:
+            proxy (str): name of proxy property to create.
+
+        """
+        setattr(self, proxy, property(
+            fget = self._proxy_getter,
+            fset = self._proxy_setter,
+            fdel = self._proxy_deleter))
+        return self
+
+    def _proxify_methods(self, proxy: str) -> None:
+        """Creates proxy method with an alternate name.
+
+        Args:
+            proxy (str): name of proxy to repalce in method names.
+
+        """
+        for item in dir(self):
+            if (self._proxied_attribute in item
+                    and not item.startswith('__')
+                    and callable(item)):
+                self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
+                    getattr(self, item))
+        return self
+ 
+ 
 @dataclasses.dataclass
-class ValidatorBase(abc.ABC):
-    """Base class for type validation and/or conversion.
-    
+class Loader(abc.ABC):
+    """ for lazy loading of python modules and objects.
+
     Args:
-        accepts (Union[Sequence[Callable], Callable]): type(s) accepted by the
-            parent class.
-        stores (Callable): a single type accepted by the parent class. Defaults 
-            to None. If it is set to none, then an instance is only useful for 
-            validation and does not convert types.
-            
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. Defaults to an empty list.
+        _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+
     """
-    accepts: Union[Sequence[Callable], Callable] = dataclasses.field(
+    modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = list)
-    stores: Callable = None
+    _loaded: ClassVar[Mapping[Any, Any]] = {}
+    
+    """ Public Methods """
+
+    def load(self, 
+            key: str, 
+            check_attributes: bool = False, 
+            **kwargs) -> object:
+        """Returns object named by 'key'.
+
+        Args:
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
+
+        Returns:
+            object: imported from a python module.
+
+        """
+        imported = None
+        if key in self._loaded:
+            imported = self._loaded[key]
+        else:
+            if check_attributes:
+                try:
+                    key = getattr(self, key)
+                except AttributeError:
+                    pass
+            for module in sourdough.tools.listify(self.modules):
+                try:
+                    imported = sourdough.tools.importify(
+                        module = module, 
+                        key = key)
+                    break
+                except (AttributeError, ImportError):
+                    pass
+        if imported is None:
+            raise ImportError(f'{key} was not found in {self.modules}')
+        elif kwargs:
+            self._loaded[key] = imported(**kwargs)
+            return self._loaded[key]
+        else:
+            self._loaded[key] = imported
+            return self._loaded[key]
             
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def verify(self, contents: Any) -> Any:
-        pass
-    
-    @abc.abstractmethod
-    def convert(self, contents: Any) -> Any:
-        pass   
-    
+ 
+
+
+""" 
+Reflector is currently omitted from the sourdough build because I'm unsure
+if it has a significant use case. The code below should still work, but it
+isn't included in the uploaded package build. 
+"""
+
+# @dataclasses.dataclass
+# class Reflector(Lexicon):
+#     """Base class for a mirrored dictionary.
+
+#     Reflector access methods search keys and values for corresponding
+#     matched values and keys, respectively.
+
+#     Args:
+#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to 
+#             en empty dict.
+              
+#     """
+#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+
+#     def __post_init__(self) -> None:
+#         """Creates 'reversed_contents' from passed 'contents'."""
+#         self._create_reversed()
+#         return self
+
+#     """ Dunder Methods """
+
+#     def __getitem__(self, key: str) -> Any:
+#         """Returns match for 'key' in 'contents' or 'reversed_contents'.
+
+#         Args:
+#             key (str): name of key to find.
+
+#         Returns:
+#             Any: value stored in 'contents' or 'reversed_contents'.
+
+#         Raises:
+#             KeyError: if 'key' is neither found in 'contents' nor 
+#                 'reversed_contents'.
+
+#         """
+#         try:
+#             return self.contents[key]
+#         except KeyError:
+#             try:
+#                 return self.reversed_contents[key]
+#             except KeyError:
+#                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
+
+#     def __setitem__(self, key: str, value: Any) -> None:
+#         """Stores arguments in 'contents' and 'reversed_contents'.
+
+#         Args:
+#             key (str): name of key to set.
+#             value (Any): value to be paired with key.
+
+#         """
+#         self.contents[key] = value
+#         self.reversed_contents[value] = key
+#         return self
+
+#     def __delitem__(self, key: str) -> None:
+#         """Deletes key in the 'contents' and 'reversed_contents' dictionaries.
+
+#         Args:
+#             key (str): name of key to delete.
+
+#         """
+#         try:
+#             value = self.contents[key]
+#             del self.contents[key]
+#             del self.reversed_contents[value]
+#         except KeyError:
+#             try:
+#                 value = self.reversed_contents[key]
+#                 del self.reversed_contents[key]
+#                 del self.contents[value]
+#             except KeyError:
+#                 pass
+#         return self
+
+#     """ Private Methods """
+
+#     def _create_reversed(self) -> None:
+#         """Creates 'reversed_contents' from 'contents'."""
+#         self.reversed_contents = {
+#             value: key for key, value in self.contents.items()}
+#         return self
+
+
+   

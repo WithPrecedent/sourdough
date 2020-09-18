@@ -21,8 +21,8 @@ import sourdough
     
 @dataclasses.dataclass
 class Role(
-        sourdough.mixins.RegistryMixin, 
-        sourdough.Element, 
+        sourdough.base.Registry, 
+        sourdough.base.Element, 
         abc.ABC):
     """Base class related to constructing and iterating Structure instances.
     
@@ -30,7 +30,7 @@ class Role(
     name: str = None
     workflow: sourdough.Workflow = None
     iterations: int = 1
-    registry: ClassVar[sourdough.Inventory] = sourdough.Inventory(
+    library: ClassVar[sourdough.Inventory] = sourdough.Inventory(
         stored_types = ('Role'))
 
     """ Initialization Methods """
@@ -70,7 +70,7 @@ class Role(
             
         """
         if isinstance(Structure.structure, str):
-            Structure.structure = cls.registry[Structure.structure]()
+            Structure.structure = cls.library[Structure.structure]()
         elif (inspect.isclass(Structure.structure) 
                 and issubclass(Structure.structure, cls)):
             Structure.structure = Structure.structure() 
@@ -116,12 +116,12 @@ class Role(
             
         """
         structures = {}
-        for key in project.components.registry.keys():
+        for key in project.components.library.keys():
             suffix = f'_{key}s'
             structures[key] = {
                 k: v for k, v in settings.items() if k.endswith(suffix)} 
             
-        return {k: v for k, v in project.components.registry.items()}
+        return {k: v for k, v in project.components.library.items()}
     
     def _build_wrapper(self,
             key: str, 
@@ -141,7 +141,7 @@ class Role(
             [type]: [description]
         """
         # Checks if special prebuilt class exists.
-        if key in project.component.registry:
+        if key in project.component.library:
             print('test wrapped', wrapped)
             for item in wrapped:
                 print('test item in wrapped', item)

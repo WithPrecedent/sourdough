@@ -12,9 +12,9 @@ import sourdough
 
 @dataclasses.dataclass
 class AComponent(
-    sourdough.mixins.LibraryMixin,
-    sourdough.mixins.RegistryMixin,
-    sourdough.Element):
+    sourdough.base.Repository,
+    sourdough.base.Registry,
+    sourdough.base.Element):
     pass
 
 
@@ -24,7 +24,7 @@ class OtherComponent(AComponent):
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.mixins.OptionsMixin, OtherComponent):
+class AnotherComponent(sourdough.base.Options, OtherComponent):
     
     options = sourdough.base.Catalog(contents = {
         'base': AComponent(),
@@ -32,7 +32,7 @@ class AnotherComponent(sourdough.mixins.OptionsMixin, OtherComponent):
  
 
 @dataclasses.dataclass
-class ProxiedComponent(sourdough.mixins.ProxyMixin, OtherComponent):
+class ProxiedComponent(sourdough.base.Proxy, OtherComponent):
     
     def __post_init__(self):
         super().__post_init__()
@@ -41,11 +41,11 @@ class ProxiedComponent(sourdough.mixins.ProxyMixin, OtherComponent):
 
 
 def test_mixins():
-    # Tests Component, RegistryMixin, and LibraryMixin
+    # Tests Component, Registry, and Repository
     a_component = AComponent()
     other_component = OtherComponent()
-    assert 'other_component' in AComponent.registry
-    assert 'other_component' in a_component.registry
+    assert 'other_component' in AComponent.library
+    assert 'other_component' in a_component.library
     assert 'other_component' in AComponent.library
     assert 'other_component' in a_component.library
     an_instance = a_component.build(key = 'other_component', name = 'test')
@@ -53,13 +53,13 @@ def test_mixins():
     another_instance = a_component.borrow(key = 'other_component')
     assert another_instance.name == 'other_component'
     
-    # Tests OptionsMixin
+    # Tests Options
     another_component = AnotherComponent()
     base_instance = another_component.select(key = 'base')
     other_instance = another_component.select(key = 'other')
     assert other_instance.name == 'other_component'
     
-    # Tests ProxyMixin
+    # Tests Proxy
     # proxied_component = ProxiedComponent()
     # print('test property', proxied_component.new_property)
     # assert proxied_component.new_property == 'value'

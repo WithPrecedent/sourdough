@@ -89,8 +89,8 @@ class Overview(sourdough.base.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: sourdough.Element, 
-            element: sourdough.Element) -> Sequence[sourdough.Element]: 
+            item: sourdough.base.Element, 
+            element: sourdough.base.Element) -> Sequence[sourdough.base.Element]: 
         """[summary]
 
         Args:
@@ -421,7 +421,7 @@ class Survey(ParallelStructure):
  
     
 @dataclasses.dataclass
-class Technique(sourdough.mixins.LoaderMixin, sourdough.Component):
+class Technique(sourdough.base.Loader, sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -462,7 +462,7 @@ class Technique(sourdough.mixins.LoaderMixin, sourdough.Component):
     
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'registry'.
+        # Adds new subclass to 'library'.
         if not hasattr(cls, '_base'):
             cls._base = cls
 
@@ -545,7 +545,7 @@ class Task(sourdough.Component):
     
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'registry'.
+        # Adds new subclass to 'library'.
         if not hasattr(cls, '_base'):
             cls._base = cls
                 
