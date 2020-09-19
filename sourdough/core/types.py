@@ -1,106 +1,24 @@
 """
-types: sourdough type annotators, validators, and converters
+validator: sourdough type annotators, validators, and converters
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    ValidatorOption (Registry): abstract base class for any type validators 
-        and converters. The class provides a universal 'verify' method for type
-        validation. All subclasses must have a 'convert' method for type 
-        conversion.
-    Validator (Factory): returns ValidatorOption subclass instance which is used
-        for type validation and conversion.
+    ValidatorFactory (Factory): returns sourdough.base.Validator subclass 
+        instance which is used for type validation and conversion.
 
 """
 from __future__ import annotations
 import abc
 import dataclasses
-import typing
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
 
 import sourdough
 
- 
-@dataclasses.dataclass
-class ValidatorOption(sourdough.base.Registry):
-    """Base class for type validation and/or conversion.
-    
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored by the parent class. Defaults 
-            to None.
-            
-    """
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = list)
-    stores: Any = None
-    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
-            
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def convert(self, contents: Any) -> Any:
-        """Submodules must provide their own methods.
-        
-        This method should convert every one of the types in 'accepts' to the
-        type in 'stores'.
-        
-        """
-        pass   
-
-    """ Public Methods """
-    
-    def verify(self, contents: Any) -> Any:
-        """Verifies that 'contents' is one of the types in 'accepts'.
-        
-        Args:
-            contents (Any): item(s) to be type validated.
-            
-        Raises:
-            TypeError: if 'contents' is not one of the types in 'accepts'.
-            
-        Returns:
-            Any: original contents if there is no TypeError.
-        
-        """
-        accepts = sourdough.tools.tuplify(self.accepts)
-        if all(isinstance(c, accepts) for c in contents):
-            return contents
-        else:
-            raise TypeError(
-                f'contents must be or contain one of the following types: ' 
-                f'{self.accepts}')
-
 
 @dataclasses.dataclass
-class Validator(sourdough.base.Factory, abc.ABC):
-    """Factory for type validation and/or conversion class construction.
-    
-    Validator is primary used to convert Element subclasses to and from single
-    instances, Mappings of instances, and Sequences of instances. 
-    
-    Args:
-        product (Union[str, Sequence[str]]): name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.library'.
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored by the parent class. Defaults 
-            to None.
-        options (ClassVar[sourdough.base.Options]): class which contains a 
-            'library' of alternatives for constructing objects.
-            
-    """
-    product: Union[str, Sequence[str]]
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = list)
-    stores: Any = None
-    options: ClassVar[sourdough.base.Options] = ValidatorOption
-           
-
-@dataclasses.dataclass
-class Mapify(ValidatorOption):
+class Mapify(sourdough.base.Validator):
     """Type validator and converter for Mappings.
     
     Args:
@@ -148,7 +66,7 @@ class Mapify(ValidatorOption):
     
 
 @dataclasses.dataclass    
-class Sequencify(ValidatorOption):
+class Sequencify(sourdough.base.Validator):
     """Type validator and converter for Sequences.
     
     Args:
@@ -187,3 +105,29 @@ class Sequencify(ValidatorOption):
         elif isinstance(contents, sourdough.base.Element):
             converted = converted.append(contents)
         return converted  
+
+
+@dataclasses.dataclass
+class ValidatorFactory(sourdough.base.Factory, abc.ABC):
+    """Factory for type validation and/or conversion class construction.
+    
+    ValidatorFactory is primary used to convert Element subclasses to and from 
+    single instances, Mappings of instances, and Sequences of instances. 
+    
+    Args:
+        product (Union[str, Sequence[str]]): name(s) of objects to return. 
+            'product' must correspond to key(s) in 'options.library'.
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+        stores (Any): a single type stored by the parent class. Defaults 
+            to None.
+        options (ClassVar[sourdough.base.Options]): class which contains a 
+            'library' of alternatives for constructing objects.
+            
+    """
+    product: Union[str, Sequence[str]]
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = list)
+    stores: Any = None
+    options: ClassVar[sourdough.base.Options] = sourdough.base.Validator
+     

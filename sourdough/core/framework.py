@@ -13,11 +13,8 @@ Contents:
 
 
 """
-
 from __future__ import annotations
 import abc
-import collections.abc
-import copy
 import dataclasses
 import typing
 from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
@@ -26,14 +23,13 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Inventory(sourdough.base.Catalog):
+class Inventory(sourdough.types.Mapify, sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Inventory differs from a 'Catalog' in one way:
-        1) It includes a Validator instance which allows for type validation
-            and conversion. The Validator instance is placed in the 'validator'
-            attribute and has both a 'verify' and 'convert' method. 'convert'
-            automatically calls 'verify'.
+        1) It inherits from Mapify which has the following methods for type
+            validation and conversion: 'verify', 'convert', 
+            '_initial_validation'.
             
     Args:
         contents (Union[Component, Sequence[Component], Mapping[Any, 
@@ -47,36 +43,21 @@ class Inventory(sourdough.base.Catalog):
             the key passed is not a list or special access key (True) or to 
             return a list only when a list or special acces key is used (False). 
             Defaults to False.
-
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+            Defaults to sourdough.base.Element.
+        stores (Any): a single type stored by the parent class. Defaults 
+            to dict.
                      
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
-    validator: sourdough.Validator = sourdough.Validator(product = 'mapify')
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = lambda: sourdough.base.Element)
+    stores: Any = dataclasses.field(default_factory = lambda: dict)
+    
 
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        # Validates and converts passed 'contents' if necessary.
-        self._initial_validation()
-       
-    """ Private Methods """
-    
-    def _initial_validation(self) -> None:
-        """Validates passed 'contents' on class initialization."""
-        new_contents = copy.deepcopy(self.contents)
-        new_contents = self.validator.convert(contents = new_contents)
-        self.contents = new_contents
-        return self 
- 
- 
 @dataclasses.dataclass
 class Component(sourdough.base.Registry, sourdough.base.Element, abc.ABC):
     """Base class for all pieces of sourdough composite objects.
@@ -137,12 +118,17 @@ class Component(sourdough.base.Registry, sourdough.base.Element, abc.ABC):
 
 
 @dataclasses.dataclass
-class Structure(sourdough.base.Registry, sourdough.base.Hybrid, abc.ABC):
+class Structure(
+        sourdough.base.Registry, 
+        sourdough.types.Sequencify,
+        sourdough.base.Hybrid,
+        Component, 
+        abc.ABC):
     """Base class for composite objects in sourdough projects.
     
     Structure differs from an ordinary Hybrid in two ways:
-        1) It includes a Validator instance which allows for type validation
-            and conversion. The Validator instance is placed in the 'validator'
+        1) It includes a ValidatorFactory instance which allows for type validation
+            and conversion. The ValidatorFactory instance is placed in the 'validator'
             attribute and has both a 'verify' and 'convert' method. 'convert'
             automatically calls 'verify'.
         2) It maintains a 'library' of subclasses that are automatically added
@@ -169,9 +155,6 @@ class Structure(sourdough.base.Registry, sourdough.base.Hybrid, abc.ABC):
     contents: Sequence[Union[str, Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    validator: ClassVar[sourdough.Validator] = sourdough.Validator(
-            product = 'sequencify',                                                                               
-            accepts = Component)
     library: ClassVar[Inventory] = Inventory()
 
     """ Initialization Methods """
@@ -196,25 +179,6 @@ class Structure(sourdough.base.Registry, sourdough.base.Hybrid, abc.ABC):
     @abc.abstractmethod
     def finalize(self, **kwargs) -> Iterable:
         pass
-
-    """ Public Methods """
-    
-    def validate(self, contents: Sequence[Any]) -> Sequence[Any]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents (Sequence[Any]): item(s) to validate or convert to a list.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Sequence[Any]: validated or converted argument that is compatible 
-                with an instance.
-        
-        """
-        contents = self.validator.verify(contents = contents)
-        return self.validator.convert(element = contents)
   
     """ Dunder Methods """
     

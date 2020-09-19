@@ -28,14 +28,16 @@ Contents:
         subclasses and stores them in the 'library' class attribute. 
     Repository (Options): abstract base class for automatically storing subclass
         instances in a 'library' class attribute.
-    Strategies (Options): abstract base class  for storing strategies at runtime
-        (without automatic registration) in an 'library' class attribute.
-    Loader (ABC): lazy loader which uses a 'load' method to import python
-        classes, functions, and other items at runtime on demand. 
+    Validator (Registry): abstract base class for type validators and 
+        converters. The class provides a universal 'verify' method for type
+        validation. All subclasses must have a 'convert' method for type 
+        conversion.
     Factory (ABC): object factory which returns instances of one or more 
         selected options. If multiple options are selected for creation, they 
         are returned in a list. Factory must be linked to an Options subclass
         via its 'options' attribute.
+    Loader (ABC): lazy loader which uses a 'load' method to import python
+        classes, functions, and other items at runtime on demand. 
     ProxyMixin (ABC): mixin which creates a python property which refers to 
         another attribute by using the 'proxify' method.
  
@@ -194,7 +196,7 @@ class Lexicon(collections.abc.MutableMapping):
                 
         """
         try:
-            contents = self.validator.convert(contents = contents)
+            contents = self.convert(contents = contents)
         except AttributeError:
             pass
         self.contents.update(contents)
@@ -322,7 +324,7 @@ class Slate(collections.abc.MutableSequence):
 
         """
         try:
-            contents = self.validator.convert(contents = contents)
+            contents = self.convert(contents = contents)
         except AttributeError:
             pass
         self.contents.extend(contents)
@@ -475,7 +477,7 @@ class Hybrid(Element, Slate):
             
         """
         try:
-            contents = self.validator.convert(contents = contents)
+            contents = self.convert(contents = contents)
         except AttributeError:
             pass
         self.contents.append(contents)
@@ -525,7 +527,7 @@ class Hybrid(Element, Slate):
             
         """
         try:
-            contents = self.validator.convert(contents = contents)
+            contents = self.convert(contents = contents)
         except AttributeError:
             pass
         self.contents.extend(contents)
@@ -982,8 +984,9 @@ class Options(abc.ABC):
     
     Options store strategies  or other options in a 'library' attribute. It 
     provides subclasses with a 'build' method for creating instances from stored
-    options and a 'select' method which returns stored items as they are stored. A Options subclass can be linked to a Factory to 
-    automatically return a stored object when a Factory subclass is instanced.
+    options and a 'select' method which returns stored items as they are stored. 
+    A Options subclass can be linked to a Factory to automatically return a 
+    stored object when a Factory subclass is instanced.
     
     Args:
         library (ClassVar[Catalog]): the instance which stores 
@@ -1059,8 +1062,8 @@ class Registry(Options, abc.ABC):
         register_from_disk (bool): whether to look in the current working
             folder and subfolders for subclasses of the Element class for 
             which this class is a mixin. Defaults to False.
-        library (ClassVar[Catalog]): the instance which stores 
-            subclasses in a Catalog instance.
+        library (ClassVar[Catalog]): the instance which stores subclasses in a 
+            Catalog instance.
 
     Namespaces: 
         'library', 'add_option', 'build', 'select', 'register_from_disk', 
@@ -1193,8 +1196,7 @@ class Repository(Options, abc.ABC):
     that subclass.
 
     Args:
-        library (ClassVar[Catalog]): dict which stores subclass 
-            instances.
+        library (ClassVar[Catalog]): dict which stores subclass instances.
             
     Namespaces: 
         'library', 'register_from_disk', 'add_option', 'build'
@@ -1214,6 +1216,76 @@ class Repository(Options, abc.ABC):
         # Adds this instance to the 'library' class variable.
         self.library[self.name] = self
 
+
+@dataclasses.dataclass
+class Validator(abc.ABC):
+    """Base class for type validation and/or conversion.
+    
+    Args:
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+        stores (Any): a single type stored by the parent class. Defaults to 
+            None.
+                        
+    """
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = list)
+    stores: Any = None
+
+    """ Initialization Methods """
+    
+    def __post_init__(self):
+        """Registers an instance with 'library'."""
+        # Calls initialization method of other inherited classes.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Initializes 'contents' attribute.
+        self._initial_validation()
+        
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def convert(self, contents: Any) -> Any:
+        """Submodules must provide their own methods.
+        
+        This method should convert every one of the types in 'accepts' to the
+        type in 'stores'.
+        
+        """
+        pass   
+
+    """ Public Methods """
+    
+    def verify(self, contents: Any) -> Any:
+        """Verifies that 'contents' is one of the types in 'accepts'.
+        
+        Args:
+            contents (Any): item(s) to be type validated.
+            
+        Raises:
+            TypeError: if 'contents' is not one of the types in 'accepts'.
+            
+        Returns:
+            Any: original contents if there is no TypeError.
+        
+        """
+        accepts = sourdough.tools.tuplify(self.accepts)
+        if all(isinstance(c, accepts) for c in contents):
+            return contents
+        else:
+            raise TypeError(
+                f'contents must be or contain one of the following types: ' 
+                f'{self.accepts}')
+       
+    """ Private Methods """
+    
+    def _initial_validation(self) -> None:
+        """Validates passed 'contents' on class initialization."""
+        self.contents = self.convert(contents = self.contents)
+        return self 
+ 
 
 @dataclasses.dataclass
 class Factory(abc.ABC):
