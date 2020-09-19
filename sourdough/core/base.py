@@ -193,6 +193,10 @@ class Lexicon(collections.abc.MutableMapping):
                 method.
                 
         """
+        try:
+            contents = self.validator.convert(contents = contents)
+        except AttributeError:
+            pass
         self.contents.update(contents)
         return self
                 
@@ -317,6 +321,10 @@ class Slate(collections.abc.MutableSequence):
             contents (Sequence[Any]): items to add to the 'contents' attribute.
 
         """
+        try:
+            contents = self.validator.convert(contents = contents)
+        except AttributeError:
+            pass
         self.contents.extend(contents)
         return self  
         
@@ -453,25 +461,6 @@ class Hybrid(Element, Slate):
         self._default = None
         
     """ Public Methods """
-    
-    # def validate(self, 
-    #         contents: Elemental) -> Sequence[Element]:
-    #     """Validates 'contents' or converts 'contents' to proper type.
-        
-    #     Args:
-    #         contents (Elemental): item(s) to validate or convert to a 
-    #             list of Element instances.
-            
-    #     Raises:
-    #         TypeError: if 'contents' argument is not of a supported datatype.
-            
-    #     Returns:
-    #         Sequence[Element]: validated or converted argument that is 
-    #             compatible with an instance.
-        
-    #     """
-    #     contents = self.validator.verify(contents = contents)
-    #     return self.validator.convert(element = contents) 
 
     def append(self, contents: Elemental) -> None:
         """Appends 'element' to 'contents'.
@@ -485,9 +474,10 @@ class Hybrid(Element, Slate):
             TypeError: if 'element' does not have a name attribute.
             
         """
-        if (isinstance(contents, Sequence)
-                and not isinstance(contents, Element)):
-            contents = self.__class__(contents)
+        try:
+            contents = self.validator.convert(contents = contents)
+        except AttributeError:
+            pass
         self.contents.append(contents)
         return self    
     
@@ -534,6 +524,10 @@ class Hybrid(Element, Slate):
             TypeError: if 'element' does not have a name attribute.
             
         """
+        try:
+            contents = self.validator.convert(contents = contents)
+        except AttributeError:
+            pass
         self.contents.extend(contents)
         return self  
 
@@ -1085,15 +1079,31 @@ class Registry(Options, abc.ABC):
     
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'library'.
-        if not hasattr(cls, '_library_base'):
-            cls._library_base = cls
-        print('test registry', cls.__name__)
-        if (not (hasattr(super(), 'library') or cls == cls._library_base)
-                and not inspect.isabstract(cls)):
-            name = sourdough.tools.snakify(cls.get_name())
-            print('test name', name)
-            cls._library_base.library[name] = cls
+        if not abc.ABC in cls.__bases__:
+            try:
+                name = cls.get_name()
+            except AttributeError:
+                name = sourdough.tools.snakify(cls.__name__)
+            for item in cls.__mro__:    
+                if Registry in item.__bases__:
+                    item.library[name] = cls
+                
+    # def __init_subclass__(cls, **kwargs):
+    #     super().__init_subclass__(**kwargs)
+    #     # if cls.__mro__[1] == Registry:
+    #     if Registry in cls.__bases__:
+    #         cls._library_base = True
+    #     try:
+    #         name = cls.get_name()
+    #     except AttributeError:
+    #         name = sourdough.tools.snakify(cls.__name__)
+    #     if not abc.ABC in cls.__bases__:
+    #         for item in cls.__mro__:    
+    #             try:
+    #                 if item._library_base:
+    #                     item.library[name] = cls
+    #             except AttributeError:
+    #                 pass
 
     # def __post_init__(self) -> None:
     #     """Initializes class instance attributes."""
@@ -1210,36 +1220,36 @@ class Factory(abc.ABC):
     """Returns class(es) from options stored in 'options.library'.
 
     Args:
-        products (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'products' must correspond to key(s) in 'options.library'.
+        product (Union[str, Sequence[str]]: name(s) of objects to return. 
+            'product' must correspond to key(s) in 'options.library'.
         options (ClassVar[Options]): class which contains a 'library'.
 
     Raises:
-        TypeError: if 'products' is neither a str nor Sequence of str.
+        TypeError: if 'product' is neither a str nor Sequence of str.
 
     Returns:
         Any: the factory uses the '__new__' method to return a different object 
             product instance with kwargs as the parameters.
 
     """
-    products: Union[str, Sequence[str]]
+    product: Union[str, Sequence[str]]
     options: ClassVar[Options] = Options
 
     """ Initialization Methods """
     
-    def __new__(cls, products: Union[str, Sequence[str]], **kwargs) -> Any:
+    def __new__(cls, product: Union[str, Sequence[str]], **kwargs) -> Any:
         """Returns an instance from 'options.library'.
 
         Args:
-        products (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'products' must correspond to key(s) in 'options.library'.
+        product (Union[str, Sequence[str]]: name(s) of objects to return. 
+            'product' must correspond to key(s) in 'options.library'.
             kwargs: parameters to pass to the object being created.
 
         Returns:
             Any: an instance of a Callable stored in 'options.library'.
         
         """
-        return cls.options.build(key = products, **kwargs)
+        return cls.options.build(key = product, **kwargs)
     
     """ Class Methods """
     
@@ -1426,8 +1436,6 @@ class Loader(abc.ABC):
             return self._loaded[key]
             
  
-
-
 """ 
 Reflector is currently omitted from the sourdough build because I'm unsure
 if it has a significant use case. The code below should still work, but it

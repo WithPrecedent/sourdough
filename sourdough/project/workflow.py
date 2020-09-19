@@ -581,7 +581,7 @@ class Editor(sourdough.Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.base.Action] = dataclasses.field(
+    contents: Sequence[sourdough.base.Element] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Inventory)

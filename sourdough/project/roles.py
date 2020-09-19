@@ -285,7 +285,7 @@ class Survey(Role):
 # class Compare(LazyIterable):
     
     
-#     def generator(self, *args) -> sourdough.base.Action:
+#     def generator(self, *args) -> sourdough.base.Element:
 #         pools = [tuple(pool) for pool in args]
 #         result = [[]]
 #         for pool in pools:

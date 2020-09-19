@@ -12,7 +12,8 @@ import importlib
 import inspect
 import pathlib
 import re
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
 import more_itertools
 
@@ -237,6 +238,38 @@ def subsetify(
     """
     return {key: dictionary[key] for key in listify(subset)}
 
+def tuplify(
+        variable: Any,
+        default_value: Any = None) -> Tuple[Any]:
+    """Returns passed variable as a tuple (if not already a tuple).
+
+    Args:
+        variable (Any): variable to be transformed into a tuple.
+        default_value (Any): the default value to return if 'variable' is None.
+            Unfortunately, to indicate you want None to be the default value,
+            you need to put 'None' in quotes. If not passed, 'default_value'
+            is set to ().
+
+    Returns:
+        Tuple[Any]: a passed tuple, 'variable' converted to a tuple, or 
+            'default_value'.
+
+    """
+    if variable is None:
+        if default_value is None:
+            return ()
+        elif default_value in ['None', 'none']:
+            return None
+        else:
+            return default_value
+    elif isinstance(variable, tuple):
+        return variable
+    else:
+        try:
+            return tuple(variable)
+        except TypeError:
+            return (variable)
+        
 def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
     """Converts stingsr to appropriate, supported datatypes.
 

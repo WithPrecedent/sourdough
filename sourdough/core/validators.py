@@ -5,8 +5,10 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    ValidatorOptions (Registry): abstract base class for any type validators 
-        and converters. All subclasses must have 'verify' and 'convert' methods.
+    ValidatorOption (Registry): abstract base class for any type validators 
+        and converters. The class provides a universal 'verify' method for type
+        validation. All subclasses must have a 'convert' method for type 
+        conversion.
     Validator (Factory): returns ValidatorOption subclass instance which is used
         for type validation and conversion.
 
@@ -26,10 +28,9 @@ class ValidatorOption(sourdough.base.Registry):
     
     Args:
         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class.
-        stores (Any): a single type accepted by the parent class. Defaults 
-            to None. If it is set to none, then an instance is only useful for 
-            validation and does not convert types.
+            class either as an individual item, in a Mapping, or in a Sequence.
+        stores (Any): a single type stored by the parent class. Defaults 
+            to None.
             
     """
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
@@ -40,12 +41,37 @@ class ValidatorOption(sourdough.base.Registry):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def verify(self, contents: Any) -> Any:
-        pass
-    
-    @abc.abstractmethod
     def convert(self, contents: Any) -> Any:
+        """Submodules must provide their own methods.
+        
+        This method should convert every one of the types in 'accepts' to the
+        type in 'stores'.
+        
+        """
         pass   
+
+    """ Public Methods """
+    
+    def verify(self, contents: Any) -> Any:
+        """Verifies that 'contents' is one of the types in 'accepts'.
+        
+        Args:
+            contents (Any): item(s) to be type validated.
+            
+        Raises:
+            TypeError: if 'contents' is not one of the types in 'accepts'.
+            
+        Returns:
+            Any: original contents if there is no TypeError.
+        
+        """
+        accepts = sourdough.tools.tuplify(self.accepts)
+        if all(isinstance(c, accepts) for c in contents):
+            return contents
+        else:
+            raise TypeError(
+                f'contents must be or contain one of the following types: ' 
+                f'{self.accepts}')
 
 
 @dataclasses.dataclass
@@ -53,19 +79,20 @@ class Validator(sourdough.base.Factory, abc.ABC):
     """Factory for type validation and/or conversion class construction.
     
     Validator is primary used to convert Element subclasses to and from single
-    instances, Mappings of instances, and Sequences of instances. However, with
-    additional conversion methods, it can be extended to any validation or 
-    converstion task.
+    instances, Mappings of instances, and Sequences of instances. 
     
     Args:
-        accepts (Union[Sequence[Callable], Callable]): type(s) accepted by the
-            parent class.
-        stores (Callable): a single type accepted by the parent class. Defaults 
-            to None. If it is set to none, then an instance is only useful for 
-            validation and does not convert types.
+        product (Union[str, Sequence[str]]): name(s) of objects to return. 
+            'product' must correspond to key(s) in 'options.library'.
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+        stores (Any): a single type stored by the parent class. Defaults 
+            to None.
+        options (ClassVar[sourdough.base.Options]): class which contains a 
+            'library' of alternatives for constructing objects.
             
     """
-    products: Union[str, Sequence[str]]
+    product: Union[str, Sequence[str]]
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
         default_factory = list)
     stores: Any = None
@@ -74,55 +101,30 @@ class Validator(sourdough.base.Factory, abc.ABC):
 
 @dataclasses.dataclass
 class Mapify(ValidatorOption):
+    """Type validator and converter for Mappings.
     
+    Args:
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+            Defaults to sourdough.base.Element.
+        stores (Any): a single type stored by the parent class. Defaults 
+            to dict.
+            
+    """    
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default = lambda: [Mapping, Sequence, sourdough.base.Element])
-    stores: Any = dataclasses.field(default = lambda: Mapping)
+        default_factory = lambda: sourdough.base.Element)
+    stores: Any = dataclasses.field(default_factory = lambda: dict)
     
     """ Public Methods """
-
-    def verify(contents: sourdough.base.Elemental) -> sourdough.base.Elemental:
-        """Verifies that 'contents' is or contains the type 'kind'.
-
-        Args:
-            contents (sourdough.base.Elemental): item to verify its type.
-            kind (Element): the specific class type which 'contents' must be or 
-                'contain'. Defaults to Element.
-
-        Raises:
-            TypeError: if 'contents' is not or does not contain 'kind'.
-
-        Returns:
-            sourdough.base.Elemental: the original 'contents'.
-            
-        """
-        if not ((isinstance(contents, kind) 
-                or (inspect.isclass(contents) and issubclass(contents, kind)))
-            or (isinstance(contents, Sequence) 
-                    and (all(isinstance(c, kind) for c in contents)
-                or (all(inspect.isclass(c) for c in contents)
-                    and all(issubclass(c, kind) for c in contents))))
-            or (isinstance(contents, Mapping)
-                    and (all(isinstance(c, kind) for c in contents.values())
-                or (all(inspect.isclass(c) for c in contents.values())
-                    and all(issubclass(c, kind) for c in contents.values()))))):
-            raise TypeError(f'contents must be or conttain {kind} type(s)')  
-        return contents
     
     def convert(self, 
-            contents: sourdough.base.Elemental) -> Mapping[str, sourdough.base.Element]:
+            contents: sourdough.base.Elemental) -> (
+                Mapping[str, sourdough.base.Element]):
         """Converts 'contents' to a Mapping type.
         
-        If 'stores' is not None, it must have a 'contents' attribute which is 
-        where the converted 'contents' will be passed. If it is not passed, 
-        'contents' will be converted to an ordinary dict.
-        
-        If 'contents' is already a Mapping, it is not converted. However, it 
-        still will be placed inside a 'stores' instance if 'stores' is not None.
-        
         Args:
-            contents (sourdough.base.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
+            contents (sourdough.base.Elemental): an object containing one or 
+                more Element subclasses or Element subclass instances.
         
         Raises:
             TypeError: if 'contents' is not an sourdough.base.Elemental.
@@ -131,42 +133,44 @@ class Mapify(ValidatorOption):
             Mapping[str, Element]: converted 'contents'.
             
         """
+        converted = self.stores()
+        contents = self.verify(contents = contents)
         if isinstance(contents, Mapping):
             converted = contents
-        elif isinstance(contents, Sequence) or isinstance(contents, sourdough.base.Element):
-            converted = {}
-            for item in sourdough.tools.listify(contents):
+        elif (isinstance(contents, Sequence) 
+                or isinstance(contents, sourdough.base.Element)):
+            for item in sourdough.tools.tuplify(contents):
                 try:
                     converted[item.name] = item
                 except AttributeError:
                     converted[item.get_name()] = item
-        else:
-            raise TypeError(f'contents must be {sourdough.base.Elemental} type')
-        if self.stores:
-            converted = self.stores(contents = converted)
         return converted
     
 
 @dataclasses.dataclass    
 class Sequencify(ValidatorOption):
+    """Type validator and converter for Sequences.
     
+    Args:
+        accepts (Union[Sequence[Callable], Callable]): type(s) accepted by the
+            parent class. Defaults to sourdough.base.Element.
+        stores (Callable): a single type accepted by the parent class. Defaults 
+            to None. If it is set to none, then an instance is only useful for 
+            validation and does not convert types. Defaults to Sequence.
+            
+    """        
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default = lambda: [Mapping, Sequence, sourdough.base.Element])
-    stores: Any = dataclasses.field(default = lambda: Sequence)
+        default_factory = lambda: sourdough.base.Element)
+    stores: Any = dataclasses.field(default_factory = lambda: list)
     
-    def convert(self, contents: sourdough.base.Elemental) -> Sequence[Element]:
+    def convert(self, 
+            contents: sourdough.base.Elemental) -> (
+                Sequence[sourdough.base.Element]):
         """Converts 'contents' to a Sequence type.
         
-        If 'stores' is not None, it must have a 'contents' attribute which is 
-        where the converted 'contents' will be passed. If it is not passed, 
-        'contents' will be converted to an ordinary list.
-        
-        If 'contents' is already a Sequence, it is not converted. However, it 
-        still will be placed inside a 'stores' instance if 'stores' is not None.
-        
         Args:
-            contents (sourdough.base.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
+            contents (sourdough.base.Elemental): an object containing one or 
+                more Element subclasses or Element subclass instances.
         
         Raises:
             TypeError: if 'contents' is not an sourdough.base.Elemental.
@@ -174,45 +178,12 @@ class Sequencify(ValidatorOption):
         Returns:
             Sequence[Element]: converted 'contents'.
             
-        """    
+        """
+        converted = self.stores()
         if isinstance(contents, Mapping):
-            converted = list(contents.values())
+            converted = converted.extend(contents.values())
         elif isinstance(contents, Sequence):
             converted = contents
         elif isinstance(contents, sourdough.base.Element):
-            converted = [contents]
-        else:
-            raise TypeError(f'contents must be {sourdough.base.Elemental} type')
-        if self.stores:
-            converted = self.stores(contents = converted)
+            converted = converted.append(contents)
         return converted  
-
-
-
-
-    """ Public Methods """
-
-    def convert(self, contents: sourdough.base.Elemental) -> Any:
-        """Converts 'contents' to the appropriate type based on 'converters'.
-        
-        Args:
-            contents (sourdough.base.Elemental): an object containing one or more Element
-                subclasses or Element subclass instances.
-        
-        Raises:
-            ValueError: if 'stores' is None.
-            TypeError: if there is no converter method for the type in 'stores'.
-              
-        Returns:
-            Any: converted 'contents'.
-            
-        """
-        contents = self.verify(contents = contents, kind = self.stores)
-        if self.stores is None:
-            raise ValueError(
-                'Validator cannot convert without a value for stores')
-        try:
-            return getattr(self, self.converters[self.stores])(
-                contents = contents)
-        except (KeyError, AttributeError):
-            raise TypeError(f'no matching converter for {self.stroes}')  

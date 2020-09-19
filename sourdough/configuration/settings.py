@@ -75,7 +75,11 @@ class Settings(sourdough.base.Lexicon):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
-        super().__post_init__()
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        self._initial_validation()
         # Infers types for values in 'contents', if the 'infer_types' option is 
         # selected.
         if self.infer_types:

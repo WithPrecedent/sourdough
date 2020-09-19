@@ -379,8 +379,8 @@ class Survey(ParallelStructure):
             version of the class name ('__class__.__name__').
     
     """
-    contents: Sequence[sourdough.Pipeline] = dataclasses.field(d
-                                                               efault_factory = list)
+    contents: Sequence[sourdough.Pipeline] = dataclasses.field(
+        default_factory = list)
     iterations: int = 10
     criteria: str = None
     name: str = None

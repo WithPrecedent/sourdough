@@ -71,8 +71,8 @@ class Dynamite(sourdough.Technique):
     
 
 def test_project():
-    print('test library', sourdough.Component.library)
-    assert 'parser' in sourdough.Component.library
+    print('!!!!!!! test library', sourdough.Structure.library)
+    assert 'parser' in sourdough.Structure.library
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
@@ -81,7 +81,7 @@ def test_project():
     return
 
 # @dataclasses.dataclass
-# class NewAction(sourdough.base.Action):
+# class NewAction(sourdough.base.Element):
     
 #     def perform(self, data: object) -> object:
 #         data.new_value = 7
@@ -89,7 +89,7 @@ def test_project():
         
 
 # @dataclasses.dataclass
-# class OtherAction(sourdough.base.Action):
+# class OtherAction(sourdough.base.Element):
     
 #     def perform(self, data: object) -> object:
 #         data.other_value = 'something'
