@@ -18,34 +18,25 @@ Contents:
         with both dict and list interfaces and methods.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies.
-    Options (ABC): abstract base class for subclasses which store strategies 
-        or other options in a 'library' attribute. It provides subclasses with
+    Library (Catalog, ABC): abstract base class for subclasses which store strategies 
+        or other options in a 'contents' attribute. It provides subclasses with
         a 'build' method for creating instances from stored options and a
         'select' method which returns stored items as they are stored. A 
-        Options subclass can be linked to a Factory to automatically return
+        Library subclass can be linked to a Factory to automatically return
         a stored object when a Factory subclass is instanced.
-    Registry (Options): abstract base class that automatically registers any 
-        subclasses and stores them in the 'library' class attribute. 
-    Repository (Options): abstract base class for automatically storing subclass
-        instances in a 'library' class attribute.
-    Validator (Registry): abstract base class for type validators and 
-        converters. The class provides a universal 'verify' method for type
-        validation. All subclasses must have a 'convert' method for type 
-        conversion.
+    Registry (Library, ABC): abstract base class that automatically registers any 
+        subclasses and stores them in the 'contents' class attribute. 
     Factory (ABC): object factory which returns instances of one or more 
         selected options. If multiple options are selected for creation, they 
-        are returned in a list. Factory must be linked to an Options subclass
-        via its 'options' attribute.
-    Loader (ABC): lazy loader which uses a 'load' method to import python
-        classes, functions, and other items at runtime on demand. 
-    ProxyMixin (ABC): mixin which creates a python property which refers to 
-        another attribute by using the 'proxify' method.
+        are returned in a list. Factory must be linked to an Registry subclass
+        via its 'contents' attribute.
+    # ProxyMixin (ABC): mixin which creates a python property which refers to 
+    #     another attribute by using the 'proxify' method.
  
 """
 from __future__ import annotations
 import abc
 import collections.abc
-import copy
 import dataclasses
 import inspect
 import pprint
@@ -182,6 +173,16 @@ class Lexicon(collections.abc.MutableMapping):
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s), if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass  
         
     """ Public Methods """
      
@@ -457,8 +458,11 @@ class Hybrid(Element, Slate):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()        
+        # Calls parent initialization method(s), if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass  
         # Sets initial default value for the 'get' method.
         self._default = None
         
@@ -850,6 +854,11 @@ class Catalog(Lexicon):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
+        # Calls parent initialization method(s), if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass  
         # Sets 'default' to all keys of 'contents', if not passed.
         self.defaults = self.defaults or 'all'
 
@@ -979,47 +988,47 @@ class Catalog(Lexicon):
 
 
 @dataclasses.dataclass
-class Options(abc.ABC):
+class Library(Catalog):
     """ Base class for stored options libraries.
     
-    Options store strategies  or other options in a 'library' attribute. It 
+    Library store strategies  or other options in a 'contents' attribute. It 
     provides subclasses with a 'build' method for creating instances from stored
     options and a 'select' method which returns stored items as they are stored. 
-    A Options subclass can be linked to a Factory to automatically return a 
+    A Library subclass can be linked to a Factory to automatically return a 
     stored object when a Factory subclass is instanced.
     
     Args:
-        library (ClassVar[Catalog]): the instance which stores 
-            options or strategies in the 'library' class attribute.  
+        contents (ClassVar[sourdough.base.Catalog]): the instance which stores 
+            options or strategies in the 'contents' class attribute.  
     
     Namespaces: 
-        'library', 'register_from_disk', 'add_option', 'build'
+        'contents', 'register_from_disk', 'add_option', 'build'
         
     """
-    library: ClassVar[Catalog] = Catalog()
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     
     """ Class Methods """
     
     @classmethod
     def add_option(cls, key: str, value: Any) -> None:
-        """Adds 'value' to 'library' at 'key'.
+        """Adds 'value' to 'contents' at 'key'.
         
         Args:
             key (str): name of key to link to 'value'.
-            value (Any): item to store in 'library'.
+            value (Any): item to store in 'contents'.
             
         """
-        cls.library[key] = value
+        cls.contents[key] = value
         return cls
     
     @classmethod
     def build(cls, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'library'.
+        """Creates instance(s) of a class(es) stored in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): name matching a key in 'library' 
+            key (Union[str, Sequence[str]]): name matching a key in 'contents' 
                 for which the value is sought.
-            kwargs: arguments to pass to any selected items from the 'library'.
+            kwargs: arguments to pass to any selected items from the 'contents'.
 
         Raises:
             TypeError: if 'key' is neither a str nor Sequence type.
@@ -1030,53 +1039,44 @@ class Options(abc.ABC):
             
         """
         if isinstance(key, str):
-            return cls.library.create(key = key, **kwargs)
+            return cls.contents.create(key = key, **kwargs)
         elif isinstance(key, Sequence):
             instances = []
             for item in key:
-                instances.append(cls.library.create(key = item, **kwargs))
+                instances.append(cls.contents.create(key = item, **kwargs))
             return instances
         else:
             raise TypeError('key must be a str or list type')
  
     @classmethod
     def select(cls, key: Union[str, Sequence[str]]) -> object:
-        """Returns a value stored in 'library'.
+        """Returns a value stored in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): key(s) to values in 'library' to
+            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
                 return.
 
         Returns:
-            Any: value(s) stored in library.
+            Any: value(s) stored in contents.
             
         """
-        return cls.library[key]       
+        return cls.contents[key]       
 
 
 @dataclasses.dataclass
-class Registry(Options, abc.ABC):
-    """ which stores subclasses in a 'library' class attribute.
+class Registry(Library, abc.ABC):
+    """Base class which stores subclasses in a 'library' class attribute.
 
     Args:
-        register_from_disk (bool): whether to look in the current working
-            folder and subfolders for subclasses of the Element class for 
-            which this class is a mixin. Defaults to False.
-        library (ClassVar[Catalog]): the instance which stores subclasses in a 
-            Catalog instance.
-
-    Namespaces: 
-        'library', 'add_option', 'build', 'select', 'register_from_disk', 
-        '_library_base', 'find_subclasses', '_import_from_path', 
-        '_get_subclasses'
+        library (ClassVar[sourdough.base.Catalog]): the instance which stores subclasses in a 
+            sourdough.base.Catalog instance.
         
     To Do:
         Fix 'find_subclasses' and related classes. Currently, 
             importlib.util.module_from_spec returns None.
     
     """
-    # register_from_disk: bool = False
-    library: ClassVar[Catalog] = Catalog()
+    library: Mapping[str, Any] = dataclasses.field(default_factory = Library)
     
     """ Initialization Methods """
     
@@ -1090,211 +1090,16 @@ class Registry(Options, abc.ABC):
             for item in cls.__mro__:    
                 if Registry in item.__bases__:
                     item.library[name] = cls
-                
-    # def __init_subclass__(cls, **kwargs):
-    #     super().__init_subclass__(**kwargs)
-    #     # if cls.__mro__[1] == Registry:
-    #     if Registry in cls.__bases__:
-    #         cls._library_base = True
-    #     try:
-    #         name = cls.get_name()
-    #     except AttributeError:
-    #         name = sourdough.tools.snakify(cls.__name__)
-    #     if not abc.ABC in cls.__bases__:
-    #         for item in cls.__mro__:    
-    #             try:
-    #                 if item._library_base:
-    #                     item.library[name] = cls
-    #             except AttributeError:
-    #                 pass
-
-    # def __post_init__(self) -> None:
-    #     """Initializes class instance attributes."""
-    #     super().__post_init__()
-    #     # Adds subclasses from disk to 'library' if 'register_from_disk'.
-    #     if self.register_from_disk:
-    #         self.find_subclasses(folder = pathlib.Path.cwd())
-
-    # def find_subclasses(self, 
-    #         folder: Union[str, pathlib.Path], 
-    #         recursive: bool = True) -> None:
-    #     """Adds Element subclasses for python files in 'folder'.
-        
-    #     If 'recursive' is True, subfolders are searched as well.
-        
-    #     Args:
-    #         folder (Union[str, pathlib.Path]): folder to initiate search for 
-    #             Element subclasses.
-    #         recursive (bool]): whether to also search subfolders (True)
-    #             or not (False). Defaults to True.
-                
-    #     """
-    #     if recursive:
-    #         glob_method = 'rglob'
-    #     else:
-    #         glob_method = 'glob'
-    #     for file_path in getattr(pathlib.Path(folder), glob_method)('*.py'):
-    #         if not file_path.name.startswith('__'):
-    #             module = self._import_from_path(file_path = file_path)
-    #             subclasses = self._get_subclasses(module = module)
-    #             for subclass in subclasses:
-    #                 self.add({
-    #                     sourdough.tools.snakify(subclass.__name__): subclass})    
-    #     return self
-       
-    # """ Private Methods """
-    
-    # def _import_from_path(self, file_path: Union[pathlib.Path, str]) -> object:
-    #     """Returns an imported module from a file path.
-        
-    #     Args:
-    #         file_path (Union[pathlib.Path, str]): path of a python module.
-        
-    #     Returns:
-    #         object: an imported python module. 
-        
-    #     """
-    #     # file_path = str(file_path)
-    #     # file_path = pathlib.Path(file_path)
-    #     print('test file path', file_path)
-    #     module_spec = importlib.util.spec_from_file_location(file_path)
-    #     print('test module_spec', module_spec)
-    #     module = importlib.util.module_from_spec(module_spec)
-    #     return module_spec.loader.exec_module(module)
-    
-    # def _get_subclasses(self, 
-    #         module: object) -> Sequence[sourdough.base.Element]:
-    #     """Returns a list of subclasses in 'module'.
-        
-    #     Args:
-    #         module (object): an import python module.
-        
-    #     Returns:
-    #         Sequence[Element]: list of subclasses of Element. If none are 
-    #             found, an empty list is returned.
-                
-    #     """
-    #     matches = []
-    #     for item in pyclbr.readmodule(module):
-    #         # Adds direct subclasses.
-    #         if inspect.issubclass(item, sourdough.base.Element):
-    #             matches.append[item]
-    #         else:
-    #             # Adds subclasses of other subclasses.
-    #             for subclass in self.contents.values():
-    #                 if subclass(item, subclass):
-    #                     matches.append[item]
-    #     return matches
-
-   
-@dataclasses.dataclass
-class Repository(Options, abc.ABC):
-    """ which stores subclass instances in a 'library' class attribute.
-
-    In order to ensure that a subclass instance is added to the base 
-    Catalog instance, super().__post_init__() should be called by 
-    that subclass.
-
-    Args:
-        library (ClassVar[Catalog]): dict which stores subclass instances.
-            
-    Namespaces: 
-        'library', 'register_from_disk', 'add_option', 'build'
-
-    """
-    library: ClassVar[Catalog] = Catalog()
-
-    """ Initialization Methods """
-    
-    def __post_init__(self):
-        """Registers an instance with 'library'."""
-        # Calls initialization method of other inherited classes.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        # Adds this instance to the 'library' class variable.
-        self.library[self.name] = self
-
-
-@dataclasses.dataclass
-class Validator(abc.ABC):
-    """Base class for type validation and/or conversion.
-    
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored by the parent class. Defaults to 
-            None.
-                        
-    """
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = list)
-    stores: Any = None
-
-    """ Initialization Methods """
-    
-    def __post_init__(self):
-        """Registers an instance with 'library'."""
-        # Calls initialization method of other inherited classes.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        # Initializes 'contents' attribute.
-        self._initial_validation()
-        
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def convert(self, contents: Any) -> Any:
-        """Submodules must provide their own methods.
-        
-        This method should convert every one of the types in 'accepts' to the
-        type in 'stores'.
-        
-        """
-        pass   
-
-    """ Public Methods """
-    
-    def verify(self, contents: Any) -> Any:
-        """Verifies that 'contents' is one of the types in 'accepts'.
-        
-        Args:
-            contents (Any): item(s) to be type validated.
-            
-        Raises:
-            TypeError: if 'contents' is not one of the types in 'accepts'.
-            
-        Returns:
-            Any: original contents if there is no TypeError.
-        
-        """
-        accepts = sourdough.tools.tuplify(self.accepts)
-        if all(isinstance(c, accepts) for c in contents):
-            return contents
-        else:
-            raise TypeError(
-                f'contents must be or contain one of the following types: ' 
-                f'{self.accepts}')
-       
-    """ Private Methods """
-    
-    def _initial_validation(self) -> None:
-        """Validates passed 'contents' on class initialization."""
-        self.contents = self.convert(contents = self.contents)
-        return self 
- 
+                    
 
 @dataclasses.dataclass
 class Factory(abc.ABC):
-    """Returns class(es) from options stored in 'options.library'.
+    """Returns class(es) from options stored in 'options.contents'.
 
     Args:
         product (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.library'.
-        options (ClassVar[Options]): class which contains a 'library'.
+            'product' must correspond to key(s) in 'options.contents'.
+        options (ClassVar[Registry]): class which contains a 'contents'.
 
     Raises:
         TypeError: if 'product' is neither a str nor Sequence of str.
@@ -1305,20 +1110,20 @@ class Factory(abc.ABC):
 
     """
     product: Union[str, Sequence[str]]
-    options: ClassVar[Options] = Options
+    options: ClassVar[Registry] = Registry
 
     """ Initialization Methods """
     
     def __new__(cls, product: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Returns an instance from 'options.library'.
+        """Returns an instance from 'options.contents'.
 
         Args:
         product (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.library'.
+            'product' must correspond to key(s) in 'options.contents'.
             kwargs: parameters to pass to the object being created.
 
         Returns:
-            Any: an instance of a Callable stored in 'options.library'.
+            Any: an instance of a Callable stored in 'options.contents'.
         
         """
         return cls.options.build(key = product, **kwargs)
@@ -1327,186 +1132,127 @@ class Factory(abc.ABC):
     
     @classmethod
     def add_option(cls, key: str, value: Any) -> None:
-        """Adds 'value' to 'options.library' at 'key'.
+        """Adds 'value' to 'options.contents' at 'key'.
         
         Args:
             key (str): name of key to link to 'value'.
-            value (Any): item to store in 'options.library'.
+            value (Any): item to store in 'options.contents'.
             
         """
         cls.options.add_option(key = key, value = value)
         return cls
        
    
-@dataclasses.dataclass
-class ProxyMixin(abc.ABC):
-    """ which creates a proxy name for a Element subclass attribute.
+# @dataclasses.dataclass
+# class ProxyMixin(abc.ABC):
+#     """ which creates a proxy name for a Element subclass attribute.
 
-    The 'proxify' method dynamically creates a property to access the stored
-    attribute. This allows class instances to customize names of stored
-    attributes while still maintaining the interface of the base sourdough
-    classes.
+#     The 'proxify' method dynamically creates a property to access the stored
+#     attribute. This allows class instances to customize names of stored
+#     attributes while still maintaining the interface of the base sourdough
+#     classes.
 
-    Only one proxy should be created per class. Otherwise, the created proxy
-    properties will all point to the same attribute.
+#     Only one proxy should be created per class. Otherwise, the created proxy
+#     properties will all point to the same attribute.
 
-    Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
-        '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
-        the proxy property set by the user with the 'proxify' method.
+#     Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
+#         '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
+#         the proxy property set by the user with the 'proxify' method.
        
-    To Do:
-        Add property to class instead of instance to prevent return of property
-            object.
-        Implement '__set_name__' in a secondary class to simplify the code and
-            namespace usage.
+#     To Do:
+#         Add property to class instead of instance to prevent return of property
+#             object.
+#         Implement '__set_name__' in a secondary class to simplify the code and
+#             namespace usage.
         
-    """
+#     """
 
-    """ Public Methods """
+#     """ Public Methods """
 
-    def proxify(self,
-            proxy: str,
-            attribute: str,
-            default_value: Any = None,
-            proxify_methods: bool = True) -> None:
-        """Adds a proxy property to refer to class attribute.
+#     def proxify(self,
+#             proxy: str,
+#             attribute: str,
+#             default_value: Any = None,
+#             proxify_methods: bool = True) -> None:
+#         """Adds a proxy property to refer to class attribute.
 
-        Args:
-            proxy (str): name of proxy property to create.
-            attribute (str): name of attribute to link the proxy property to.
-            default_value (Any): default value to use when deleting 'attribute' 
-                with '__delitem__'. Defaults to None.
-            proxify_methods (bool): whether to create proxy methods replacing 
-                'attribute' in the original method name with the string passed 
-                in 'proxy'. So, for example, 'add_chapter' would become 
-                'add_recipe' if 'proxy' was 'recipe' and 'attribute' was
-                'chapter'. The original method remains as well as the proxy.
-                This does not change the rest of the signature of the method so
-                parameter names remain the same. Defaults to True.
+#         Args:
+#             proxy (str): name of proxy property to create.
+#             attribute (str): name of attribute to link the proxy property to.
+#             default_value (Any): default value to use when deleting 'attribute' 
+#                 with '__delitem__'. Defaults to None.
+#             proxify_methods (bool): whether to create proxy methods replacing 
+#                 'attribute' in the original method name with the string passed 
+#                 in 'proxy'. So, for example, 'add_chapter' would become 
+#                 'add_recipe' if 'proxy' was 'recipe' and 'attribute' was
+#                 'chapter'. The original method remains as well as the proxy.
+#                 This does not change the rest of the signature of the method so
+#                 parameter names remain the same. Defaults to True.
 
-        """
-        self._proxied_attribute = attribute
-        self._default_proxy_value = default_value
-        self._proxify_attribute(proxy = proxy)
-        if proxify_methods:
-            self._proxify_methods(proxy = proxy)
-        return self
+#         """
+#         self._proxied_attribute = attribute
+#         self._default_proxy_value = default_value
+#         self._proxify_attribute(proxy = proxy)
+#         if proxify_methods:
+#             self._proxify_methods(proxy = proxy)
+#         return self
 
-    """ Proxy Property Methods """
+#     """ Proxy Property Methods """
 
-    def _proxy_getter(self) -> Any:
-        """Proxy getter for '_proxied_attribute'.
+#     def _proxy_getter(self) -> Any:
+#         """Proxy getter for '_proxied_attribute'.
 
-        Returns:
-            Any: value stored at '_proxied_attribute'.
+#         Returns:
+#             Any: value stored at '_proxied_attribute'.
 
-        """
-        return getattr(self, self._proxied_attribute)
+#         """
+#         return getattr(self, self._proxied_attribute)
 
-    def _proxy_setter(self, value: Any) -> None:
-        """Proxy setter for '_proxied_attribute'.
+#     def _proxy_setter(self, value: Any) -> None:
+#         """Proxy setter for '_proxied_attribute'.
 
-        Args:
-            value (Any): value to set attribute to.
+#         Args:
+#             value (Any): value to set attribute to.
 
-        """
-        setattr(self, self._proxied_attribute, value)
-        return self
+#         """
+#         setattr(self, self._proxied_attribute, value)
+#         return self
 
-    def _proxy_deleter(self) -> None:
-        """Proxy deleter for '_proxied_attribute'."""
-        setattr(self, self._proxied_attribute, self._default_proxy_value)
-        return self
+#     def _proxy_deleter(self) -> None:
+#         """Proxy deleter for '_proxied_attribute'."""
+#         setattr(self, self._proxied_attribute, self._default_proxy_value)
+#         return self
 
-    """ Other Private Methods """
+#     """ Other Private Methods """
 
-    def _proxify_attribute(self, proxy: str) -> None:
-        """Creates proxy property for '_proxied_attribute'.
+#     def _proxify_attribute(self, proxy: str) -> None:
+#         """Creates proxy property for '_proxied_attribute'.
 
-        Args:
-            proxy (str): name of proxy property to create.
+#         Args:
+#             proxy (str): name of proxy property to create.
 
-        """
-        setattr(self, proxy, property(
-            fget = self._proxy_getter,
-            fset = self._proxy_setter,
-            fdel = self._proxy_deleter))
-        return self
+#         """
+#         setattr(self, proxy, property(
+#             fget = self._proxy_getter,
+#             fset = self._proxy_setter,
+#             fdel = self._proxy_deleter))
+#         return self
 
-    def _proxify_methods(self, proxy: str) -> None:
-        """Creates proxy method with an alternate name.
+#     def _proxify_methods(self, proxy: str) -> None:
+#         """Creates proxy method with an alternate name.
 
-        Args:
-            proxy (str): name of proxy to repalce in method names.
+#         Args:
+#             proxy (str): name of proxy to repalce in method names.
 
-        """
-        for item in dir(self):
-            if (self._proxied_attribute in item
-                    and not item.startswith('__')
-                    and callable(item)):
-                self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
-                    getattr(self, item))
-        return self
+#         """
+#         for item in dir(self):
+#             if (self._proxied_attribute in item
+#                     and not item.startswith('__')
+#                     and callable(item)):
+#                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
+#                     getattr(self, item))
+#         return self
  
- 
-@dataclasses.dataclass
-class Loader(abc.ABC):
-    """ for lazy loading of python modules and objects.
-
-    Args:
-        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
-            load is/are located. Defaults to an empty list.
-        _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
-            loaded objects. This is checked first by the 'load' method to avoid
-            unnecessary re-importation. Defaults to an empty dict.
-
-    """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = list)
-    _loaded: ClassVar[Mapping[Any, Any]] = {}
-    
-    """ Public Methods """
-
-    def load(self, 
-            key: str, 
-            check_attributes: bool = False, 
-            **kwargs) -> object:
-        """Returns object named by 'key'.
-
-        Args:
-            key (str): name of class, function, or variable to try to import 
-                from modules listed in 'modules'.
-
-        Returns:
-            object: imported from a python module.
-
-        """
-        imported = None
-        if key in self._loaded:
-            imported = self._loaded[key]
-        else:
-            if check_attributes:
-                try:
-                    key = getattr(self, key)
-                except AttributeError:
-                    pass
-            for module in sourdough.tools.listify(self.modules):
-                try:
-                    imported = sourdough.tools.importify(
-                        module = module, 
-                        key = key)
-                    break
-                except (AttributeError, ImportError):
-                    pass
-        if imported is None:
-            raise ImportError(f'{key} was not found in {self.modules}')
-        elif kwargs:
-            self._loaded[key] = imported(**kwargs)
-            return self._loaded[key]
-        else:
-            self._loaded[key] = imported
-            return self._loaded[key]
-            
  
 """ 
 Reflector is currently omitted from the sourdough build because I'm unsure
