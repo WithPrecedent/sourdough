@@ -5,6 +5,8 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Registry (ABC): abstract base class that automatically registers any 
+        subclasses and stores them in the 'registry' class attribute. 
     Validator (Registry, Quirk): abstract base class for type validators and 
         converters. The class provides a universal 'verify' method for type
         validation. All subclasses must have a 'convert' method for type 
@@ -13,7 +15,9 @@ Contents:
         instance which is used for type validation and conversion.
     Loader (Quirk): lazy loader which uses a 'load' method to import python
         classes, functions, and other items at runtime on demand. 
- 
+    # ProxyMixin (Quirk, ABC): mixin which creates a python property which 
+    #     refers to another attribute by using the 'proxify' method.
+    
 """
 from __future__ import annotations
 import abc
@@ -26,7 +30,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Registry(sourdough.base.Quirk, abc.ABC):
-    """Base class which stores subclasses in a 'library' class attribute.
+    """Mixin which stores subclasses in a 'library' class attribute.
 
     Args:
         library (ClassVar[Catalog]): the instance which stores subclasses.
@@ -47,9 +51,10 @@ class Registry(sourdough.base.Quirk, abc.ABC):
                 if Registry in item.__bases__:
                     item.library[name] = cls
 
+
 @dataclasses.dataclass
 class Validator(sourdough.base.Registry, sourdough.base.Quirk, abc.ABC):
-    """Base class for type validation and/or conversion.
+    """Base class for type validation and/or conversion Quirks.
     
     Args:
         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
@@ -58,7 +63,6 @@ class Validator(sourdough.base.Registry, sourdough.base.Quirk, abc.ABC):
             None.
                         
     """
-    element: sourdough.base.Element
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
         default_factory = list)
     stores: Any = None
@@ -295,4 +299,116 @@ class Loader(sourdough.base.Quirk):
         else:
             self._loaded[key] = imported
             return self._loaded[key]
-             
+
+  
+# @dataclasses.dataclass
+# class ProxyMixin(abc.ABC):
+#     """ which creates a proxy name for a Element subclass attribute.
+
+#     The 'proxify' method dynamically creates a property to access the stored
+#     attribute. This allows class instances to customize names of stored
+#     attributes while still maintaining the interface of the base sourdough
+#     classes.
+
+#     Only one proxy should be created per class. Otherwise, the created proxy
+#     properties will all point to the same attribute.
+
+#     Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
+#         '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
+#         the proxy property set by the user with the 'proxify' method.
+       
+#     To Do:
+#         Add property to class instead of instance to prevent return of property
+#             object.
+#         Implement '__set_name__' in a secondary class to simplify the code and
+#             namespace usage.
+        
+#     """
+
+#     """ Public Methods """
+
+#     def proxify(self,
+#             proxy: str,
+#             attribute: str,
+#             default_value: Any = None,
+#             proxify_methods: bool = True) -> None:
+#         """Adds a proxy property to refer to class attribute.
+
+#         Args:
+#             proxy (str): name of proxy property to create.
+#             attribute (str): name of attribute to link the proxy property to.
+#             default_value (Any): default value to use when deleting 'attribute' 
+#                 with '__delitem__'. Defaults to None.
+#             proxify_methods (bool): whether to create proxy methods replacing 
+#                 'attribute' in the original method name with the string passed 
+#                 in 'proxy'. So, for example, 'add_chapter' would become 
+#                 'add_recipe' if 'proxy' was 'recipe' and 'attribute' was
+#                 'chapter'. The original method remains as well as the proxy.
+#                 This does not change the rest of the signature of the method so
+#                 parameter names remain the same. Defaults to True.
+
+#         """
+#         self._proxied_attribute = attribute
+#         self._default_proxy_value = default_value
+#         self._proxify_attribute(proxy = proxy)
+#         if proxify_methods:
+#             self._proxify_methods(proxy = proxy)
+#         return self
+
+#     """ Proxy Property Methods """
+
+#     def _proxy_getter(self) -> Any:
+#         """Proxy getter for '_proxied_attribute'.
+
+#         Returns:
+#             Any: value stored at '_proxied_attribute'.
+
+#         """
+#         return getattr(self, self._proxied_attribute)
+
+#     def _proxy_setter(self, value: Any) -> None:
+#         """Proxy setter for '_proxied_attribute'.
+
+#         Args:
+#             value (Any): value to set attribute to.
+
+#         """
+#         setattr(self, self._proxied_attribute, value)
+#         return self
+
+#     def _proxy_deleter(self) -> None:
+#         """Proxy deleter for '_proxied_attribute'."""
+#         setattr(self, self._proxied_attribute, self._default_proxy_value)
+#         return self
+
+#     """ Other Private Methods """
+
+#     def _proxify_attribute(self, proxy: str) -> None:
+#         """Creates proxy property for '_proxied_attribute'.
+
+#         Args:
+#             proxy (str): name of proxy property to create.
+
+#         """
+#         setattr(self, proxy, property(
+#             fget = self._proxy_getter,
+#             fset = self._proxy_setter,
+#             fdel = self._proxy_deleter))
+#         return self
+
+#     def _proxify_methods(self, proxy: str) -> None:
+#         """Creates proxy method with an alternate name.
+
+#         Args:
+#             proxy (str): name of proxy to repalce in method names.
+
+#         """
+#         for item in dir(self):
+#             if (self._proxied_attribute in item
+#                     and not item.startswith('__')
+#                     and callable(item)):
+#                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
+#                     getattr(self, item))
+#         return self
+ 
+      

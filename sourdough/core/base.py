@@ -10,8 +10,6 @@ Contents:
     Elemental: annotation type for all classes that contain Elements. This
         includes any Element subclass, Sequences of Elements, and Mappings with
         Element values.
-    Quirk (ABC): classes that link to an Element adding functionality or 
-        altering behavior. Each Quirk subclass must have an 'apply' method.
     Repository (Iterable, ABC): base class for all sourdough iterables. All
         subclasses must have 'add' and 'subsetify' methods as well as store 
         their contents in the 'contents' attribute.
@@ -20,19 +18,21 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
-    Registry (ABC): abstract base class that automatically registers any 
-        subclasses and stores them in the 'registry' class attribute. 
+    Quirk (ABC): sourdough mixin. All Quirk subclasses are automatically 
+        registered in a Catalog instance stored in the 'options' class 
+        attribute.
     Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
         with additional functionality.
     Hybrid (Element, Slate): iterable containing Element subclass instances 
         with both dict and list interfaces and methods.
+    Workshop (ABC):
 
     # Factory (ABC): object factory which returns instances of one or more 
     #     selected options. If multiple options are selected for creation, they 
     #     are returned in a list. Factory must be linked to an Registry subclass
     #     via its 'contents' attribute.
-    # ProxyMixin (ABC): mixin which creates a python property which refers to 
-    #     another attribute by using the 'proxify' method.
+
+    # Reflector (MutableMapping):
  
 """
 from __future__ import annotations
@@ -161,11 +161,11 @@ class Repository(collections.abc.Iterable, abc.ABC):
         3) It allows the '+' operator to be used to join a Repository subclass 
             instance of the same general type (Mapping, Sequence, Tuple, etc.). 
             The '+' operator calls the Repository subclass 'add' method to 
-            implement how the added item(s) is/are added to the Repository subclass
-            instance.
-        4) The internally stored iterable must be stored in the 'contents'
+            implement how the added item(s) is/are added to the Repository 
+            subclass instance.
+        4) The internally stored iterable must be located in the 'contents'
             attribute. This allows for consistent coordination among classes
-            and the addition of Quirk subclass instances to a Repository.
+            and mixins.
     
     Args:
         contents (Iterable[Any]): stored iterable. Defaults to an empty list.
@@ -189,7 +189,7 @@ class Repository(collections.abc.Iterable, abc.ABC):
     
     """ Dunder Methods """
      
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterable[Any]:
         """Returns iterable of 'contents'.
 
         Returns:
@@ -348,9 +348,9 @@ class Catalog(Lexicon):
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
-        always_return_list (bool]): whether to return a list even when
-            the key passed is not a list or special access key (True) or to 
-            return a list only when a list or special acces key is used (False). 
+        always_return_list (bool): whether to return a list even when the key 
+            passed is not a list or special access key (True) or to return a 
+            list only when a list or special access key is used (False). 
             Defaults to False.
                      
     """
@@ -376,38 +376,37 @@ class Catalog(Lexicon):
             key: Union[str, Sequence[str]], **kwargs) -> Union[
                 object, 
                 Sequence[object]]:
-        """Returns an instance of a stored subclass or instance.
+        """Returns instance(s) of a stored classes
         
         This method acts as a factory for instancing stored classes or returning
         instances.
         
         Args:
-            key (str): key to desired item in 'contents'.
-            kwargs: arguments to pass to the selected item when it is instanced.
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+            kwargs: arguments to pass to the selected item(s) when instanced.
                     
         Returns:
-
+            Union[object, Sequence[object]]: instance(s) of stored classes.
             
         """
-        try:
-            return self.contents[key](**kwargs)
-        except TypeError:
+        items = self[key]
+        if isinstance(items, Sequence) and not isinstance(items, str):
             instances = []
-            for item in key:
+            for item in items:
                 instances.append(item(**kwargs))
-            return instances
+        else:
+            instances = items(**kwargs)
+        return instances
  
     def select(self,
-            key: Union[str, Sequence[str]]) -> Union[
-                Callable, 
-                Sequence[Callable]]:
+            key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) stored in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
-                return.
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
 
         Returns:
+            Union[Any, Sequence[Any]]: stored value(s).
             
         """
         return self[key] 
@@ -440,17 +439,17 @@ class Catalog(Lexicon):
     """ Dunder Methods """
 
     def __getitem__(self, 
-            key: Union[Sequence[str], str]) -> Union[Sequence[Any], Any]:
+            key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) for 'key' in 'contents'.
 
         The method searches for 'all', 'default', and 'none' matching wildcard
         options before searching for direct matches in 'contents'.
 
         Args:
-            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents'.
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
 
         Returns:
-            Union[Sequence[Any], Any]: value(s) stored in 'contents'.
+            Union[Any, Sequence[Any]]: value(s) stored in 'contents'.
 
         """
         # Returns a list of all values if the 'all' key is sought.
@@ -480,13 +479,13 @@ class Catalog(Lexicon):
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
     def __setitem__(self,
-            key: Union[Sequence[str], str],
-            value: Union[Sequence[Any], Any]) -> None:
+            key: Union[str, Sequence[str]],
+            value: Union[Any, Sequence[Any]]) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Union[Sequence[str], str]): name of key(s) to set in 'contents'.
-            value (Union[Sequence[Any], Any]): value(s) to be paired with 'key' 
+            key (Union[str, Sequence[str]]): name of key(s) to set in 'contents'.
+            value (Union[Any, Sequence[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
         """
@@ -499,11 +498,11 @@ class Catalog(Lexicon):
                 self.contents.update(dict(zip(key, value)))
         return self
 
-    def __delitem__(self, key: Union[Sequence[str], str]) -> None:
+    def __delitem__(self, key: Union[str, Sequence[str]]) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents' to
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents' to
                 delete the key/value pair.
 
         """
@@ -521,7 +520,8 @@ class Quirk(abc.ABC):
     class attribute.
 
     Args:
-        options (ClassVar[Catalog[str, Quirk]]): dict which stores subclasses.
+        options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
+            subclasses.
                 
     """
     options: ClassVar[Catalog[str, Quirk]] = Catalog()
@@ -1022,16 +1022,11 @@ class Hybrid(Element, Slate):
 
 @dataclasses.dataclass
 class Workshop(abc.ABC):
-    """Returns class(es) from options stored in 'options.contents'.
+    """Creates class(es) from 'options' using 'bases'.
 
     Args:
-        product (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.contents'.
+    
         options (ClassVar[Registry]): class which contains a 'contents'.
-        quirks (Sequence[str]): str(s) matching keys in Quirk.library. For any
-            matching quirks, an instance is created and connected to the 
-            Element subclass instance. Quirks can modify the behavior or add
-            functionality to an element class.
             
     Raises:
         TypeError: if 'product' is neither a str nor Sequence of str.
@@ -1056,6 +1051,21 @@ class Workshop(abc.ABC):
         """
         return 
 
+    """ Class Methods """
+    
+    @classmethod
+    def add_option(cls, option: Callable) -> None:
+        """[summary]
+
+        Args:
+            option (Callable): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        cls.options.append(option)
+        return cls
+    
     
                    
 
@@ -1109,117 +1119,6 @@ class Workshop(abc.ABC):
 #         cls.options.add_option(key = key, value = value)
 #         return cls
        
-   
-# @dataclasses.dataclass
-# class ProxyMixin(abc.ABC):
-#     """ which creates a proxy name for a Element subclass attribute.
-
-#     The 'proxify' method dynamically creates a property to access the stored
-#     attribute. This allows class instances to customize names of stored
-#     attributes while still maintaining the interface of the base sourdough
-#     classes.
-
-#     Only one proxy should be created per class. Otherwise, the created proxy
-#     properties will all point to the same attribute.
-
-#     Namespaces: 'proxify', '_proxy_getter', '_proxy_setter', 
-#         '_proxy_deleter', '_proxify_attribute', '_proxify_method', the name of
-#         the proxy property set by the user with the 'proxify' method.
-       
-#     To Do:
-#         Add property to class instead of instance to prevent return of property
-#             object.
-#         Implement '__set_name__' in a secondary class to simplify the code and
-#             namespace usage.
-        
-#     """
-
-#     """ Public Methods """
-
-#     def proxify(self,
-#             proxy: str,
-#             attribute: str,
-#             default_value: Any = None,
-#             proxify_methods: bool = True) -> None:
-#         """Adds a proxy property to refer to class attribute.
-
-#         Args:
-#             proxy (str): name of proxy property to create.
-#             attribute (str): name of attribute to link the proxy property to.
-#             default_value (Any): default value to use when deleting 'attribute' 
-#                 with '__delitem__'. Defaults to None.
-#             proxify_methods (bool): whether to create proxy methods replacing 
-#                 'attribute' in the original method name with the string passed 
-#                 in 'proxy'. So, for example, 'add_chapter' would become 
-#                 'add_recipe' if 'proxy' was 'recipe' and 'attribute' was
-#                 'chapter'. The original method remains as well as the proxy.
-#                 This does not change the rest of the signature of the method so
-#                 parameter names remain the same. Defaults to True.
-
-#         """
-#         self._proxied_attribute = attribute
-#         self._default_proxy_value = default_value
-#         self._proxify_attribute(proxy = proxy)
-#         if proxify_methods:
-#             self._proxify_methods(proxy = proxy)
-#         return self
-
-#     """ Proxy Property Methods """
-
-#     def _proxy_getter(self) -> Any:
-#         """Proxy getter for '_proxied_attribute'.
-
-#         Returns:
-#             Any: value stored at '_proxied_attribute'.
-
-#         """
-#         return getattr(self, self._proxied_attribute)
-
-#     def _proxy_setter(self, value: Any) -> None:
-#         """Proxy setter for '_proxied_attribute'.
-
-#         Args:
-#             value (Any): value to set attribute to.
-
-#         """
-#         setattr(self, self._proxied_attribute, value)
-#         return self
-
-#     def _proxy_deleter(self) -> None:
-#         """Proxy deleter for '_proxied_attribute'."""
-#         setattr(self, self._proxied_attribute, self._default_proxy_value)
-#         return self
-
-#     """ Other Private Methods """
-
-#     def _proxify_attribute(self, proxy: str) -> None:
-#         """Creates proxy property for '_proxied_attribute'.
-
-#         Args:
-#             proxy (str): name of proxy property to create.
-
-#         """
-#         setattr(self, proxy, property(
-#             fget = self._proxy_getter,
-#             fset = self._proxy_setter,
-#             fdel = self._proxy_deleter))
-#         return self
-
-#     def _proxify_methods(self, proxy: str) -> None:
-#         """Creates proxy method with an alternate name.
-
-#         Args:
-#             proxy (str): name of proxy to repalce in method names.
-
-#         """
-#         for item in dir(self):
-#             if (self._proxied_attribute in item
-#                     and not item.startswith('__')
-#                     and callable(item)):
-#                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
-#                     getattr(self, item))
-#         return self
- 
  
 """ 
 Reflector is currently omitted from the sourdough build because I'm unsure
