@@ -146,9 +146,197 @@ class Element(abc.ABC):
 
 Elemental = Union[Element, Mapping[str, Element], Sequence[Element]]
 
+@dataclasses.dataclass
+class Quirk(abc.ABC):
+    """Base class for quirks
+    
+    Quirk automatically stores all non-abstract subclasses in the 'contents' 
+    class attribute.
+
+    Args:
+        element (Element): related instance for which a Quirk subclasses' 
+            methods should be applied.
+        register_from_disk (bool): whether to look in the current working
+            folder and subfolders for Quirk subclasses. Defaults to False.
+        contents (ClassVar[sourdough.base.Catalog]): the instance which stores 
+            subclasses in a sourdough.base.Catalog instance.
+            
+    """
+    element: Element
+    # register_from_disk: bool = False
+    library: ClassVar[sourdough.base.Library] = sourdough.base.Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        try:
+            name = cls.get_name()
+        except AttributeError:
+            name = sourdough.tools.snakify(cls.__name__)
+        Quirk.library[name] = cls
+                       
+    # """ Initialization Methods """
+    
+    # def __post_init__(self) -> None:
+    #     """Initializes class instance attributes."""
+    #     super().__post_init__()
+    #     # Adds subclasses from disk to 'contents' if 'register_from_disk'.
+    #     if self.register_from_disk:
+    #         self.find_subclasses(folder = pathlib.Path.cwd())
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, **kwargs) -> Any:
+        pass
+
+    # """ Public Methods """
+
+    # def find_subclasses(self, 
+    #         folder: Union[str, pathlib.Path], 
+    #         recursive: bool = True) -> None:
+    #     """Adds Element subclasses for python files in 'folder'.
+        
+    #     If 'recursive' is True, subfolders are searched as well.
+        
+    #     Args:
+    #         folder (Union[str, pathlib.Path]): folder to initiate search for 
+    #             Element subclasses.
+    #         recursive (bool]): whether to also search subfolders (True)
+    #             or not (False). Defaults to True.
+                
+    #     """
+    #     if recursive:
+    #         glob_method = 'rglob'
+    #     else:
+    #         glob_method = 'glob'
+    #     for file_path in getattr(pathlib.Path(folder), glob_method)('*.py'):
+    #         if not file_path.name.startswith('__'):
+    #             module = self._import_from_path(file_path = file_path)
+    #             subclasses = self._get_subclasses(module = module)
+    #             for subclass in subclasses:
+    #                 self.add({
+    #                     sourdough.tools.snakify(subclass.__name__): subclass})    
+    #     return self
+       
+    # """ Private Methods """
+    
+    # def _import_from_path(self, file_path: Union[pathlib.Path, str]) -> object:
+    #     """Returns an imported module from a file path.
+        
+    #     Args:
+    #         file_path (Union[pathlib.Path, str]): path of a python module.
+        
+    #     Returns:
+    #         object: an imported python module. 
+        
+    #     """
+    #     # file_path = str(file_path)
+    #     # file_path = pathlib.Path(file_path)
+    #     print('test file path', file_path)
+    #     module_spec = importlib.util.spec_from_file_location(file_path)
+    #     print('test module_spec', module_spec)
+    #     module = importlib.util.module_from_spec(module_spec)
+    #     return module_spec.loader.exec_module(module)
+    
+    # def _get_subclasses(self, 
+    #         module: object) -> Sequence[sourdough.base.Element]:
+    #     """Returns a list of subclasses in 'module'.
+        
+    #     Args:
+    #         module (object): an import python module.
+        
+    #     Returns:
+    #         Sequence[Element]: list of subclasses of Element. If none are 
+    #             found, an empty list is returned.
+                
+    #     """
+    #     matches = []
+    #     for item in pyclbr.readmodule(module):
+    #         # Adds direct subclasses.
+    #         if inspect.issubclass(item, sourdough.base.Element):
+    #             matches.append[item]
+    #         else:
+    #             # Adds subclasses of other subclasses.
+    #             for subclass in self.contents.values():
+    #                 if subclass(item, subclass):
+    #                     matches.append[item]
+    #     return matches
+  
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping):
+class Process(collections.abc.Iterable, abc.ABC):
+    """Base class for sourdough iterables.
+  
+    A Process differs from a general python iterable in 4 ways:
+        1) It must include an 'add' method which allows different datatypes to
+            be passed and added to a Process subclass instance.
+        2) It must includes a 'subsetify' method which will return a Process 
+            subclass instance with only items matching those in the passed list
+            of strings.
+        3) It allows the '+' operator to be used to join a Process subclass 
+            instance of the same general type (Mapping, Sequence, Tuple, etc.). 
+            The '+' operator calls the Process subclass 'add' method to 
+            implement how the added item(s) is/are added to the Process subclass
+            instance.
+        4) The internally stored iterable must be stored in the 'contents'
+            attribute. This allows for consistent coordination among classes
+            and the addition of Quirk subclass instances to a Process.
+    
+    Args:
+        contents (Iterable[Any]): stored iterable. Defaults to an empty list.
+              
+    """
+    contents: Iterable[Any] = dataclasses.field(default_factory = list)
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def add(self, contents: Any) -> None:
+        """
+        """
+        pass
+    
+    @abc.abstractmethod
+    def subsetify(self, subset: Sequence[str]) -> Iterable:
+        """
+        """
+        pass
+    
+    """ Dunder Methods """
+     
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents' using the 'add' method.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+
+@dataclasses.dataclass
+class Lexicon(collections.abc.MutableMapping, Process):
     """Basic sourdough dict replacement.
 
     Lexicon subclasses can serve as drop in replacements for dicts with added
@@ -258,38 +446,10 @@ class Lexicon(collections.abc.MutableMapping):
         """
         del self.contents[key]
         return self
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: of 'contents'.
-
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            int: length of 'contents'.
-
-        """
-        return len(self.contents)
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents' using the 'add' method.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(other)
-        return self
 
   
 @dataclasses.dataclass
-class Slate(collections.abc.MutableSequence):
+class Slate(collections.abc.MutableSequence, Process):
     """Basic sourdough list replacement.
     
     A Slate differs from a python list in 3 significant ways:
@@ -363,34 +523,6 @@ class Slate(collections.abc.MutableSequence):
 
         """
         del self.contents[key]
-
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: generic ordered iterable of 'contents'.
-               
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            int: length of 'contents'.
-
-        """
-        return len(self.contents)
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents'.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(other)
-        return self
 
    
 @dataclasses.dataclass
