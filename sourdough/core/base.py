@@ -10,20 +10,23 @@ Contents:
     Elemental: annotation type for all classes that contain Elements. This
         includes any Element subclass, Sequences of Elements, and Mappings with
         Element values.
+    Quirk (ABC): classes that link to an Element adding functionality or 
+        altering behavior. Each Quirk subclass must have an 'apply' method.
     Repository (Iterable, ABC): base class for all sourdough iterables. All
         subclasses must have 'add' and 'subsetify' methods as well as store 
         their contents in the 'contents' attribute.
-    Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
-        with additional functionality.
     Lexicon (MutableMapping, Repository): sourdough's drop-in replacement for 
         python dicts with some added functionality.
-    Hybrid (Element, Slate): iterable containing Element subclass instances 
-        with both dict and list interfaces and methods.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
     Registry (ABC): abstract base class that automatically registers any 
-        subclasses and stores them in the 'contents' class attribute. 
+        subclasses and stores them in the 'registry' class attribute. 
+    Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
+        with additional functionality.
+    Hybrid (Element, Slate): iterable containing Element subclass instances 
+        with both dict and list interfaces and methods.
+
     # Factory (ABC): object factory which returns instances of one or more 
     #     selected options. If multiple options are selected for creation, they 
     #     are returned in a list. Factory must be linked to an Registry subclass
@@ -70,7 +73,6 @@ class Element(abc.ABC):
     
     """
     name: str = None
-    _quirks: Sequence[Quirk] = dataclasses.field(default_factory = list)
 
     """ Initialization Methods """
 
@@ -78,9 +80,6 @@ class Element(abc.ABC):
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
         self.name = self.name or self.get_name()
-        # Iterates through associated Quirk instances.
-        for quirk in self._quirks:
-            quirk.apply(self)
 
     """ Class Methods """
 
@@ -148,129 +147,7 @@ class Element(abc.ABC):
 
 Elemental = Union[Element, Mapping[str, Element], Sequence[Element]]
 
-@dataclasses.dataclass
-class Quirk(abc.ABC):
-    """Base class for quirks.
     
-    Quirk automatically stores all non-abstract subclasses in the 'contents' 
-    class attribute.
-
-    Args:
-        element (Element): related instance for which a Quirk subclasses' 
-            methods should be applied.
-        register_from_disk (bool): whether to look in the current working
-            folder and subfolders for Quirk subclasses. Defaults to False.
-        contents (ClassVar[sourdough.base.Catalog]): the instance which stores 
-            subclasses in a sourdough.base.Catalog instance.
-        
-    To Do:
-        Fix 'find_subclasses' and related classes. Currently, 
-            importlib.util.module_from_spec returns None.
-                        
-    """
-    element: Element
-    # register_from_disk: bool = False
-    library: ClassVar[sourdough.base.Library] = sourdough.base.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        try:
-            name = cls.get_name()
-        except AttributeError:
-            name = sourdough.tools.snakify(cls.__name__)
-        Quirk.library[name] = cls
-                       
-    # """ Initialization Methods """
-    
-    # def __post_init__(self) -> None:
-    #     """Initializes class instance attributes."""
-    #     super().__post_init__()
-    #     # Adds subclasses from disk to 'contents' if 'register_from_disk'.
-    #     if self.register_from_disk:
-    #         self.find_subclasses(folder = pathlib.Path.cwd())
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, **kwargs) -> Any:
-        pass
-
-    # """ Public Methods """
-
-    # def find_subclasses(self, 
-    #         folder: Union[str, pathlib.Path], 
-    #         recursive: bool = True) -> None:
-    #     """Adds Element subclasses for python files in 'folder'.
-        
-    #     If 'recursive' is True, subfolders are searched as well.
-        
-    #     Args:
-    #         folder (Union[str, pathlib.Path]): folder to initiate search for 
-    #             Element subclasses.
-    #         recursive (bool]): whether to also search subfolders (True)
-    #             or not (False). Defaults to True.
-                
-    #     """
-    #     if recursive:
-    #         glob_method = 'rglob'
-    #     else:
-    #         glob_method = 'glob'
-    #     for file_path in getattr(pathlib.Path(folder), glob_method)('*.py'):
-    #         if not file_path.name.startswith('__'):
-    #             module = self._import_from_path(file_path = file_path)
-    #             subclasses = self._get_subclasses(module = module)
-    #             for subclass in subclasses:
-    #                 self.add({
-    #                     sourdough.tools.snakify(subclass.__name__): subclass})    
-    #     return self
-       
-    # """ Private Methods """
-    
-    # def _import_from_path(self, file_path: Union[pathlib.Path, str]) -> object:
-    #     """Returns an imported module from a file path.
-        
-    #     Args:
-    #         file_path (Union[pathlib.Path, str]): path of a python module.
-        
-    #     Returns:
-    #         object: an imported python module. 
-        
-    #     """
-    #     # file_path = str(file_path)
-    #     # file_path = pathlib.Path(file_path)
-    #     print('test file path', file_path)
-    #     module_spec = importlib.util.spec_from_file_location(file_path)
-    #     print('test module_spec', module_spec)
-    #     module = importlib.util.module_from_spec(module_spec)
-    #     return module_spec.loader.exec_module(module)
-    
-    # def _get_subclasses(self, 
-    #         module: object) -> Sequence[sourdough.base.Element]:
-    #     """Returns a list of subclasses in 'module'.
-        
-    #     Args:
-    #         module (object): an import python module.
-        
-    #     Returns:
-    #         Sequence[Element]: list of subclasses of Element. If none are 
-    #             found, an empty list is returned.
-                
-    #     """
-    #     matches = []
-    #     for item in pyclbr.readmodule(module):
-    #         # Adds direct subclasses.
-    #         if inspect.issubclass(item, sourdough.base.Element):
-    #             matches.append[item]
-    #         else:
-    #             # Adds subclasses of other subclasses.
-    #             for subclass in self.contents.values():
-    #                 if subclass(item, subclass):
-    #                     matches.append[item]
-    #     return matches
-  
-
 @dataclasses.dataclass
 class Repository(collections.abc.Iterable, abc.ABC):
     """Base class for sourdough iterables.
@@ -436,6 +313,229 @@ class Lexicon(collections.abc.MutableMapping, Repository):
         """
         del self.contents[key]
         return self
+
+
+@dataclasses.dataclass
+class Catalog(Lexicon):
+    """Base class for a wildcard and list-accepting dictionary.
+
+    A Catalog inherits the differences between a Lexicon and an ordinary python
+    dict.
+
+    A Catalog differs from a Lexicon in 6 significant ways:
+        1) It recognizes an 'all' key which will return a list of all values
+            stored in a Catalog instance.
+        2) It recognizes a 'default' key which will return all values matching
+            keys listed in the 'defaults' attribute. 'default' can also be set
+            using the 'catalog['default'] = new_default' assignment. If 
+            'defaults' is not passed when the instance is initialized, the 
+            initial value of 'defaults' is 'all'.
+        3) It recognizes a 'none' key which will return an empty list.
+        4) It supports a list of keys being accessed with the matching values 
+            returned. For example, 'catalog[['first_key', 'second_key']]' will 
+            return the values for those keys in a list ['first_value',
+            'second_value'].
+        5) If a single key is sought, a Catalog can either return the stored
+            value or a stored value in a list (if 'always_return_list' is
+            True). The latter option is available to make iteration easier
+            when the iterator assumes a single datatype will be returned.
+        6) It includes a 'instance' and 'select' methods which return instances 
+            or stored classes, respectively.
+
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
+            used to return items when 'default' is sought. If not passed, 
+            'default' will be set to all keys.
+        always_return_list (bool]): whether to return a list even when
+            the key passed is not a list or special access key (True) or to 
+            return a list only when a list or special acces key is used (False). 
+            Defaults to False.
+                     
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
+    defaults: Sequence[str] = dataclasses.field(default_factory = list)
+    always_return_list: bool = False
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s), if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass  
+        # Sets 'default' to all keys of 'contents', if not passed.
+        self.defaults = self.defaults or 'all'
+
+    """ Public Methods """
+
+    def instance(self, 
+            key: Union[str, Sequence[str]], **kwargs) -> Union[
+                object, 
+                Sequence[object]]:
+        """Returns an instance of a stored subclass or instance.
+        
+        This method acts as a factory for instancing stored classes or returning
+        instances.
+        
+        Args:
+            key (str): key to desired item in 'contents'.
+            kwargs: arguments to pass to the selected item when it is instanced.
+                    
+        Returns:
+
+            
+        """
+        try:
+            return self.contents[key](**kwargs)
+        except TypeError:
+            instances = []
+            for item in key:
+                instances.append(item(**kwargs))
+            return instances
+ 
+    def select(self,
+            key: Union[str, Sequence[str]]) -> Union[
+                Callable, 
+                Sequence[Callable]]:
+        """Returns value(s) stored in 'contents'.
+
+        Args:
+            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
+                return.
+
+        Returns:
+            
+        """
+        return self[key] 
+            
+    def subsetify(self, 
+            subset: Union[str, Sequence[str]], 
+            **kwargs) -> Catalog:
+        """Returns a subset of 'contents'.
+
+        Args:
+            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
+                from 'contents'.
+            kwargs: allows subclasses to send additional parameters to this 
+                method.
+                
+        Returns:
+            Catalog: with only keys in 'subset'.
+
+        """
+        if isinstance(self.defaults, str):
+            new_defaults = self.defaults
+        else:
+            new_defaults = [i for i in self.defaults if i in subset] 
+        return super().subsetify(
+            subset = subset,
+            defaults = new_defaults,
+            always_return_list = self.always_return_list,
+            **kwargs)
+
+    """ Dunder Methods """
+
+    def __getitem__(self, 
+            key: Union[Sequence[str], str]) -> Union[Sequence[Any], Any]:
+        """Returns value(s) for 'key' in 'contents'.
+
+        The method searches for 'all', 'default', and 'none' matching wildcard
+        options before searching for direct matches in 'contents'.
+
+        Args:
+            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents'.
+
+        Returns:
+            Union[Sequence[Any], Any]: value(s) stored in 'contents'.
+
+        """
+        # Returns a list of all values if the 'all' key is sought.
+        if key in ['all', ['all']]:
+            return list(self.contents.values())
+        # Returns a list of values for keys listed in 'defaults' attribute.
+        elif key in ['default', ['default'], 'defaults', ['defaults']]:
+            try:
+                return self[self.defaults]
+            except KeyError:
+                return list(
+                    {k: self.contents[k] for k in self.defaults}.values())
+        # Returns an empty list if a null value is sought.
+        elif key in ['none', ['none'], 'None', ['None']]:
+            return []
+        # Returns list of matching values if 'key' is list-like.        
+        elif isinstance(key, Sequence) and not isinstance(key, str):
+            return [self.contents[k] for k in key if k in self.contents]
+        # Returns matching value if key is a str.
+        else:
+            try:
+                if self.always_return_list:
+                    return [self.contents[key]]
+                else:
+                    return self.contents[key]
+            except KeyError:
+                raise KeyError(f'{key} is not in {self.__class__.__name__}')
+
+    def __setitem__(self,
+            key: Union[Sequence[str], str],
+            value: Union[Sequence[Any], Any]) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (Union[Sequence[str], str]): name of key(s) to set in 'contents'.
+            value (Union[Sequence[Any], Any]): value(s) to be paired with 'key' 
+                in 'contents'.
+
+        """
+        if key in ['default', ['default'], 'defaults', ['defaults']]:
+            self.defaults = sourdough.tools.listify(value)
+        else:
+            try:
+                self.contents[key] = value
+            except TypeError:
+                self.contents.update(dict(zip(key, value)))
+        return self
+
+    def __delitem__(self, key: Union[Sequence[str], str]) -> None:
+        """Deletes 'key' in 'contents'.
+
+        Args:
+            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents' to
+                delete the key/value pair.
+
+        """
+        self.contents = {
+            i: self.contents[i]
+            for i in self.contents if i not in sourdough.tools.listify(key)}
+        return self
+
+
+@dataclasses.dataclass
+class Quirk(abc.ABC):
+    """Base class for sourdough mixins.
+    
+    Quirk automatically stores all non-abstract subclasses in the 'options' 
+    class attribute.
+
+    Args:
+        options (ClassVar[Catalog[str, Quirk]]): dict which stores subclasses.
+                
+    """
+    options: ClassVar[Catalog[str, Quirk]] = Catalog()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            try:
+                name = cls.get_name()
+            except AttributeError:
+                name = sourdough.tools.snakify(cls.__name__)
+            Quirk.options[name] = cls
 
   
 @dataclasses.dataclass
@@ -921,227 +1021,43 @@ class Hybrid(Element, Slate):
 
 
 @dataclasses.dataclass
-class Catalog(Lexicon):
-    """Base class for a wildcard and list-accepting dictionary.
-
-    A Catalog inherits the differences between a Lexicon and an ordinary python
-    dict.
-
-    A Catalog differs from a Lexicon in 6 significant ways:
-        1) It recognizes an 'all' key which will return a list of all values
-            stored in a Catalog instance.
-        2) It recognizes a 'default' key which will return all values matching
-            keys listed in the 'defaults' attribute. 'default' can also be set
-            using the 'catalog['default'] = new_default' assignment. If 
-            'defaults' is not passed when the instance is initialized, the 
-            initial value of 'defaults' is 'all'.
-        3) It recognizes a 'none' key which will return an empty list.
-        4) It supports a list of keys being accessed with the matching values 
-            returned. For example, 'catalog[['first_key', 'second_key']]' will 
-            return the values for those keys in a list ['first_value',
-            'second_value'].
-        5) If a single key is sought, a Catalog can either return the stored
-            value or a stored value in a list (if 'always_return_list' is
-            True). The latter option is available to make iteration easier
-            when the iterator assumes a single datatype will be returned.
-        6) It includes a 'create' method which will either instance a stored
-            class or return a stored instance.
+class Workshop(abc.ABC):
+    """Returns class(es) from options stored in 'options.contents'.
 
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
-            used to return items when 'default' is sought. If not passed, 
-            'default' will be set to all keys.
-        always_return_list (bool]): whether to return a list even when
-            the key passed is not a list or special access key (True) or to 
-            return a list only when a list or special acces key is used (False). 
-            Defaults to False.
-                     
+        product (Union[str, Sequence[str]]: name(s) of objects to return. 
+            'product' must correspond to key(s) in 'options.contents'.
+        options (ClassVar[Registry]): class which contains a 'contents'.
+        quirks (Sequence[str]): str(s) matching keys in Quirk.library. For any
+            matching quirks, an instance is created and connected to the 
+            Element subclass instance. Quirks can modify the behavior or add
+            functionality to an element class.
+            
+    Raises:
+        TypeError: if 'product' is neither a str nor Sequence of str.
+
+    Returns:
+        Any: the factory uses the '__new__' method to return a different object 
+            product instance with kwargs as the parameters.
+
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)  
-    defaults: Sequence[str] = dataclasses.field(default_factory = list)
-    always_return_list: bool = False
-    
+    bases: Union[str, Sequence[str]]
+    options: ClassVar[Sequence[Callable]] = [Quirk]
+
     """ Initialization Methods """
     
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s), if they exist.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass  
-        # Sets 'default' to all keys of 'contents', if not passed.
-        self.defaults = self.defaults or 'all'
+    def __new__(cls, bases: Union[str, Sequence[str]], **kwargs) -> Any:
+        """
 
-    """ Public Methods """
+        Args:
 
-    def instance(self, 
-            key: Union[str, Sequence[str]], **kwargs) -> Union[
-                object, 
-                Sequence[object]]:
-        """Returns an instance of a stored subclass or instance.
+        Returns:
         
-        This method acts as a factory for instancing stored classes or returning
-        instances.
-        
-        Args:
-            key (str): key to desired item in 'contents'.
-            kwargs: arguments to pass to the selected item when it is instanced.
-                    
-        Returns:
-
-            
         """
-        try:
-            return self.contents[key](**kwargs)
-        except TypeError:
-            instances = []
-            for item in key:
-                instances.append(item(**kwargs))
-            return instances
- 
-    def select(self,
-            key: Union[str, Sequence[str]]) -> Union[
-                Callable, 
-                Sequence[Callable]]:
-        """Returns value(s) stored in 'contents'.
-
-        Args:
-            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
-                return.
-
-        Returns:
-            
-        """
-        return self[key] 
-            
-    def subsetify(self, 
-            subset: Union[str, Sequence[str]], 
-            **kwargs) -> Catalog:
-        """Returns a subset of 'contents'.
-
-        Args:
-            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
-                from 'contents'.
-            kwargs: allows subclasses to send additional parameters to this 
-                method.
-                
-        Returns:
-            Catalog: with only keys in 'subset'.
-
-        """
-        if isinstance(self.defaults, str):
-            new_defaults = self.defaults
-        else:
-            new_defaults = [i for i in self.defaults if i in subset] 
-        return super().subsetify(
-            subset = subset,
-            defaults = new_defaults,
-            always_return_list = self.always_return_list,
-            **kwargs)
-
-    """ Dunder Methods """
-
-    def __getitem__(self, 
-            key: Union[Sequence[str], str]) -> Union[Sequence[Any], Any]:
-        """Returns value(s) for 'key' in 'contents'.
-
-        The method searches for 'all', 'default', and 'none' matching wildcard
-        options before searching for direct matches in 'contents'.
-
-        Args:
-            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents'.
-
-        Returns:
-            Union[Sequence[Any], Any]: value(s) stored in 'contents'.
-
-        """
-        # Returns a list of all values if the 'all' key is sought.
-        if key in ['all', ['all']]:
-            return list(self.contents.values())
-        # Returns a list of values for keys listed in 'defaults' attribute.
-        elif key in ['default', ['default'], 'defaults', ['defaults']]:
-            try:
-                return self[self.defaults]
-            except KeyError:
-                return list(
-                    {k: self.contents[k] for k in self.defaults}.values())
-        # Returns an empty list if a null value is sought.
-        elif key in ['none', ['none'], 'None', ['None']]:
-            return []
-        # Returns list of matching values if 'key' is list-like.        
-        elif isinstance(key, Sequence) and not isinstance(key, str):
-            return [self.contents[k] for k in key if k in self.contents]
-        # Returns matching value if key is a str.
-        else:
-            try:
-                if self.always_return_list:
-                    return [self.contents[key]]
-                else:
-                    return self.contents[key]
-            except KeyError:
-                raise KeyError(f'{key} is not in {self.__class__.__name__}')
-
-    def __setitem__(self,
-            key: Union[Sequence[str], str],
-            value: Union[Sequence[Any], Any]) -> None:
-        """Sets 'key' in 'contents' to 'value'.
-
-        Args:
-            key (Union[Sequence[str], str]): name of key(s) to set in 'contents'.
-            value (Union[Sequence[Any], Any]): value(s) to be paired with 'key' 
-                in 'contents'.
-
-        """
-        if key in ['default', ['default'], 'defaults', ['defaults']]:
-            self.defaults = sourdough.tools.listify(value)
-        else:
-            try:
-                self.contents[key] = value
-            except TypeError:
-                self.contents.update(dict(zip(key, value)))
-        return self
-
-    def __delitem__(self, key: Union[Sequence[str], str]) -> None:
-        """Deletes 'key' in 'contents'.
-
-        Args:
-            key (Union[Sequence[str], str]): name(s) of key(s) in 'contents' to
-                delete the key/value pair.
-
-        """
-        self.contents = {
-            i: self.contents[i]
-            for i in self.contents if i not in sourdough.tools.listify(key)}
-        return self
-
-
-@dataclasses.dataclass
-class Registry(abc.ABC):
-    """Base class which stores subclasses in a 'library' class attribute.
-
-    Args:
-        registry (ClassVar[Catalog]): the instance which stores subclasses.
+        return 
 
     
-    """
-    registry: Mapping[str, Any] = dataclasses.field(default_factory = Library)
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            try:
-                name = cls.get_name()
-            except AttributeError:
-                name = sourdough.tools.snakify(cls.__name__)
-            for item in cls.__mro__:    
-                if Registry in item.__bases__:
-                    item.library[name] = cls
-                    
+                   
 
 # @dataclasses.dataclass
 # class Factory(abc.ABC):

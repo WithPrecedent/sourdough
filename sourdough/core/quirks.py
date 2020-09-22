@@ -25,6 +25,29 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Registry(sourdough.base.Quirk, abc.ABC):
+    """Base class which stores subclasses in a 'library' class attribute.
+
+    Args:
+        library (ClassVar[Catalog]): the instance which stores subclasses.
+
+    """
+    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            try:
+                name = cls.get_name()
+            except AttributeError:
+                name = sourdough.tools.snakify(cls.__name__)
+            for item in cls.__mro__:    
+                if Registry in item.__bases__:
+                    item.library[name] = cls
+
+@dataclasses.dataclass
 class Validator(sourdough.base.Registry, sourdough.base.Quirk, abc.ABC):
     """Base class for type validation and/or conversion.
     
