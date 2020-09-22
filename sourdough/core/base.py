@@ -1,5 +1,5 @@
 """
-base: sourdough base class for composite objects
+base: sourdough base classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -8,28 +8,26 @@ Contents:
     Element (ABC): abstract base class for sourdough objects that are part of 
         composite structures.
     Elemental: annotation type for all classes that contain Elements. This
-        includes any Element subclass, any Sequence of Elements or a Mapping
-        with Element values.
-    Slate (MutableSequence): sourdough drop-in replacement for list with 
-        additional functionality.
-    Lexicon (MutableMapping): sourdough's drop-in replacement for python dicts 
-        with some added functionality.
+        includes any Element subclass, Sequences of Elements, and Mappings with
+        Element values.
+    Repository (Iterable, ABC): base class for all sourdough iterables. All
+        subclasses must have 'add' and 'subsetify' methods as well as store 
+        their contents in the 'contents' attribute.
+    Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
+        with additional functionality.
+    Lexicon (MutableMapping, Repository): sourdough's drop-in replacement for 
+        python dicts with some added functionality.
     Hybrid (Element, Slate): iterable containing Element subclass instances 
         with both dict and list interfaces and methods.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
-        storing different options and strategies.
-    Library (Catalog, ABC): abstract base class for subclasses which store strategies 
-        or other options in a 'contents' attribute. It provides subclasses with
-        a 'build' method for creating instances from stored options and a
-        'select' method which returns stored items as they are stored. A 
-        Library subclass can be linked to a Factory to automatically return
-        a stored object when a Factory subclass is instanced.
-    Registry (Library, ABC): abstract base class that automatically registers any 
+        storing different options and strategies. It also returns lists of 
+        matches if a list of keys is provided.
+    Registry (ABC): abstract base class that automatically registers any 
         subclasses and stores them in the 'contents' class attribute. 
-    Factory (ABC): object factory which returns instances of one or more 
-        selected options. If multiple options are selected for creation, they 
-        are returned in a list. Factory must be linked to an Registry subclass
-        via its 'contents' attribute.
+    # Factory (ABC): object factory which returns instances of one or more 
+    #     selected options. If multiple options are selected for creation, they 
+    #     are returned in a list. Factory must be linked to an Registry subclass
+    #     via its 'contents' attribute.
     # ProxyMixin (ABC): mixin which creates a python property which refers to 
     #     another attribute by using the 'proxify' method.
  
@@ -72,6 +70,7 @@ class Element(abc.ABC):
     
     """
     name: str = None
+    _quirks: Sequence[Quirk] = dataclasses.field(default_factory = list)
 
     """ Initialization Methods """
 
@@ -79,6 +78,9 @@ class Element(abc.ABC):
         """Initializes class instance attributes."""
         # Sets 'name' to the default value if it is not passed.
         self.name = self.name or self.get_name()
+        # Iterates through associated Quirk instances.
+        for quirk in self._quirks:
+            quirk.apply(self)
 
     """ Class Methods """
 
@@ -148,7 +150,7 @@ Elemental = Union[Element, Mapping[str, Element], Sequence[Element]]
 
 @dataclasses.dataclass
 class Quirk(abc.ABC):
-    """Base class for quirks
+    """Base class for quirks.
     
     Quirk automatically stores all non-abstract subclasses in the 'contents' 
     class attribute.
@@ -160,7 +162,11 @@ class Quirk(abc.ABC):
             folder and subfolders for Quirk subclasses. Defaults to False.
         contents (ClassVar[sourdough.base.Catalog]): the instance which stores 
             subclasses in a sourdough.base.Catalog instance.
-            
+        
+    To Do:
+        Fix 'find_subclasses' and related classes. Currently, 
+            importlib.util.module_from_spec returns None.
+                        
     """
     element: Element
     # register_from_disk: bool = False
@@ -266,23 +272,23 @@ class Quirk(abc.ABC):
   
 
 @dataclasses.dataclass
-class Process(collections.abc.Iterable, abc.ABC):
+class Repository(collections.abc.Iterable, abc.ABC):
     """Base class for sourdough iterables.
   
-    A Process differs from a general python iterable in 4 ways:
+    A Repository differs from a general python iterable in 4 ways:
         1) It must include an 'add' method which allows different datatypes to
-            be passed and added to a Process subclass instance.
-        2) It must includes a 'subsetify' method which will return a Process 
+            be passed and added to a Repository subclass instance.
+        2) It must includes a 'subsetify' method which will return a Repository 
             subclass instance with only items matching those in the passed list
             of strings.
-        3) It allows the '+' operator to be used to join a Process subclass 
+        3) It allows the '+' operator to be used to join a Repository subclass 
             instance of the same general type (Mapping, Sequence, Tuple, etc.). 
-            The '+' operator calls the Process subclass 'add' method to 
-            implement how the added item(s) is/are added to the Process subclass
+            The '+' operator calls the Repository subclass 'add' method to 
+            implement how the added item(s) is/are added to the Repository subclass
             instance.
         4) The internally stored iterable must be stored in the 'contents'
             attribute. This allows for consistent coordination among classes
-            and the addition of Quirk subclass instances to a Process.
+            and the addition of Quirk subclass instances to a Repository.
     
     Args:
         contents (Iterable[Any]): stored iterable. Defaults to an empty list.
@@ -336,24 +342,8 @@ class Process(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, Process):
+class Lexicon(collections.abc.MutableMapping, Repository):
     """Basic sourdough dict replacement.
-
-    Lexicon subclasses can serve as drop in replacements for dicts with added
-    features.
-    
-    A Lexicon differs from a python dict in 5 significant ways:
-        1) It includes an 'add' method which allows different datatypes to
-            be passed and added to a Lexicon instance. All of the normal dict 
-            methods are also available. 'add' should be used to set default or 
-            more complex methods of adding elements to the stored dict.
-        2) It includes a 'subsetify' method which will return a Lexicon or
-            Lexicon subclass instance with only the key/value pairs matching
-            keys in the 'subset' argument.
-        3) It allows the '+' operator to be used to join a Lexicon instance
-            with another Lexicon instance or another Mapping. The '+' operator 
-            calls the Lexicon 'add' method to implement how the added item(s) 
-            is/are added to the Lexicon instance.
     
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
@@ -449,14 +439,8 @@ class Lexicon(collections.abc.MutableMapping, Process):
 
   
 @dataclasses.dataclass
-class Slate(collections.abc.MutableSequence, Process):
+class Slate(collections.abc.MutableSequence, Repository):
     """Basic sourdough list replacement.
-    
-    A Slate differs from a python list in 3 significant ways:
-        1) It includes a 'name' attribute which is used for internal referencing
-            in sourdough. This is inherited from Element.
-        2) It includes an 'add' method which allows different datatypes to be 
-            passed and added to the 'contents' of a Slate instance. 
 
     Args:
         contents (Sequence[Any]): items to store in a list. Defaults to an empty 
@@ -542,9 +526,7 @@ class Hybrid(Element, Slate):
     
     A Hybrid differs from a Slate in 4 significant ways:
         1) It only stores Element subclasses or subclass instances.
-        2) It includes a 'subsetify' method which will return a Hybrid or Hybrid 
-            subclass instance with only the items with 'name' attributes 
-            matching items in the 'subset' argument.
+        2) It is itself an Element and, as a result, has a 'name' attribute.
         3) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
             Element instances. A 'name' acts as a key to create the facade of 
@@ -561,11 +543,10 @@ class Hybrid(Element, Slate):
             callable. 
 
     Args:
-        contents (Elemental): Element subclasses or Element subclass 
-            instances to store in a list. If a dict is passed, the keys will 
-            be ignored and only the values will be added to 'contents'. If a
-            single Element is passed, it will be placed in a list. Defaults to 
-            an empty list.
+        contents (Elemental): Element subclasses or Element subclass instances 
+            to store in a list. If a dict is passed, the keys will be ignored 
+            and only the values will be added to 'contents'. If a single Element 
+            is passed, it will be placed in a list. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -579,8 +560,8 @@ class Hybrid(Element, Slate):
             the snake case version of the class name ('__class__.__name__').
         
     Attributes:
-        contents (Sequence[Element]): stored Element subclasses or 
-            subclass instances.
+        contents (Sequence[Element]): stored Element subclasses or subclass 
+            instances.
             
     """
     contents: Elemental = dataclasses.field(default_factory = list)
@@ -996,7 +977,10 @@ class Catalog(Lexicon):
 
     """ Public Methods """
 
-    def create(self, key: str, **kwargs) -> object:
+    def instance(self, 
+            key: Union[str, Sequence[str]], **kwargs) -> Union[
+                object, 
+                Sequence[object]]:
         """Returns an instance of a stored subclass or instance.
         
         This method acts as a factory for instancing stored classes or returning
@@ -1007,16 +991,32 @@ class Catalog(Lexicon):
             kwargs: arguments to pass to the selected item when it is instanced.
                     
         Returns:
-            object: that has been instanced with kwargs as arguments if it 
-                was a stored class. Otherwise, the instance is returned as it 
-                was stored.
+
             
         """
         try:
             return self.contents[key](**kwargs)
         except TypeError:
-            return self.contents[key] 
-        
+            instances = []
+            for item in key:
+                instances.append(item(**kwargs))
+            return instances
+ 
+    def select(self,
+            key: Union[str, Sequence[str]]) -> Union[
+                Callable, 
+                Sequence[Callable]]:
+        """Returns value(s) stored in 'contents'.
+
+        Args:
+            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
+                return.
+
+        Returns:
+            
+        """
+        return self[key] 
+            
     def subsetify(self, 
             subset: Union[str, Sequence[str]], 
             **kwargs) -> Catalog:
@@ -1090,8 +1090,7 @@ class Catalog(Lexicon):
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Union[Sequence[str], str]): name of key(s) to set in 
-                'contents'.
+            key (Union[Sequence[str], str]): name of key(s) to set in 'contents'.
             value (Union[Sequence[Any], Any]): value(s) to be paired with 'key' 
                 in 'contents'.
 
@@ -1120,95 +1119,15 @@ class Catalog(Lexicon):
 
 
 @dataclasses.dataclass
-class Library(Catalog):
-    """ Base class for stored options libraries.
-    
-    Library store strategies  or other options in a 'contents' attribute. It 
-    provides subclasses with a 'build' method for creating instances from stored
-    options and a 'select' method which returns stored items as they are stored. 
-    A Library subclass can be linked to a Factory to automatically return a 
-    stored object when a Factory subclass is instanced.
-    
-    Args:
-        contents (ClassVar[sourdough.base.Catalog]): the instance which stores 
-            options or strategies in the 'contents' class attribute.  
-    
-    Namespaces: 
-        'contents', 'register_from_disk', 'add_option', 'build'
-        
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    
-    """ Class Methods """
-    
-    @classmethod
-    def add_option(cls, key: str, value: Any) -> None:
-        """Adds 'value' to 'contents' at 'key'.
-        
-        Args:
-            key (str): name of key to link to 'value'.
-            value (Any): item to store in 'contents'.
-            
-        """
-        cls.contents[key] = value
-        return cls
-    
-    @classmethod
-    def build(cls, key: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Creates instance(s) of a class(es) stored in 'contents'.
-
-        Args:
-            key (Union[str, Sequence[str]]): name matching a key in 'contents' 
-                for which the value is sought.
-            kwargs: arguments to pass to any selected items from the 'contents'.
-
-        Raises:
-            TypeError: if 'key' is neither a str nor Sequence type.
-            
-        Returns:
-            Any: instance(s) of a stored class(es) with kwargs passed as 
-                arguments.
-            
-        """
-        if isinstance(key, str):
-            return cls.contents.create(key = key, **kwargs)
-        elif isinstance(key, Sequence):
-            instances = []
-            for item in key:
-                instances.append(cls.contents.create(key = item, **kwargs))
-            return instances
-        else:
-            raise TypeError('key must be a str or list type')
- 
-    @classmethod
-    def select(cls, key: Union[str, Sequence[str]]) -> object:
-        """Returns a value stored in 'contents'.
-
-        Args:
-            key (Union[str, Sequence[str]]): key(s) to values in 'contents' to
-                return.
-
-        Returns:
-            Any: value(s) stored in contents.
-            
-        """
-        return cls.contents[key]       
-
-
-@dataclasses.dataclass
-class Registry(Library, abc.ABC):
+class Registry(abc.ABC):
     """Base class which stores subclasses in a 'library' class attribute.
 
     Args:
-        library (ClassVar[sourdough.base.Catalog]): the instance which stores subclasses in a 
-            sourdough.base.Catalog instance.
-        
-    To Do:
-        Fix 'find_subclasses' and related classes. Currently, 
-            importlib.util.module_from_spec returns None.
+        registry (ClassVar[Catalog]): the instance which stores subclasses.
+
     
     """
-    library: Mapping[str, Any] = dataclasses.field(default_factory = Library)
+    registry: Mapping[str, Any] = dataclasses.field(default_factory = Library)
     
     """ Initialization Methods """
     
@@ -1224,55 +1143,55 @@ class Registry(Library, abc.ABC):
                     item.library[name] = cls
                     
 
-@dataclasses.dataclass
-class Factory(abc.ABC):
-    """Returns class(es) from options stored in 'options.contents'.
+# @dataclasses.dataclass
+# class Factory(abc.ABC):
+#     """Returns class(es) from options stored in 'options.contents'.
 
-    Args:
-        product (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.contents'.
-        options (ClassVar[Registry]): class which contains a 'contents'.
+#     Args:
+#         product (Union[str, Sequence[str]]: name(s) of objects to return. 
+#             'product' must correspond to key(s) in 'options.contents'.
+#         options (ClassVar[Registry]): class which contains a 'contents'.
 
-    Raises:
-        TypeError: if 'product' is neither a str nor Sequence of str.
+#     Raises:
+#         TypeError: if 'product' is neither a str nor Sequence of str.
 
-    Returns:
-        Any: the factory uses the '__new__' method to return a different object 
-            product instance with kwargs as the parameters.
+#     Returns:
+#         Any: the factory uses the '__new__' method to return a different object 
+#             product instance with kwargs as the parameters.
 
-    """
-    product: Union[str, Sequence[str]]
-    options: ClassVar[Registry] = Registry
+#     """
+#     product: Union[str, Sequence[str]]
+#     options: ClassVar[Registry] = Registry
 
-    """ Initialization Methods """
+#     """ Initialization Methods """
     
-    def __new__(cls, product: Union[str, Sequence[str]], **kwargs) -> Any:
-        """Returns an instance from 'options.contents'.
+#     def __new__(cls, product: Union[str, Sequence[str]], **kwargs) -> Any:
+#         """Returns an instance from 'options.contents'.
 
-        Args:
-        product (Union[str, Sequence[str]]: name(s) of objects to return. 
-            'product' must correspond to key(s) in 'options.contents'.
-            kwargs: parameters to pass to the object being created.
+#         Args:
+#         product (Union[str, Sequence[str]]: name(s) of objects to return. 
+#             'product' must correspond to key(s) in 'options.contents'.
+#             kwargs: parameters to pass to the object being created.
 
-        Returns:
-            Any: an instance of a Callable stored in 'options.contents'.
+#         Returns:
+#             Any: an instance of a Callable stored in 'options.contents'.
         
-        """
-        return cls.options.build(key = product, **kwargs)
+#         """
+#         return cls.options.build(key = product, **kwargs)
     
-    """ Class Methods """
+#     """ Class Methods """
     
-    @classmethod
-    def add_option(cls, key: str, value: Any) -> None:
-        """Adds 'value' to 'options.contents' at 'key'.
+#     @classmethod
+#     def add_option(cls, key: str, value: Any) -> None:
+#         """Adds 'value' to 'options.contents' at 'key'.
         
-        Args:
-            key (str): name of key to link to 'value'.
-            value (Any): item to store in 'options.contents'.
+#         Args:
+#             key (str): name of key to link to 'value'.
+#             value (Any): item to store in 'options.contents'.
             
-        """
-        cls.options.add_option(key = key, value = value)
-        return cls
+#         """
+#         cls.options.add_option(key = key, value = value)
+#         return cls
        
    
 # @dataclasses.dataclass
