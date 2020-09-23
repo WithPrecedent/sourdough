@@ -1067,8 +1067,7 @@ class Workshop(abc.ABC):
         return cls
     
     
-                   
-
+    
 # @dataclasses.dataclass
 # class Factory(abc.ABC):
 #     """Returns class(es) from options stored in 'options.contents'.

@@ -21,7 +21,7 @@ import sourdough
     
 @dataclasses.dataclass
 class Role(
-        sourdough.base.Registry, 
+        sourdough.quirks.Registry, 
         sourdough.base.Element, 
         abc.ABC):
     """Base class related to constructing and iterating Structure instances.

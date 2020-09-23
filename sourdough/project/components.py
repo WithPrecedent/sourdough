@@ -5,6 +5,10 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Structure (Sequencify, Hybrid, Component): type validated iterable in 
+        sourdough composite objects. Structure instances can only contain
+        Component instances (including other Structure instances). All structure
+        subclasses must have 'iterate', 'activate', and 'finalize' methods.
     Technique (Component, Action): primitive object which performs some action.
     Task (Component, Action): wrapper for Technique which performs some action 
         (optional). Task can be useful when using Role subclasses with parallel
@@ -105,6 +109,70 @@ class Overview(sourdough.base.Lexicon):
             return [item]
         else:
             return []
+
+
+@dataclasses.dataclass
+class Structure(
+        sourdough.quirks.Sequencify,
+        sourdough.base.Hybrid,
+        Component):
+    """Base class for composite objects in sourdough projects.
+    
+    Structure differs from an ordinary Hybrid in 1 significant way:
+        1) It is mixed in with Sequencify which allows for type validation and 
+            conversion, using the 'verify' and 'convert' methods.
+            
+    Args:
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').
+                
+    """
+    contents: Sequence[Union[str, Component]] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        super().__post_init__()        
+        # Initializes 'index' for iteration.
+        self.index = -1
+            
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def iterate(self, **kwargs) -> Iterable:
+        pass
+    
+    @abc.abstractmethod
+    def activate(self, **kwargs) -> Iterable:
+        pass    
+    
+    @abc.abstractmethod
+    def finalize(self, **kwargs) -> Iterable:
+        pass
+  
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        if self.index + 1 < len(self.contents):
+            self.index += 1
+            yield self.iterate()
+        else:
+            raise StopIteration
 
     
 @dataclasses.dataclass

@@ -1,17 +1,24 @@
 """
-framework: base classes for sourdough projects
+framework: core classes for sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Inventory (Catalog): dictionary for storing Component options.
-    Component (Element, Registry): base class for all elements of a 
+    Inventory (Mapify, Catalog): type validated dictionary for storing Component 
+        options and strategies.
+    Component (Registry, Element, ABC): base class for all elements of a 
         sourdough composite object. If you want to create custom elements for
         composites, you must subclass Component or one of its subclasses for
         the auto-registration library to work.
-
-
+    Componental: annotation type for all classes that contain Components. This
+        includes any Component subclass, Sequences of Components, and Mappings 
+        with Components values.
+    Stage (Registry, Element, ABC): step in a Workflow. All Stage subclasses
+        must have 'perform' methods.
+    Workflow (Registry, Sequencify, Hybrid, ABC): type validated iterable only 
+        containing Stage instances. 
+    
 """
 from __future__ import annotations
 import abc
@@ -23,19 +30,16 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Inventory(sourdough.types.Mapify, sourdough.base.Catalog):
+class Inventory(sourdough.quirks.Mapify, sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Inventory differs from a 'Catalog' in one way:
         1) It inherits from Mapify which has the following methods for type
-            validation and conversion: 'verify', 'convert', 
-            '_initial_validation'.
+            validation and conversion: 'verify', 'convert'.
             
     Args:
-        contents (Union[Component, Sequence[Component], Mapping[Any, 
-            Component]]): Component(s) to validate or convert to a dict. If 
-            'contents' is a Sequence or a Component, the key for storing 
-            'contents' is the 'name' attribute of each Component.
+        contents (Mapping[str, Component]]): stored dictionary. Defaults to an 
+            empty dict.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
@@ -45,21 +49,22 @@ class Inventory(sourdough.types.Mapify, sourdough.base.Catalog):
             Defaults to False.
         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
             class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to sourdough.base.Element.
+            Defaults to Component.
         stores (Any): a single type stored by the parent class. Defaults 
             to dict.
                      
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
+    contents: Mapping[str, Component] = dataclasses.field(
+        default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.base.Element)
+        default_factory = lambda: Component)
     stores: Any = dataclasses.field(default_factory = lambda: dict)
     
 
 @dataclasses.dataclass
-class Component(sourdough.base.Registry, sourdough.base.Element, abc.ABC):
+class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
     """Base class for all pieces of sourdough composite objects.
     
     Args:
@@ -75,13 +80,13 @@ class Component(sourdough.base.Registry, sourdough.base.Element, abc.ABC):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[Inventory]): the instance which automatically stores 
-            any subclass of Component.
+        library (ClassVar[Inventory[str, Component]]): an instance which 
+            automatically stores any subclasses. 
               
     """
     contents: Any = None
     name: str = None
-    library: ClassVar[Inventory] = Inventory()
+    library: ClassVar[Inventory[str, Component]] = Inventory()
 
     """ Private Class Methods """
 
@@ -117,26 +122,17 @@ class Component(sourdough.base.Registry, sourdough.base.Element, abc.ABC):
         return {f'_{k}s': v for k, v in cls.library.items()}   
 
 
+Componental = Union[Component, Mapping[str, Component], Sequence[Component]]
+
+
 @dataclasses.dataclass
-class Structure(
-        sourdough.base.Registry, 
-        sourdough.types.Sequencify,
-        sourdough.base.Hybrid,
-        Component, 
+class Stage(
+        sourdough.quirks.Registry, 
+        sourdough.base.Element, 
         abc.ABC):
-    """Base class for composite objects in sourdough projects.
+    """Base class for a stage in a Workflow.
     
-    Structure differs from an ordinary Hybrid in two ways:
-        1) It includes a ValidatorFactory instance which allows for type validation
-            and conversion. The ValidatorFactory instance is placed in the 'validator'
-            attribute and has both a 'verify' and 'convert' method. 'convert'
-            automatically calls 'verify'.
-        2) It maintains a 'library' of subclasses that are automatically added
-            by inheriting from sourdough.base.Registry. 
-            
     Args:
-        contents (Sequence[Union[str, Component]]): a list of str or Components. 
-            Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -148,66 +144,17 @@ class Structure(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').
-        library (ClassVar[Inventory]): An Inventory instance which will 
-            automatically store all subclasses.
-                
-    """
-    contents: Sequence[Union[str, Component]] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    library: ClassVar[Inventory] = Inventory()
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()        
-        # Initializes 'index' for iteration.
-        self.index = -1
+        library (ClassVar[Inventory[str, Stage]]): an instance which 
+            automatically stores any subclasses. 
             
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterable:
-        pass
-    
-    @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterable:
-        pass    
-    
-    @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterable:
-        pass
-  
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        if self.index + 1 < len(self.contents):
-            self.index += 1
-            yield self.iterate()
-        else:
-            raise StopIteration
-
-
-@dataclasses.dataclass
-class Stage(
-        sourdough.base.Registry, 
-        sourdough.base.Element, 
-        abc.ABC):
-    """Base class for a stage in a Workflow.
-    
-    Args:
-    
     """
     name: str = None
-    needs: ClassVar[Sequence[str]] = []
-    library: ClassVar[Inventory] = Inventory()
+    library: ClassVar[Inventory[str, Stage]] = Inventory()
 
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def perform(self, **kwargs) -> object:
+    def perform(self, project: sourdough.interface.Project, **kwargs) -> object:
         """Performs some action related to kwargs.
         
         Subclasses must provide their own methods.
@@ -218,18 +165,34 @@ class Stage(
 
 @dataclasses.dataclass
 class Workflow(
-        sourdough.base.Registry, 
+        sourdough.quirks.Registry, 
+        sourdough.quirks.Sequencify,
         sourdough.base.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     
     Args:
-        
+        contents (Sequence[Union[str, Component]]): a list of str or Stages. 
+            Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. Defaults to None. If 'name' is None and 
+            '__post_init__' of Element is called, 'name' is set based upon
+            the 'get_name' method in Element. If that method is not overridden 
+            by a subclass instance, 'name' will be assigned to the snake case 
+            version of the class name ('__class__.__name__').     
+        library (ClassVar[Inventory[str, Workflow]]): an instance which 
+            automatically stores any subclasses.        
+               
     """
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    library: ClassVar[Inventory] = Inventory()
+    library: ClassVar[Inventory[str, Workflow]] = Inventory()
      
     """ Public Methods """
     

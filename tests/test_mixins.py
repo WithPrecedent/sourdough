@@ -13,7 +13,7 @@ import sourdough
 @dataclasses.dataclass
 class AComponent(
     sourdough.base.Repository,
-    sourdough.base.Registry,
+    sourdough.quirks.Registry,
     sourdough.base.Element):
     pass
 
