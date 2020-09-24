@@ -5,8 +5,6 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Inventory (Mapify, Catalog): type validated dictionary for storing Component 
-        subclasses or subclass instances.
     Component (Registry, Element, ABC): base class for all elements of a 
         sourdough composite object. If you want to create custom elements for
         composites, you must subclass Component or one of its subclasses for
@@ -24,42 +22,6 @@ from typing import (
     Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
 import sourdough
-
-
-@dataclasses.dataclass
-class Inventory(sourdough.validators.Mapify, sourdough.base.Catalog):
-    """Catalog subclass with a more limiting 'validate' method.
-
-    Inventory differs from a 'Catalog' in one way:
-        1) It inherits from Mapify which has the following methods for type
-            validation and conversion: 'verify', 'convert'. The 'accepts' and
-            'stores' attributes determine what types are permitted in an
-            Inventory instance.
-            
-    Args:
-        contents (Mapping[str, Element]]): stored dictionary. Defaults to an 
-            empty dict.
-        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
-            used to return items when 'default' is sought. If not passed, 
-            'default' will be set to all keys.
-        always_return_list (bool]): whether to return a list even when
-            the key passed is not a list or special access key (True) or to 
-            return a list only when a list or special acces key is used (False). 
-            Defaults to False.
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to Element.
-        stores (Any): a single type stored by the parent class. Defaults 
-            to dict.
-                     
-    """
-    contents: Mapping[str, sourdough.base.Element] = dataclasses.field(
-        default_factory = dict)  
-    defaults: Sequence[str] = dataclasses.field(default_factory = list)
-    always_return_list: bool = False
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.base.Element)
-    stores: Any = dataclasses.field(default_factory = lambda: dict)
     
     
 @dataclasses.dataclass
@@ -79,13 +41,14 @@ class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[Inventory[str, Component]]): an instance which 
-            automatically stores any subclasses. 
+        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+            which automatically stores any subclasses. 
               
     """
     contents: Any = None
     name: str = None
-    library: ClassVar[Inventory[str, Component]] = Inventory()
+    library: ClassVar[
+        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
 
     """ Private Class Methods """
 
@@ -140,12 +103,13 @@ class Stage(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').
-        library (ClassVar[Inventory[str, Stage]]): an instance which 
-            automatically stores any subclasses. 
+        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+            which automatically stores any subclasses. 
             
     """
     name: str = None
-    library: ClassVar[Inventory[str, Stage]] = Inventory()
+    library: ClassVar[
+        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
 
     """ Required Subclass Methods """
     
@@ -181,14 +145,15 @@ class Workflow(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').     
-        library (ClassVar[Inventory[str, Workflow]]): an instance which 
-            automatically stores any subclasses.        
+        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+            which automatically stores any subclasses.     
                
     """
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    library: ClassVar[Inventory[str, Workflow]] = Inventory()
+    library: ClassVar[
+        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
      
     """ Public Methods """
     

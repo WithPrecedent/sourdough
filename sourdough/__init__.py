@@ -46,7 +46,7 @@ from .configuration.settings import Settings
 from .configuration.filer import Filer
 
 # Imports for sourdough projects.
-from .project.framework import Inventory
+from .project.framework import Catalog
 from .project.framework import Component
 from .project.framework import Stage
 from .project.framework import Workflow
@@ -101,7 +101,7 @@ __all__ = [
     'Elemental',
     'Settings',
     'Filer',
-    'Inventory',
+    'Catalog',
     'Component',
     'Stage',
     'Workflow',

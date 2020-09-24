@@ -90,7 +90,7 @@ class Outline(sourdough.base.Lexicon):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[sourdough.Inventory]): the instance which 
+        library (ClassVar[sourdough.Catalog]): the instance which 
             automatically stores any subclass of Component.
               
     """
@@ -586,5 +586,5 @@ class Editor(sourdough.Workflow):
     contents: Sequence[sourdough.base.Element] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.Inventory)
+        default_factory = sourdough.Catalog)
     name: str = None

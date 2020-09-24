@@ -343,7 +343,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     workflow: sourdough.Workflow = None
 #     iterations: int = 1
-#     library: ClassVar[sourdough.Inventory] = sourdough.Inventory(
+#     library: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         stored_types = ('Role'))
 
 #     """ Initialization Methods """
@@ -612,7 +612,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
-#     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
+#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
@@ -625,7 +625,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = 'iterator'    
-#     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
+#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {
 #             'edge': sourdough.Edge,
 #             'node': sourdough.Node})
@@ -638,7 +638,7 @@ class Survey(ParallelStructure):
     # edges: Union[Sequence[sourdough.Edge],
     #     Sequence[Sequence[str]], 
     #     Mapping[Any, Sequence[str]]] = dataclasses.field(default_factory = list)
-    # options: ClassVar[sourdough.Inventory] = sourdough.Inventory()  
+    # options: ClassVar[sourdough.Catalog] = sourdough.Catalog()  
 
     # """ Initialization Methods """
     
