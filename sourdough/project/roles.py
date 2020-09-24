@@ -301,7 +301,7 @@ class Survey(Role):
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.Inventory] = sourdough.Inventory(
 #         contents = {
-#             'task': sourdough.Task,
+#             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
 #             'Structure': sourdough.Structure})
   

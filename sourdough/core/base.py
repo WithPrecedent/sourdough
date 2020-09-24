@@ -5,33 +5,30 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Element (ABC): abstract base class for sourdough objects that are part of 
-        composite structures.
-    Elemental: annotation type for all classes that contain Elements. This
-        includes any Element subclass, Sequences of Elements, and Mappings with
-        Element values.
-    Repository (Iterable, ABC): base class for all sourdough iterables. All
-        subclasses must have 'add' and 'subsetify' methods as well as store 
-        their contents in the 'contents' attribute.
+    Element (ABC): abstract base class for sourdough objects that provides a
+        'name' attribute and 'get_name' method. It also provides a pretty
+        str representation that effectively shows composite structures.
+    Repository (Iterable, ABC): abstract base class for sourdough iterables. 
+        All subclasses must have an 'add' method as well as store their contents 
+        in the 'contents' attribute.
     Lexicon (MutableMapping, Repository): sourdough's drop-in replacement for 
         python dicts with some added functionality.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
-    Quirk (ABC): sourdough mixin. All Quirk subclasses are automatically 
-        registered in a Catalog instance stored in the 'options' class 
-        attribute.
     Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
         with additional functionality.
-    Hybrid (Element, Slate): iterable containing Element subclass instances 
-        with both dict and list interfaces and methods.
-    Workshop (ABC):
-
+    Hybrid (Slate): iterable containing Element subclass instances with both 
+        dict and list interfaces and methods.
+    Quirk (ABC): abstract base class for sourdough mixins. All Quirk subclasses 
+        are automatically registered in a Catalog instance stored in the 
+        'options' class attribute.
+            
+    # Workshop (ABC):
     # Factory (ABC): object factory which returns instances of one or more 
     #     selected options. If multiple options are selected for creation, they 
     #     are returned in a list. Factory must be linked to an Registry subclass
     #     via its 'contents' attribute.
-
     # Reflector (MutableMapping):
  
 """
@@ -144,10 +141,7 @@ class Element(abc.ABC):
                 representation.append(f'{attribute}: {str(value)}')
         return new_line.join(representation)    
 
-
-Elemental = Union[Element, Mapping[str, Element], Sequence[Element]]
-
-    
+ 
 @dataclasses.dataclass
 class Repository(collections.abc.Iterable, abc.ABC):
     """Base class for sourdough iterables.
@@ -177,16 +171,9 @@ class Repository(collections.abc.Iterable, abc.ABC):
     
     @abc.abstractmethod
     def add(self, contents: Any) -> None:
-        """
-        """
+        """Subclasses must provide their own methods."""
         pass
-    
-    @abc.abstractmethod
-    def subsetify(self, subset: Sequence[str]) -> Iterable:
-        """
-        """
-        pass
-    
+
     """ Dunder Methods """
      
     def __iter__(self) -> Iterable[Any]:
@@ -511,32 +498,6 @@ class Catalog(Lexicon):
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
 
-
-@dataclasses.dataclass
-class Quirk(abc.ABC):
-    """Base class for sourdough mixins.
-    
-    Quirk automatically stores all non-abstract subclasses in the 'options' 
-    class attribute.
-
-    Args:
-        options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
-            subclasses.
-                
-    """
-    options: ClassVar[Catalog[str, Quirk]] = Catalog()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            try:
-                name = cls.get_name()
-            except AttributeError:
-                name = sourdough.tools.snakify(cls.__name__)
-            Quirk.options[name] = cls
-
   
 @dataclasses.dataclass
 class Slate(collections.abc.MutableSequence, Repository):
@@ -574,7 +535,7 @@ class Slate(collections.abc.MutableSequence, Repository):
             pass
         self.contents.extend(contents)
         return self  
-        
+                    
     """ Dunder Methods """
 
     def __getitem__(self, key: int) -> Any:
@@ -624,10 +585,9 @@ class Hybrid(Element, Slate):
     A Hybrid inherits the differences between a Slate and an ordinary python 
     list.
     
-    A Hybrid differs from a Slate in 4 significant ways:
+    A Hybrid differs from a Slate in 3 significant ways:
         1) It only stores Element subclasses or subclass instances.
-        2) It is itself an Element and, as a result, has a 'name' attribute.
-        3) Hybrid has an interface of both a dict and a list, but stores a list. 
+        2) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
             Element instances. A 'name' acts as a key to create the facade of 
             a dictionary with the items in the stored list serving as values. 
@@ -637,35 +597,24 @@ class Hybrid(Element, Slate):
             used if a high volume of access calls is not anticipated. 
             Ordinarily, the loss of lookup speed should have negligible effect 
             on overall performance.
-        4) It includes 'apply' and 'find' methods which traverse items in
+        3) It includes 'apply' and 'find' methods which traverse items in
             'contents' (recursively, if the 'recursive' argument is True), to
             either 'apply' a callable or 'find' items matching criteria in a
             callable. 
 
     Args:
-        contents (Elemental): Element subclasses or Element subclass instances 
-            to store in a list. If a dict is passed, the keys will be ignored 
-            and only the values will be added to 'contents'. If a single Element 
-            is passed, it will be placed in a list. Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based 
-            upon the '_get_name' method in Element. If that method is 
-            not overridden by a subclass instance, 'name' will be assigned to 
-            the snake case version of the class name ('__class__.__name__').
+        contents (sourdough.Elemental): Element subclasses or Element subclass 
+            instances to store in a list. If a dict is passed, the keys will be 
+            ignored and only the values will be added to 'contents'. If a single 
+            Element is passed, it will be placed in a list. Defaults to an empty 
+            list.
         
     Attributes:
         contents (Sequence[Element]): stored Element subclasses or subclass 
             instances.
             
     """
-    contents: Elemental = dataclasses.field(default_factory = list)
-    name: str = None 
+    contents: sourdough.Elemental = dataclasses.field(default_factory = list)
     
     """ Initialization Methods """
     
@@ -681,7 +630,7 @@ class Hybrid(Element, Slate):
         
     """ Public Methods """
 
-    def append(self, contents: Elemental) -> None:
+    def append(self, contents: sourdough.Elemental) -> None:
         """Appends 'element' to 'contents'.
         
         Args:
@@ -732,11 +681,11 @@ class Hybrid(Element, Slate):
         self.contents = []
         return self
    
-    def extend(self, contents: Elemental) -> None:
+    def extend(self, contents: sourdough.Elemental) -> None:
         """Extends 'element' to 'contents'.
         
         Args:
-            contents (Elemental): Elemental instance(s) to add to the 'contents' 
+            contents (sourdough.Elemental): instance(s) to add to the 'contents' 
                 attribute.
 
         Raises:
@@ -897,15 +846,15 @@ class Hybrid(Element, Slate):
                 name = self.name,
                 contents = [c for c in self.contents if c.get_name() in subset])    
      
-    def update(self, contents: Elemental) -> None:
+    def update(self, contents: sourdough.Elemental) -> None:
         """Mimics the dict 'update' method by appending 'contents'.
         
         Args:
-            contents (Elemental): Elemental instances to add to the 'contents' 
-                attribute. If a Mapping is passed, the values are added to 
-                'contents' and the keys become the 'name' attributes of those 
-                values. To mimic 'update', the passed 'elements' are added to 
-                'contents' by the 'extend' method.
+            contents (sourdough.Elemental): sourdough.Elemental instances to add 
+                to the 'contents' attribute. If a Mapping is passed, the values 
+                are added to 'contents' and the keys become the 'name' 
+                attributes of those values. To mimic 'update', the passed 
+                'elements' are added to 'contents' by the 'extend' method.
  
         Raises:
             TypeError: if any of 'elements' do not have a name attribute or
@@ -1021,50 +970,76 @@ class Hybrid(Element, Slate):
 
 
 @dataclasses.dataclass
-class Workshop(abc.ABC):
-    """Creates class(es) from 'options' using 'bases'.
+class Quirk(abc.ABC):
+    """Base class for sourdough mixins.
+    
+    Quirk automatically stores all non-abstract subclasses in the 'options' 
+    class attribute.
 
     Args:
-    
-        options (ClassVar[Registry]): class which contains a 'contents'.
-            
-    Raises:
-        TypeError: if 'product' is neither a str nor Sequence of str.
-
-    Returns:
-        Any: the factory uses the '__new__' method to return a different object 
-            product instance with kwargs as the parameters.
-
+        options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
+            subclasses.
+                
     """
-    bases: Union[str, Sequence[str]]
-    options: ClassVar[Sequence[Callable]] = [Quirk]
-
+    options: ClassVar[Catalog[str, Quirk]] = Catalog()
+    
     """ Initialization Methods """
     
-    def __new__(cls, bases: Union[str, Sequence[str]], **kwargs) -> Any:
-        """
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            try:
+                name = cls.get_name()
+            except AttributeError:
+                name = sourdough.tools.snakify(cls.__name__)
+            Quirk.options[name] = cls
 
-        Args:
 
-        Returns:
-        
-        """
-        return 
+# @dataclasses.dataclass
+# class Workshop(abc.ABC):
+#     """Creates class(es) from 'options' using 'bases'.
 
-    """ Class Methods """
+#     Args:
     
-    @classmethod
-    def add_option(cls, option: Callable) -> None:
-        """[summary]
+#         options (ClassVar[Registry]): class which contains a 'contents'.
+            
+#     Raises:
+#         TypeError: if 'product' is neither a str nor Sequence of str.
 
-        Args:
-            option (Callable): [description]
+#     Returns:
+#         Any: the factory uses the '__new__' method to return a different object 
+#             product instance with kwargs as the parameters.
 
-        Returns:
-            [type]: [description]
-        """
-        cls.options.append(option)
-        return cls
+#     """
+#     bases: Union[str, Sequence[str]]
+#     options: ClassVar[Sequence[Callable]] = [Quirk]
+
+#     """ Initialization Methods """
+    
+#     def __new__(cls, bases: Union[str, Sequence[str]], **kwargs) -> Any:
+#         """
+
+#         Args:
+
+#         Returns:
+        
+#         """
+#         return 
+
+#     """ Class Methods """
+    
+#     @classmethod
+#     def add_option(cls, option: Callable) -> None:
+#         """[summary]
+
+#         Args:
+#             option (Callable): [description]
+
+#         Returns:
+#             [type]: [description]
+#         """
+#         cls.options.append(option)
+#         return cls
     
     
     

@@ -10,8 +10,8 @@ Contents:
         Component instances (including other Structure instances). All structure
         subclasses must have 'iterate', 'activate', and 'finalize' methods.
     Technique (Component, Action): primitive object which performs some action.
-    Task (Component, Action): wrapper for Technique which performs some action 
-        (optional). Task can be useful when using Role subclasses with parallel
+    Step (Component, Action): wrapper for Technique which performs some action 
+        (optional). Step can be useful when using Role subclasses with parallel
         structures such as Compare and Survey.
 
 """
@@ -573,16 +573,16 @@ class Technique(sourdough.base.Loader, sourdough.Component):
 
              
 @dataclasses.dataclass
-class Task(sourdough.Component):
+class Step(sourdough.Component):
     """Wrapper for a Technique.
 
-    Subclasses of Task can store additional methods and attributes to apply to 
+    Subclasses of Step can store additional methods and attributes to apply to 
     all possible technique instances that could be used. This is often useful 
     when creating 'comparative' Structure instances which test a variety of 
     strategies with similar or identical parameters and/or methods.
 
-    A Task instance will try to return attributes from 'technique' if the
-    attribute is not found in the Task instance. 
+    A Step instance will try to return attributes from 'technique' if the
+    attribute is not found in the Step instance. 
 
     Args:
         technique (Technique): technique object for this Structure in a sourdough
@@ -639,7 +639,7 @@ class Task(sourdough.Component):
         """Subclasses must provide their own methods.
         
         The code below outlines a basic method that a subclass should build on
-        for a properly functioning Task.
+        for a properly functioning Step.
         
         Applies stored 'contents' with 'parameters'.
         

@@ -6,14 +6,11 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Inventory (Mapify, Catalog): type validated dictionary for storing Component 
-        options and strategies.
+        subclasses or subclass instances.
     Component (Registry, Element, ABC): base class for all elements of a 
         sourdough composite object. If you want to create custom elements for
         composites, you must subclass Component or one of its subclasses for
         the auto-registration library to work.
-    Componental: annotation type for all classes that contain Components. This
-        includes any Component subclass, Sequences of Components, and Mappings 
-        with Components values.
     Stage (Registry, Element, ABC): step in a Workflow. All Stage subclasses
         must have 'perform' methods.
     Workflow (Registry, Sequencify, Hybrid, ABC): type validated iterable only 
@@ -120,9 +117,6 @@ class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
             [type]: [description]
         """
         return {f'_{k}s': v for k, v in cls.library.items()}   
-
-
-Componental = Union[Component, Mapping[str, Component], Sequence[Component]]
 
 
 @dataclasses.dataclass

@@ -139,16 +139,16 @@ class Mapify(Validator):
     """ Public Methods """
     
     def convert(self, 
-            contents: sourdough.base.Elemental) -> (
+            contents: sourdough.Elemental) -> (
                 Mapping[str, sourdough.base.Element]):
         """Converts 'contents' to a Mapping type.
         
         Args:
-            contents (sourdough.base.Elemental): an object containing one or 
+            contents (sourdough.Elemental): an object containing one or 
                 more Element subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'contents' is not an sourdough.base.Elemental.
+            TypeError: if 'contents' is not an sourdough.Elemental.
                 
         Returns:
             Mapping[str, Element]: converted 'contents'.
@@ -187,16 +187,16 @@ class Sequencify(Validator):
     """ Public Methods """
        
     def convert(self, 
-            contents: sourdough.base.Elemental) -> (
+            contents: sourdough.Elemental) -> (
                 Sequence[sourdough.base.Element]):
         """Converts 'contents' to a Sequence type.
         
         Args:
-            contents (sourdough.base.Elemental): an object containing one or 
+            contents (sourdough.Elemental): an object containing one or 
                 more Element subclasses or Element subclass instances.
         
         Raises:
-            TypeError: if 'contents' is not an sourdough.base.Elemental.
+            TypeError: if 'contents' is not an sourdough.Elemental.
                 
         Returns:
             Sequence[Element]: converted 'contents'.

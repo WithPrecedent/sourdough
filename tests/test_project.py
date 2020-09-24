@@ -20,7 +20,7 @@ class Parser(sourdough.Structure):
 
 
 @dataclasses.dataclass
-class Search(sourdough.Task):
+class Search(sourdough.Step):
 
     def perform(self):
         return   

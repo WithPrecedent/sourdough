@@ -385,7 +385,7 @@ class Publish(sourdough.Stage):
         """
         if isinstance(component, sourdough.Technique):
             component = self._get_technique(technique = component, **kwargs)
-        elif isinstance(component, sourdough.Task):
+        elif isinstance(component, sourdough.Step):
             component.technique = self._get_technique(
                 technique = component.technique,
                 **kwargs)
@@ -406,7 +406,7 @@ class Publish(sourdough.Stage):
         """
         if isinstance(component, sourdough.Technique):
             return self._set_technique_parameters(technique = component)
-        elif isinstance(component, sourdough.Task):
+        elif isinstance(component, sourdough.Step):
             return self._set_task_parameters(task = component)
         else:
             return component
@@ -420,7 +420,7 @@ class Publish(sourdough.Stage):
             technique = self._get_settings(technique = technique)
         return technique
     
-    def _set_task_parameters(self, task: sourdough.Task) -> sourdough.Task:
+    def _set_task_parameters(self, task: sourdough.Step) -> sourdough.Step:
         """
         
         """
@@ -437,9 +437,9 @@ class Publish(sourdough.Stage):
     def _get_settings(self,
             technique: Union[
                 sourdough.Technique, 
-                sourdough.Task]) -> Union[
+                sourdough.Step]) -> Union[
                     sourdough.Technique, 
-                    sourdough.Task]:
+                    sourdough.Step]:
         """Acquires parameters from 'settings' of 'project'.
 
         Args:
@@ -552,7 +552,7 @@ class Apply(sourdough.Stage):
         if isinstance(component, sourdough.Technique):
             component.algorithm = self.project.component.library[
                 component.algorithm]
-        elif isinstance(component, sourdough.Task):
+        elif isinstance(component, sourdough.Step):
             component.technique.algorithm = self.project.component.library[
                 component.technique.algorithm]
         return component   
