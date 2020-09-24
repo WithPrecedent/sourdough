@@ -22,7 +22,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.Structure, sourdough.Component):
+class Aggregation(sourdough.Structure):
     """Base class for composite objects in sourdough projects.
     
     Distinguishing characteristics of an Aggregation:
@@ -52,7 +52,7 @@ class Aggregation(sourdough.Structure, sourdough.Component):
        
 
 @dataclasses.dataclass
-class SerialStructure(sourdough.Structure, sourdough.Component, abc.ABC):
+class SerialStructure(sourdough.Structure, abc.ABC):
     """Base class for serial composite objects in sourdough projects.
         
     Args:
@@ -77,17 +77,17 @@ class SerialStructure(sourdough.Structure, sourdough.Component, abc.ABC):
              
     """ Required Subclass Methods """
     
-    @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def iterate(self, **kwargs) -> Iterable:
+    #     pass
     
-    @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterable:
-        pass    
+    # @abc.abstractmethod
+    # def activate(self, **kwargs) -> Iterable:
+    #     pass    
     
-    @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def finalize(self, **kwargs) -> Iterable:
+    #     pass
             
     
 @dataclasses.dataclass
@@ -121,7 +121,7 @@ class Pipeline(SerialStructure):
             
 
 @dataclasses.dataclass
-class ParallelStructure(sourdough.Structure, sourdough.Component, abc.ABC):
+class ParallelStructure(sourdough.Structure, abc.ABC):
     """Base class for parallel composite objects in sourdough projects.
         
     Args:
@@ -148,21 +148,21 @@ class ParallelStructure(sourdough.Structure, sourdough.Component, abc.ABC):
             
     """ Required Subclass Methods """
     
-    @abc.abstractmethod
-    def organize(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def organize(self, **kwargs) -> Iterable:
+    #     pass
     
-    @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def iterate(self, **kwargs) -> Iterable:
+    #     pass
     
-    @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterable:
-        pass    
+    # @abc.abstractmethod
+    # def activate(self, **kwargs) -> Iterable:
+    #     pass    
     
-    @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def finalize(self, **kwargs) -> Iterable:
+    #     pass
 
 
 @dataclasses.dataclass
@@ -343,7 +343,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     workflow: sourdough.Workflow = None
 #     iterations: int = 1
-#     library: ClassVar[sourdough.Catalog] = sourdough.Catalog(
+#     library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
 #         stored_types = ('Role'))
 
 #     """ Initialization Methods """
@@ -459,7 +459,7 @@ class Survey(ParallelStructure):
 #             for item in wrapped:
 #                 print('test item in wrapped', item)
 #                 kwargs.update({generic.contains: key})
-#                 component = project.component.build(key = key, **kwargs)
+#                 component = project.component.instance(key = key, **kwargs)
 #                 self.Structure.add(component) 
 #         # Otherwise uses the appropriate generic type.
 #         else:
@@ -477,7 +477,7 @@ class Survey(ParallelStructure):
 #         """
 #         # Checks if special prebuilt class exists.
 #         try:
-#             component = project.component.build(key = key, **kwargs)
+#             component = project.component.instance(key = key, **kwargs)
 #         # Otherwise uses the appropriate generic type.
 #         except KeyError:
 #             kwargs.update({'name': key})
@@ -612,7 +612,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
-#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
+#     options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
@@ -625,7 +625,7 @@ class Survey(ParallelStructure):
 #     name: str = None
 #     Structure: sourdough.Structure = None
 #     iterator: Union[str, Callable] = 'iterator'    
-#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
+#     options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog(
 #         contents = {
 #             'edge': sourdough.Edge,
 #             'node': sourdough.Node})
@@ -638,7 +638,7 @@ class Survey(ParallelStructure):
     # edges: Union[Sequence[sourdough.Edge],
     #     Sequence[Sequence[str]], 
     #     Mapping[Any, Sequence[str]]] = dataclasses.field(default_factory = list)
-    # options: ClassVar[sourdough.Catalog] = sourdough.Catalog()  
+    # options: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()  
 
     # """ Initialization Methods """
     

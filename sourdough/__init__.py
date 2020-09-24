@@ -46,7 +46,6 @@ from .configuration.settings import Settings
 from .configuration.filer import Filer
 
 # Imports for sourdough projects.
-from .project.framework import Catalog
 from .project.framework import Component
 from .project.framework import Stage
 from .project.framework import Workflow
@@ -56,7 +55,6 @@ from .project.components  import Step
 from .project import structures
 from .project import workflows
 from .project.interface import Project
-
 
 
 """

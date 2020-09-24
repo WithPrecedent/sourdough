@@ -1,8 +1,13 @@
 """
-workflow: classes used for project process and object creation and application
+workflows: classes used for project process and object creation and application
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+
+Draft: Settings => Outline
+Publish: Outline => Structure
+Apply: Structure + Data => Structure + Data
 
 Contents:
     Draft (Stage): creates a Hybrid instance from passed arguments and/or a 
@@ -90,7 +95,7 @@ class Outline(sourdough.base.Lexicon):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[sourdough.Catalog]): the instance which 
+        library (ClassVar[sourdough.base.Catalog]): the instance which 
             automatically stores any subclass of Component.
               
     """
@@ -351,10 +356,10 @@ class Publish(sourdough.Stage):
             
         """
         try:
-            instance = project.components.build(key = name)
+            instance = project.components.instance(key = name)
         except KeyError:
             try:
-                instance = project.structures.build(
+                instance = project.structures.instance(
                     key = generic, 
                     name = name)
             except KeyError:
@@ -374,10 +379,6 @@ class Publish(sourdough.Stage):
         for key, value in attributes.items():
             setattr(component, key, value)
         return component   
-    
-    
-    
-    
 
     def _get_techniques(self, 
             component: sourdough.Component,
@@ -399,7 +400,7 @@ class Publish(sourdough.Stage):
         """
         
         """
-        return self.project.component.build(technique, **kwargs)
+        return self.project.component.instance(technique, **kwargs)
        
     def _set_parameters(self, 
             component: sourdough.Component) -> sourdough.Component:
@@ -471,7 +472,7 @@ class Publish(sourdough.Stage):
         for Structure in Structures:
             # Checks if special prebuilt class exists.
             try:
-                component = self.project.components.build(
+                component = self.project.components.instance(
                     key = Structure, 
                     **kwargs)
             # Otherwise uses the appropriate generic type.
@@ -519,7 +520,6 @@ class Publish(sourdough.Stage):
         return components   
 
                 
-
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
     
@@ -586,5 +586,5 @@ class Editor(sourdough.Workflow):
     contents: Sequence[sourdough.base.Element] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.Catalog)
+        default_factory = sourdough.base.Catalog)
     name: str = None

@@ -31,7 +31,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Registry(sourdough.base.Quirk, abc.ABC):
+class Registry(abc.ABC):
     """Mixin which stores subclasses in a 'library' class attribute.
 
     Args:
@@ -54,9 +54,45 @@ class Registry(sourdough.base.Quirk, abc.ABC):
                 if Registry in item.__bases__:
                     item.library[name] = cls
 
+    """ Public Methods """
+
+    @classmethod
+    def instance(cls, 
+            key: Union[str, Sequence[str]], **kwargs) -> Union[
+                object, 
+                Sequence[object]]:
+        """Returns instance(s) of a stored classes
+        
+        This method acts as a factory for instancing stored classes or returning
+        instances.
+        
+        Args:
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+            kwargs: arguments to pass to the selected item(s) when instanced.
+                    
+        Returns:
+            Union[object, Sequence[object]]: instance(s) of stored classes.
+            
+        """
+        return cls.library.instance(key = key, **kwargs)
+ 
+    @classmethod
+    def select(cls,
+            key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
+        """Returns value(s) stored in 'contents'.
+
+        Args:
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+
+        Returns:
+            Union[Any, Sequence[Any]]: stored value(s).
+            
+        """
+        return cls.library.select(key = key)
+
 
 @dataclasses.dataclass
-class Validator(sourdough.quirks.Registry, sourdough.base.Quirk, abc.ABC):
+class Validator(abc.ABC):
     """Base class for type validation and/or conversion Quirks.
     
     Args:
@@ -71,7 +107,7 @@ class Validator(sourdough.quirks.Registry, sourdough.base.Quirk, abc.ABC):
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
         default_factory = list)
     stores: Any = None
-    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
+    # library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
 
     """ Initialization Methods """
     
@@ -82,8 +118,6 @@ class Validator(sourdough.quirks.Registry, sourdough.base.Quirk, abc.ABC):
             super().__post_init__()
         except AttributeError:
             pass
-        # Initializes 'contents' attribute.
-        self.element.contents = self.apply(contents = self.element.contents)
         
     """ Required Subclass Methods """
     
@@ -122,99 +156,7 @@ class Validator(sourdough.quirks.Registry, sourdough.base.Quirk, abc.ABC):
 
 
 @dataclasses.dataclass
-class Mapify(Validator):
-    """Type validator and converter for Mappings.
-    
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to sourdough.base.Element.
-        stores (Any): a single type stored by the parent class. Defaults to 
-            dict.
-            
-    """    
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.base.Element)
-    stores: Any = dataclasses.field(default_factory = lambda: dict)
-    
-    """ Public Methods """
-    
-    def convert(self, 
-            contents: sourdough.Elemental) -> (
-                Mapping[str, sourdough.base.Element]):
-        """Converts 'contents' to a Mapping type.
-        
-        Args:
-            contents (sourdough.Elemental): an object containing one or 
-                more Element subclasses or Element subclass instances.
-        
-        Raises:
-            TypeError: if 'contents' is not an sourdough.Elemental.
-                
-        Returns:
-            Mapping[str, Element]: converted 'contents'.
-            
-        """
-        converted = self.stores()
-        contents = self.verify(contents = contents)
-        if isinstance(contents, Mapping):
-            converted = contents
-        elif (isinstance(contents, Sequence) 
-                or isinstance(contents, sourdough.base.Element)):
-            for item in sourdough.tools.tuplify(contents):
-                try:
-                    converted[item.name] = item
-                except AttributeError:
-                    converted[item.get_name()] = item
-        return converted
-    
-
-@dataclasses.dataclass    
-class Sequencify(Validator):
-    """Type validator and converter for Sequences.
-    
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to sourdough.base.Element.
-        stores (Any): a single type accepted by the parent class. Defaults to 
-            list.
-            
-    """        
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.base.Element)
-    stores: Any = dataclasses.field(default_factory = lambda: list)
-    
-    """ Public Methods """
-       
-    def convert(self, 
-            contents: sourdough.Elemental) -> (
-                Sequence[sourdough.base.Element]):
-        """Converts 'contents' to a Sequence type.
-        
-        Args:
-            contents (sourdough.Elemental): an object containing one or 
-                more Element subclasses or Element subclass instances.
-        
-        Raises:
-            TypeError: if 'contents' is not an sourdough.Elemental.
-                
-        Returns:
-            Sequence[Element]: converted 'contents'.
-            
-        """
-        converted = self.stores()
-        if isinstance(contents, Mapping):
-            converted = converted.extend(contents.values())
-        elif isinstance(contents, Sequence):
-            converted = contents
-        elif isinstance(contents, sourdough.base.Element):
-            converted = converted.append(contents)
-        return converted  
-        
-
-@dataclasses.dataclass
-class Loader(sourdough.base.Quirk, abc.ABC):
+class Loader(abc.ABC):
     """ for lazy loading of python modules and objects.
 
     Args:

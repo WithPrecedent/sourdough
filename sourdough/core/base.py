@@ -176,24 +176,6 @@ class Repository(collections.abc.Iterable, abc.ABC):
         pass
 
     """ Dunder Methods """
-     
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: of 'contents'.
-
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            int: length of 'contents'.
-
-        """
-        return len(self.contents)
 
     def __add__(self, other: Any) -> None:
         """Combines argument with 'contents' using the 'add' method.
@@ -301,6 +283,24 @@ class Lexicon(collections.abc.MutableMapping, Repository):
         """
         del self.contents[key]
         return self
+    
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
 
 
 @dataclasses.dataclass
@@ -570,6 +570,24 @@ class Slate(collections.abc.MutableSequence, Repository):
         """
         del self.contents[key]
 
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+    
    
 @dataclasses.dataclass
 class Hybrid(Element, Slate):
@@ -970,30 +988,30 @@ class Hybrid(Element, Slate):
         return len(list(more_itertools.collapse(self.contents)))
 
 
-@dataclasses.dataclass
-class Quirk(abc.ABC):
-    """Base class for sourdough mixins.
+# @dataclasses.dataclass
+# class Quirk(abc.ABC):
+#     """Base class for sourdough mixins.
     
-    Quirk automatically stores all non-abstract subclasses in the 'options' 
-    class attribute.
+#     Quirk automatically stores all non-abstract subclasses in the 'options' 
+#     class attribute.
 
-    Args:
-        options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
-            subclasses.
+#     Args:
+#         options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
+#             subclasses.
                 
-    """
-    options: ClassVar[Catalog[str, Quirk]] = Catalog()
+#     """
+#     options: ClassVar[Catalog[str, Quirk]] = Catalog()
     
-    """ Initialization Methods """
+#     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            try:
-                name = cls.get_name()
-            except AttributeError:
-                name = sourdough.tools.snakify(cls.__name__)
-            Quirk.options[name] = cls
+#     def __init_subclass__(cls, **kwargs):
+#         super().__init_subclass__(**kwargs)
+#         if not abc.ABC in cls.__bases__:
+#             try:
+#                 name = cls.get_name()
+#             except AttributeError:
+#                 name = sourdough.tools.snakify(cls.__name__)
+#             Quirk.options[name] = cls
 
 
 # @dataclasses.dataclass
@@ -1078,7 +1096,7 @@ class Quirk(abc.ABC):
 #             Any: an instance of a Callable stored in 'options.contents'.
         
 #         """
-#         return cls.options.build(key = product, **kwargs)
+#         return cls.options.instance(key = product, **kwargs)
     
 #     """ Class Methods """
     

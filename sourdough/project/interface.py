@@ -68,7 +68,7 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
             whether the workflow must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
         data (object): any data object for the project to be applied.         
-
+        registered ()
     
     Attributes:
         design (sourdough.Structure): the iterable composite object created by
@@ -89,24 +89,32 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
     identification: str = None
     automatic: bool = True
     data: object = None
+    registered: sourdough.base.Catalog[str, Callable] = sourdough.base.Catalog(
+        contents = {
+            'settings': sourdough.Settings,
+            'filer': sourdough.Filer,
+            'workflow': sourdough.Workflow,
+            'design': sourdough.Component})
 
     """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
-        super().__post_init__()
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Sets unique project 'identification', if not passed.
         self.identification = self._get_identification()
         # Validates various attributes or converts them to the proper type.
-        attributes = ['settings', 'filer', 'workflow', 'design']
-        for attribute in attributes:
+        for attribute in self.registered.keys():
             getattr(self, f'_validate_{attribute}')()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
-            self.design = self._auto_workflow(design = self.design)
+            self._auto_workflow()
 
     """ Public Methods """
     
@@ -225,75 +233,46 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
         """Validates 'workflow' or converts it to a list of Workflow subclasses.
         """
         if (inspect.isclass(self.workflow) 
-                and (issubclass(self.workflow, sourdough.Workflow)
-                     or self.workflow == sourdough.Workflow)):
-            workflow = self.workflow.library['default']
-            new_workflow = []
-            for item in workflow:
-                new_workflow.append(item(project = self))
-            self.workflow = new_workflow
-        elif (isinstance(self.workflow, Sequence) 
-                and all(isinstance(w, str) for w in self.workflow)):
-            new_workflow = []
-            for item in self.workflow:
-                new_workflow.append(
-                    sourdough.Workflow.build(item, project = self))
-        elif not (isinstance(self.workflow, Sequence) 
-                and all(isinstance(w, sourdough.Workflow) 
-                    for w in self.workflow)):
-            raise TypeError('workflow must be Workflow or its subclass')
+                and (issubclass(self.workflow, self.registered['workflow'])
+                     or self.workflow == self.registered['workflow'])):
+            self.workflow = self.workflow()
+        elif isinstance(self.workflow, str):
+            self.workflow = self.registered['workflow'].instance(
+                key = self.workflow)
+        else:
+            raise TypeError(
+                f'workflow must be a str matching a key in '
+                f'{self.registered["workflow"]}.library or a '
+                f'{self.registered["workflow"]} subclass')
         return self
 
-    def _validate_components(self) -> None:
-        """Validates 'component' as Component or its subclass."""
-        if not (inspect.isclass(self.components) 
-                and (issubclass(self.components, sourdough.Component)
-                     or self.components == sourdough.Component)):
-            raise TypeError('components must be Component or its subclass')
+    def _validate_design(self) -> None:
+        """Validates 'design' as a Component or its subclass."""
+        if (inspect.isclass(self.design) 
+                and (issubclass(self.design, self.registered['design'])
+                     or self.design == self.registered['design'])):
+            self.design = self.design()
+        elif isinstance(self.design, str):
+            self.design = self.registered['design'].instance(
+                key = self.design)
         else:
-            self.manager = self._get_manager()
-        return self
-    
-    def _validate_structures(self) -> None:
-        """Validates 'structure' as Role or its subclass."""
-        if not (inspect.isclass(self.structures) 
-                and (issubclass(self.structures, sourdough.Role)
-                     or self.structures == sourdough.Role)):
-            raise TypeError('structures must be Role or its subclass')
-        return self
-      
-    def _get_manager(self) -> None:
-        """Returns a Manager instance from 'component' attribute."""
-        managers = self.components._get_values_by_type(sourdough.Manager)
-        if len(managers) == 0:
-            raise ValueError(
-                'There must a Manager or Manager subclass imported')
-        elif len(managers) > 1:
-            raise ValueError(
-                'There cannot be more than one Manager or Manager subclass ' 
-                'imported')            
-        else:
-            return managers[0](
-                name = self.name,
-                identification = self.identification)       
+            raise TypeError(
+                f'design must be a str matching a key in '
+                f'{self.registered["design"]}.library or a '
+                f'{self.registered["design"]} subclass')
+        return self    
                      
-    def _auto_workflow(self, 
-            manager: sourdough.Manager) -> sourdough.Manager:
+    def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances.
 
         Args:
-            manager (sourdough.Manager): an instance containing a composite
-                object.
                 
         Returns:
-            sourdough.Manager: a composite object accessed and possibly modified
-                by the stored Workflow instances.
             
         """
-        for stage in self:
+        for stage in self.workflow:
+            print('test stage', stage)
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.name} process')
-            manager = stage.perform(Structure = manager)
-            print('test manager', manager.workflow)
-            # print('test stage overview', manager.overview)
-        return manager
+            self = stage.perform(project = self)
+        return self

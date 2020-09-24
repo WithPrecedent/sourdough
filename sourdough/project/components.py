@@ -48,7 +48,6 @@ class Overview(sourdough.base.Lexicon):
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     name: str = None
-    structure: sourdough.Structure = None
     
     """ Initialization Methods """
     
@@ -141,7 +140,10 @@ class Structure(
     contents: Sequence[Union[str, sourdough.component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = lambda: sourdough.Component)
+    stores: Any = dataclasses.field(default_factory = lambda: list)
+    
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
@@ -153,17 +155,17 @@ class Structure(
             
     """ Required Subclass Methods """
     
-    @abc.abstractmethod
-    def iterate(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def iterate(self, **kwargs) -> Iterable:
+    #     pass
     
-    @abc.abstractmethod
-    def activate(self, **kwargs) -> Iterable:
-        pass    
+    # @abc.abstractmethod
+    # def activate(self, **kwargs) -> Iterable:
+    #     pass    
     
-    @abc.abstractmethod
-    def finalize(self, **kwargs) -> Iterable:
-        pass
+    # @abc.abstractmethod
+    # def finalize(self, **kwargs) -> Iterable:
+    #     pass
   
     """ Dunder Methods """
     
@@ -176,7 +178,7 @@ class Structure(
 
 
 @dataclasses.dataclass
-class Technique(sourdough.base.Loader, sourdough.Component):
+class Technique(sourdough.quirks.Loader, sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment

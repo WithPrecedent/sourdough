@@ -18,6 +18,8 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
+import inspect
+from types import new_class
 from typing import (
     Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
@@ -27,6 +29,16 @@ import sourdough
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
     """Base class for all pieces of sourdough composite objects.
+    
+    A Component differs from an Element in 3 significant ways:
+        1) It includes a 'contents' attribute which can store any type of
+            object as part of a larger composite structure. In this way, 
+            Component acts as a wrapper for pieces in a composite whole.
+        2) It includes a 'library' registry that stores all subclasses. This
+            makes it easy to access any imported Component subclass using a
+            string key.
+        3) It has several private class methods which allow access to 'library' 
+            using other techniques other than the associated string key.
     
     Args:
         contents (Any): a stored object.
@@ -152,36 +164,25 @@ class Workflow(
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
     name: str = None
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = lambda: Stage)
+    stores: Any = dataclasses.field(default_factory = lambda: list)
     library: ClassVar[
         sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
-     
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Validates or converts 'contents'.
+        self.contents = self.convert(contents = self.contents)
+        
     """ Public Methods """
-    
-    def validate(self, 
-            contents: Sequence[Union[str, Stage]]) -> Sequence[Stage]:
-        """Validates 'contents' or converts 'contents' to proper type.
-        
-        Args:
-            contents (Sequence[Union[str, Stage]]): items to validate 
-                or convert to a list of Stage instances.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Sequence[Stage]: validated or converted argument that is 
-                compatible with an instance.
-        
-        """
-        new_contents = []
-        for item in contents:
-            if isinstance(item, str):
-                new_contents.append(Stage.build(key = item))
-            elif isinstance(item, Stage):
-                new_contents.append(item)
-            else:
-                raise TypeError('contents must be a list of Stage or str types')
-        return new_contents
 
     def perform(self, project: sourdough.Project) -> sourdough.Project:
         """[summary]
@@ -202,7 +203,7 @@ class Workflow(
         return project
     
     """ Private Methods """
-    
+       
     def _get_stage_parameters(self, 
             flow: Stage,
             project: sourdough.Project) -> Mapping[str, Any]:
