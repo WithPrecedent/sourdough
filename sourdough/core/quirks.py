@@ -34,17 +34,17 @@ import sourdough
 class Registry(abc.ABC):
     """Mixin which stores subclasses in a 'library' class attribute.
 
-    Args:
+    Attributes:
         library (ClassVar[sourdough.base.Catalog]): the instance which stores 
             subclasses.
 
     """
-    library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
-    
+
     """ Initialization Methods """
     
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
+        cls.library = sourdough.base.Catalog()
         if not abc.ABC in cls.__bases__:
             try:
                 name = cls.get_name()
@@ -54,7 +54,11 @@ class Registry(abc.ABC):
                 if Registry in item.__bases__:
                     item.library[name] = cls
 
-    """ Public Methods """
+    """ Class Methods """
+
+    @classmethod
+    def inject(cls, item: Any) -> Any:
+        return item
 
     @classmethod
     def instance(cls, 
@@ -118,7 +122,13 @@ class Validator(abc.ABC):
             super().__post_init__()
         except AttributeError:
             pass
-        
+
+    """ Class Methods """
+
+    @classmethod
+    def inject(cls, item: Any) -> Any:
+        return item
+
     """ Required Subclass Methods """
     
     @abc.abstractmethod
@@ -170,7 +180,13 @@ class Loader(abc.ABC):
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = list)
     _loaded: ClassVar[Mapping[Any, Any]] = {}
-    
+
+    """ Class Methods """
+
+    @classmethod
+    def inject(cls, item: Any) -> Any:
+        return item
+ 
     """ Public Methods """
 
     def load(self, 

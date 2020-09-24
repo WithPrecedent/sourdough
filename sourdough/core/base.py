@@ -988,130 +988,78 @@ class Hybrid(Element, Slate):
         return len(list(more_itertools.collapse(self.contents)))
 
 
-# @dataclasses.dataclass
-# class Quirk(abc.ABC):
-#     """Base class for sourdough mixins.
-    
-#     Quirk automatically stores all non-abstract subclasses in the 'options' 
-#     class attribute.
+@dataclasses.dataclass
+class Factory(abc.ABC):
+    """
+    """
+    options: Union[str, Sequence[str]]
+    bases: ClassVar[Sequence[Callable]] = []
 
-#     Args:
-#         options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
-#             subclasses.
+    """ Initialization Methods """
+    
+    def __new__(cls, options: Union[str, Sequence[str]], **kwargs) -> Any:
+        """
+
+        Args:
+
+        Returns:
+        
+        """
+        return 
+
+    """ Class Methods """
+    
+    @classmethod
+    def add_option(cls, option: Callable) -> None:
+        """[summary]
+
+        Args:
+            option (Callable): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        cls.bases.append(option)
+        return cls
+    
+    
+@dataclasses.dataclass
+class Quirk(abc.ABC):
+    """Base class for sourdough mixins.
+    
+    Quirk automatically stores all non-abstract subclasses in the 'options' 
+    class attribute.
+
+    Args:
+        options (ClassVar[Catalog[str, Quirk]]): Catalog instance which stores 
+            subclasses.
                 
-#     """
-#     options: ClassVar[Catalog[str, Quirk]] = Catalog()
+    """
+    options: ClassVar[Catalog[str, Quirk]] = Catalog()
     
-#     """ Initialization Methods """
+    """ Initialization Methods """
     
-#     def __init_subclass__(cls, **kwargs):
-#         super().__init_subclass__(**kwargs)
-#         if not abc.ABC in cls.__bases__:
-#             try:
-#                 name = cls.get_name()
-#             except AttributeError:
-#                 name = sourdough.tools.snakify(cls.__name__)
-#             Quirk.options[name] = cls
-
-
-# @dataclasses.dataclass
-# class Workshop(abc.ABC):
-#     """Creates class(es) from 'options' using 'bases'.
-
-#     Args:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            try:
+                name = cls.get_name()
+            except AttributeError:
+                name = sourdough.tools.snakify(cls.__name__)
+            Quirk.options[name] = cls
     
-#         options (ClassVar[Registry]): class which contains a 'contents'.
-            
-#     Raises:
-#         TypeError: if 'product' is neither a str nor Sequence of str.
-
-#     Returns:
-#         Any: the factory uses the '__new__' method to return a different object 
-#             product instance with kwargs as the parameters.
-
-#     """
-#     bases: Union[str, Sequence[str]]
-#     options: ClassVar[Sequence[Callable]] = [Quirk]
-
-#     """ Initialization Methods """
+    """ Required Subclass Methods """
     
-#     def __new__(cls, bases: Union[str, Sequence[str]], **kwargs) -> Any:
-#         """
-
-#         Args:
-
-#         Returns:
+    @classmethod
+    @abc.abstractmethod
+    def inject(self, item: Any) -> Any:
+        """Subclasses must provide their own methods.
         
-#         """
-#         return 
-
-#     """ Class Methods """
-    
-#     @classmethod
-#     def add_option(cls, option: Callable) -> None:
-#         """[summary]
-
-#         Args:
-#             option (Callable): [description]
-
-#         Returns:
-#             [type]: [description]
-#         """
-#         cls.options.append(option)
-#         return cls
-    
-    
-    
-# @dataclasses.dataclass
-# class Factory(abc.ABC):
-#     """Returns class(es) from options stored in 'options.contents'.
-
-#     Args:
-#         product (Union[str, Sequence[str]]: name(s) of objects to return. 
-#             'product' must correspond to key(s) in 'options.contents'.
-#         options (ClassVar[Registry]): class which contains a 'contents'.
-
-#     Raises:
-#         TypeError: if 'product' is neither a str nor Sequence of str.
-
-#     Returns:
-#         Any: the factory uses the '__new__' method to return a different object 
-#             product instance with kwargs as the parameters.
-
-#     """
-#     product: Union[str, Sequence[str]]
-#     options: ClassVar[Registry] = Registry
-
-#     """ Initialization Methods """
-    
-#     def __new__(cls, product: Union[str, Sequence[str]], **kwargs) -> Any:
-#         """Returns an instance from 'options.contents'.
-
-#         Args:
-#         product (Union[str, Sequence[str]]: name(s) of objects to return. 
-#             'product' must correspond to key(s) in 'options.contents'.
-#             kwargs: parameters to pass to the object being created.
-
-#         Returns:
-#             Any: an instance of a Callable stored in 'options.contents'.
+        This method should add methods, attributes, and/or properties to the
+        passed argument.
         
-#         """
-#         return cls.options.instance(key = product, **kwargs)
-    
-#     """ Class Methods """
-    
-#     @classmethod
-#     def add_option(cls, key: str, value: Any) -> None:
-#         """Adds 'value' to 'options.contents' at 'key'.
-        
-#         Args:
-#             key (str): name of key to link to 'value'.
-#             value (Any): item to store in 'options.contents'.
-            
-#         """
-#         cls.options.add_option(key = key, value = value)
-#         return cls
-       
+        """
+        pass
  
 """ 
 Reflector is currently omitted from the sourdough build because I'm unsure

@@ -20,7 +20,34 @@ import warnings
 
 import sourdough
 
-   
+
+@dataclasses.dataclass
+class Workshop(sourdough.base.Factory):
+
+    name: str
+    selections: Mapping[str, str]
+    bases: ClassVar[
+        sourdough.base.Catalog[str, Callable]] = sourdough.base.Catalog(
+            contents = {
+                'workflow': sourdough.Workflow,
+                'components': sourdough.Component})
+    quirks: ClassVar[
+        sourdough.base.Catalog[str, Callable]] = sourdough.base.Catalog(
+            contents = {
+                'validator': sourdough.quirks.Validator,
+                'registry': sourdough.quirks.Registry})
+        
+    def __new__(cls, name: str, selections: Mapping[str, str], **kwargs) -> Any:
+        """
+        """
+        bases = tuple(cls.bases[k].select(v) for k, v in selections.items())
+        quirks = tuple(cls.quirks[k].select(v) for k, v in selections.items())
+        product = type(name = name, bases = bases)
+        for quirk in quirks:
+            product = quirk.inject(item = product)
+        return product
+            
+        
 @dataclasses.dataclass
 class Project(sourdough.base.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
@@ -89,12 +116,6 @@ class Project(sourdough.base.Element, collections.abc.Iterable):
     identification: str = None
     automatic: bool = True
     data: object = None
-    registered: sourdough.base.Catalog[str, Callable] = sourdough.base.Catalog(
-        contents = {
-            'settings': sourdough.Settings,
-            'filer': sourdough.Filer,
-            'workflow': sourdough.Workflow,
-            'design': sourdough.Component})
 
     """ Initialization Methods """
 
