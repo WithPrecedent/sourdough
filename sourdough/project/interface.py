@@ -9,11 +9,13 @@ Contents:
 
 """
 from __future__ import annotations
+import abc
 import collections.abc
 import dataclasses
 import inspect
 import pathlib
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 import warnings
 
 import sourdough

@@ -7,7 +7,8 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 import dataclasses
 import pathlib
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
 import sourdough
 

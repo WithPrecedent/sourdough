@@ -17,7 +17,8 @@ area of the documentation that could be made clearer, please don't hesitate
 to email me - I want to ensure the package is as accessible as possible.
 
 """
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
 """ 
 sourdough imports are designed to allow key classes and functions to have first 
@@ -37,28 +38,25 @@ from .utilities import memory
 
 # Imports of core base classes and mixins.
 from .core import base
-from .core import types
-from .core import framework
-from .core.framework import Inventory
-from .core.framework import Component
-from .core.framework import Stage
-from .core.framework import Workflow
+from .core import quirks
+from .core import validators
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
 from .configuration.filer import Filer
 
 # Imports for sourdough projects.
+from .project.framework import Inventory
+from .project.framework import Component
+from .project.framework import Stage
+from .project.framework import Workflow
 from .project.components import Structure
-from .project.components import Aggregation
-from .project.components import Pipeline
-from .project.components import Contest
-from .project.components import Study
-from .project.components import Survey
 from .project.components import Technique 
-from .project.components import Step
-from .project.workflow import Editor
+from .project.components  import Step
+from .project import structures
+from .project import workflows
 from .project.interface import Project
+
 
 
 """
@@ -97,17 +95,17 @@ __all__ = [
     'decorators',
     'memory',
     'base',
-    'types',
-    'framework',
+    'quirks',
+    'validators',
     'Element',
     'Elemental',
     'Settings',
     'Filer',
     'Inventory',
     'Component',
-    'Structure',
     'Stage',
     'Workflow',
+    'Structure',
     'Aggregation', 
     'Pipeline', 
     'Contest', 

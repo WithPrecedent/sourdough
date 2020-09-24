@@ -20,22 +20,24 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
-import typing
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
 import sourdough
 
 
 @dataclasses.dataclass
-class Inventory(sourdough.quirks.Mapify, sourdough.base.Catalog):
+class Inventory(sourdough.validators.Mapify, sourdough.base.Catalog):
     """Catalog subclass with a more limiting 'validate' method.
 
     Inventory differs from a 'Catalog' in one way:
         1) It inherits from Mapify which has the following methods for type
-            validation and conversion: 'verify', 'convert'.
+            validation and conversion: 'verify', 'convert'. The 'accepts' and
+            'stores' attributes determine what types are permitted in an
+            Inventory instance.
             
     Args:
-        contents (Mapping[str, Component]]): stored dictionary. Defaults to an 
+        contents (Mapping[str, Element]]): stored dictionary. Defaults to an 
             empty dict.
         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
@@ -46,20 +48,20 @@ class Inventory(sourdough.quirks.Mapify, sourdough.base.Catalog):
             Defaults to False.
         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
             class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to Component.
+            Defaults to Element.
         stores (Any): a single type stored by the parent class. Defaults 
             to dict.
                      
     """
-    contents: Mapping[str, Component] = dataclasses.field(
+    contents: Mapping[str, sourdough.base.Element] = dataclasses.field(
         default_factory = dict)  
     defaults: Sequence[str] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: Component)
+        default_factory = lambda: sourdough.base.Element)
     stores: Any = dataclasses.field(default_factory = lambda: dict)
     
-
+    
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
     """Base class for all pieces of sourdough composite objects.
@@ -160,7 +162,7 @@ class Stage(
 @dataclasses.dataclass
 class Workflow(
         sourdough.quirks.Registry, 
-        sourdough.quirks.Sequencify,
+        sourdough.validators.Sequencify,
         sourdough.base.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.

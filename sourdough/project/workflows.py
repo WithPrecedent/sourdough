@@ -1,21 +1,23 @@
 """
-editor: sourdough editor workflow for project creation and iteration
+workflow: classes used for project process and object creation and application
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Draft (Action): creates a Hybrid instance from passed arguments and/or a 
+    Draft (Stage): creates a Hybrid instance from passed arguments and/or a 
         Settings instance.
-    Publish (Action): finalizes a Hybrid instance based upon the initial
+    Publish (Stage): finalizes a Hybrid instance based upon the initial
         construction by an Draft instance and/or runtime user editing.
-    Apply (Action): executes a Hybrid instance, storing changes and results
+    Apply (Stage): executes a Hybrid instance, storing changes and results
         in the Apply instance and/or passed data object.
 
 """
 from __future__ import annotations
+import abc
 import dataclasses
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Sequence, Union
+from typing import (
+    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
 
 import sourdough
 
