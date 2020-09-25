@@ -31,11 +31,6 @@ For example:
     
 """
 
-# Imports of select functions and decorators for use throughout sourdough.
-from .utilities import tools
-from .utilities import decorators
-from .utilities import memory
-
 # Imports of core base classes and mixins.
 from .core import base
 from .core import quirks
