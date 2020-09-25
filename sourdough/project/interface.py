@@ -42,7 +42,7 @@ class Workshop(sourdough.base.Factory):
         """
         bases = tuple(cls.bases[k].select(v) for k, v in selections.items())
         quirks = tuple(cls.quirks[k].select(v) for k, v in selections.items())
-        product = type(name = name, bases = bases)
+        product = dataclasses.dataclass(type(name = name, bases = bases))
         for quirk in quirks:
             product = quirk.inject(item = product)
         return product
