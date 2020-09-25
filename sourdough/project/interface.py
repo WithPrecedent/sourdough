@@ -14,8 +14,8 @@ import collections.abc
 import dataclasses
 import inspect
 import pathlib
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 import warnings
 
 import sourdough

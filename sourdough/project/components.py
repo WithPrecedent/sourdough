@@ -20,8 +20,8 @@ from __future__ import annotations
 import abc
 import dataclasses
 import typing
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 
 import sourdough
 
@@ -108,73 +108,6 @@ class Overview(sourdough.Lexicon):
             return [item]
         else:
             return []
-
-   
-@dataclasses.dataclass
-class Structure(
-        sourdough.validators.Sequencify,
-        sourdough.Hybrid,
-        sourdough.Component):
-    """Base class for composite objects in sourdough projects.
-    
-    Structure differs from an ordinary Hybrid in 1 significant way:
-        1) It is mixed in with Sequencify which allows for type validation and 
-            conversion, using the 'verify' and 'convert' methods.
-            
-    Args:
-        contents (Sequence[Union[str, Component]]): a list of str or Components. 
-            Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
-                
-    """
-    contents: Sequence[Union[str, sourdough.component]] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.Component)
-    stores: Any = dataclasses.field(default_factory = lambda: list)
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        super().__post_init__()        
-        # Initializes 'index' for iteration.
-        self.index = -1
-            
-    """ Required Subclass Methods """
-    
-    # @abc.abstractmethod
-    # def iterate(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def activate(self, **kwargs) -> Iterable:
-    #     pass    
-    
-    # @abc.abstractmethod
-    # def finalize(self, **kwargs) -> Iterable:
-    #     pass
-  
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        if self.index + 1 < len(self.contents):
-            self.index += 1
-            yield self.iterate()
-        else:
-            raise StopIteration
 
 
 @dataclasses.dataclass

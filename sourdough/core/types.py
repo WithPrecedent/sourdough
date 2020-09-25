@@ -28,8 +28,8 @@ import collections.abc
 import dataclasses
 import pprint
 import textwrap
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 
 import more_itertools
 
@@ -258,7 +258,7 @@ class Catalog(Lexicon):
 
     """ Public Methods """
 
-    def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
+    def instance(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
                  object, Sequence[object]]:
         """Returns instance(s) of a stored classes
         
@@ -869,7 +869,7 @@ class Factory(abc.ABC):
             '__class__.__name__').
         library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
-            the subclasses themselves.
+            the subclasses themselves. Defaults to an empty Catalog instance.
 
     """
     name: str = 'test'

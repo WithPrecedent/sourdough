@@ -21,8 +21,8 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 
 import sourdough
 

@@ -13,8 +13,8 @@ from __future__ import annotations
 import abc
 import dataclasses
 import itertools
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 
 import more_itertools
 
