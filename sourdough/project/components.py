@@ -27,7 +27,7 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Overview(sourdough.base.Lexicon):
+class Overview(sourdough.Lexicon):
     """Dictionary of different Element types in a Structure instance.
     
     Args:
@@ -92,8 +92,8 @@ class Overview(sourdough.base.Lexicon):
     """ Private Methods """
 
     def _get_type(self, 
-            item: sourdough.base.Element, 
-            element: sourdough.base.Element) -> Sequence[sourdough.base.Element]: 
+            item: sourdough.Element, 
+            element: sourdough.Element) -> Sequence[sourdough.Element]: 
         """[summary]
 
         Args:
@@ -113,7 +113,7 @@ class Overview(sourdough.base.Lexicon):
 @dataclasses.dataclass
 class Structure(
         sourdough.validators.Sequencify,
-        sourdough.base.Hybrid,
+        sourdough.Hybrid,
         sourdough.Component):
     """Base class for composite objects in sourdough projects.
     

@@ -17,8 +17,8 @@ area of the documentation that could be made clearer, please don't hesitate
 to email me - I want to ensure the package is as accessible as possible.
 
 """
-from typing import (
-    Any, Callable, ClassVar, Dict, Iterable, List, Mapping, Sequence, Union)
+from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
+                    Optional, Sequence, Tuple, Union)
 
 """ 
 sourdough imports are designed to allow key classes and functions to have first 
@@ -26,15 +26,20 @@ or second-level access.
 
 For example:
 
-    Instead of acccesing Element via sourdough.core.base.Element,
-    you can just use: sourdough.base.Element
+    Instead of acccesing Hybrid via sourdough.core.types.Hybrid,
+    you can just use: sourdough.Hybrid
     
 """
 
-# Imports of core base classes and mixins.
-from .core import base
+# Imports of core sourdough classes.
+from .core import types
+from .core.types import Lexicon
+from .core.types import Catalog
+from .core.types import Slate
+from .core.types import Hybrid
+from .core.types import Factory
+from .core.base import Quirk
 from .core import quirks
-from .core import validators
 
 # Imports of configuration and file management classes.
 from .configuration.settings import Settings
@@ -67,11 +72,6 @@ accessible at sourdough.[Annotation]
         with Components values.
         
 """
-Elemental = Union[
-    base.Element, 
-    Mapping[str, base.Element], 
-    Sequence[base.Element]]
-
 
 Componental = Union[
     Component, 
@@ -83,30 +83,4 @@ __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
-__all__ = [
-    'tools',
-    'decorators',
-    'memory',
-    'base',
-    'quirks',
-    'validators',
-    'Element',
-    'Elemental',
-    'Settings',
-    'Filer',
-    'Catalog',
-    'Component',
-    'Stage',
-    'Workflow',
-    'Structure',
-    'Aggregation', 
-    'Pipeline', 
-    'Contest', 
-    'Study', 
-    'Survey', 
-    'Technique', 
-    'Step', 
-    'Details', 
-    'Outline', 
-    'Editor', 
-    'Project']
+__all__ = []

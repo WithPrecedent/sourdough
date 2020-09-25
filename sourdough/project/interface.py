@@ -22,17 +22,17 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workshop(sourdough.base.Factory):
+class Workshop(sourdough.Factory):
 
     name: str
     selections: Mapping[str, str]
     bases: ClassVar[
-        sourdough.base.Catalog[str, Callable]] = sourdough.base.Catalog(
+        sourdough.Catalog[str, Callable]] = sourdough.Catalog(
             contents = {
                 'workflow': sourdough.Workflow,
                 'components': sourdough.Component})
     quirks: ClassVar[
-        sourdough.base.Catalog[str, Callable]] = sourdough.base.Catalog(
+        sourdough.Catalog[str, Callable]] = sourdough.Catalog(
             contents = {
                 'validator': sourdough.quirks.Validator,
                 'registry': sourdough.quirks.Registry})
@@ -49,7 +49,7 @@ class Workshop(sourdough.base.Factory):
             
         
 @dataclasses.dataclass
-class Project(sourdough.base.Element, collections.abc.Iterable):
+class Project(sourdough.Element, collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:

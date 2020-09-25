@@ -5,8 +5,6 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Registry (Quirk, ABC): automatically registers any subclasses and stores
-        them in the 'library' class attribute. 
     Validator (Registry, Quirk, ABC): base class for type validators and 
         converters. The class provides a universal 'verify' method for type
         validation. All subclasses must have a 'convert' method for type 
@@ -14,7 +12,7 @@ Contents:
     Loader (Quirk, ABC): lazy loader which uses a 'load' method to import python
         classes, functions, and other items at runtime. 
         
-    # ValidatorFactory (Factory): returns sourdough.base.Validator subclass 
+    # ValidatorFactory (Factory): returns sourdough.Validator subclass 
     #     instance which is used for type validation and conversion.
     # ProxyMixin (Quirk, ABC): mixin which creates a python property which 
     #     refers to another attribute by using the 'proxify' method.
@@ -31,71 +29,6 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Registry(abc.ABC):
-    """Mixin which stores subclasses in a 'library' class attribute.
-
-    Attributes:
-        library (ClassVar[sourdough.base.Catalog]): the instance which stores 
-            subclasses.
-
-    """
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls.library = sourdough.base.Catalog()
-        if not abc.ABC in cls.__bases__:
-            try:
-                name = cls.get_name()
-            except AttributeError:
-                name = sourdough.tools.snakify(cls.__name__)
-            for item in cls.__mro__:    
-                if Registry in item.__bases__:
-                    item.library[name] = cls
-
-    """ Class Methods """
-
-    @classmethod
-    def inject(cls, item: Any) -> Any:
-        return item
-
-    @classmethod
-    def instance(cls, 
-            key: Union[str, Sequence[str]], **kwargs) -> Union[
-                object, 
-                Sequence[object]]:
-        """Returns instance(s) of a stored classes
-        
-        This method acts as a factory for instancing stored classes or returning
-        instances.
-        
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-            kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-        Returns:
-            Union[object, Sequence[object]]: instance(s) of stored classes.
-            
-        """
-        return cls.library.instance(key = key, **kwargs)
- 
-    @classmethod
-    def select(cls,
-            key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
-        """Returns value(s) stored in 'contents'.
-
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
-            
-        """
-        return cls.library.select(key = key)
-
-
-@dataclasses.dataclass
 class Validator(abc.ABC):
     """Base class for type validation and/or conversion Quirks.
     
@@ -104,14 +37,14 @@ class Validator(abc.ABC):
             class either as an individual item, in a Mapping, or in a Sequence.
         stores (Any): a single type stored by the parent class. Defaults to 
             None.
-        library (ClassVar[sourdough.base.Catalog]): the instance which stores 
+        library (ClassVar[sourdough.Catalog]): the instance which stores 
             subclasses.        
                         
     """
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
         default_factory = list)
     stores: Any = None
-    # library: ClassVar[sourdough.base.Catalog] = sourdough.base.Catalog()
+    # library: ClassVar[sourdough.Catalog] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -164,6 +97,99 @@ class Validator(abc.ABC):
                 f'contents must be or contain one of the following types: ' 
                 f'{self.accepts}')
 
+
+
+@dataclasses.dataclass
+class Mapify(Validator, abc.ABC):
+    """Type validator and converter for Mappings.
+    
+    Args:
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+            Defaults to sourdough.Element.
+        stores (Any): a single type stored by the parent class. Defaults to 
+            dict.
+            
+    """    
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = lambda: sourdough.Element)
+    stores: Any = dataclasses.field(default_factory = lambda: dict)
+    
+    """ Public Methods """
+    
+    def convert(self, 
+            contents: Any) -> (
+                Mapping[str, sourdough.Element]):
+        """Converts 'contents' to a Mapping type.
+        
+        Args:
+            contents (Any): an object containing one or 
+                more Element subclasses or Element subclass instances.
+        
+        Raises:
+            TypeError: if 'contents' is not an Any.
+                
+        Returns:
+            Mapping[str, Element]: converted 'contents'.
+            
+        """
+        converted = self.stores()
+        contents = self.verify(contents = contents)
+        if isinstance(contents, Mapping):
+            converted = contents
+        elif (isinstance(contents, Sequence) 
+                or isinstance(contents, sourdough.Element)):
+            for item in sourdough.tools.tuplify(contents):
+                try:
+                    converted[item.name] = item
+                except AttributeError:
+                    converted[item.get_name()] = item
+        return converted
+    
+
+@dataclasses.dataclass    
+class Sequencify(Validator, abc.ABC):
+    """Type validator and converter for Sequences.
+    
+    Args:
+        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+            class either as an individual item, in a Mapping, or in a Sequence.
+            Defaults to sourdough.Element.
+        stores (Any): a single type accepted by the parent class. Defaults to 
+            list.
+            
+    """        
+    accepts: Union[Sequence[Any], Any] = dataclasses.field(
+        default_factory = lambda: sourdough.Element)
+    stores: Any = dataclasses.field(default_factory = lambda: list)
+    
+    """ Public Methods """
+       
+    def convert(self, 
+            contents: Any) -> (
+                Sequence[sourdough.Element]):
+        """Converts 'contents' to a Sequence type.
+        
+        Args:
+            contents (Any): an object containing one or 
+                more Element subclasses or Element subclass instances.
+        
+        Raises:
+            TypeError: if 'contents' is not an Any.
+                
+        Returns:
+            Sequence[Element]: converted 'contents'.
+            
+        """
+        converted = self.stores()
+        if isinstance(contents, Mapping):
+            converted = converted.extend(contents.values())
+        elif isinstance(contents, Sequence):
+            converted = contents
+        elif isinstance(contents, sourdough.Element):
+            converted = converted.append(contents)
+        return converted  
+        
 
 @dataclasses.dataclass
 class Loader(abc.ABC):
@@ -232,7 +258,7 @@ class Loader(abc.ABC):
 
 
 # @dataclasses.dataclass
-# class ValidatorFactory(sourdough.base.Factory, abc.ABC):
+# class ValidatorFactory(sourdough.Factory, abc.ABC):
 #     """Factory for type validation and/or conversion class construction.
     
 #     ValidatorFactory is primary used to convert Element subclasses to and from 
@@ -245,7 +271,7 @@ class Loader(abc.ABC):
 #             class either as an individual item, in a Mapping, or in a Sequence.
 #         stores (Any): a single type stored by the parent class. Defaults 
 #             to None.
-#         options (ClassVar[sourdough.base.Options]): class which contains a 
+#         options (ClassVar[sourdough.Options]): class which contains a 
 #             'library' of alternatives for constructing objects.
             
 #     """
@@ -253,7 +279,7 @@ class Loader(abc.ABC):
 #     accepts: Union[Sequence[Any], Any] = dataclasses.field(
 #         default_factory = list)
 #     stores: Any = None
-#     options: ClassVar[sourdough.base.Options] = sourdough.base.Validator
+#     options: ClassVar[sourdough.Options] = sourdough.Validator
     
   
 # @dataclasses.dataclass

@@ -12,9 +12,9 @@ import sourdough
 
 @dataclasses.dataclass
 class AComponent(
-    sourdough.base.Repository,
+    sourdough.Repository,
     sourdough.quirks.Registry,
-    sourdough.base.Element):
+    sourdough.Element):
     pass
 
 
@@ -24,15 +24,15 @@ class OtherComponent(AComponent):
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.base.Options, OtherComponent):
+class AnotherComponent(sourdough.Options, OtherComponent):
     
-    options = sourdough.base.Catalog(contents = {
+    options = sourdough.Catalog(contents = {
         'base': AComponent(),
         'other': OtherComponent()})
  
 
 @dataclasses.dataclass
-class ProxiedComponent(sourdough.base.Proxy, OtherComponent):
+class ProxiedComponent(sourdough.Proxy, OtherComponent):
     
     def __post_init__(self):
         super().__post_init__()

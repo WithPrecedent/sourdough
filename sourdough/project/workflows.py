@@ -28,7 +28,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Details(sourdough.base.Slate):
+class Details(sourdough.Slate):
     """Basic characteristics of a group of sourdough Components.
     
     Args:
@@ -80,7 +80,7 @@ class Details(sourdough.base.Slate):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.base.Lexicon):
+class Outline(sourdough.Lexicon):
     """Base class for pieces of sourdough composite objects.
     
     Args:
@@ -95,7 +95,7 @@ class Outline(sourdough.base.Lexicon):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[sourdough.base.Catalog]): the instance which 
+        library (ClassVar[sourdough.Catalog]): the instance which 
             automatically stores any subclass of Component.
               
     """
@@ -583,8 +583,8 @@ class Editor(sourdough.Workflow):
             snake case version of the class name ('__class__.__name__').
         
     """
-    contents: Sequence[sourdough.base.Element] = dataclasses.field(
+    contents: Sequence[sourdough.Element] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.base.Catalog)
+        default_factory = sourdough.Catalog)
     name: str = None

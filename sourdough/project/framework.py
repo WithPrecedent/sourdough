@@ -27,7 +27,7 @@ import sourdough
     
     
 @dataclasses.dataclass
-class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
+class Component(sourdough.quirks.Registry, sourdough.Element, abc.ABC):
     """Base class for all pieces of sourdough composite objects.
     
     A Component differs from an Element in 3 significant ways:
@@ -53,14 +53,14 @@ class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__'). 
-        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+        library (ClassVar[sourdough.Catalog[str, Component]]): an instance 
             which automatically stores any subclasses. 
               
     """
     contents: Any = None
     name: str = None
     library: ClassVar[
-        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
+        sourdough.Catalog[str, Component]] = sourdough.Catalog()
 
     """ Private Class Methods """
 
@@ -99,7 +99,7 @@ class Component(sourdough.quirks.Registry, sourdough.base.Element, abc.ABC):
 @dataclasses.dataclass
 class Stage(
         sourdough.quirks.Registry, 
-        sourdough.base.Element, 
+        sourdough.Element, 
         abc.ABC):
     """Base class for a stage in a Workflow.
     
@@ -115,13 +115,13 @@ class Stage(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').
-        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+        library (ClassVar[sourdough.Catalog[str, Component]]): an instance 
             which automatically stores any subclasses. 
             
     """
     name: str = None
     library: ClassVar[
-        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
+        sourdough.Catalog[str, Component]] = sourdough.Catalog()
 
     """ Required Subclass Methods """
     
@@ -139,7 +139,7 @@ class Stage(
 class Workflow(
         sourdough.quirks.Registry, 
         sourdough.validators.Sequencify,
-        sourdough.base.Hybrid, 
+        sourdough.Hybrid, 
         abc.ABC):
     """Base class for sourdough workflows.
     
@@ -157,7 +157,7 @@ class Workflow(
             the 'get_name' method in Element. If that method is not overridden 
             by a subclass instance, 'name' will be assigned to the snake case 
             version of the class name ('__class__.__name__').     
-        library (ClassVar[sourdough.base.Catalog[str, Component]]): an instance 
+        library (ClassVar[sourdough.Catalog[str, Component]]): an instance 
             which automatically stores any subclasses.     
                
     """
@@ -168,7 +168,7 @@ class Workflow(
         default_factory = lambda: Stage)
     stores: Any = dataclasses.field(default_factory = lambda: list)
     library: ClassVar[
-        sourdough.base.Catalog[str, Component]] = sourdough.base.Catalog()
+        sourdough.Catalog[str, Component]] = sourdough.Catalog()
 
     """ Initialization Methods """
 
