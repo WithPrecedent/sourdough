@@ -192,7 +192,7 @@ class Sequencify(Validator, abc.ABC):
         
 
 @dataclasses.dataclass
-class Loader(abc.ABC):
+class Loader(object):
     """ for lazy loading of python modules and objects.
 
     Args:

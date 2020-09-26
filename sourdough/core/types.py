@@ -35,7 +35,7 @@ import more_itertools
 
 import sourdough
 
- 
+    
 @dataclasses.dataclass
 class Repository(collections.abc.Iterable, abc.ABC):
     """Interface for sourdough iterables.
@@ -848,7 +848,7 @@ class Hybrid(Slate):
         """
         return len(list(more_itertools.collapse(self.contents)))
 
-
+@sourdough.namify
 @dataclasses.dataclass
 class Factory(abc.ABC):
     """Factory interface for core sourdough classes.
@@ -872,7 +872,7 @@ class Factory(abc.ABC):
             the subclasses themselves. Defaults to an empty Catalog instance.
 
     """
-    name: str = 'test'
+    namr: str = None
     library: ClassVar[Mapping[str, Callable]] = Catalog()
 
     """ Initialization Methods """
@@ -882,26 +882,37 @@ class Factory(abc.ABC):
         super().__init_subclass__(**kwargs)
         if not abc.ABC in cls.__bases__:
             cls.library[cls.name] = cls
-
-    """ Properties """
-    
-    @property
-    def name(self) -> str:
-        """Sets 'name' property.
-
-        Returns:
-            str: 'name' passed to a subclass instance or the snake case name of
-                either '__name__' or '__class__.__name__'.
         
-        """
-        if self.name is None:
-            try:
-                return sourdough.tools.snakify(self.__name__)
-            except AttributeError:
-                return sourdough.tools.snakify(self.__class__.__name__)
-        else:
-            return self.name
+    # """ Properties """
+    
+    # @property
+    # def name(self) -> str:
+    #     """Sets 'name' property.
+
+    #     Returns:
+    #         str: 'name' passed to a subclass instance or the snake case name of
+    #             either '__name__' or '__class__.__name__'.
+        
+    #     """
+    #     if self._name is None:
+    #         try:
+    #             return sourdough.tools.snakify(self.__name__)
+    #         except AttributeError:
+    #             return sourdough.tools.snakify(self.__class__.__name__)
+    #     else:
+    #         return self._name
+
+    # @name.setter
+    # def name(self, value: str) -> None:
+    #     """Sets '_name' to 'value'.
+        
+    #     Args:
+    #         value (str): str to set 'name' property to.
             
+    #     """
+    #     self._name = value
+    #     return self
+               
     """ Class Methods """
 
     @classmethod

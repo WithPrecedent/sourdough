@@ -30,6 +30,8 @@ For example:
     you can just use: sourdough.Hybrid
     
 """
+from .utilities import tools
+from .utilities.decorators import namify
 from .core import types
 from .core.types import Lexicon
 from .core.types import Catalog

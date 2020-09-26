@@ -7,13 +7,34 @@
 """
 from __future__ import annotations
 import datetime
+import inspect
 import functools
 import time
 import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
+import sourdough
 
+
+def namify(process: Callable) -> Callable:
+    """Adds 'name' attribute to 'process' if none is passed.
+    
+    Args:
+        process (Callable"""
+    @functools.wraps(process)
+    def wrapped(*args, **kwargs):
+        call_signature = inspect.signature(process)
+        arguments = dict(call_signature.bind(*args, **kwargs).arguments)
+        if not arguments.get('name'):
+            try:
+                name = sourdough.tools.snakify(process.__name__)
+            except AttributeError:
+                name = sourdough.tools.snakify(process.__class__.__name__)
+            arguments['name'] = name
+        return process(**arguments)
+    return wrapped
+    
 def timer(process: str = None) -> Callable:
     """Decorator for computing the length of time a process takes.
 

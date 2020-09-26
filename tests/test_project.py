@@ -65,7 +65,7 @@ class Explode(sourdough.Technique):
 @dataclasses.dataclass
 class Dynamite(sourdough.Technique):
     
-    name: str = 'annihilate'
+    label: str = 'annihilate'
 
     def perform(self):
         return 
@@ -75,7 +75,7 @@ def test_project():
     print('!!!!!!! test library', sourdough.Structure.library)
     assert 'parser' in sourdough.Structure.library
     project = sourdough.Project(
-        name = 'cool_project',
+        label = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
     print('test project', project.manager)

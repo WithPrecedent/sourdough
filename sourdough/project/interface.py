@@ -21,35 +21,35 @@ import warnings
 import sourdough
 
 
-@dataclasses.dataclass
-class Workshop(sourdough.Factory):
+# @dataclasses.dataclass
+# class Workshop(sourdough.Factory):
 
-    name: str
-    selections: Mapping[str, str]
-    bases: ClassVar[
-        sourdough.Catalog[str, Callable]] = sourdough.Catalog(
-            contents = {
-                'workflow': sourdough.Workflow,
-                'components': sourdough.Component})
-    quirks: ClassVar[
-        sourdough.Catalog[str, Callable]] = sourdough.Catalog(
-            contents = {
-                'validator': sourdough.quirks.Validator,
-                'registry': sourdough.quirks.Registry})
+#     name: str
+#     selections: Mapping[str, str]
+#     bases: ClassVar[
+#         sourdough.Catalog[str, Callable]] = sourdough.Catalog(
+#             contents = {
+#                 'workflow': sourdough.Workflow,
+#                 'components': sourdough.Component})
+#     quirks: ClassVar[
+#         sourdough.Catalog[str, Callable]] = sourdough.Catalog(
+#             contents = {
+#                 'validator': sourdough.quirks.Validator,
+#                 'loader': sourdough.quirks.Loader})
         
-    def __new__(cls, name: str, selections: Mapping[str, str], **kwargs) -> Any:
-        """
-        """
-        bases = tuple(cls.bases[k].select(v) for k, v in selections.items())
-        quirks = tuple(cls.quirks[k].select(v) for k, v in selections.items())
-        product = dataclasses.dataclass(type(name = name, bases = bases))
-        for quirk in quirks:
-            product = quirk.inject(item = product)
-        return product
+#     def __new__(cls, name: str, selections: Mapping[str, str], **kwargs) -> Any:
+#         """
+#         """
+#         bases = tuple(cls.bases[k].select(v) for k, v in selections.items())
+#         quirks = tuple(cls.quirks[k].select(v) for k, v in selections.items())
+#         product = dataclasses.dataclass(type(name = name, bases = bases))
+#         for quirk in quirks:
+#             product = quirk.inject(item = product)
+#         return product
             
         
 @dataclasses.dataclass
-class Project(sourdough.Element, collections.abc.Iterable):
+class Project(sourdough.Component):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
