@@ -22,7 +22,7 @@ import sourdough
 
 
 # @dataclasses.dataclass
-# class Workshop(sourdough.Factory):
+# class Workshop(sourdough.quirks.Registry):
 
 #     name: str
 #     selections: Mapping[str, str]
@@ -116,6 +116,12 @@ class Project(sourdough.Component):
     identification: str = None
     automatic: bool = True
     data: object = None
+    registered: ClassVar[Mapping[str, Callable]] = sourdough.Catalog(
+        contents = {
+            'structure': sourdough.Structure,
+            'workflow': sourdough.Workflow,
+            'task': sourdough.components.Task,
+            'technique': sourdough.components.Technique})
 
     """ Initialization Methods """
 

@@ -10,7 +10,6 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import dataclasses
 import functools
 import inspect
@@ -19,19 +18,18 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-@sourdough.namify
 @dataclasses.dataclass
-class Component(collections.abc.Container, abc.ABC):
+class Component(sourdough.quirks.Library):
     """Base class for all pieces of sourdough composite objects.
     
     A Component differs from a Container in 3 significant ways:
         1) It includes a 'contents' attribute which can store any type of
             object as part of a larger composite structure. In this way, 
             Component acts as a wrapper for pieces in a composite whole.
-        2) It includes a 'library' registry that stores all subclasses. This
+        2) It includes a registry that stores all subclasses in 'registry'. This
             makes it easy to access any imported Component subclass using a
             string key.
-        3) It has several private class methods which allow access to 'library' 
+        3) It has several private class methods which allow access to 'registry' 
             using other techniques other than the associated string key.
     
     Args:
@@ -43,7 +41,7 @@ class Component(collections.abc.Container, abc.ABC):
             Defaults to None. If 'name' is None, it will be assigned to the 
             snake case version of the class name ('__name__' or 
             '__class__.__name__').
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
               
@@ -54,81 +52,45 @@ class Component(collections.abc.Container, abc.ABC):
 
     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            cls.library[cls.name] = cls
+    # def __init_subclass__(cls, **kwargs):
+    #     """Adds 'cls' to 'registry' if it is a concrete class."""
+    #     super().__init_subclass__(**kwargs)
+    #     if not abc.ABC in cls.__bases__:
+    #         cls.registry[cls.name] = cls
             
-    # """ Properties """
     
-    # @property
-    # def name(self) -> str:
-    #     """Sets 'name' property.
+    # """ Class Methods """
 
-    #     Returns:
-    #         str: 'name' passed to a subclass instance or the snake case name of
-    #             either '__name__' or '__class__.__name__'.
+    # @classmethod
+    # def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
+    #              object, Sequence[object]]:
+    #     """Returns instance(s) of a stored class(es).
         
-    #     """
-    #     if self._name is None:
-    #         try:
-    #             return sourdough.tools.snakify(self.__name__)
-    #         except AttributeError:
-    #             return sourdough.tools.snakify(self.__class__.__name__)
-    #     else:
-    #         return self._name
-
-    # @name.setter
-    # def name(self, value: str) -> None:
-    #     """Sets '_name' to 'value'.
+    #     This method acts as a factory for instancing stored classes.
         
     #     Args:
-    #         value (str): str to set 'name' property to.
+    #         key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+    #         kwargs: arguments to pass to the selected item(s) when instanced.
+                    
+    #     Returns:
+    #         Union[object, Sequence[object]]: instance(s) of stored classes.
             
     #     """
-    #     self._name = value
-    #     return self
-    
-    """ Class Methods """
-
-    @classmethod
-    def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
-                 object, Sequence[object]]:
-        """Returns instance(s) of a stored class(es).
-        
-        This method acts as a factory for instancing stored classes.
-        
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-            kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-        Returns:
-            Union[object, Sequence[object]]: instance(s) of stored classes.
-            
-        """
-        return cls.library.instance(key = key, **kwargs)
+    #     return cls.registry.instance(key = key, **kwargs)
  
-    @classmethod
-    def select(cls, key: Union[str, Sequence[str]]) -> Union[
-               Any, Sequence[Any]]:
-        """Returns value(s) stored in 'contents'.
+    # @classmethod
+    # def select(cls, key: Union[str, Sequence[str]]) -> Union[
+    #            Any, Sequence[Any]]:
+    #     """Returns value(s) stored in 'contents'.
 
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+    #     Args:
+    #         key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
 
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
+    #     Returns:
+    #         Union[Any, Sequence[Any]]: stored value(s).
             
-        """
-        return cls.library.select(key = key)
- 
-    """ Dunder Methods """
-    
-    def __contains__(self, item: object) -> bool:
-        """
-        """
-        return item in self.contents
+    #     """
+    #     return cls.registry.select(key = key)
         
     """ Private Class Methods """
 
@@ -165,7 +127,7 @@ class Component(collections.abc.Container, abc.ABC):
 
    
 @dataclasses.dataclass
-class Structure(sourdough.Factory, sourdough.Hybrid, Component, abc.ABC):
+class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
     """Base class for composite objects in sourdough projects.
     
     Structure differs from an ordinary Hybrid in 1 significant way:
@@ -184,11 +146,9 @@ class Structure(sourdough.Factory, sourdough.Hybrid, Component, abc.ABC):
             '__class__.__name__').
                 
     """
-    name: str
+    name: str = None
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
-    _name: str = dataclasses.field(init = False, repr = False)
-    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
     
     """ Initialization Methods """
     
@@ -224,7 +184,7 @@ class Structure(sourdough.Factory, sourdough.Hybrid, Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Stage(sourdough.Factory, abc.ABC):
+class Stage(sourdough.quirks.Registry):
     """Base class for a stage in a Workflow.
     
     Args:
@@ -235,14 +195,13 @@ class Stage(sourdough.Factory, abc.ABC):
             Defaults to None. If 'name' is None, it will be assigned to the 
             snake case version of the class name ('__name__' or 
             '__class__.__name__').
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
             
     """
-    name: str
-    _name: str = dataclasses.field(init = False, repr = False)
-    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
+    name: str = None
+    registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Required Subclass Methods """
     
@@ -257,7 +216,7 @@ class Stage(sourdough.Factory, abc.ABC):
         
 
 @dataclasses.dataclass
-class Workflow(sourdough.Factory, sourdough.Hybrid, abc.ABC):
+class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
     """Base class for sourdough workflows.
     
     Args:
@@ -270,16 +229,14 @@ class Workflow(sourdough.Factory, sourdough.Hybrid, abc.ABC):
             Defaults to None. If 'name' is None, it will be assigned to the 
             snake case version of the class name ('__name__' or 
             '__class__.__name__').   
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
                
     """
-    name: str
+    name: str = None
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
-    _name: str = dataclasses.field(init = False, repr = False)
-    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
 
@@ -334,36 +291,3 @@ class Workflow(sourdough.Factory, sourdough.Hybrid, abc.ABC):
             else:
                 parameters[need] = getattr(project, need)
         return parameters
-
-
-@dataclasses.dataclass
-class Quirk(sourdough.Factory, abc.ABC):
-    """Base class for sourdough mixins.
-    
-    Quirk automatically stores all non-abstract subclasses in the 'options' 
-    class attribute.
-
-    Args:
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
-                
-    """
-    name: str
-    _name: str = dataclasses.field(init = False, repr = False)
-    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
-    
-    """ Initialization Methods """
-    
-    """ Required Subclass Methods """
-    
-    @classmethod
-    @abc.abstractmethod
-    def inject(self, item: Any) -> Any:
-        """Subclasses must provide their own methods.
-        
-        This method should add methods, attributes, and/or properties to the
-        passed argument.
-        
-        """
-        pass

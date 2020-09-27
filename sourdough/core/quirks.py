@@ -11,9 +11,10 @@ Contents:
         conversion.
     Loader (Quirk, ABC): lazy loader which uses a 'load' method to import python
         classes, functions, and other items at runtime. 
-        
-    # ValidatorFactory (Factory): returns sourdough.Validator subclass 
-    #     instance which is used for type validation and conversion.
+    Registry (ABC): abstract base class for storing subclasses and/or instancing
+        subclasses for a registry attribute, 'registry', which automatically
+        stores all concrete subclasses.
+                
     # ProxyMixin (Quirk, ABC): mixin which creates a python property which 
     #     refers to another attribute by using the 'proxify' method.
     
@@ -21,7 +22,7 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
-# import inspect
+import inspect
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
@@ -29,22 +30,19 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Validator(abc.ABC):
+class Validator(sourdough.Quirk):
     """Base class for type validation and/or conversion Quirks.
     
     Args:
         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
             class either as an individual item, in a Mapping, or in a Sequence.
         stores (Any): a single type stored by the parent class. Defaults to 
-            None.
-        library (ClassVar[sourdough.Catalog]): the instance which stores 
-            subclasses.        
+            None.    
                         
     """
     accepts: Union[Sequence[Any], Any] = dataclasses.field(
         default_factory = list)
     stores: Any = None
-    # library: ClassVar[sourdough.Catalog] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -98,9 +96,8 @@ class Validator(abc.ABC):
                 f'{self.accepts}')
 
 
-
 @dataclasses.dataclass
-class Mapify(Validator, abc.ABC):
+class Mapify(Validator):
     """Type validator and converter for Mappings.
     
     Args:
@@ -148,7 +145,7 @@ class Mapify(Validator, abc.ABC):
     
 
 @dataclasses.dataclass    
-class Sequencify(Validator, abc.ABC):
+class Sequencify(Validator):
     """Type validator and converter for Sequences.
     
     Args:
@@ -192,7 +189,7 @@ class Sequencify(Validator, abc.ABC):
         
 
 @dataclasses.dataclass
-class Loader(object):
+class Loader(sourdough.Quirk):
     """ for lazy loading of python modules and objects.
 
     Args:
@@ -256,34 +253,134 @@ class Loader(object):
             return self._loaded[key]
 
 
+@dataclasses.dataclass
+class Registry(sourdough.Quirk):
+    """Registry interface for core sourdough classes.
+    
+    Every Registry subclass maintains a Catalog of concrete subclasses in the
+    'registry' class attribute. Subclasses can be accessed using ordinary dict 
+    methods on [RegistrySubclass].registry or using the 'select' method. 
+    Subclasses can be instanced using the 'instance' method while passing any 
+    desired kwargs.
 
-# @dataclasses.dataclass
-# class ValidatorFactory(sourdough.Factory, abc.ABC):
-#     """Factory for type validation and/or conversion class construction.
+    Attributes:
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+            are derived from the 'name' property of subclasses and values are
+            the subclasses themselves. Defaults to an empty Catalog instance.
+
+    """
+    name: str = None
+    registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
+
+    """ Initialization Methods """
     
-#     ValidatorFactory is primary used to convert Element subclasses to and from 
-#     single instances, Mappings of instances, and Sequences of instances. 
-    
-#     Args:
-#         product (Union[str, Sequence[str]]): name(s) of objects to return. 
-#             'product' must correspond to key(s) in 'options.library'.
-#         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-#             class either as an individual item, in a Mapping, or in a Sequence.
-#         stores (Any): a single type stored by the parent class. Defaults 
-#             to None.
-#         options (ClassVar[sourdough.Options]): class which contains a 
-#             'library' of alternatives for constructing objects.
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'registry' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            cls.registry[key] = cls
+               
+    """ Class Methods """
+
+    @classmethod
+    def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
+                 object, Sequence[object]]:
+        """Returns instance(s) of a stored class(es).
+        
+        This method acts as a factory for instancing stored classes.
+        
+        Args:
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'registry'.
+            kwargs: arguments to pass to the selected item(s) when instanced.
+                    
+        Returns:
+            Union[object, Sequence[object]]: instance(s) of stored classes.
             
-#     """
-#     product: Union[str, Sequence[str]]
-#     accepts: Union[Sequence[Any], Any] = dataclasses.field(
-#         default_factory = list)
-#     stores: Any = None
-#     options: ClassVar[sourdough.Options] = sourdough.Validator
+        """
+        return cls.registry.instance(key = key, **kwargs)
+ 
+    @classmethod
+    def select(cls, key: Union[str, Sequence[str]]) -> Union[
+               Any, Sequence[Any]]:
+        """Returns value(s) stored in 'registry'.
+
+        Args:
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'registry'.
+
+        Returns:
+            Union[Any, Sequence[Any]]: stored value(s).
+            
+        """
+        return cls.registry.select(key = key)
+   
+
+@dataclasses.dataclass
+class Library(sourdough.Quirk):
+    """Library interface for core sourdough classes.
     
+    Every Library subclass maintains a Catalog of concrete subclasses in the
+    'library' class attribute. Subclasses can be accessed using ordinary dict 
+    methods on [LibrarySubclass].library or using the 'select' method. 
+    Subclasses can be instanced using the 'instance' method while passing any 
+    desired kwargs.
+
+    Attributes:
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+            are derived from the 'name' property of subclasses and values are
+            the subclasses themselves. Defaults to an empty Catalog instance.
+
+    """
+    namr: str = None
+    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance."""
+        # Calls parent initialization methods, if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        for item in self.__class__.__mro__:
+            if Library in item.__bases__:
+                item.library[self.name] = self
+                break
+        
+    """ Class Methods """
+ 
+    @classmethod
+    def borrow(cls, key: Union[str, Sequence[str]]) -> Union[
+               Any, Sequence[Any]]:
+        """Returns value(s) stored in 'library'.
+
+        Args:
+            key (Union[str, Sequence[str]]): name(s) of key(s) in 'library'.
+
+        Returns:
+            Union[Any, Sequence[Any]]: stored value(s).
+            
+        """
+        return cls.library.select(key = key)
+
   
 # @dataclasses.dataclass
-# class ProxyMixin(abc.ABC):
+# class ProxyMixin(sourdough.Quirk):
 #     """ which creates a proxy name for a Element subclass attribute.
 
 #     The 'proxify' method dynamically creates a property to access the stored

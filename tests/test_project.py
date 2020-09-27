@@ -72,10 +72,10 @@ class Dynamite(sourdough.Technique):
     
 
 def test_project():
-    print('!!!!!!! test library', sourdough.Structure.library)
-    assert 'parser' in sourdough.Structure.library
+    print('!!!!!!! test registry', sourdough.Structure.registry)
+    assert 'parser' in sourdough.Structure.registry
     project = sourdough.Project(
-        label = 'cool_project',
+        name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
     print('test project', project.manager)

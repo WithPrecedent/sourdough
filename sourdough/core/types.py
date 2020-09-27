@@ -17,9 +17,6 @@ Contents:
         with additional functionality.
     Hybrid (Slate): iterable containing Any subclass instances with both 
         dict and list interfaces and methods.
-    Factory (ABC): abstract base class for storing subclasses and/or instancing
-        subclasses for a registry attribute, 'library', which automatically
-        stores all concrete subclasses.
         
 """
 from __future__ import annotations
@@ -847,102 +844,15 @@ class Hybrid(Slate):
 
         """
         return len(list(more_itertools.collapse(self.contents)))
-
-@sourdough.namify
-@dataclasses.dataclass
-class Factory(abc.ABC):
-    """Factory interface for core sourdough classes.
     
-    Every Factory subclass maintains a Catalog of concrete subclasses in the
-    'library' class attribute. Subclasses can be accessed using ordinary dict 
-    methods on [FactorySubclass].library or using the 'select' method. 
-    Subclasses can be instanced using the 'instance' method while passing any 
-    desired kwargs.
 
-    Attributes:
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
+@dataclasses.dataclass
+class Quirk(abc.ABC):
+    """Base class for sourdough mixins.
 
+    Args:
+                
     """
-    namr: str = None
-    library: ClassVar[Mapping[str, Callable]] = Catalog()
-
+    
     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            cls.library[cls.name] = cls
-        
-    # """ Properties """
-    
-    # @property
-    # def name(self) -> str:
-    #     """Sets 'name' property.
-
-    #     Returns:
-    #         str: 'name' passed to a subclass instance or the snake case name of
-    #             either '__name__' or '__class__.__name__'.
-        
-    #     """
-    #     if self._name is None:
-    #         try:
-    #             return sourdough.tools.snakify(self.__name__)
-    #         except AttributeError:
-    #             return sourdough.tools.snakify(self.__class__.__name__)
-    #     else:
-    #         return self._name
-
-    # @name.setter
-    # def name(self, value: str) -> None:
-    #     """Sets '_name' to 'value'.
-        
-    #     Args:
-    #         value (str): str to set 'name' property to.
-            
-    #     """
-    #     self._name = value
-    #     return self
-               
-    """ Class Methods """
-
-    @classmethod
-    def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
-                 object, Sequence[object]]:
-        """Returns instance(s) of a stored class(es).
-        
-        This method acts as a factory for instancing stored classes.
-        
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-            kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-        Returns:
-            Union[object, Sequence[object]]: instance(s) of stored classes.
-            
-        """
-        return cls.library.instance(key = key, **kwargs)
- 
-    @classmethod
-    def select(cls, key: Union[str, Sequence[str]]) -> Union[
-               Any, Sequence[Any]]:
-        """Returns value(s) stored in 'contents'.
-
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
-            
-        """
-        return cls.library.select(key = key)
-   

@@ -37,7 +37,7 @@ from .core.types import Lexicon
 from .core.types import Catalog
 from .core.types import Slate
 from .core.types import Hybrid
-from .core.types import Factory
+from .core.types import Quirk
 from .core import quirks
 from .configuration.settings import Settings
 from .configuration.filer import Filer
@@ -45,7 +45,6 @@ from .core.base import Component
 from .core.base import Structure
 from .core.base import Stage
 from .core.base import Workflow
-from .core.base import Quirk
 from .project.components import Technique 
 from .project.components  import Step
 from .project import structures
