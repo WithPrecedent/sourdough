@@ -45,8 +45,7 @@ from .core.base import Component
 from .core.base import Structure
 from .core.base import Stage
 from .core.base import Workflow
-from .project.components import Technique 
-from .project.components  import Step
+from .project import components
 from .project import structures
 from .project import workflows
 from .project.interface import Project

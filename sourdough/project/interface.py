@@ -21,33 +21,98 @@ import warnings
 import sourdough
 
 
-# @dataclasses.dataclass
-# class Workshop(sourdough.quirks.Registry):
+@dataclasses.dataclass
+class Workshop(sourdough.Catalog):
 
-#     name: str
-#     selections: Mapping[str, str]
-#     bases: ClassVar[
-#         sourdough.Catalog[str, Callable]] = sourdough.Catalog(
-#             contents = {
-#                 'workflow': sourdough.Workflow,
-#                 'components': sourdough.Component})
-#     quirks: ClassVar[
-#         sourdough.Catalog[str, Callable]] = sourdough.Catalog(
-#             contents = {
-#                 'validator': sourdough.quirks.Validator,
-#                 'loader': sourdough.quirks.Loader})
-        
-#     def __new__(cls, name: str, selections: Mapping[str, str], **kwargs) -> Any:
-#         """
-#         """
-#         bases = tuple(cls.bases[k].select(v) for k, v in selections.items())
-#         quirks = tuple(cls.quirks[k].select(v) for k, v in selections.items())
-#         product = dataclasses.dataclass(type(name = name, bases = bases))
-#         for quirk in quirks:
-#             product = quirk.inject(item = product)
-#         return product
+    contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
+    project: Project = None
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Checks to see if 'project' exists.
+        if self.project is None:
+            raise ValueError(
+                f'{self.__class__.__name__} requires a Project instance')
+        # Creates base classes with selected Quirk mixins.
+        self.create_bases()
+        # Point the 'bases' of Project to 'contents' attribute.
+        Project.bases = self.contents
+    
+    """ Public Methods """
+    
+    def create_bases(self) -> None:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        quirks = self._get_settings_quirks()
+        for key, value in self.project.bases.items():
+            self.contents[key] = self.create_class(
+                name = key, 
+                base = value, 
+                quirks = quirks)
+        return self
             
-        
+    def create_class(self, name: str, base: Callable, 
+                     quirks: Sequence[sourdough.Quirk]) -> Callable:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            base (Callable): [description]
+            quirks (Sequence[sourdough.Quirk])
+
+        Returns:
+            Callable: [description]
+            
+        """
+        if quirks:
+            bases = quirks.append(base)
+            new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
+            # Recursively adds quirks to items in the 'registry' of 'base'.
+            if hasattr(base, 'registry'):
+                new_registry = {}
+                for key, value in base.registry.items():
+                    new_registry[key] = self.create_class(
+                        name = key,
+                        base = value,
+                        quirks = quirks)
+                new_base.registry = new_registry
+        else:
+            new_base = base
+        return new_base
+             
+    """ Private Methods """
+    
+    def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
+        """[summary]
+
+        Returns:
+            Sequence[sourdough.Quirk]: [description]
+            
+        """
+        settings_keys = {
+            'verbose': 'talker', 
+            'early_validation': 'validator', 
+            'conserve_memory': 'conserver'}
+        quirks = []
+        for key, value in settings_keys.items():
+            try:
+                if self.project.settings['general'][key]:
+                    quirks.append(sourdough.Quirk.options[value])
+            except KeyError:
+                pass
+        return quirks
+
+            
 @dataclasses.dataclass
 class Project(sourdough.Component):
     """Constructs, organizes, and implements a sourdough project.
@@ -95,7 +160,7 @@ class Project(sourdough.Component):
             whether the workflow must be changed manually by using the 'advance' 
             or '__iter__' methods (False). Defaults to True.
         data (object): any data object for the project to be applied.         
-        registered ()
+        bases ()
     
     Attributes:
         design (sourdough.Structure): the iterable composite object created by
@@ -116,12 +181,15 @@ class Project(sourdough.Component):
     identification: str = None
     automatic: bool = True
     data: object = None
-    registered: ClassVar[Mapping[str, Callable]] = sourdough.Catalog(
+    results: Mapping[str, object] = dataclasses.field(default_factory = dict)
+    bases: ClassVar[Mapping[str, Callable]] = sourdough.Catalog(
         contents = {
-            'structure': sourdough.Structure,
+            'design': sourdough.Structure,
+            'stage': sourdough.Stage,
             'workflow': sourdough.Workflow,
-            'task': sourdough.components.Task,
-            'technique': sourdough.components.Technique})
+            'step': sourdough.components.Step,
+            'technique': sourdough.components.Technique,
+            'components': sourdough.Component})
 
     """ Initialization Methods """
 
@@ -136,9 +204,13 @@ class Project(sourdough.Component):
         warnings.filterwarnings('ignore')
         # Sets unique project 'identification', if not passed.
         self.identification = self._get_identification()
-        # Validates various attributes or converts them to the proper type.
-        for attribute in self.registered.keys():
-            getattr(self, f'_validate_{attribute}')()
+        # Validates or converts 'settings' and 'filer'.
+        self._validate_settings()
+        self._validate_filer()
+        # Creates instances of the Workshop class builder.
+        self.workshop = Workshop(project = self)
+        # Initializes 'workflow' instance.
+        self._initialize_workflow()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
@@ -236,8 +308,8 @@ class Project(sourdough.Component):
                 contents = self.settings,
                 defaults = {
                     'general': {
-                        'verbose': True,
-                        'early_validation': True,
+                        'verbose': False,
+                        'early_validation': False,
                         'conserve_memery': False},
                     'files': {
                         'source_format': 'csv',
@@ -256,47 +328,50 @@ class Project(sourdough.Component):
                 settings = self.settings)
         return self
 
-    def _validate_workflow(self) -> None:
-        """Validates 'workflow' or converts it to a list of Workflow subclasses.
-        """
+    def _initialize_workflow(self) -> None:
+        """Validates or converts 'workflow' and initializes it."""
+        if 'workflow' not in self.bases:
+            self.__class__.bases['workflow'] = self.workshop.create_class(
+                name = 'workflow',
+                base = sourdough.Workflow,
+                quirks = self.workshop._get_settings_quirks())
         if (inspect.isclass(self.workflow) 
-                and (issubclass(self.workflow, self.registered['workflow'])
-                     or self.workflow == self.registered['workflow'])):
+                and (issubclass(self.workflow, self.bases['workflow'])
+                     or self.workflow == self.bases['workflow'])):
             self.workflow = self.workflow()
         elif isinstance(self.workflow, str):
-            self.workflow = self.registered['workflow'].instance(
+            self.workflow = self.bases['workflow'].instance(
                 key = self.workflow)
         else:
             raise TypeError(
                 f'workflow must be a str matching a key in '
-                f'{self.registered["workflow"]}.library or a '
-                f'{self.registered["workflow"]} subclass')
+                f'{self.bases["workflow"]}.library or a '
+                f'{self.bases["workflow"]} subclass')
         return self
 
-    def _validate_design(self) -> None:
-        """Validates 'design' as a Component or its subclass."""
-        if (inspect.isclass(self.design) 
-                and (issubclass(self.design, self.registered['design'])
-                     or self.design == self.registered['design'])):
-            self.design = self.design()
-        elif isinstance(self.design, str):
-            self.design = self.registered['design'].instance(
-                key = self.design)
-        else:
-            raise TypeError(
-                f'design must be a str matching a key in '
-                f'{self.registered["design"]}.library or a '
-                f'{self.registered["design"]} subclass')
-        return self    
+    # def _initialize_design(self) -> None:
+    #     """Validates or converts 'design' and initializes it."""
+    #     if 'design' not in self.bases:
+    #         self.__class__.bases['design'] = self.workshop.create_class(
+    #             name = 'design',
+    #             base = sourdough.Structure,
+    #             quirks = self.workshop._get_settings_quirks())
+    #     if (inspect.isclass(self.design) 
+    #             and (issubclass(self.design, self.bases['design'])
+    #                  or self.design == self.bases['design'])):
+    #         self.design = self.design()
+    #     elif isinstance(self.design, str):
+    #         self.design = self.bases['design'].instance(
+    #             key = self.design)
+    #     else:
+    #         raise TypeError(
+    #             f'design must be a str matching a key in '
+    #             f'{self.bases["design"]}.library or a '
+    #             f'{self.bases["design"]} subclass')
+    #     return self    
                      
     def _auto_workflow(self) -> None:
-        """Advances through the stored Workflow instances.
-
-        Args:
-                
-        Returns:
-            
-        """
+        """Advances through the stored Workflow instances."""
         for stage in self.workflow:
             print('test stage', stage)
             if hasattr(self, 'verbose') and self.verbose:

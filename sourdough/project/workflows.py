@@ -222,12 +222,10 @@ class Draft(sourdough.Stage):
     
     """
     name: str = None
-    needs: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['project']) 
     
     """ Public Methods """
     
-    def perform(self, project: sourdough.Project) -> sourdough.Outline:
+    def perform(self, project: sourdough.Project) -> sourdough.Project:
         """Drafts an Outline instance based on 'settings'.
 
         Args:
@@ -238,12 +236,14 @@ class Draft(sourdough.Stage):
             
         """       
         components = self._get_all_components(project = project)
-        return self._create_outline(components = components, project = project)        
-
+        project.results['outline']  = self._create_outline(
+            components = components, 
+            project = project)
+        return project
+        
     """ Private Methods """
 
-    def _get_all_components(self, 
-            project: sourdough.Project) -> Mapping[str, Sequence[str]]:
+    def _get_all_components(self, project: sourdough.Project) -> Dict[str, Sequence[str]]:
         """[summary]
 
         Args:
@@ -351,12 +351,11 @@ class Publish(sourdough.Stage):
     
     """    
     name: str = None 
-    needs: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['project']) 
+
     
     """ Public Methods """
  
-    def perform(self, project: sourdough.Project) -> sourdough.Structure:
+    def perform(self, project: sourdough.Project) -> sourdough.Project:
         """Drafts an Outline instance based on 'settings'.
 
         Args:
@@ -366,13 +365,13 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        root_key = project.outline.keys()[0]
-        root_value = project.outline[root_key]
-        return self._create_composite(
+        root_key = project.results['outline'].keys()[0]
+        root_value = project.results['outline'][root_key]
+        project.results['deliverable'] = self. self._create_composite(
             name = root_key,
             details = root_value,
             project = project)
-            
+        return project     
 
     """ Private Methods """
 
@@ -603,33 +602,6 @@ class Publish(sourdough.Stage):
                     base = base)
         return components   
 
-                
-@dataclasses.dataclass
-class Apply(sourdough.Stage):
-    
-    workflow: sourdough.Workflow = None
-    name: str = None 
-    
-    def perform(self, Structure: sourdough.Structure) -> sourdough.Structure:
-        """[summary]
-
-        Returns:
-            [type] -- [description]
-            
-        """
-        new_contents = []
-        for item in Structure:
-            if isinstance(item, sourdough.Structure):
-                instance = self.create(Structure = item)
-            else:
-                instance = item.perform(data = self.project.data)
-            instance.structure.finalize()
-            new_contents.append(instance)
-        Structure.contents = new_contents
-        return Structure
-
-    """ Private Methods """
-        
     def _get_algorithms(self, 
             component: sourdough.Component) -> sourdough.Component:
         """
@@ -642,6 +614,27 @@ class Apply(sourdough.Stage):
             component.technique.algorithm = self.project.component.library[
                 component.technique.algorithm]
         return component   
+     
+                
+@dataclasses.dataclass
+class Apply(sourdough.Stage):
+    
+    workflow: sourdough.Workflow = None
+    name: str = None 
+    
+    def perform(self, project: sourdough.Project) -> sourdough.Project:
+        """[summary]
+
+        Returns:
+            [type] -- [description]
+            
+        """
+        kwargs = {}
+        if project.data is not None:
+            kwargs['data'] = project.data
+        for component in project.results['deliverable']:
+            component.apply(**kwargs)
+        return project
 
 
 @dataclasses.dataclass

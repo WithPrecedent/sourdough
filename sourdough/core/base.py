@@ -18,11 +18,12 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
+
 @dataclasses.dataclass
 class Component(sourdough.quirks.Library):
     """Base class for all pieces of sourdough composite objects.
     
-    A Component differs from a Container in 3 significant ways:
+    A Components differs from a Library in 3 significant ways:
         1) It includes a 'contents' attribute which can store any type of
             object as part of a larger composite structure. In this way, 
             Component acts as a wrapper for pieces in a composite whole.
@@ -49,48 +50,6 @@ class Component(sourdough.quirks.Library):
     name: str = None
     contents: Any = None
     library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
-
-    """ Initialization Methods """
-    
-    # def __init_subclass__(cls, **kwargs):
-    #     """Adds 'cls' to 'registry' if it is a concrete class."""
-    #     super().__init_subclass__(**kwargs)
-    #     if not abc.ABC in cls.__bases__:
-    #         cls.registry[cls.name] = cls
-            
-    
-    # """ Class Methods """
-
-    # @classmethod
-    # def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
-    #              object, Sequence[object]]:
-    #     """Returns instance(s) of a stored class(es).
-        
-    #     This method acts as a factory for instancing stored classes.
-        
-    #     Args:
-    #         key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-    #         kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-    #     Returns:
-    #         Union[object, Sequence[object]]: instance(s) of stored classes.
-            
-    #     """
-    #     return cls.registry.instance(key = key, **kwargs)
- 
-    # @classmethod
-    # def select(cls, key: Union[str, Sequence[str]]) -> Union[
-    #            Any, Sequence[Any]]:
-    #     """Returns value(s) stored in 'contents'.
-
-    #     Args:
-    #         key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
-
-    #     Returns:
-    #         Union[Any, Sequence[Any]]: stored value(s).
-            
-    #     """
-    #     return cls.registry.select(key = key)
         
     """ Private Class Methods """
 
@@ -144,11 +103,15 @@ class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
             Defaults to None. If 'name' is None, it will be assigned to the 
             snake case version of the class name ('__name__' or 
             '__class__.__name__').
-                
+        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+            are derived from the 'name' property of subclasses and values are
+            the subclasses themselves. Defaults to an empty Catalog instance.
+                            
     """
     name: str = None
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
+    registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
     
     """ Initialization Methods """
     
@@ -206,8 +169,8 @@ class Stage(sourdough.quirks.Registry):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def perform(self, project: sourdough.interface.Project, **kwargs) -> object:
-        """Performs some action related to kwargs.
+    def perform(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+        """Performs some action based on 'project' and kwargs.
         
         Subclasses must provide their own methods.
         
@@ -237,6 +200,7 @@ class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
     name: str = None
     contents: Sequence[Union[str, Stage]] = dataclasses.field(
         default_factory = list)
+    registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
 
@@ -248,46 +212,26 @@ class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
         except AttributeError:
             pass
         # Validates or converts 'contents'.
-        self.contents = self.convert(contents = self.contents)
-        
-    """ Public Methods """
-
-    def perform(self, project: sourdough.Project) -> sourdough.Project:
-        """[summary]
-
-        Args:
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Project: [description]
-        """
-        for step in self.contents:
-            instance = step()
-            parameters = self._get_stage_parameters(
-                flow = step, 
-                project = project)
-            result = instance.perform(**parameters)
-            setattr(project, result.name, result)
-        return project
+        self._initialize_stages()
     
     """ Private Methods """
-       
-    def _get_stage_parameters(self, 
-            flow: Stage,
-            project: sourdough.Project) -> Mapping[str, Any]:
+    
+    def _initialize_stages(self) -> None:
         """[summary]
 
-        Args:
-            flow (Stage): [description]
+        Raises:
+            TypeError: [description]
 
         Returns:
-            Mapping[str, Any]: [description]
-            
+            [type]: [description]
         """
-        parameters = {}
-        for need in flow.needs:
-            if need in ['project']:
-                parameters['project'] = project
+        new_stages = []
+        for stage in self.contents:
+            if isinstance(stage, str):
+                new_stages.append(Stage.registry.instance(stage))
+            elif issubclass(stage, Stage):
+                new_stages.append(stage())
             else:
-                parameters[need] = getattr(project, need)
-        return parameters
+                raise TypeError('All stages must be str or Stage type')
+        self.contents = new_stages
+        return self

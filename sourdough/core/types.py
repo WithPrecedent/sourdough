@@ -15,8 +15,8 @@ Contents:
         matches if a list of keys is provided.
     Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
         with additional functionality.
-    Hybrid (Slate): iterable containing Any subclass instances with both 
-        dict and list interfaces and methods.
+    Hybrid (Slate): iterable with both dict and list interfaces and methods
+        that stores items with a 'name' attribute.
         
 """
 from __future__ import annotations
@@ -53,7 +53,7 @@ class Repository(collections.abc.Iterable, abc.ABC):
         contents (Iterable[Any]): stored iterable.
               
     """
-    contents: Iterable[Any]
+    contents: Iterable[Any] = None
 
     """ Initialization Methods """
     
@@ -119,7 +119,7 @@ class Lexicon(collections.abc.MutableMapping, Repository):
                 
         """
         try:
-            contents = self.convert(contents = contents)
+            contents = self.convert(items = contents)
         except AttributeError:
             pass
         self.contents.update(contents)
@@ -257,10 +257,9 @@ class Catalog(Lexicon):
 
     def instance(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
                  object, Sequence[object]]:
-        """Returns instance(s) of a stored classes
+        """Returns instance(s) of a stored class(es).
         
-        This method acts as a factory for instancing stored classes or returning
-        instances.
+        This method acts as a factory for instancing stored classes.
         
         Args:
             key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
@@ -421,7 +420,7 @@ class Slate(collections.abc.MutableSequence, Repository):
 
         """
         try:
-            contents = self.convert(contents = contents)
+            contents = self.convert(items = contents)
         except AttributeError:
             pass
         self.contents.extend(contents)
@@ -847,12 +846,23 @@ class Hybrid(Slate):
     
 
 @dataclasses.dataclass
-class Quirk(abc.ABC):
+class Quirk(object):
     """Base class for sourdough mixins.
 
-    Args:
-                
+    Attributes:
+        options (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
+            are derived from the 'name' property of subclasses and values are
+            the subclasses themselves. Defaults to an empty Catalog instance.
+
     """
-    
+    name: str = None
+    options: ClassVar[Mapping[str, Callable]] = Catalog()
+
     """ Initialization Methods """
     
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'options' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            cls.options[key] = cls

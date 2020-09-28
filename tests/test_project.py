@@ -21,49 +21,49 @@ class Parser(sourdough.Structure):
 
 
 @dataclasses.dataclass
-class Search(sourdough.Step):
+class Search(sourdough.components.Step):
 
     def perform(self):
         return   
 
 
 @dataclasses.dataclass
-class Slice(sourdough.Technique):
+class Slice(sourdough.components.Technique):
 
     def perform(self):
         return  
 
 
 @dataclasses.dataclass
-class Dice(sourdough.Technique):
+class Dice(sourdough.components.Technique):
 
     def perform(self):
         return 
     
     
 @dataclasses.dataclass
-class Find(sourdough.Technique):
+class Find(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Locate(sourdough.Technique):
+class Locate(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Explode(sourdough.Technique):
+class Explode(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Dynamite(sourdough.Technique):
+class Dynamite(sourdough.components.Technique):
     
     label: str = 'annihilate'
 
