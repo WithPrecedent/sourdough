@@ -23,6 +23,8 @@ from __future__ import annotations
 import abc
 import dataclasses
 import inspect
+from sourdough.utilities.tools import deannotate
+import typing
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
@@ -39,8 +41,7 @@ class Validator(sourdough.Quirk):
     Attributes:
         accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
             individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored by the parent class. Defaults to 
-            None.  
+        stores (Any): a single type stored in 'contents'.
                           
     """
 
@@ -53,29 +54,54 @@ class Validator(sourdough.Quirk):
             super().__post_init__()
         except AttributeError:
             pass
-        self.accepts = sourdough.tools.deannotate(
+        self.accepts = self.deannotate(
             annotation = self.__annotations__['contents'])
-
-    """ Class Methods """
-
-    @classmethod
-    def inject(cls, item: Any) -> Any:
-        return item
 
     """ Required Subclass Methods """
     
     @abc.abstractmethod
     def convert(self, contents: Any) -> Any:
-        """Submodules must provide their own methods.
+        """Converts 'contents' to appropriate type.
         
         This method should convert every one of the types in 'accepts' to the
         type in 'stores'.
         
+        Subclasses must provide their own methods.
+        
         """
         pass   
 
-    """ Public Methods """
-    
+    @abc.abstractmethod
+    def verify(self, contents: Any) -> Any:
+        """Verifies 'contents' contains one of the types in 'accepts'.
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass  
+
+    def deannotate(self, annotation: Any) -> Tuple[Any]:
+        """Returns type annotations as a tuple.
+        
+        This allows even complicated annotations with Union to be converted to a
+        form that fits with an isinstance call.
+
+        Args:
+            annotation (Any): type annotation.
+
+        Returns:
+            Tuple[Any]: base level of stored type in an annotation
+        
+        """
+        origin = typing.get_origin(annotation)
+        args = typing.get_args(annotation)
+        if origin is Union:
+            accepts = tuple(deannotate(a)[0] for a in args)
+        else:
+            self.stores = origin
+            accepts = typing.get_args(annotation)
+        return accepts
+        
     def verify(self, contents: Any) -> Any:
         """Verifies that 'contents' is one of the types in 'accepts'.
         
@@ -89,24 +115,26 @@ class Validator(sourdough.Quirk):
             Any: original contents if there is no TypeError.
         
         """
-        if all(isinstance(c, self.accepts) for c in contents):
-            return contents
+        if ((isinstance(contents, Mapping) 
+                and all(isinstance(c, self.accepts) for c in contents.values()))
+            or (isinstance(contents, Sequence) 
+                and all(isinstance(c, self.accepts) for c in contents))
+            or isinstance(contents, self.accepts)):
+            return contents   
         else:
             raise TypeError(
                 f'contents must be or contain one of the following types: ' 
-                f'{self.accepts}')
+                f'{self.accepts}')        
 
 
 @dataclasses.dataclass
 class Mapify(Validator):
     """Type validator and converter for Mappings.
-    
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to sourdough.Element.
-        stores (Any): a single type stored by the parent class. Defaults to 
-            dict.
+
+    Attributes:
+        accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
+            individual item, in a Mapping, or in a Sequence.
+        stores (Any): a single type stored by the parent class. Set to dict.
             
     """    
 
@@ -123,29 +151,24 @@ class Mapify(Validator):
     
     """ Public Methods """
     
-    def convert(self, 
-            contents: Any) -> (
-                Mapping[str, sourdough.Element]):
+    def convert(self, contents: Any) -> (Mapping[str, Any]):
         """Converts 'contents' to a Mapping type.
         
         Args:
-            contents (Any): an object containing one or 
-                more Element subclasses or Element subclass instances.
-        
-        Raises:
-            TypeError: if 'contents' is not an Any.
+            contents (Any): an object containing item(s) with 'name' attributes.
                 
         Returns:
-            Mapping[str, Element]: converted 'contents'.
+            Mapping[str, Any]: converted 'contents'.
             
         """
-        converted = self.stores()
         contents = self.verify(contents = contents)
+        converted = {}
         if isinstance(contents, Mapping):
             converted = contents
         elif (isinstance(contents, Sequence) 
-                or isinstance(contents, sourdough.Element)):
-            for item in sourdough.tools.tuplify(contents):
+                and not isinstance(contents, str)
+                and all(hasattr(i, 'name') for i in contents)):
+            for item in contents:
                 try:
                     converted[item.name] = item
                 except AttributeError:
@@ -203,7 +226,26 @@ class Sequencify(Validator):
         elif isinstance(contents, sourdough.Element):
             converted = converted.append(contents)
         return converted  
+
+    def verify(self, contents: Any) -> Any:
+        """Verifies that 'contents' is one of the types in 'accepts'.
         
+        Args:
+            contents (Any): item(s) to be type validated.
+            
+        Raises:
+            TypeError: if 'contents' is not one of the types in 'accepts'.
+            
+        Returns:
+            Any: original contents if there is no TypeError.
+        
+        """
+        if all(isinstance(c, self.accepts) for c in contents):
+            return contents
+        else:
+            raise TypeError(
+                f'contents must be or contain one of the following types: ' 
+                f'{self.accepts}')        
 
 @dataclasses.dataclass
 class Loader(sourdough.Quirk):

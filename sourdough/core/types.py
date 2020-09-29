@@ -68,10 +68,38 @@ class Repository(collections.abc.Iterable, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def add(self, contents: Any) -> None:
-        """Subclasses must provide their own methods."""
+    def add(self, item: Any) -> None:
+        """Adds 'item' to 'contents' in the default manner.
+        
+        Subclasses must provide their own methods."""
         pass
 
+    """ Public Methods """
+    
+    def convert(self, contents: Any) -> Iterable:
+        """Placeholder method for type conversion.
+        
+        Args:
+            contents (Any): item(s) to be type converted.
+            
+        Returns:
+            Iterable: converted item(s).
+        
+        """
+        return contents
+    
+    def verify(self, contents: Any) -> Iterable:
+        """Placeholder method for type validation.
+        
+        Args:
+            contents (Any): item(s) to be type validated.
+            
+        Returns:
+            Iterable: validated item(s).
+        
+        """
+        return contents
+    
     """ Dunder Methods """
 
     def __add__(self, other: Any) -> None:
@@ -108,21 +136,18 @@ class Lexicon(collections.abc.MutableMapping, Repository):
         
     """ Public Methods """
      
-    def add(self, contents: Mapping[Any, Any], **kwargs) -> None:
-        """Adds 'contents' to the 'contents' attribute.
+    def add(self, item: Mapping[Any, Any], **kwargs) -> None:
+        """Adds 'item' to the 'contents' attribute.
         
         Args:
-            contents (Mapping[Any, Any]): items to add to 'contents' attribute.
-                Any.
+            item (Mapping[Any, Any]): items to add to 'contents' attribute.
             kwargs: allows subclasses to send additional parameters to this 
                 method.
                 
         """
-        try:
-            contents = self.convert(items = contents)
-        except AttributeError:
-            pass
-        self.contents.update(contents)
+        item = self.verify(item = item)
+        item = self.convert(items = item)
+        self.contents.update(item)
         return self
                 
     def subsetify(self, subset: Union[str, Sequence[str]], **kwargs) -> Lexicon:
@@ -166,6 +191,8 @@ class Lexicon(collections.abc.MutableMapping, Repository):
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
+        item = self.verify(item = value)
+        item = self.convert(items = item)
         self.contents[key] = value
         return self
 
@@ -412,18 +439,16 @@ class Slate(collections.abc.MutableSequence, Repository):
     
     """ Public Methods """
 
-    def add(self, contents: Sequence[Any]) -> None:
-        """Extends 'contents' argument to 'contents' attribute.
+    def add(self, item: Sequence[Any]) -> None:
+        """Extends 'item' argument to 'contents' attribute.
         
         Args:
-            contents (Sequence[Any]): items to add to the 'contents' attribute.
+            item (Sequence[Any]): items to add to the 'contents' attribute.
 
         """
-        try:
-            contents = self.convert(items = contents)
-        except AttributeError:
-            pass
-        self.contents.extend(contents)
+        item = self.verify(item = item)
+        item = self.convert(items = item)
+        self.contents.extend(item)
         return self  
 
     def insert(self, index: int, item: Any) -> None:
@@ -434,6 +459,8 @@ class Slate(collections.abc.MutableSequence, Repository):
             item (Any): object to be inserted.
             
         """
+        item = self.verify(item = item)
+        item = self.convert(items = item)
         self.contents.insert(index, item)
         return self
                         
@@ -459,6 +486,8 @@ class Slate(collections.abc.MutableSequence, Repository):
             value (Any): value to be set at 'key' in 'contents'.
 
         """
+        item = self.verify(item = value)
+        item = self.convert(items = item)
         self.contents[key] = value
 
     def __delitem__(self, key: Union[str, int]) -> None:
@@ -470,23 +499,23 @@ class Slate(collections.abc.MutableSequence, Repository):
         """
         del self.contents[key]
 
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'contents'.
+    # def __iter__(self) -> Iterable[Any]:
+    #     """Returns iterable of 'contents'.
 
-        Returns:
-            Iterable: of 'contents'.
+    #     Returns:
+    #         Iterable: of 'contents'.
 
-        """
-        return iter(self.contents)
+    #     """
+    #     return iter(self.contents)
 
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
+    # def __len__(self) -> int:
+    #     """Returns length of 'contents'.
 
-        Returns:
-            int: length of 'contents'.
+    #     Returns:
+    #         int: length of 'contents'.
 
-        """
-        return len(self.contents)
+    #     """
+    #     return len(self.contents)
     
    
 @dataclasses.dataclass
@@ -543,15 +572,16 @@ class Hybrid(Slate):
         
     """ Public Methods """
 
-    def append(self, items: List[Any]) -> None:
+    def append(self, item: List[Any]) -> None:
         """Appends 'item' to 'contents'.
         
         Args:
             items (List[Any]): items to append to 'contents'.
 
         """
-        items = self.convert(items = items)
-        self.contents.append(items)
+        item = self.verify(item = item)
+        item = self.convert(items = item)
+        self.contents.append(item)
         return self    
     
     def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
@@ -585,23 +615,8 @@ class Hybrid(Slate):
         """Removes all items from 'contents'."""
         self.contents = []
         return self
-
-    def convert(self, items: Any) -> List[Any]:
-        """Converts 'items' to the proper type.
-
-        This default method just returns items as is. Subclasses should override
-        this method if type conversion is desired.
-
-        Args:
-            items (Any): items to be type converted.
-
-        Returns:
-            List[Any]: 'items' converted to a list type.
-
-        """
-        return items
     
-    def extend(self, items: Any) -> None:
+    def extend(self, item: Any) -> None:
         """Extends 'items' to 'contents'.
         
         Args:
@@ -611,8 +626,9 @@ class Hybrid(Slate):
             TypeError: if 'item' does not have a name attribute.
             
         """
-        tems = self.convert(items = items)
-        self.contents.extend(items)
+        item = self.verify(item = item)
+        item = self.convert(items = item)
+        self.contents.extend(item)
         return self  
 
     def find(self, tool: Callable, recursive: bool = True, 
@@ -811,6 +827,8 @@ class Hybrid(Slate):
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
+        item = self.verify(item = value)
+        item = self.convert(items = item)
         if isinstance(key, int):
             self.contents[key] = value
         else:
