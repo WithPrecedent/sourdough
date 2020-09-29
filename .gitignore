@@ -144,3 +144,4 @@ cython_debug/
 
 # poetry settings
 /poetry.toml
+.python-version

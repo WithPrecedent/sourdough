@@ -425,7 +425,18 @@ class Slate(collections.abc.MutableSequence, Repository):
             pass
         self.contents.extend(contents)
         return self  
-                    
+
+    def insert(self, index: int, item: Any) -> None:
+        """Inserts 'item' at 'index' in 'contents'.
+
+        Args:
+            index (int): index to insert 'item' at.
+            item (Any): object to be inserted.
+            
+        """
+        self.contents.insert(index, item)
+        return self
+                        
     """ Dunder Methods """
 
     def __getitem__(self, key: int) -> Any:
@@ -651,18 +662,6 @@ class Hybrid(Slate):
             return self[key]
         except KeyError:
             return self._default
-            
-    def insert(self, index: int, item: Any) -> None:
-        """Inserts 'item' at 'index' in 'contents'.
-
-        Args:
-            index (int): index to insert 'item' at.
-            item (Any): object to be inserted.
-            
-        """
-        items = self.convert(items = item)
-        self.contents.insert(index, item)
-        return self
 
     def items(self) -> Iterable:
         """Emulates python dict 'items' method.

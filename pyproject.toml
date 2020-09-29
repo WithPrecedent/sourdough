@@ -5,7 +5,7 @@ description = "start python projects right"
 authors = ["Corey Rayburn Yung <coreyrayburnyung@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 more_itertools = "^8.2.0"
 numpy = "^1.18.4"
 pandas = "^1.0.3"

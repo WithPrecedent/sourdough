@@ -273,7 +273,7 @@ class Project(sourdough.Component):
             'workflow': sourdough.Workflow,
             'step': sourdough.components.Step,
             'technique': sourdough.components.Technique,
-            'components': sourdough.Component})
+            'component': sourdough.Component})
 
     """ Initialization Methods """
 

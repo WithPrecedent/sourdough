@@ -11,7 +11,10 @@ Contents:
 
 """
 
+from .decorators import *
+from .memory import *
 from .tools import *
+
 
 # from .tools import importify
 # from .tools import listify

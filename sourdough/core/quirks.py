@@ -33,16 +33,16 @@ import sourdough
 class Validator(sourdough.Quirk):
     """Base class for type validation and/or conversion Quirks.
     
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
+    To use this mixin, a base class must have a 'contents' attribute for the
+    items to be validated and/or converted.
+
+    Attributes:
+        accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
+            individual item, in a Mapping, or in a Sequence.
         stores (Any): a single type stored by the parent class. Defaults to 
-            None.    
-                        
+            None.  
+                          
     """
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = list)
-    stores: Any = None
 
     """ Initialization Methods """
     
@@ -53,6 +53,8 @@ class Validator(sourdough.Quirk):
             super().__post_init__()
         except AttributeError:
             pass
+        self.accepts = sourdough.tools.deannotate(
+            annotation = self.__annotations__['contents'])
 
     """ Class Methods """
 
@@ -87,8 +89,7 @@ class Validator(sourdough.Quirk):
             Any: original contents if there is no TypeError.
         
         """
-        accepts = sourdough.tools.tuplify(self.accepts)
-        if all(isinstance(c, accepts) for c in contents):
+        if all(isinstance(c, self.accepts) for c in contents):
             return contents
         else:
             raise TypeError(
@@ -108,9 +109,17 @@ class Mapify(Validator):
             dict.
             
     """    
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.Element)
-    stores: Any = dataclasses.field(default_factory = lambda: dict)
+
+    """ Initialization Methods """
+    
+    def __post_init__(self):
+        """Registers an instance with 'contents'."""
+        # Calls initialization method of other inherited classes.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        self.stores = dict
     
     """ Public Methods """
     
@@ -156,9 +165,17 @@ class Sequencify(Validator):
             list.
             
     """        
-    accepts: Union[Sequence[Any], Any] = dataclasses.field(
-        default_factory = lambda: sourdough.Element)
-    stores: Any = dataclasses.field(default_factory = lambda: list)
+
+    """ Initialization Methods """
+    
+    def __post_init__(self):
+        """Registers an instance with 'contents'."""
+        # Calls initialization method of other inherited classes.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        self.stores = list
     
     """ Public Methods """
        
@@ -263,27 +280,20 @@ class Registry(sourdough.Quirk):
     Subclasses can be instanced using the 'instance' method while passing any 
     desired kwargs.
 
-    Attributes:
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
+    Attributes
         registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
 
     """
-    name: str = None
-    registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
     
     def __init_subclass__(cls, **kwargs):
         """Adds 'cls' to 'registry' if it is a concrete class."""
         super().__init_subclass__(**kwargs)
+        if not hasattr(cls, 'registry'):
+            cls.registry = sourdough.Catalog()
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             cls.registry[key] = cls
@@ -333,20 +343,11 @@ class Library(sourdough.Quirk):
     desired kwargs.
 
     Attributes:
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
         library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
 
     """
-    namr: str = None
-    library: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -359,8 +360,13 @@ class Library(sourdough.Quirk):
             pass
         for item in self.__class__.__mro__:
             if Library in item.__bases__:
-                item.library[self.name] = self
-                break
+                try:
+                    item.library[self.name] = self
+                    break
+                except AttributeError:
+                    item.library = sourdough.Catalog()
+                    item.library[self.name] = self
+                    break
         
     """ Class Methods """
  

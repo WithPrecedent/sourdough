@@ -12,6 +12,7 @@ import importlib
 import inspect
 import pathlib
 import re
+import typing
 from typing import (
     Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
 
@@ -57,7 +58,29 @@ def classify(
             return variable.__class__
         except AttributeError:
             return variable
-        
+
+def deannotate(annotation: Any) -> Tuple[Any]:
+    """Returns type annotations as a tuple.
+    
+    This allows even complicated annotations with Union to be converted to a
+    form that fits with an isinstance call.
+
+    Args:
+        annotation (Any): type annotation.
+
+    Returns:
+        Tuple[Any]: base level of stored type in an annotation
+    
+    """
+    origin = typing.get_origin(annotation)
+    args = typing.get_args(annotation)
+    if origin is Union:
+        return tuple(deannotate(a)[0] for a in args)
+    elif origin is None:
+        return annotation
+    else:
+        return typing.get_args(annotation)
+           
 def importify(module: str, key: str) -> object:
     """Lazily loads object from 'module'.
 

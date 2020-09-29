@@ -109,7 +109,7 @@ class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
                             
     """
     name: str = None
-    contents: Sequence[Union[str, Stage]] = dataclasses.field(
+    contents: Union[Sequence[str], Sequence[Stage]] = dataclasses.field(
         default_factory = list)
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
     
@@ -164,6 +164,8 @@ class Stage(sourdough.quirks.Registry):
             
     """
     name: str = None
+    needs: Sequence[str] = dataclasses.field(default_factory = list)
+    produces: Sequence[str] = dataclasses.field(default_factory = list)
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Required Subclass Methods """
@@ -179,27 +181,21 @@ class Stage(sourdough.quirks.Registry):
         
 
 @dataclasses.dataclass
-class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
+class Workflow(sourdough.quirks.Registry, sourdough.Slate):
     """Base class for sourdough workflows.
     
     Args:
         contents (Sequence[Union[str, Stage]]): a list of str or Stages. 
             Defaults to an empty list.
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').   
+        project (sourdough.Project): related project instance.
         registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
             are derived from the 'name' property of subclasses and values are
             the subclasses themselves. Defaults to an empty Catalog instance.
                
     """
-    name: str = None
-    contents: Sequence[Union[str, Stage]] = dataclasses.field(
+    contents: Union[Sequence[str], Sequence[Workflow]] = dataclasses.field(
         default_factory = list)
+    project: sourdough.Project = None
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
@@ -224,11 +220,12 @@ class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
 
         Returns:
             [type]: [description]
+            
         """
         new_stages = []
         for stage in self.contents:
             if isinstance(stage, str):
-                new_stages.append(Stage.registry.instance(stage))
+                new_stages.append(Stage.instance(stage))
             elif issubclass(stage, Stage):
                 new_stages.append(stage())
             else:

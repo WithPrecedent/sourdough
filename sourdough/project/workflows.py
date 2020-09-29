@@ -155,11 +155,13 @@ class Draft(sourdough.Stage):
         project.results['outline']  = self._create_outline(
             components = components, 
             project = project)
+        print('test project outline', project.results['outline'])
         return project
         
     """ Private Methods """
 
-    def _get_all_components(self, project: sourdough.Project) -> Dict[str, Sequence[str]]:
+    def _get_all_components(self, project: sourdough.Project) -> (
+            Dict[str, Sequence[str]]):
         """[summary]
 
         Args:
@@ -170,7 +172,8 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        suffixes = project.components._suffixify().keys()
+        keys = project.bases.keys()
+        suffixes = tuple(sourdough.tools.add_suffix(keys, 's'))
         component_names = {}
         for section in project.settings.values():
             for key, value in section.items():
@@ -191,7 +194,7 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        outline = sourdough.project.containers.Outline()  
+        outline = Outline()  
         for key, value in components.items():
             name, generic = self._divide_key(key = key)
             structure = self._get_structure(
@@ -558,26 +561,11 @@ class Editor(sourdough.Workflow):
     """Three-step workflow that allows user editing and easy serialization.
     
     Args:
-        contents (Union[Element, Mapping[Any, Element], 
-            Sequence[Element]]): Element subclasses or Element subclass 
-            instances to store in a list. If a dict is passed, the keys will be 
-            ignored and only the values will be added to 'contents'. Defaults to 
-            an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the '_get_name' method in Element. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+        contents (Sequence[Union[str, Stage]]): a list of str or Stages. 
+            Defaults to an empty list.
+        project (sourdough.Project): related project instance.
         
     """
-    contents: Sequence[sourdough.Element] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
-    results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.Catalog)
-    name: str = None
+    project: sourdough.Project = None

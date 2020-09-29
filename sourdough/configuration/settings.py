@@ -12,7 +12,7 @@ Contents:
 from __future__ import annotations
 import configparser
 import dataclasses
-import importlib
+import importlib.util
 import json
 import pathlib
 import toml
