@@ -21,6 +21,7 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
+import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
@@ -47,11 +48,12 @@ class Details(sourdough.Slate):
             version of the class name ('__class__.__name__'). 
         
     """
-    contents: Sequence[str] = dataclasses.field(default_factory = list)
-    generic: str = None
-    structure: str = None
-    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
+    base: str = None
+    contains: str = None
+    design: str = None
+    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     
     """ Public Methods """
     
@@ -78,6 +80,8 @@ class Details(sourdough.Slate):
         else:
             raise TypeError('contents must be a str of list of str types')
 
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)
 
 @dataclasses.dataclass
 class Outline(sourdough.Lexicon):
@@ -100,33 +104,11 @@ class Outline(sourdough.Lexicon):
               
     """
     contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
-    generic: str = None
     name: str = None
-        
-    """ Public Methods """
-    
-    def validate(self, 
-            contents: Mapping[str, Details]) -> Mapping[str, Details]:
-        """Validates 'contents' or converts 'contents' to a dict.
-        
-        Args:
-            contents (Mapping[str, Details]): variable to validate as compatible 
-                with an instance.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Mapping[str, Details]: validated or converted argument that is 
-                compatible with an instance.
-        
-        """
-        if (isinstance(contents, Mapping) 
-                and all(isinstance(c, Details) for c in contents.values())):
-            return contents
-        else:
-            raise TypeError(
-                'contents must be a dict type with Details type values')
+    project: sourdough.Project = dataclasses.field(repr = False, default = None) 
+
+    def __str__(self) -> str:
+        return pprint.pformat(self.contents, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
@@ -137,7 +119,11 @@ class Draft(sourdough.Stage):
         project (sourdough.Project): the related Project instance.
     
     """
-    name: str = None
+    action: str = 'drafting'
+    # needs: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['settings'])
+    # produces: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['outline'])
     
     """ Public Methods """
     
@@ -151,17 +137,15 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """       
-        components = self._get_all_components(project = project)
-        project.results['outline']  = self._create_outline(
-            components = components, 
-            project = project)
+        suffixes = self._get_component_suffixes(project = project)
+        outline  = self._create_outline(project = project, suffixes = suffixes)
+        self._set_product(name = 'outline', project = project, product = outline)
         print('test project outline', project.results['outline'])
         return project
         
     """ Private Methods """
 
-    def _get_all_components(self, project: sourdough.Project) -> (
-            Dict[str, Sequence[str]]):
+    def _get_component_suffixes(self, project: sourdough.Project) -> Tuple[str]:
         """[summary]
 
         Args:
@@ -172,43 +156,41 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        keys = project.bases.keys()
-        suffixes = tuple(sourdough.tools.add_suffix(keys, 's'))
-        component_names = {}
+        return tuple([item + 's' for item in project.bases.keys()])
+    
+    def _create_outline(self, project: sourdough.Project, 
+                        suffixes: Tuple[str]) -> Outline:
+        """[summary]
+
+        Args:
+            project (sourdough.Project): [description]
+            suffixes (Tuple[str]): [description]
+
+        Returns:
+            Outline: [description]
+            
+        """
+        outline = Outline(
+            project = project,
+            name = f'{project.name}_outline')
         for section in project.settings.values():
             for key, value in section.items():
-                if key.startswith(key) and key.endswith(suffixes):
-                    component_names[key] = sourdough.tools.listify(value)
-        return component_names
-        
-    def _create_outline(self, 
-            components: Mapping[str, Sequence[str]], 
-            project: sourdough.Project) -> sourdough.Outline:
-        """[summary]
-
-        Args:
-            key (str): [description]
-            settings (sourdough.Settings): [description]
-
-        Returns:
-            sourdough.Outline: [description]
-            
-        """
-        outline = Outline()  
-        for key, value in components.items():
-            name, generic = self._divide_key(key = key)
-            structure = self._get_structure(
-                name = name, 
-                settings = project.settings)
-            attributes = self._get_attributes(name = name, project = project) 
-            details = sourdough.project.containers.Details(
-                    contents = value,
-                    generic = generic, 
-                    structure = structure,
-                    attributes = attributes)
-            outline.add({name: details})
+                if key.endswith(suffixes):
+                    name, suffix = self._divide_key(key = key)
+                    contains = suffix.rstrip('s')
+                    attributes = self._get_attributes(
+                        name = name, 
+                        project = project,
+                        suffixes = suffixes)
+                    outline[name] = Details(
+                        name = name,
+                        base = self._get_base(name = name, outline = outline),
+                        contains = contains,
+                        design = self._get_design(name = name, project = project),
+                        contents = sourdough.tools.listify(value),
+                        attributes = attributes)
         return outline
-    
+
     def _divide_key(self, key: str) -> Sequence[str, str]:
         """[summary]
 
@@ -223,44 +205,64 @@ class Draft(sourdough.Stage):
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
 
-    def _get_structure(self, name: str, settings: sourdough.Settings) -> str:
+    def _get_design(self, name: str, project: sourdough.Project) -> str:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (sourdough.Settings): [description]
+            project (sourdough.Project): [description]
 
         Returns:
             str: [description]
             
         """
         try:
-            structure = settings[name][f'{name}_structure']
+            structure = project.settings[name][f'{name}_design']
         except KeyError:
-            structure = 'pipeline'
+            structure = None
         return structure
 
-    def _get_attributes(self, 
-            name: str, 
-            project: sourdough.Project) -> Mapping[str, Any]:
+    def _get_attributes(self, name: str, project: sourdough.Project,
+                        suffixes: Tuple[str]) -> Mapping[str, Any]:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (sourdough.Settings): [description]
+            project (sourdough.Project): [description]
+            suffixes (Tuple[str]):
 
         Returns:
             Mapping[str, Any]: [description]
             
         """
-        suffixes = project.components._suffixify().keys()
         attributes = {}
-        for key, value in project.settings[name].items():
-            if not key.endswith('_structure') and not key.endswith(suffixes):
-                attributes[key] = value
+        try:
+            for key, value in project.settings[name].items():
+                if not (key.endswith(suffixes) 
+                        or key.endswith('_design')
+                        or key.endswith('workflow')):
+                    attributes[key] = value
+        except KeyError:
+            pass
         return attributes
 
-        
+    def _get_base(self, name: str, outline: Outline) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            outline (Outline): [description]
+
+        Returns:
+            str: [description]
+        """
+        base = 'design'
+        for key, details in outline.items():
+            if name in details:
+                base = details.contains
+        return base
+       
+    
 @dataclasses.dataclass
 class Publish(sourdough.Stage):
     """Finalizes a composite object from user settings.
@@ -269,8 +271,11 @@ class Publish(sourdough.Stage):
         project (sourdough.Project): the related Project instance.
     
     """    
-    name: str = None 
-
+    action: str = 'publishing' 
+    # needs: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['outline'])
+    # produces: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['plan'])
     
     """ Public Methods """
  
@@ -284,64 +289,76 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        root_key = project.results['outline'].keys()[0]
-        root_value = project.results['outline'][root_key]
-        project.results['deliverable'] = self. self._create_composite(
+        outline = project.results['outline']
+        root_key = list(outline.keys())[0]
+        root_details = outline[root_key]        
+        project.results['deliverable'] = self._create_deliverable(
             name = root_key,
-            details = root_value,
+            details = root_details,
+            outline = outline,
             project = project)
+        print('test deliverable', project.results['deliverable'])
         return project     
 
     """ Private Methods """
 
-    def _create_composite(self,
-            name: str, 
-            details: sourdough.project.containers.Details,
-            project: sourdough.Project) -> sourdough.Component:
+    def _create_deliverable(self, name: str, details: Details, outline: Outline,
+                            project: sourdough.Project) -> sourdough.Structure:
         """[summary]
 
         Args:
             name (str): [description]
-            details (sourdough.project.containers.Details): [description]
-            outline (sourdough.Outline): [description]
+            details (Details): [description]
+            outline (Outline): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.Structure: [description]
+            
         """
+        
         base = self._create_component(
             name = name,
-            generic = details.generic,
+            base = details.base,
+            contents = details.contents,
             project = project)
+        print('test base', name, base)
         base = self._add_attributes(
             component = base, 
             attributes = details.attributes)
-        base.organize()
         for item in details:
-            if item in project.outline:
-                value = project.outline[item]
-                generic = project.components.library[value.generic]
-                if issubclass(generic, sourdough.project.structures.Structure):
-                    instance = self._create_composite(
-                        name = item,
-                        details = value,
-                        project = project)
-                else:
-                    instance = self._create_clones(
-                        name = item,
-                        details = value,
-                        project = project)
+            if item in outline:
+                inner_details = outline[item]
+                inner_base = project.bases[inner_details.base]
+                instance = self._create_deliverable(
+                    name = item,
+                    details = inner_details,
+                    outline = outline,
+                    project = project)
+                base.add(instance)
+                # if issubclass(base, sourdough.Structure):
+                #     instance = self._create_composite(
+                #         name = item,
+                #         details = inner_details,
+                #         project = project)
+                # else:
+                #     instance = self._create_clones(
+                #         name = item,
+                #         details = value,
+                #         project = project)
             else:
                 instance = self._create_component(
                     name = item,
-                    generic = details.generic,
+                    base = details.base,
+                    contents = details.contents,
                     project = project)
-            base.add(instance)
+                base.contents = instance
         return base
 
     def _create_component(self,
             name: str, 
-            generic: str,
+            base: str,
+            contents: Sequence[str],
             project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
@@ -358,15 +375,19 @@ class Publish(sourdough.Stage):
             
         """
         try:
-            instance = project.components.instance(key = name)
-        except KeyError:
+            instance = project.bases[base].instance(
+                key = name, 
+                contents = contents)
+        except (AttributeError, KeyError):
             try:
-                instance = project.structures.instance(
-                    key = generic, 
-                    name = name)
+                instance = project.bases['component'].borrow(key = name)
+                if contents:
+                    instance.contents = contents
             except KeyError:
-                raise KeyError(
-                    f'No Component or Structure was found matching {name}')
+                instance = project.bases[base](name = name, contents = contents)
+                
+                # raise KeyError(
+                #     f'No Component or Structure was found matching {name}')
         return instance  
     
     def _add_attributes(self, 
@@ -382,165 +403,168 @@ class Publish(sourdough.Stage):
             setattr(component, key, value)
         return component   
 
-    def _get_techniques(self, 
-            component: sourdough.Component,
-            **kwargs) -> sourdough.Component:
-        """
+    # def _get_techniques(self, 
+    #         component: sourdough.Component,
+    #         **kwargs) -> sourdough.Component:
+    #     """
         
-        """
-        if isinstance(component, sourdough.Technique):
-            component = self._get_technique(technique = component, **kwargs)
-        elif isinstance(component, sourdough.Step):
-            component.technique = self._get_technique(
-                technique = component.technique,
-                **kwargs)
-        return component   
+    #     """
+    #     if isinstance(component, sourdough.Technique):
+    #         component = self._get_technique(technique = component, **kwargs)
+    #     elif isinstance(component, sourdough.Step):
+    #         component.technique = self._get_technique(
+    #             technique = component.technique,
+    #             **kwargs)
+    #     return component   
 
-    def _get_technique(self, 
-            technique: sourdough.Technique,
-            **kwargs) -> sourdough.Technique:
-        """
+    # def _get_technique(self, 
+    #         technique: sourdough.Technique,
+    #         **kwargs) -> sourdough.Technique:
+    #     """
         
-        """
-        return self.project.component.instance(technique, **kwargs)
+    #     """
+    #     return self.project.component.instance(technique, **kwargs)
        
-    def _set_parameters(self, 
-            component: sourdough.Component) -> sourdough.Component:
-        """
+    # def _set_parameters(self, 
+    #         component: sourdough.Component) -> sourdough.Component:
+    #     """
         
-        """
-        if isinstance(component, sourdough.Technique):
-            return self._set_technique_parameters(technique = component)
-        elif isinstance(component, sourdough.Step):
-            return self._set_task_parameters(task = component)
-        else:
-            return component
+    #     """
+    #     if isinstance(component, sourdough.Technique):
+    #         return self._set_technique_parameters(technique = component)
+    #     elif isinstance(component, sourdough.Step):
+    #         return self._set_task_parameters(task = component)
+    #     else:
+    #         return component
     
-    def _set_technique_parameters(self, 
-            technique: sourdough.Technique) -> sourdough.Technique:
-        """
+    # def _set_technique_parameters(self, 
+    #         technique: sourdough.Technique) -> sourdough.Technique:
+    #     """
         
-        """
-        if technique.name not in ['none', None, 'None']:
-            technique = self._get_settings(technique = technique)
-        return technique
+    #     """
+    #     if technique.name not in ['none', None, 'None']:
+    #         technique = self._get_settings(technique = technique)
+    #     return technique
     
-    def _set_task_parameters(self, task: sourdough.Step) -> sourdough.Step:
-        """
+    # def _set_task_parameters(self, task: sourdough.Step) -> sourdough.Step:
+    #     """
         
-        """
-        if task.technique.name not in ['none', None, 'None']:
-            task = self._get_settings(technique = task)
-            try:
-                task.set_conditional_parameters()
-            except AttributeError:
-                pass
-            task.technique = self._set_technique_parameters(
-                technique = task.technique)
-        return task  
+    #     """
+    #     if task.technique.name not in ['none', None, 'None']:
+    #         task = self._get_settings(technique = task)
+    #         try:
+    #             task.set_conditional_parameters()
+    #         except AttributeError:
+    #             pass
+    #         task.technique = self._set_technique_parameters(
+    #             technique = task.technique)
+    #     return task  
             
-    def _get_settings(self,
-            technique: Union[
-                sourdough.Technique, 
-                sourdough.Step]) -> Union[
-                    sourdough.Technique, 
-                    sourdough.Step]:
-        """Acquires parameters from 'settings' of 'project'.
+    # def _get_settings(self,
+    #         technique: Union[
+    #             sourdough.Technique, 
+    #             sourdough.Step]) -> Union[
+    #                 sourdough.Technique, 
+    #                 sourdough.Step]:
+    #     """Acquires parameters from 'settings' of 'project'.
 
-        Args:
-            technique (technique): an instance for parameters to be added to.
+    #     Args:
+    #         technique (technique): an instance for parameters to be added to.
 
-        Returns:
-            technique: instance with parameters added.
+    #     Returns:
+    #         technique: instance with parameters added.
 
-        """
-        key = f'{technique.name}_parameters'
-        try: 
-            technique.parameters.update(self.project.settings[key])
-        except KeyError:
-            pass
-        return technique
+    #     """
+    #     key = f'{technique.name}_parameters'
+    #     try: 
+    #         technique.parameters.update(self.project.settings[key])
+    #     except KeyError:
+    #         pass
+    #     return technique
 
-    def _create_Structures(self, 
-            Structures: Sequence[str],
-            suffix: str,
-            **kwargs) -> Sequence[sourdough.Structure]:
-        """[summary]
+    # def _create_Structures(self, 
+    #         Structures: Sequence[str],
+    #         suffix: str,
+    #         **kwargs) -> Sequence[sourdough.Structure]:
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
-        """
-        new_Structures = []
-        for Structure in Structures:
-            # Checks if special prebuilt class exists.
-            try:
-                component = self.project.components.instance(
-                    key = Structure, 
-                    **kwargs)
-            # Otherwise uses the appropriate generic type.
-            except KeyError:
-                generic = self.project.components._suffixify()[suffix]
-                kwargs.update({'name': Structure})
-                component = generic(**kwargs)
-            component = self.create(Structure = component)
-            new_Structures.append(component)
-        return new_Structures
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     new_Structures = []
+    #     for Structure in Structures:
+    #         # Checks if special prebuilt class exists.
+    #         try:
+    #             component = self.project.bases.instance(
+    #                 key = Structure, 
+    #                 **kwargs)
+    #         # Otherwise uses the appropriate base type.
+    #         except KeyError:
+    #             base = self.project.bases._suffixify()[suffix]
+    #             kwargs.update({'name': Structure})
+    #             component = base(**kwargs)
+    #         component = self.create(Structure = component)
+    #         new_Structures.append(component)
+    #     return new_Structures
         
 
-    def _get_Structure_suffixes(self) -> Sequence[str]:
-        """[summary]
+    # def _get_structure_suffixes(self) -> Sequence[str]:
+    #     """[summary]
 
-        Args:
-            component (sourdough.Component): [description]
+    #     Args:
+    #         component (sourdough.Component): [description]
 
-        Returns:
-            Sequence[str]: [description]
+    #     Returns:
+    #         Sequence[str]: [description]
             
-        """
-        components = self.project.components._suffixify()
-        return [
-            k for k, v in components.items() if isinstance(v, sourdough.Structure)]
+    #     """
+    #     components = self.project.bases._suffixify()
+    #     return [
+    #         k for k, v in components.items() if isinstance(v, sourdough.Structure)]
 
-    def _create_composite(self, 
-            settings: Mapping[str, Sequence[str]]) -> Mapping[
-                Sequence[str, str], 
-                Sequence[sourdough.Component]]:
-        """[summary]
+    # def _create_composite(self, 
+    #         settings: Mapping[str, Sequence[str]]) -> Mapping[
+    #             Sequence[str, str], 
+    #             Sequence[sourdough.Component]]:
+    #     """[summary]
 
-        Returns:
-            [type]: [description]
-        """
-        components = {}
-        bases = {}
-        for key, value in settings.items():
-            prefix, base = self._divide_key(key = key)
-            for item in value:
-                bases[prefix] = base
-                components[prefix] = self._create_component(
-                    name = item, 
-                    base = base)
-        return components   
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     components = {}
+    #     bases = {}
+    #     for key, value in settings.items():
+    #         prefix, base = self._divide_key(key = key)
+    #         for item in value:
+    #             bases[prefix] = base
+    #             components[prefix] = self._create_component(
+    #                 name = item, 
+    #                 base = base)
+    #     return components   
 
-    def _get_algorithms(self, 
-            component: sourdough.Component) -> sourdough.Component:
-        """
+    # def _get_algorithms(self, 
+    #         component: sourdough.Component) -> sourdough.Component:
+    #     """
         
-        """
-        if isinstance(component, sourdough.Technique):
-            component.algorithm = self.project.component.library[
-                component.algorithm]
-        elif isinstance(component, sourdough.Step):
-            component.technique.algorithm = self.project.component.library[
-                component.technique.algorithm]
-        return component   
+    #     """
+    #     if isinstance(component, sourdough.Technique):
+    #         component.algorithm = self.project.component.library[
+    #             component.algorithm]
+    #     elif isinstance(component, sourdough.Step):
+    #         component.technique.algorithm = self.project.component.library[
+    #             component.technique.algorithm]
+    #     return component   
      
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
     
-    workflow: sourdough.Workflow = None
-    name: str = None 
-    
+    action: str = 'application' 
+    # needs: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['plan', 'data'])
+    # produces: Union[Sequence[str], str] = dataclasses.field(
+    #     default_factory = lambda: ['deliverable', 'data'])
+        
     def perform(self, project: sourdough.Project) -> sourdough.Project:
         """[summary]
 
@@ -552,7 +576,7 @@ class Apply(sourdough.Stage):
         if project.data is not None:
             kwargs['data'] = project.data
         for component in project.results['deliverable']:
-            component.apply(**kwargs)
+            component.perform(**kwargs)
         return project
 
 
@@ -569,3 +593,4 @@ class Editor(sourdough.Workflow):
     contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     project: sourdough.Project = None
+    name: str = None

@@ -138,12 +138,12 @@ class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
   
     """ Dunder Methods """
     
-    def __iter__(self) -> Iterable:
-        if self.index + 1 < len(self.contents):
-            self.index += 1
-            yield self.iterate()
-        else:
-            raise StopIteration
+    # def __iter__(self) -> Iterable:
+    #     if self.index + 1 < len(self.contents):
+    #         self.index += 1
+    #         yield self.iterate()
+    #     else:
+    #         raise StopIteration
 
 
 @dataclasses.dataclass
@@ -163,9 +163,9 @@ class Stage(sourdough.quirks.Registry):
             the subclasses themselves. Defaults to an empty Catalog instance.
             
     """
-    name: str = None
-    needs: Sequence[str] = dataclasses.field(default_factory = list)
-    produces: Sequence[str] = dataclasses.field(default_factory = list)
+    action: str = None
+    # needs: Union[Sequence[str], str] = dataclasses.field(default_factory = list)
+    # produces: Union[Sequence[str], str] = dataclasses.field(default_factory = list)
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Required Subclass Methods """
@@ -178,10 +178,23 @@ class Stage(sourdough.quirks.Registry):
         
         """
         pass
+
+    """ Private Methods """
+    
+    def _get_need(self, name: str, project: sourdough.Project) -> Any:
+        try:
+            return getattr(project, name)
+        except AttributeError:
+            return project.results[name]
         
+    def _set_product(self, name: str, product: Any, 
+                     project: sourdough.Project) -> None:
+        project.results[name] = product
+        return project
+                
 
 @dataclasses.dataclass
-class Workflow(sourdough.quirks.Registry, sourdough.Slate):
+class Workflow(sourdough.quirks.Registry, sourdough.Hybrid):
     """Base class for sourdough workflows.
     
     Args:
@@ -196,6 +209,7 @@ class Workflow(sourdough.quirks.Registry, sourdough.Slate):
     contents: Union[Sequence[str], Sequence[Workflow]] = dataclasses.field(
         default_factory = list)
     project: sourdough.Project = None
+    name: str = None
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Initialization Methods """
@@ -209,7 +223,7 @@ class Workflow(sourdough.quirks.Registry, sourdough.Slate):
             pass
         # Validates or converts 'contents'.
         self._initialize_stages()
-    
+         
     """ Private Methods """
     
     def _initialize_stages(self) -> None:

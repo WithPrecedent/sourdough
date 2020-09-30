@@ -198,7 +198,7 @@ class Workshop(sourdough.Catalog):
 
             
 @dataclasses.dataclass
-class Project(sourdough.Component):
+class Project(object):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
@@ -268,12 +268,18 @@ class Project(sourdough.Component):
     results: Mapping[str, object] = dataclasses.field(default_factory = dict)
     bases: ClassVar[Mapping[str, Callable]] = sourdough.Catalog(
         contents = {
+            'worker': sourdough.Structure,
             'design': sourdough.Structure,
             'stage': sourdough.Stage,
             'workflow': sourdough.Workflow,
             'step': sourdough.components.Step,
             'technique': sourdough.components.Technique,
             'component': sourdough.Component})
+    # components: ClassVar[Sequence[str]] = [
+    #     'design', 
+    #     'step', 
+    #     'technique', 
+    #     'component']
 
     """ Initialization Methods """
 
@@ -298,85 +304,17 @@ class Project(sourdough.Component):
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
-
-    """ Public Methods """
-    
-    def advance(self, stage: str = None) -> None:
-        """Advances to next item in 'workflow' or to 'stage' argument.
-        
-        This method only needs to be called manually if 'automatic' is False.
-        Otherwise, this method is automatically called when the class is 
-        instanced.
-        
-        Args:
-            stage (str): name of item in 'workflow'. Defaults to None. 
-                If not passed, the method goes to the next item in workflow.
-                
-        Raises:
-            ValueError: if 'stage' is neither None nor in 'workflow'.
-            IndexError: if 'advance' is called at the last stage in 'workflow'.
-            
-        """
-        if stage is None:
-            try:
-                new_stage = self.workflow[self.index + 1]
-            except IndexError:
-                raise IndexError(f'{self.name} cannot advance further')
-        else:
-            try:
-                new_stage = self.workflow[stage]
-            except KeyError:
-                raise ValueError(f'{stage} is not a recognized stage')
-        self.index += 1
-        self.previous_stage: str = self.stage
-        self.stage = new_stage
-        return self
-
-    def iterate(self, 
-            manager: 'sourdough.Manager') -> (
-                'sourdough.Manager'):
-        """Advances to next stage and applies that stage to 'manager'.
-        Args:
-            manager (sourdough.Manager): instance to apply the next 
-                stage's methods to.
-                
-        Raises:
-            IndexError: if this instance is already at the last stage.
-        Returns:
-            sourdough.Manager: with the last stage applied.
-            
-        """
-        if self.index == len(self.workflow) - 1:
-            raise IndexError(
-                f'{self.name} is at the last stage and cannot further iterate')
-        else:
-            self.advance()
-            self.workflow[self.index].create(manager = manager)
-        return manager
             
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        """Returns iterable of methods of 'workflow'.
+        """Returns iterable of 'workflow'.
         
         Returns:
-            Iterable: 'create' methods of 'workflow'.
+            Iterable: 'workflow' iterable.
             
         """
-        return iter([getattr(s, 'create') for s in self.workflow])
-
-    def __next__(self) -> Callable:
-        """Returns next method after method matching 'item'.
-        
-        Returns:
-            Callable: next method corresponding to those listed in 'options'.
-            
-        """
-        if self.index < len(self.workflow):
-            self.advance()
-            return getattr(self.workflow[self.index], 'create')
-        else:
-            raise StopIteration()
+        return iter(self.workflow)
 
     """ Private Methods """
 
@@ -414,6 +352,11 @@ class Project(sourdough.Component):
 
     def _initialize_workflow(self) -> None:
         """Validates or converts 'workflow' and initializes it."""
+        if self.workflow is None:
+            try:
+                self.workflow = self.settings[self.name]['workflow']
+            except KeyError:
+                self.workflow = 'editor'
         if 'workflow' not in self.bases:
             self.__class__.bases['workflow'] = self.workshop.create_class(
                 name = 'workflow',
@@ -457,8 +400,8 @@ class Project(sourdough.Component):
     def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances."""
         for stage in self.workflow:
-            print('test stage', stage)
+
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Beginning {stage.name} process')
+                print(f'Beginning {stage.action} process')
             self = stage.perform(project = self)
         return self

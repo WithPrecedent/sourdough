@@ -76,29 +76,29 @@ class Repository(collections.abc.Iterable, abc.ABC):
 
     """ Public Methods """
     
-    def convert(self, contents: Any) -> Iterable:
+    def convert(self, item: Any) -> Iterable:
         """Placeholder method for type conversion.
         
         Args:
-            contents (Any): item(s) to be type converted.
+            item (Any): item(s) to be type converted.
             
         Returns:
             Iterable: converted item(s).
         
         """
-        return contents
+        return item
     
-    def verify(self, contents: Any) -> Iterable:
+    def verify(self, item: Any) -> Iterable:
         """Placeholder method for type validation.
         
         Args:
-            contents (Any): item(s) to be type validated.
+            item (Any): item(s) to be type validated.
             
         Returns:
             Iterable: validated item(s).
         
         """
-        return contents
+        return item
     
     """ Dunder Methods """
 
@@ -146,7 +146,7 @@ class Lexicon(collections.abc.MutableMapping, Repository):
                 
         """
         item = self.verify(item = item)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents.update(item)
         return self
                 
@@ -192,7 +192,7 @@ class Lexicon(collections.abc.MutableMapping, Repository):
 
         """
         item = self.verify(item = value)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents[key] = value
         return self
 
@@ -447,8 +447,11 @@ class Slate(collections.abc.MutableSequence, Repository):
 
         """
         item = self.verify(item = item)
-        item = self.convert(items = item)
-        self.contents.extend(item)
+        item = self.convert(item = item)
+        try:
+            self.contents.extend(item)
+        except TypeError:
+            self.contents.append(item)
         return self  
 
     def insert(self, index: int, item: Any) -> None:
@@ -460,7 +463,7 @@ class Slate(collections.abc.MutableSequence, Repository):
             
         """
         item = self.verify(item = item)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents.insert(index, item)
         return self
                         
@@ -487,7 +490,7 @@ class Slate(collections.abc.MutableSequence, Repository):
 
         """
         item = self.verify(item = value)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents[key] = value
 
     def __delitem__(self, key: Union[str, int]) -> None:
@@ -499,23 +502,23 @@ class Slate(collections.abc.MutableSequence, Repository):
         """
         del self.contents[key]
 
-    # def __iter__(self) -> Iterable[Any]:
-    #     """Returns iterable of 'contents'.
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'contents'.
 
-    #     Returns:
-    #         Iterable: of 'contents'.
+        Returns:
+            Iterable: of 'contents'.
 
-    #     """
-    #     return iter(self.contents)
+        """
+        return iter(self.contents)
 
-    # def __len__(self) -> int:
-    #     """Returns length of 'contents'.
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
 
-    #     Returns:
-    #         int: length of 'contents'.
+        Returns:
+            int: length of 'contents'.
 
-    #     """
-    #     return len(self.contents)
+        """
+        return len(self.contents)
     
    
 @dataclasses.dataclass
@@ -580,7 +583,7 @@ class Hybrid(Slate):
 
         """
         item = self.verify(item = item)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents.append(item)
         return self    
     
@@ -627,7 +630,7 @@ class Hybrid(Slate):
             
         """
         item = self.verify(item = item)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         self.contents.extend(item)
         return self  
 
@@ -766,9 +769,9 @@ class Hybrid(Slate):
             for key, value in items.items():
                 new_item = value
                 new_item.name = key
-                self.extend(items = new_item)
+                self.extend(item = new_item)
         else:
-            self.extend(items = items)
+            self.extend(item = items)
         return self
 
     def values(self) -> Sequence[Any]:
@@ -828,7 +831,7 @@ class Hybrid(Slate):
 
         """
         item = self.verify(item = value)
-        item = self.convert(items = item)
+        item = self.convert(item = item)
         if isinstance(key, int):
             self.contents[key] = value
         else:

@@ -27,7 +27,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.quirks.Loader, sourdough.Component):
+class Technique(sourdough.quirks.Registry, sourdough.quirks.Loader, sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -111,7 +111,7 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
 
              
 @dataclasses.dataclass
-class Step(sourdough.Component):
+class Step(sourdough.quirks.Registry, sourdough.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
