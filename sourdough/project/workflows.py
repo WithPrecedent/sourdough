@@ -4,18 +4,16 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-
-Draft: Settings => Outline
-Publish: Outline => Structure
-Apply: Structure + Data => Structure + Data
-
 Contents:
+    Details (Slate):
+    Outline (Lexicon):
     Draft (Stage): creates a Hybrid instance from passed arguments and/or a 
         Settings instance.
     Publish (Stage): finalizes a Hybrid instance based upon the initial
         construction by an Draft instance and/or runtime user editing.
     Apply (Stage): executes a Hybrid instance, storing changes and results
         in the Apply instance and/or passed data object.
+    Editor (Workflow):
 
 """
 from __future__ import annotations
