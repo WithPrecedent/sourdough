@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(sourdough.quirks.Library):
+class Components(sourdough.quirks.Library):
     """Base class for all pieces of sourdough composite objects.
     
     A Components differs from a Library in 3 significant ways:
@@ -86,7 +86,7 @@ class Component(sourdough.quirks.Library):
 
    
 @dataclasses.dataclass
-class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
+class Structure(sourdough.quirks.Registry, sourdough.Hybrid):
     """Base class for composite objects in sourdough projects.
     
     Structure differs from an ordinary Hybrid in 1 significant way:
@@ -109,7 +109,7 @@ class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
                             
     """
     name: str = None
-    contents: Union[Sequence[str], Sequence[Stage]] = dataclasses.field(
+    contents: Union[Sequence[str], Sequence[Any]] = dataclasses.field(
         default_factory = list)
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
     
@@ -118,10 +118,37 @@ class Structure(sourdough.quirks.Registry, sourdough.Hybrid, Component):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Calls parent initialization method(s).
-        super().__post_init__()        
+        print('test structure contents', self.contents)
+        super().__post_init__()    
+        print('test structure contents post super', self.contents)    
         # Initializes 'index' for iteration.
         self.index = -1
-            
+
+    """ Public Methods """
+    
+    def perform(self, data: object = None, **kwargs) -> object:
+        """Subclasses must provide their own methods.
+        
+        The code below outlines a basic method that a subclass should build on
+        for a properly functioning Step.
+        
+        Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            data (object): optional object to apply 'contents' to. Defaults to
+                None.
+                
+        Returns:
+            object: with any modifications made by 'contents'. If data is not
+                passed, nothing is returned.        
+        
+        """
+        if data is None:
+            self.contents.perform(**kwargs)
+            return self
+        else:
+            return self.contents.perform(item = data, **kwargs)
+                   
     """ Required Subclass Methods """
     
     # @abc.abstractmethod
@@ -164,8 +191,6 @@ class Stage(sourdough.quirks.Registry):
             
     """
     action: str = None
-    # needs: Union[Sequence[str], str] = dataclasses.field(default_factory = list)
-    # produces: Union[Sequence[str], str] = dataclasses.field(default_factory = list)
     registry: ClassVar[Mapping[str, Callable]] = sourdough.Catalog()
 
     """ Required Subclass Methods """

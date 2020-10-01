@@ -1,7 +1,10 @@
 settings = {
     'general': {
         'verbose': True,
-        'seed': 43},
+        'seed': 43,
+        'settings_priority': True,
+        'early_validation': False,
+        'conserve_memery': False},
     'files': {
         'source_format': 'csv',
         'interim_format': 'csv',

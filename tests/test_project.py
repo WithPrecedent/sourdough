@@ -28,6 +28,20 @@ class Search(sourdough.components.Step):
 
 
 @dataclasses.dataclass
+class Divide(sourdough.components.Step):
+
+    def perform(self):
+        return   
+    
+    
+@dataclasses.dataclass
+class Destroy(sourdough.components.Step):
+
+    def perform(self):
+        return   
+    
+
+@dataclasses.dataclass
 class Slice(sourdough.components.Technique):
 
     def perform(self):
@@ -72,7 +86,6 @@ class Dynamite(sourdough.components.Technique):
     
 
 def test_project():
-    print('!!!!!!! test registry', sourdough.Structure.registry)
     assert 'parser' in sourdough.Structure.registry
     project = sourdough.Project(
         name = 'cool_project',

@@ -145,8 +145,8 @@ class Lexicon(collections.abc.MutableMapping, Repository):
                 method.
                 
         """
-        item = self.verify(item = item)
-        item = self.convert(item = item)
+        # item = self.verify(item = item)
+        # item = self.convert(item = item)
         self.contents.update(item)
         return self
                 
@@ -191,8 +191,8 @@ class Lexicon(collections.abc.MutableMapping, Repository):
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
-        item = self.verify(item = value)
-        item = self.convert(item = item)
+        # item = self.verify(item = value)
+        # item = self.convert(item = item)
         self.contents[key] = value
         return self
 
@@ -216,13 +216,13 @@ class Lexicon(collections.abc.MutableMapping, Repository):
         return iter(self.contents)
 
     def __len__(self) -> int:
-        """Returns length of 'contents'.
+        """Returns length of iterable of 'contents'
 
         Returns:
-            int: length of 'contents'.
+            int: length of iterable 'contents'.
 
         """
-        return len(self.contents)
+        return len(self.__iter__())
 
 
 @dataclasses.dataclass
@@ -446,8 +446,8 @@ class Slate(collections.abc.MutableSequence, Repository):
             item (Sequence[Any]): items to add to the 'contents' attribute.
 
         """
-        item = self.verify(item = item)
-        item = self.convert(item = item)
+        # item = self.verify(item = item)
+        # item = self.convert(item = item)
         try:
             self.contents.extend(item)
         except TypeError:
@@ -462,8 +462,8 @@ class Slate(collections.abc.MutableSequence, Repository):
             item (Any): object to be inserted.
             
         """
-        item = self.verify(item = item)
-        item = self.convert(item = item)
+        # item = self.verify(item = item)
+        # item = self.convert(item = item)
         self.contents.insert(index, item)
         return self
                         
@@ -489,8 +489,8 @@ class Slate(collections.abc.MutableSequence, Repository):
             value (Any): value to be set at 'key' in 'contents'.
 
         """
-        item = self.verify(item = value)
-        item = self.convert(item = item)
+        # item = self.verify(item = value)
+        # item = self.convert(item = item)
         self.contents[key] = value
 
     def __delitem__(self, key: Union[str, int]) -> None:
@@ -512,13 +512,13 @@ class Slate(collections.abc.MutableSequence, Repository):
         return iter(self.contents)
 
     def __len__(self) -> int:
-        """Returns length of 'contents'.
+        """Returns length of iterable of 'contents'.
 
         Returns:
-            int: length of 'contents'.
+            int: length of iterable of 'contents'.
 
         """
-        return len(self.contents)
+        return len(self.__iter__())
     
    
 @dataclasses.dataclass
@@ -582,8 +582,8 @@ class Hybrid(Slate):
             items (List[Any]): items to append to 'contents'.
 
         """
-        item = self.verify(item = item)
-        item = self.convert(item = item)
+        # item = self.verify(item = item)
+        # item = self.convert(item = item)
         self.contents.append(item)
         return self    
     
@@ -629,8 +629,8 @@ class Hybrid(Slate):
             TypeError: if 'item' does not have a name attribute.
             
         """
-        item = self.verify(item = item)
-        item = self.convert(item = item)
+        # item = self.verify(item = item)
+        # item = self.convert(item = item)
         self.contents.extend(item)
         return self  
 
@@ -830,8 +830,8 @@ class Hybrid(Slate):
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
-        item = self.verify(item = value)
-        item = self.convert(item = item)
+        # item = self.verify(item = value)
+        # item = self.convert(item = item)
         if isinstance(key, int):
             self.contents[key] = value
         else:
@@ -855,14 +855,23 @@ class Hybrid(Slate):
             self.contents = [c for c in self.contents if c.name != key]
         return self
 
-    def __len__(self) -> int:
-        """Returns length of collapsed 'contents'.
+    def __iter__(self) -> Iterable:
+        """Returns  iterable of collapsed 'contents'.
 
         Returns:
-            int: length of collapsed 'contents'.
+            Iterable: collapsed 'contents'.
 
         """
-        return len(list(more_itertools.collapse(self.contents)))
+        return more_itertools.collapse(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of iterable of 'contents'
+
+        Returns:
+            int: length of iterable 'contents'.
+
+        """
+        return len(self.__iter__())
     
 
 @dataclasses.dataclass

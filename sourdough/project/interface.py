@@ -274,7 +274,7 @@ class Project(object):
             'workflow': sourdough.Workflow,
             'step': sourdough.components.Step,
             'technique': sourdough.components.Technique,
-            'component': sourdough.Component})
+            'components': sourdough.Components})
     # components: ClassVar[Sequence[str]] = [
     #     'design', 
     #     'step', 
@@ -331,6 +331,7 @@ class Project(object):
                 defaults = {
                     'general': {
                         'verbose': False,
+                        'settings_priority': True,
                         'early_validation': False,
                         'conserve_memery': False},
                     'files': {

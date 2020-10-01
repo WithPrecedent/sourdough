@@ -18,6 +18,7 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import copy
 import dataclasses
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -84,9 +85,9 @@ class Outline(sourdough.Lexicon):
     project: sourdough.Project = dataclasses.field(repr = False, default = None) 
 
     """ Dunder Methods """
-
-    def __str__(self) -> str:
-        return pprint.pformat(self.contents, sort_dicts = False, compact = True)
+    
+    # def __str__(self) -> str:
+    #     return pprint.pformat(self.contents, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
@@ -193,7 +194,7 @@ class Draft(sourdough.Stage):
         try:
             structure = project.settings[name][f'{name}_design']
         except KeyError:
-            structure = None
+            structure = 'pipeline'
         return structure
 
     def _get_attributes(self, name: str, project: sourdough.Project,
@@ -260,108 +261,76 @@ class Publish(sourdough.Stage):
             
         """
         outline = project.results['outline']
-        root_key = list(outline.keys())[0]
-        root_details = outline[root_key]        
-        project.results['deliverable'] = self._create_deliverable(
+        root_key = list(outline.keys())[0]    
+        deliverable = self._create_structure(
             name = root_key,
-            details = root_details,
-            outline = outline,
             project = project)
-        print('test deliverable', project.results['deliverable'])
+        print('test deliverable', deliverable)
+        project.results['deliverable'] = deliverable
         return project     
 
     """ Private Methods """
 
-    def _create_deliverable(self, name: str, details: Details, outline: Outline,
-                            project: sourdough.Project) -> sourdough.Structure:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            details (Details): [description]
-            outline (Outline): [description]
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Structure: [description]
-            
-        """
-        
-        base = self._create_component(
-            name = name,
-            base = details.base,
-            contents = details.contents,
-            project = project)
-        print('test base', name, base)
-        base = self._add_attributes(
-            component = base, 
-            attributes = details.attributes)
-        for item in details:
-            if item in outline:
-                inner_details = outline[item]
-                inner_base = project.bases[inner_details.base]
-                instance = self._create_deliverable(
-                    name = item,
-                    details = inner_details,
-                    outline = outline,
-                    project = project)
-                base.add(instance)
-                # if issubclass(base, sourdough.Structure):
-                #     instance = self._create_composite(
-                #         name = item,
-                #         details = inner_details,
-                #         project = project)
-                # else:
-                #     instance = self._create_clones(
-                #         name = item,
-                #         details = value,
-                #         project = project)
-            else:
-                instance = self._create_component(
-                    name = item,
-                    base = details.base,
-                    contents = details.contents,
-                    project = project)
-                base.contents = instance
-        return base
-
-    def _create_component(self,
-            name: str, 
-            base: str,
-            contents: Sequence[str],
-            project: sourdough.Project) -> sourdough.Component:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            details (sourdough.project.containers.Details): [description]
-            project (sourdough.Project): [description]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            sourdough.Component: [description]
-            
-        """
+    def _create_unknown(self, name: str,
+                        project: sourdough.Project) -> sourdough.Structure:        
         try:
-            instance = project.bases[base].instance(
-                key = name, 
-                contents = contents)
-        except (AttributeError, KeyError):
+            return self._create_structure(name = name, project = project)
+        except KeyError:
             try:
-                instance = project.bases['component'].borrow(key = name)
-                if contents:
-                    instance.contents = contents
+                return self._instance_component(name = name, project = project)
             except KeyError:
-                instance = project.bases[base](name = name, contents = contents)
-                
-                # raise KeyError(
-                #     f'No Component or Structure was found matching {name}')
-        return instance  
+                raise KeyError(f'{name} component does not exist')   
+
+    def _create_structure(self, name: str,
+                          project: sourdough.Project) -> sourdough.Structure:
+        structure = self._instance_structure(name = name, project = project)
+        print('test structure', name, structure)
+        new_structure_contents = []
+        for item in structure:
+            print('test item structure contents', name, item)
+            new_structure_contents = self._create_unknown(
+                name = item, 
+                project = project)
+        structure.conents = new_structure_contents
+        return structure
     
+    def _instance_structure(self, name: str, 
+                            project: sourdough.Project) -> sourdough.Structure:
+        details = project.results['outline'][name]
+        kwargs = {'name': name, 'contents': details.contents}
+        print('test kwargs', kwargs)
+        try:
+            instance = project.bases[details.base].registry[name](kwargs)
+        except KeyError:
+            try:
+                instance = project.bases[details.base].registry[details.design](kwargs)
+            except KeyError:
+                raise KeyError(f'{name} structure cannot be found')
+        print('test instance.contents', instance)
+        return instance
+
+    def _instance_component(self, name: str, 
+                            project: sourdough.Project) -> sourdough.Structure:
+        details = project.results['outline'][name]
+        kwargs = {'name': name}
+        try:
+            instance = project.bases[details.base].registry[name](kwargs)
+        except KeyError:
+            try:
+                instance = project.bases[details.base].registry[details.design](kwargs)
+            except KeyError:
+                try:
+                    instance = copy.deepcopy(
+                        project.bases['components'].library[name])
+                    instance.name = name
+                    instance.contents = details.contents
+                except KeyError:
+                    raise KeyError(f'{name} component cannot be found')
+        return instance            
+
     def _add_attributes(self, 
             component: sourdough.Component,
+            project: sourdough.Project,
             attributes: Mapping[str, Any]) -> sourdough.Component:
         """[summary]
 
@@ -370,8 +339,103 @@ class Publish(sourdough.Stage):
             
         """
         for key, value in attributes.items():
-            setattr(component, key, value)
-        return component   
+            if (project.settings['general']['settings_priority']
+                    or not hasattr(component, key)):
+                setattr(component, key, value)
+        return component  
+
+
+    # def _create_component(self, name: str, outline: Outline,
+    #                       project: sourdough.Project) -> sourdough.Structure:
+    #     """[summary]
+
+    #     Args:
+    #         name (str): [description]
+    #         details (Details): [description]
+    #         outline (Outline): [description]
+    #         project (sourdough.Project): [description]
+
+    #     Returns:
+    #         sourdough.Structure: [description]
+            
+    #     """
+    #     base = self._instance_component(
+    #         name = name,
+    #         base = outline[name].base,
+    #         design = outline[name].design,
+    #         contents = copy.deepcopy(outline[name].contents),
+    #         project = project)
+    #     base = self._add_attributes(
+    #         component = base, 
+    #         attributes = outline[name].attributes,
+    #         project = project)
+    #     if issubclass(base.__class__, sourdough.Structure):
+    #         print('test yes substructure')
+    #         print('test outline', outline)
+    #         for item in base.contents:
+    #             print('test outline', outline)
+    #             # print('test base', name, base)
+    #             # print('test outline[name]', outline[name])
+    #             # print('test item', item)
+    #             instance = self._create_component(
+    #                 name = item,
+    #                 outline = outline,
+    #                 project = project)
+    #             base.add(instance)
+    #     else:
+    #         print('test not structure')
+    #         # print('test yes instance component', base)
+    #         # print('test outline[name].base', outline[name].base)
+    #         # print('test outline[name].contents', outline[name].contents)
+    #         instance = self._instance_component(
+    #             name = name,
+    #             base = outline[name].base,
+    #             design = outline[name].design,
+    #             contents = copy.deepcopy(outline[name].contents),
+    #             project = project)
+    #         base.contents = instance
+    #     return base
+
+    # def _instance_component(self,
+    #         name: str, 
+    #         base: str,
+    #         design: str,
+    #         contents: Sequence[str],
+    #         project: sourdough.Project) -> sourdough.Component:
+    #     """[summary]
+
+    #     Args:
+    #         name (str): [description]
+    #         details (sourdough.project.containers.Details): [description]
+    #         project (sourdough.Project): [description]
+
+    #     Raises:
+    #         KeyError: [description]
+
+    #     Returns:
+    #         sourdough.Component: [description]
+            
+    #     """
+    #     try:
+    #         print('project.base', project.bases[base].registry)
+    #         print('test easy lookup', base, name)
+    #         instance = project.bases[base].instance(key = name)
+    #     except KeyError:
+    #         try:
+    #             print('test instance lookup', base, name)
+    #             instance = project.bases['component'].borrow(key = name)
+    #         except KeyError:
+    #             try:
+    #                 print('test design lookup', base, name)
+    #                 instance = project.bases[base].instance(
+    #                     key = design, 
+    #                     name = name)
+    #             except KeyError:
+    #                 raise KeyError('this class is screwed')
+    #     if contents:
+    #         instance.contents = contents
+    #     return instance  
+ 
        
     # def _set_parameters(self, 
     #         component: sourdough.Component) -> sourdough.Component:

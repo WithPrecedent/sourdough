@@ -41,7 +41,7 @@ from .core.types import Quirk
 from .core import quirks
 from .configuration.settings import Settings
 from .configuration.filer import Filer
-from .core.base import Component
+from .core.base import Components
 from .core.base import Structure
 from .core.base import Stage
 from .core.base import Workflow
