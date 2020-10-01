@@ -52,34 +52,12 @@ class Details(sourdough.Slate):
     contains: str = None
     design: str = None
     attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    
-    """ Public Methods """
-    
-    def validate(self, contents: Union[str, Sequence[str]]) -> Sequence[str]:
-        """Validates 'contents' or converts 'contents' to a list.
-        
-        Args:
-            contents (Sequence[str]): variable to validate as compatible with 
-                an instance.
-            
-        Raises:
-            TypeError: if 'contents' argument is not of a supported datatype.
-            
-        Returns:
-            Sequence[str]: validated or converted argument that is compatible 
-                with an instance.
-        
-        """
-        if isinstance(contents, str):
-            return sourdough.tools.listify(contents)
-        elif (isinstance(contents, Sequence) 
-                and all(isinstance(c, str) for c in contents)):
-            return contents
-        else:
-            raise TypeError('contents must be a str of list of str types')
+
+    """ Dunder Methods """
 
     def __str__(self) -> str:
         return pprint.pformat(self, sort_dicts = False, compact = True)
+
 
 @dataclasses.dataclass
 class Outline(sourdough.Lexicon):
@@ -105,6 +83,8 @@ class Outline(sourdough.Lexicon):
     name: str = None
     project: sourdough.Project = dataclasses.field(repr = False, default = None) 
 
+    """ Dunder Methods """
+
     def __str__(self) -> str:
         return pprint.pformat(self.contents, sort_dicts = False, compact = True)
 
@@ -118,10 +98,6 @@ class Draft(sourdough.Stage):
     
     """
     action: str = 'drafting'
-    # needs: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['settings'])
-    # produces: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['outline'])
     
     """ Public Methods """
     
@@ -270,10 +246,6 @@ class Publish(sourdough.Stage):
     
     """    
     action: str = 'publishing' 
-    # needs: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['outline'])
-    # produces: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['plan'])
     
     """ Public Methods """
  
@@ -400,28 +372,6 @@ class Publish(sourdough.Stage):
         for key, value in attributes.items():
             setattr(component, key, value)
         return component   
-
-    # def _get_techniques(self, 
-    #         component: sourdough.Component,
-    #         **kwargs) -> sourdough.Component:
-    #     """
-        
-    #     """
-    #     if isinstance(component, sourdough.Technique):
-    #         component = self._get_technique(technique = component, **kwargs)
-    #     elif isinstance(component, sourdough.Step):
-    #         component.technique = self._get_technique(
-    #             technique = component.technique,
-    #             **kwargs)
-    #     return component   
-
-    # def _get_technique(self, 
-    #         technique: sourdough.Technique,
-    #         **kwargs) -> sourdough.Technique:
-    #     """
-        
-    #     """
-    #     return self.project.component.instance(technique, **kwargs)
        
     # def _set_parameters(self, 
     #         component: sourdough.Component) -> sourdough.Component:
@@ -457,111 +407,14 @@ class Publish(sourdough.Stage):
     #         task.technique = self._set_technique_parameters(
     #             technique = task.technique)
     #     return task  
-            
-    # def _get_settings(self,
-    #         technique: Union[
-    #             sourdough.Technique, 
-    #             sourdough.Step]) -> Union[
-    #                 sourdough.Technique, 
-    #                 sourdough.Step]:
-    #     """Acquires parameters from 'settings' of 'project'.
-
-    #     Args:
-    #         technique (technique): an instance for parameters to be added to.
-
-    #     Returns:
-    #         technique: instance with parameters added.
-
-    #     """
-    #     key = f'{technique.name}_parameters'
-    #     try: 
-    #         technique.parameters.update(self.project.settings[key])
-    #     except KeyError:
-    #         pass
-    #     return technique
-
-    # def _create_Structures(self, 
-    #         Structures: Sequence[str],
-    #         suffix: str,
-    #         **kwargs) -> Sequence[sourdough.Structure]:
-    #     """[summary]
-
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     new_Structures = []
-    #     for Structure in Structures:
-    #         # Checks if special prebuilt class exists.
-    #         try:
-    #             component = self.project.bases.instance(
-    #                 key = Structure, 
-    #                 **kwargs)
-    #         # Otherwise uses the appropriate base type.
-    #         except KeyError:
-    #             base = self.project.bases._suffixify()[suffix]
-    #             kwargs.update({'name': Structure})
-    #             component = base(**kwargs)
-    #         component = self.create(Structure = component)
-    #         new_Structures.append(component)
-    #     return new_Structures
-        
-
-    # def _get_structure_suffixes(self) -> Sequence[str]:
-    #     """[summary]
-
-    #     Args:
-    #         component (sourdough.Component): [description]
-
-    #     Returns:
-    #         Sequence[str]: [description]
-            
-    #     """
-    #     components = self.project.bases._suffixify()
-    #     return [
-    #         k for k, v in components.items() if isinstance(v, sourdough.Structure)]
-
-    # def _create_composite(self, 
-    #         settings: Mapping[str, Sequence[str]]) -> Mapping[
-    #             Sequence[str, str], 
-    #             Sequence[sourdough.Component]]:
-    #     """[summary]
-
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     components = {}
-    #     bases = {}
-    #     for key, value in settings.items():
-    #         prefix, base = self._divide_key(key = key)
-    #         for item in value:
-    #             bases[prefix] = base
-    #             components[prefix] = self._create_component(
-    #                 name = item, 
-    #                 base = base)
-    #     return components   
-
-    # def _get_algorithms(self, 
-    #         component: sourdough.Component) -> sourdough.Component:
-    #     """
-        
-    #     """
-    #     if isinstance(component, sourdough.Technique):
-    #         component.algorithm = self.project.component.library[
-    #             component.algorithm]
-    #     elif isinstance(component, sourdough.Step):
-    #         component.technique.algorithm = self.project.component.library[
-    #             component.technique.algorithm]
-    #     return component   
      
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
     
     action: str = 'application' 
-    # needs: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['plan', 'data'])
-    # produces: Union[Sequence[str], str] = dataclasses.field(
-    #     default_factory = lambda: ['deliverable', 'data'])
+
+    """ Public Methods """
         
     def perform(self, project: sourdough.Project) -> sourdough.Project:
         """[summary]
