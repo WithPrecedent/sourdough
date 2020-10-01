@@ -31,224 +31,271 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-@dataclasses.dataclass
-class Validator(sourdough.Quirk):
-    """Base class for type validation and/or conversion Quirks.
-    
-    To use this mixin, a base class must have a 'contents' attribute for the
-    items to be validated and/or converted.
 
-    Attributes:
-        accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
-            individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored in 'contents'.
-                          
+@dataclasses.dataclass
+class Registrar(object):
+    """Registry interface for core sourdough classes.
     """
 
     """ Initialization Methods """
     
-    def __post_init__(self):
-        """Registers an instance with 'contents'."""
-        # Calls initialization method of other inherited classes.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        self.accepts = self.deannotate(
-            annotation = self.__annotations__['contents'])
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'registry' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            cls.register()
+   
+    """ Class Methods """
 
-    """ Required Subclass Methods """
+    @classmethod
+    @abc.abstractmethod
+    def register(cls) -> None:
+        pass
     
-    @abc.abstractmethod
-    def convert(self, contents: Any) -> Any:
-        """Converts 'contents' to appropriate type.
-        
-        This method should convert every one of the types in 'accepts' to the
-        type in 'stores'.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass   
-
-    @abc.abstractmethod
-    def verify(self, contents: Any) -> Any:
-        """Verifies 'contents' contains one of the types in 'accepts'.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass  
-
-    def deannotate(self, annotation: Any) -> Tuple[Any]:
-        """Returns type annotations as a tuple.
-        
-        This allows even complicated annotations with Union to be converted to a
-        form that fits with an isinstance call.
-
-        Args:
-            annotation (Any): type annotation.
-
-        Returns:
-            Tuple[Any]: base level of stored type in an annotation
-        
-        """
-        origin = typing.get_origin(annotation)
-        args = typing.get_args(annotation)
-        if origin is Union:
-            accepts = tuple(deannotate(a)[0] for a in args)
-        else:
-            self.stores = origin
-            accepts = typing.get_args(annotation)
-        return accepts
-        
-    def verify(self, contents: Any) -> Any:
-        """Verifies that 'contents' is one of the types in 'accepts'.
-        
-        Args:
-            contents (Any): item(s) to be type validated.
-            
-        Raises:
-            TypeError: if 'contents' is not one of the types in 'accepts'.
-            
-        Returns:
-            Any: original contents if there is no TypeError.
-        
-        """
-        if ((isinstance(contents, Mapping) 
-                and all(isinstance(c, self.accepts) for c in contents.values()))
-            or (isinstance(contents, Sequence) 
-                and all(isinstance(c, self.accepts) for c in contents))
-            or isinstance(contents, self.accepts)):
-            return contents   
-        else:
-            raise TypeError(
-                f'contents must be or contain one of the following types: ' 
-                f'{self.accepts}')        
-
-
+    
 @dataclasses.dataclass
-class Mapify(Validator):
-    """Type validator and converter for Mappings.
-
-    Attributes:
-        accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
-            individual item, in a Mapping, or in a Sequence.
-        stores (Any): a single type stored by the parent class. Set to dict.
-            
-    """    
+class Librarian(object):
+    """Library interface for core sourdough classes.
+    """
 
     """ Initialization Methods """
-    
-    def __post_init__(self):
-        """Registers an instance with 'contents'."""
-        # Calls initialization method of other inherited classes.
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
         try:
             super().__post_init__()
         except AttributeError:
             pass
-        self.stores = dict
+        # Stores subclass in Library.
+        self.shelve()
     
-    """ Public Methods """
+    """ Class Methods """
+
+    @abc.abstractmethod
+    def shelve(cls) -> None:
+        pass
+
+
+# @dataclasses.dataclass
+# class Validator(object):
+#     """Base class for type validation and/or conversion Quirks.
     
-    def convert(self, contents: Any) -> (Mapping[str, Any]):
-        """Converts 'contents' to a Mapping type.
+#     To use this mixin, a base class must have a 'contents' attribute for the
+#     items to be validated and/or converted.
+
+#     Attributes:
+#         accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
+#             individual item, in a Mapping, or in a Sequence.
+#         stores (Any): a single type stored in 'contents'.
+                          
+#     """
+
+#     """ Initialization Methods """
+    
+#     def __post_init__(self):
+#         """Registers an instance with 'contents'."""
+#         # Calls initialization method of other inherited classes.
+#         try:
+#             super().__post_init__()
+#         except AttributeError:
+#             pass
+#         self.accepts = self.deannotate(
+#             annotation = self.__annotations__['contents'])
+
+#     """ Required Subclass Methods """
+    
+#     @abc.abstractmethod
+#     def convert(self, contents: Any) -> Any:
+#         """Converts 'contents' to appropriate type.
         
-        Args:
-            contents (Any): an object containing item(s) with 'name' attributes.
+#         This method should convert every one of the types in 'accepts' to the
+#         type in 'stores'.
+        
+#         Subclasses must provide their own methods.
+        
+#         """
+#         pass   
+
+#     @abc.abstractmethod
+#     def verify(self, contents: Any) -> Any:
+#         """Verifies 'contents' contains one of the types in 'accepts'.
+        
+#         Subclasses must provide their own methods.
+        
+#         """
+#         pass  
+
+#     def deannotate(self, annotation: Any) -> Tuple[Any]:
+#         """Returns type annotations as a tuple.
+        
+#         This allows even complicated annotations with Union to be converted to a
+#         form that fits with an isinstance call.
+
+#         Args:
+#             annotation (Any): type annotation.
+
+#         Returns:
+#             Tuple[Any]: base level of stored type in an annotation
+        
+#         """
+#         origin = typing.get_origin(annotation)
+#         args = typing.get_args(annotation)
+#         if origin is Union:
+#             accepts = tuple(deannotate(a)[0] for a in args)
+#         else:
+#             self.stores = origin
+#             accepts = typing.get_args(annotation)
+#         return accepts
+        
+#     def verify(self, contents: Any) -> Any:
+#         """Verifies that 'contents' is one of the types in 'accepts'.
+        
+#         Args:
+#             contents (Any): item(s) to be type validated.
+            
+#         Raises:
+#             TypeError: if 'contents' is not one of the types in 'accepts'.
+            
+#         Returns:
+#             Any: original contents if there is no TypeError.
+        
+#         """
+#         if ((isinstance(contents, Mapping) 
+#                 and all(isinstance(c, self.accepts) for c in contents.values()))
+#             or (isinstance(contents, Sequence) 
+#                 and all(isinstance(c, self.accepts) for c in contents))
+#             or isinstance(contents, self.accepts)):
+#             return contents   
+#         else:
+#             raise TypeError(
+#                 f'contents must be or contain one of the following types: ' 
+#                 f'{self.accepts}')        
+
+
+# @dataclasses.dataclass
+# class Mapify(Validator):
+#     """Type validator and converter for Mappings.
+
+#     Attributes:
+#         accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
+#             individual item, in a Mapping, or in a Sequence.
+#         stores (Any): a single type stored by the parent class. Set to dict.
+            
+#     """    
+
+#     """ Initialization Methods """
+    
+#     def __post_init__(self):
+#         """Registers an instance with 'contents'."""
+#         # Calls initialization method of other inherited classes.
+#         try:
+#             super().__post_init__()
+#         except AttributeError:
+#             pass
+#         self.stores = dict
+    
+#     """ Public Methods """
+    
+#     def convert(self, contents: Any) -> (Mapping[str, Any]):
+#         """Converts 'contents' to a Mapping type.
+        
+#         Args:
+#             contents (Any): an object containing item(s) with 'name' attributes.
                 
-        Returns:
-            Mapping[str, Any]: converted 'contents'.
+#         Returns:
+#             Mapping[str, Any]: converted 'contents'.
             
-        """
-        contents = self.verify(contents = contents)
-        converted = {}
-        if isinstance(contents, Mapping):
-            converted = contents
-        elif (isinstance(contents, Sequence) 
-                and not isinstance(contents, str)
-                and all(hasattr(i, 'name') for i in contents)):
-            for item in contents:
-                try:
-                    converted[item.name] = item
-                except AttributeError:
-                    converted[item.get_name()] = item
-        return converted
+#         """
+#         contents = self.verify(contents = contents)
+#         converted = {}
+#         if isinstance(contents, Mapping):
+#             converted = contents
+#         elif (isinstance(contents, Sequence) 
+#                 and not isinstance(contents, str)
+#                 and all(hasattr(i, 'name') for i in contents)):
+#             for item in contents:
+#                 try:
+#                     converted[item.name] = item
+#                 except AttributeError:
+#                     converted[item.get_name()] = item
+#         return converted
     
 
-@dataclasses.dataclass    
-class Sequencify(Validator):
-    """Type validator and converter for Sequences.
+# @dataclasses.dataclass    
+# class Sequencify(Validator):
+#     """Type validator and converter for Sequences.
     
-    Args:
-        accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-            class either as an individual item, in a Mapping, or in a Sequence.
-            Defaults to sourdough.Element.
-        stores (Any): a single type accepted by the parent class. Defaults to 
-            list.
+#     Args:
+#         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
+#             class either as an individual item, in a Mapping, or in a Sequence.
+#             Defaults to sourdough.Element.
+#         stores (Any): a single type accepted by the parent class. Defaults to 
+#             list.
             
-    """        
+#     """        
 
-    """ Initialization Methods """
+#     """ Initialization Methods """
     
-    def __post_init__(self):
-        """Registers an instance with 'contents'."""
-        # Calls initialization method of other inherited classes.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        self.stores = list
+#     def __post_init__(self):
+#         """Registers an instance with 'contents'."""
+#         # Calls initialization method of other inherited classes.
+#         try:
+#             super().__post_init__()
+#         except AttributeError:
+#             pass
+#         self.stores = list
     
-    """ Public Methods """
+#     """ Public Methods """
        
-    def convert(self, 
-            contents: Any) -> (
-                Sequence[sourdough.Element]):
-        """Converts 'contents' to a Sequence type.
+#     def convert(self, 
+#             contents: Any) -> (
+#                 Sequence[sourdough.Element]):
+#         """Converts 'contents' to a Sequence type.
         
-        Args:
-            contents (Any): an object containing one or 
-                more Element subclasses or Element subclass instances.
+#         Args:
+#             contents (Any): an object containing one or 
+#                 more Element subclasses or Element subclass instances.
         
-        Raises:
-            TypeError: if 'contents' is not an Any.
+#         Raises:
+#             TypeError: if 'contents' is not an Any.
                 
-        Returns:
-            Sequence[Element]: converted 'contents'.
+#         Returns:
+#             Sequence[Element]: converted 'contents'.
             
-        """
-        converted = self.stores()
-        if isinstance(contents, Mapping):
-            converted = converted.extend(contents.values())
-        elif isinstance(contents, Sequence):
-            converted = contents
-        elif isinstance(contents, sourdough.Element):
-            converted = converted.append(contents)
-        return converted  
+#         """
+#         converted = self.stores()
+#         if isinstance(contents, Mapping):
+#             converted = converted.extend(contents.values())
+#         elif isinstance(contents, Sequence):
+#             converted = contents
+#         elif isinstance(contents, sourdough.Element):
+#             converted = converted.append(contents)
+#         return converted  
 
-    def verify(self, contents: Any) -> Any:
-        """Verifies that 'contents' is one of the types in 'accepts'.
+#     def verify(self, contents: Any) -> Any:
+#         """Verifies that 'contents' is one of the types in 'accepts'.
         
-        Args:
-            contents (Any): item(s) to be type validated.
+#         Args:
+#             contents (Any): item(s) to be type validated.
             
-        Raises:
-            TypeError: if 'contents' is not one of the types in 'accepts'.
+#         Raises:
+#             TypeError: if 'contents' is not one of the types in 'accepts'.
             
-        Returns:
-            Any: original contents if there is no TypeError.
+#         Returns:
+#             Any: original contents if there is no TypeError.
         
-        """
-        if all(isinstance(c, self.accepts) for c in contents):
-            return contents
-        else:
-            raise TypeError(
-                f'contents must be or contain one of the following types: ' 
-                f'{self.accepts}')        
+#         """
+#         if all(isinstance(c, self.accepts) for c in contents):
+#             return contents
+#         else:
+#             raise TypeError(
+#                 f'contents must be or contain one of the following types: ' 
+#                 f'{self.accepts}')        
+
 
 @dataclasses.dataclass
-class Loader(sourdough.Quirk):
+class Loader(object):
     """ for lazy loading of python modules and objects.
 
     Args:
@@ -259,176 +306,62 @@ class Loader(sourdough.Quirk):
             unnecessary re-importation. Defaults to an empty dict.
 
     """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = list)
-    _loaded: ClassVar[Mapping[Any, Any]] = {}
+    pass
+    # modules: Union[str, Sequence[str]] = dataclasses.field(
+    #     default_factory = list)
+    # _loaded: ClassVar[Mapping[Any, Any]] = {}
 
-    """ Class Methods """
+    # """ Class Methods """
 
-    @classmethod
-    def inject(cls, item: Any) -> Any:
-        return item
+    # @classmethod
+    # def inject(cls, item: Any) -> Any:
+    #     return item
  
-    """ Public Methods """
+    # """ Public Methods """
 
-    def load(self, 
-            key: str, 
-            check_attributes: bool = False, 
-            **kwargs) -> object:
-        """Returns object named by 'key'.
+    # def load(self, 
+    #         key: str, 
+    #         check_attributes: bool = False, 
+    #         **kwargs) -> object:
+    #     """Returns object named by 'key'.
 
-        Args:
-            key (str): name of class, function, or variable to try to import 
-                from modules listed in 'modules'.
+    #     Args:
+    #         key (str): name of class, function, or variable to try to import 
+    #             from modules listed in 'modules'.
 
-        Returns:
-            object: imported from a python module.
+    #     Returns:
+    #         object: imported from a python module.
 
-        """
-        imported = None
-        if key in self._loaded:
-            imported = self._loaded[key]
-        else:
-            if check_attributes:
-                try:
-                    key = getattr(self, key)
-                except AttributeError:
-                    pass
-            for module in sourdough.tools.listify(self.modules):
-                try:
-                    imported = sourdough.tools.importify(
-                        module = module, 
-                        key = key)
-                    break
-                except (AttributeError, ImportError):
-                    pass
-        if imported is None:
-            raise ImportError(f'{key} was not found in {self.modules}')
-        elif kwargs:
-            self._loaded[key] = imported(**kwargs)
-            return self._loaded[key]
-        else:
-            self._loaded[key] = imported
-            return self._loaded[key]
-
-
-@dataclasses.dataclass
-class Registry(sourdough.Quirk):
-    """Registry interface for core sourdough classes.
-    
-    Every Registry subclass maintains a Catalog of concrete subclasses in the
-    'registry' class attribute. Subclasses can be accessed using ordinary dict 
-    methods on [RegistrySubclass].registry or using the 'select' method. 
-    Subclasses can be instanced using the 'instance' method while passing any 
-    desired kwargs.
-
-    Attributes
-        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
-
-    """
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'registry' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        if not hasattr(cls, 'registry'):
-            cls.registry = sourdough.Catalog()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            cls.registry[key] = cls
-               
-    """ Class Methods """
-
-    @classmethod
-    def instance(cls, key: Union[str, Sequence[str]], **kwargs) -> Union[
-                 object, Sequence[object]]:
-        """Returns instance(s) of a stored class(es).
-        
-        This method acts as a factory for instancing stored classes.
-        
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'registry'.
-            kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-        Returns:
-            Union[object, Sequence[object]]: instance(s) of stored classes.
-            
-        """
-        return cls.registry.instance(key = key, **kwargs)
- 
-    @classmethod
-    def select(cls, key: Union[str, Sequence[str]]) -> Union[
-               Any, Sequence[Any]]:
-        """Returns value(s) stored in 'registry'.
-
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'registry'.
-
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
-            
-        """
-        return cls.registry.select(key = key)
-   
-
-@dataclasses.dataclass
-class Library(sourdough.Quirk):
-    """Library interface for core sourdough classes.
-    
-    Every Library subclass maintains a Catalog of concrete subclasses in the
-    'library' class attribute. Subclasses can be accessed using ordinary dict 
-    methods on [LibrarySubclass].library or using the 'select' method. 
-    Subclasses can be instanced using the 'instance' method while passing any 
-    desired kwargs.
-
-    Attributes:
-        library (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
-
-    """
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance."""
-        # Calls parent initialization methods, if they exist.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        for item in self.__class__.__mro__:
-            if Library in item.__bases__:
-                try:
-                    item.library[self.name] = self
-                    break
-                except AttributeError:
-                    item.library = sourdough.Catalog()
-                    item.library[self.name] = self
-                    break
-        
-    """ Class Methods """
- 
-    @classmethod
-    def borrow(cls, key: Union[str, Sequence[str]]) -> Union[
-               Any, Sequence[Any]]:
-        """Returns value(s) stored in 'library'.
-
-        Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'library'.
-
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
-            
-        """
-        return cls.library.select(key = key)
+    #     """
+    #     imported = None
+    #     if key in self._loaded:
+    #         imported = self._loaded[key]
+    #     else:
+    #         if check_attributes:
+    #             try:
+    #                 key = getattr(self, key)
+    #             except AttributeError:
+    #                 pass
+    #         for module in sourdough.tools.listify(self.modules):
+    #             try:
+    #                 imported = sourdough.tools.importify(
+    #                     module = module, 
+    #                     key = key)
+    #                 break
+    #             except (AttributeError, ImportError):
+    #                 pass
+    #     if imported is None:
+    #         raise ImportError(f'{key} was not found in {self.modules}')
+    #     elif kwargs:
+    #         self._loaded[key] = imported(**kwargs)
+    #         return self._loaded[key]
+    #     else:
+    #         self._loaded[key] = imported
+    #         return self._loaded[key]
 
   
 # @dataclasses.dataclass
-# class ProxyMixin(sourdough.Quirk):
+# class ProxyMixin(object):
 #     """ which creates a proxy name for a Element subclass attribute.
 
 #     The 'proxify' method dynamically creates a property to access the stored

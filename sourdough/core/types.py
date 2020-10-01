@@ -565,7 +565,7 @@ class Hybrid(Slate):
     
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls parent initialization method(s), if they exist.
+        # Calls parent and/or mixin initialization method(s), if they exist.
         try:
             super().__post_init__()
         except AttributeError:
@@ -872,26 +872,3 @@ class Hybrid(Slate):
 
         """
         return len(self.__iter__())
-    
-
-@dataclasses.dataclass
-class Quirk(object):
-    """Base class for sourdough mixins.
-
-    Attributes:
-        options (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
-
-    """
-    name: str = None
-    options: ClassVar[Mapping[str, Callable]] = Catalog()
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'options' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            cls.options[key] = cls

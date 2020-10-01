@@ -1,5 +1,5 @@
 """
-workflows: classes used for project process and object creation and application
+editor: Workflow integrating settings while allowing runtime editing.
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -113,6 +113,7 @@ class Draft(sourdough.Stage):
             
         """       
         suffixes = self._get_component_suffixes(project = project)
+        print('test suffixes', suffixes)
         outline  = self._create_outline(project = project, suffixes = suffixes)
         self._set_product(name = 'outline', project = project, product = outline)
         print('test project outline', project.results['outline'])
@@ -131,7 +132,7 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        return tuple([item + 's' for item in project.bases.keys()])
+        return tuple([item + 's' for item in project.components.keys()])
     
     def _create_outline(self, project: sourdough.Project, 
                         suffixes: Tuple[str]) -> Outline:

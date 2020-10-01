@@ -75,7 +75,7 @@ class Settings(sourdough.Lexicon):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
+        # Calls parent and/or mixin initialization method(s).
         try:
             super().__post_init__()
         except AttributeError:

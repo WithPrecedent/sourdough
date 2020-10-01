@@ -18,185 +18,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Union)
 import warnings
 
-import sourdough
+import sourdough 
 
-
-@dataclasses.dataclass
-class Workshop(sourdough.Catalog):
-
-    contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
-    project: Project = None
-
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        # Checks to see if 'project' exists.
-        if self.project is None:
-            raise ValueError(
-                f'{self.__class__.__name__} requires a Project instance')
-        # Creates base classes with selected Quirk mixins.
-        self.create_bases()
-        # Point the 'bases' of Project to 'contents' attribute.
-        Project.bases = self.contents
     
-    """ Public Methods """
-    
-    def create_bases(self) -> None:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        quirks = self._get_settings_quirks()
-        for key, value in self.project.bases.items():
-            self.contents[key] = self.create_class(
-                name = key, 
-                base = value, 
-                quirks = quirks)
-        return self
-            
-    def create_class(self, name: str, base: Callable, 
-                     quirks: Sequence[sourdough.Quirk]) -> Callable:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            base (Callable): [description]
-            quirks (Sequence[sourdough.Quirk])
-
-        Returns:
-            Callable: [description]
-            
-        """
-        if quirks:
-            bases = quirks.append(base)
-            new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
-            # Recursively adds quirks to items in the 'registry' of 'base'.
-            if hasattr(base, 'registry'):
-                new_registry = {}
-                for key, value in base.registry.items():
-                    new_registry[key] = self.create_class(
-                        name = key,
-                        base = value,
-                        quirks = quirks)
-                new_base.registry = new_registry
-        else:
-            new_base = base
-        return new_base
-             
-    """ Private Methods """
-    
-    def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
-        """[summary]
-
-        Returns:
-            Sequence[sourdough.Quirk]: [description]
-            
-        """
-        settings_keys = {
-            'verbose': 'talker', 
-            'early_validation': 'validator', 
-            'conserve_memory': 'conserver'}
-        quirks = []
-        for key, value in settings_keys.items():
-            try:
-                if self.project.settings['general'][key]:
-                    quirks.append(sourdough.Quirk.options[value])
-            except KeyError:
-                pass
-        return quirks
-
- 
-# @dataclasses.dataclass
-# class Overview(sourdough.Lexicon):
-#     """Dictionary of different Element types in a Structure instance.
-    
-#     Args:
-#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
-#             dict.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Settings instance, 'name' 
-#             should match the appropriate section name in the Settings instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes. Defaults to None. If 'name' is None and 
-#             '__post_init__' of Element is called, 'name' is set based upon
-#             the 'get_name' method in Element. If that method is not overridden 
-#             by a subclass instance, 'name' will be assigned to the snake case 
-#             version of the class name ('__class__.__name__').
-              
-#     """
-#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-#     name: str = None
-    
-#     """ Initialization Methods """
-    
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent initialization method(s).
-#         super().__post_init__()
-#         if self.structure.structure is not None:
-#             self.add({
-#                 'name': self.structure.name, 
-#                 'structure': self.structure.structure.name})
-#             for key, value in self.structure.structure.options.items():
-#                 matches = self.structure.find(
-#                     self._get_type, 
-#                     element = value)
-#                 if len(matches) > 0:
-#                     self.contents[f'{key}s'] = matches
-#         else:
-#             raise ValueError(
-#                 'structure must be a Role for an overview to be created.')
-#         return self          
-    
-#     """ Dunder Methods """
-    
-#     def __str__(self) -> str:
-#         """Returns pretty string representation of an instance.
-        
-#         Returns:
-#             str: pretty string representation of an instance.
-            
-#         """
-#         new_line = '\n'
-#         representation = [f'sourdough {self.get_name}']
-#         for key, value in self.contents.items():
-#             if isinstance(value, Sequence):
-#                 names = [v.name for v in value]
-#                 representation.append(f'{key}: {", ".join(names)}')
-#             else:
-#                 representation.append(f'{key}: {value}')
-#         return new_line.join(representation)    
-
-#     """ Private Methods """
-
-#     def _get_type(self, 
-#             item: sourdough.Element, 
-#             element: sourdough.Element) -> Sequence[sourdough.Element]: 
-#         """[summary]
-
-#         Args:
-#             item (self.stored_types): [description]
-#             self.stored_types (self.stored_types): [description]
-
-#         Returns:
-#             Sequence[self.stored_types]:
-            
-#         """
-#         if isinstance(item, element):
-#             return [item]
-#         else:
-#             return []
-
-            
 @dataclasses.dataclass
 class Project(object):
     """Constructs, organizes, and implements a sourdough project.
@@ -265,27 +89,17 @@ class Project(object):
     identification: str = None
     automatic: bool = True
     data: object = None
-    results: Mapping[str, object] = dataclasses.field(default_factory = dict)
-    bases: ClassVar[Mapping[str, Callable]] = sourdough.Catalog(
-        contents = {
-            'worker': sourdough.Structure,
-            'design': sourdough.Structure,
-            'stage': sourdough.Stage,
-            'workflow': sourdough.Workflow,
-            'step': sourdough.components.Step,
-            'technique': sourdough.components.Technique,
-            'components': sourdough.Components})
-    # components: ClassVar[Sequence[str]] = [
-    #     'design', 
-    #     'step', 
-    #     'technique', 
-    #     'component']
-
+    results: Mapping[str, object] = dataclasses.field(
+        default_factory = sourdough.Lexicon)
+    workflows: ClassVar[Mapping[str, Callable]] = sourdough.flows
+    components: ClassVar[Mapping[str, Callable]] = sourdough.options
+    library: ClassVar[Mapping[str, Callable]] = sourdough.library
+    
     """ Initialization Methods """
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Calls parent initialization method(s).
+        # Calls parent and/or mixin initialization method(s).
         try:
             super().__post_init__()
         except AttributeError:
@@ -297,14 +111,12 @@ class Project(object):
         # Validates or converts 'settings' and 'filer'.
         self._validate_settings()
         self._validate_filer()
-        # Creates instances of the Workshop class builder.
-        self.workshop = Workshop(project = self)
         # Initializes 'workflow' instance.
         self._initialize_workflow()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
-            
+          
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
@@ -358,45 +170,19 @@ class Project(object):
                 self.workflow = self.settings[self.name]['workflow']
             except KeyError:
                 self.workflow = 'editor'
-        if 'workflow' not in self.bases:
-            self.__class__.bases['workflow'] = self.workshop.create_class(
-                name = 'workflow',
-                base = sourdough.Workflow,
-                quirks = self.workshop._get_settings_quirks())
         if (inspect.isclass(self.workflow) 
-                and (issubclass(self.workflow, self.bases['workflow'])
-                     or self.workflow == self.bases['workflow'])):
-            self.workflow = self.workflow()
+                and (issubclass(self.workflow, self.workflows)
+                     or self.workflow == self.workflows)):
+            self.workflow = self.workflow(project = self)
         elif isinstance(self.workflow, str):
-            self.workflow = self.bases['workflow'].instance(
-                key = self.workflow)
+            self.workflow = self.workflows.instance(
+                key = self.workflow,
+                project = self)
         else:
             raise TypeError(
-                f'workflow must be a str matching a key in '
-                f'{self.bases["workflow"]}.library or a '
-                f'{self.bases["workflow"]} subclass')
+                f'workflow must be a str matching a key in workflows or a '
+                f'Workflow subclass')
         return self
-
-    # def _initialize_design(self) -> None:
-    #     """Validates or converts 'design' and initializes it."""
-    #     if 'design' not in self.bases:
-    #         self.__class__.bases['design'] = self.workshop.create_class(
-    #             name = 'design',
-    #             base = sourdough.Structure,
-    #             quirks = self.workshop._get_settings_quirks())
-    #     if (inspect.isclass(self.design) 
-    #             and (issubclass(self.design, self.bases['design'])
-    #                  or self.design == self.bases['design'])):
-    #         self.design = self.design()
-    #     elif isinstance(self.design, str):
-    #         self.design = self.bases['design'].instance(
-    #             key = self.design)
-    #     else:
-    #         raise TypeError(
-    #             f'design must be a str matching a key in '
-    #             f'{self.bases["design"]}.library or a '
-    #             f'{self.bases["design"]} subclass')
-    #     return self    
                      
     def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances."""
@@ -406,3 +192,183 @@ class Project(object):
                 print(f'Beginning {stage.action} process')
             self = stage.perform(project = self)
         return self
+
+
+
+
+# @dataclasses.dataclass
+# class Workshop(sourdough.Catalog):
+
+#     contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
+#     project: Project = None
+
+#     """ Initialization Methods """
+
+#     def __post_init__(self) -> None:
+#         """Initializes class instance attributes."""
+#         # Calls parent and/or mixin initialization method(s).
+#         try:
+#             super().__post_init__()
+#         except AttributeError:
+#             pass
+#         # Checks to see if 'project' exists.
+#         if self.project is None:
+#             raise ValueError(
+#                 f'{self.__class__.__name__} requires a Project instance')
+#         # Creates base classes with selected Quirk mixins.
+#         self.create_bases()
+#         # Point the 'bases' of Project to 'contents' attribute.
+#         Project.bases = self.contents
+    
+#     """ Public Methods """
+    
+#     def create_bases(self) -> None:
+#         """[summary]
+
+#         Returns:
+#             [type]: [description]
+#         """
+#         quirks = self._get_settings_quirks()
+#         for key, value in self.project.bases.items():
+#             self.contents[key] = self.create_class(
+#                 name = key, 
+#                 base = value, 
+#                 quirks = quirks)
+#         return self
+            
+#     def create_class(self, name: str, base: Callable, 
+#                      quirks: Sequence[sourdough.Quirk]) -> Callable:
+#         """[summary]
+
+#         Args:
+#             name (str): [description]
+#             base (Callable): [description]
+#             quirks (Sequence[sourdough.Quirk])
+
+#         Returns:
+#             Callable: [description]
+            
+#         """
+#         if quirks:
+#             bases = quirks.append(base)
+#             new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
+#             # Recursively adds quirks to items in the 'registry' of 'base'.
+#             if hasattr(base, 'registry'):
+#                 new_registry = {}
+#                 for key, value in base.registry.items():
+#                     new_registry[key] = self.create_class(
+#                         name = key,
+#                         base = value,
+#                         quirks = quirks)
+#                 new_base.registry = new_registry
+#         else:
+#             new_base = base
+#         return new_base
+             
+#     """ Private Methods """
+    
+#     def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
+#         """[summary]
+
+#         Returns:
+#             Sequence[sourdough.Quirk]: [description]
+            
+#         """
+#         settings_keys = {
+#             'verbose': 'talker', 
+#             'early_validation': 'validator', 
+#             'conserve_memory': 'conserver'}
+#         quirks = []
+#         for key, value in settings_keys.items():
+#             try:
+#                 if self.project.settings['general'][key]:
+#                     quirks.append(sourdough.Quirk.options[value])
+#             except KeyError:
+#                 pass
+#         return quirks
+
+ 
+# @dataclasses.dataclass
+# class Overview(sourdough.Lexicon):
+#     """Dictionary of different Element types in a Structure instance.
+    
+#     Args:
+#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+#             dict.
+#         name (str): designates the name of a class instance that is used for 
+#             internal referencing throughout sourdough. For example, if a 
+#             sourdough instance needs settings from a Settings instance, 'name' 
+#             should match the appropriate section name in the Settings instance. 
+#             When subclassing, it is sometimes a good idea to use the same 'name' 
+#             attribute as the base class for effective coordination between 
+#             sourdough classes. Defaults to None. If 'name' is None and 
+#             '__post_init__' of Element is called, 'name' is set based upon
+#             the 'get_name' method in Element. If that method is not overridden 
+#             by a subclass instance, 'name' will be assigned to the snake case 
+#             version of the class name ('__class__.__name__').
+              
+#     """
+#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+#     name: str = None
+    
+#     """ Initialization Methods """
+    
+#     def __post_init__(self) -> None:
+#         """Initializes class instance attributes."""
+#         # Calls parent and/or mixin initialization method(s).
+#         super().__post_init__()
+#         if self.structure.structure is not None:
+#             self.add({
+#                 'name': self.structure.name, 
+#                 'structure': self.structure.structure.name})
+#             for key, value in self.structure.structure.options.items():
+#                 matches = self.structure.find(
+#                     self._get_type, 
+#                     element = value)
+#                 if len(matches) > 0:
+#                     self.contents[f'{key}s'] = matches
+#         else:
+#             raise ValueError(
+#                 'structure must be a Role for an overview to be created.')
+#         return self          
+    
+#     """ Dunder Methods """
+    
+#     def __str__(self) -> str:
+#         """Returns pretty string representation of an instance.
+        
+#         Returns:
+#             str: pretty string representation of an instance.
+            
+#         """
+#         new_line = '\n'
+#         representation = [f'sourdough {self.get_name}']
+#         for key, value in self.contents.items():
+#             if isinstance(value, Sequence):
+#                 names = [v.name for v in value]
+#                 representation.append(f'{key}: {", ".join(names)}')
+#             else:
+#                 representation.append(f'{key}: {value}')
+#         return new_line.join(representation)    
+
+#     """ Private Methods """
+
+#     def _get_type(self, 
+#             item: sourdough.Element, 
+#             element: sourdough.Element) -> Sequence[sourdough.Element]: 
+#         """[summary]
+
+#         Args:
+#             item (self.stored_types): [description]
+#             self.stored_types (self.stored_types): [description]
+
+#         Returns:
+#             Sequence[self.stored_types]:
+            
+#         """
+#         if isinstance(item, element):
+#             return [item]
+#         else:
+#             return []
+
+        

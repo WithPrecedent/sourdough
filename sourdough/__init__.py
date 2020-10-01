@@ -31,24 +31,26 @@ For example:
     
 """
 from .utilities import tools
-from .utilities.decorators import namify
-from .core import types
 from .core.types import Lexicon
 from .core.types import Catalog
 from .core.types import Slate
 from .core.types import Hybrid
-from .core.types import Quirk
 from .core import quirks
 from .configuration.settings import Settings
 from .configuration.filer import Filer
-from .core.base import Components
-from .core.base import Structure
-from .core.base import Stage
-from .core.base import Workflow
-from .project import components
-from .project import structures
-from .project import workflows
+from .core.components import options
+from .core.components import library
+from .core.components import Component
+from .core.components import Structure
+from .core.components import Element
+from .core.workflows import flows
+from .core.workflows import Stage
+from .core.workflows import Workflow
+from .project import editor
+from .project import graph
+from .project import composite
 from .project.interface import Project
+from .project import interface
 
 
 __version__ = '0.1.1'

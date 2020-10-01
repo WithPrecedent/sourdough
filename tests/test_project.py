@@ -21,63 +21,63 @@ class Parser(sourdough.Structure):
 
 
 @dataclasses.dataclass
-class Search(sourdough.components.Step):
+class Search(sourdough.composite.Step):
 
     def perform(self):
         return   
 
 
 @dataclasses.dataclass
-class Divide(sourdough.components.Step):
+class Divide(sourdough.composite.Step):
 
     def perform(self):
         return   
     
     
 @dataclasses.dataclass
-class Destroy(sourdough.components.Step):
+class Destroy(sourdough.composite.Step):
 
     def perform(self):
         return   
     
 
 @dataclasses.dataclass
-class Slice(sourdough.components.Technique):
+class Slice(sourdough.composite.Technique):
 
     def perform(self):
         return  
 
 
 @dataclasses.dataclass
-class Dice(sourdough.components.Technique):
+class Dice(sourdough.composite.Technique):
 
     def perform(self):
         return 
     
     
 @dataclasses.dataclass
-class Find(sourdough.components.Technique):
+class Find(sourdough.composite.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Locate(sourdough.components.Technique):
+class Locate(sourdough.composite.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Explode(sourdough.components.Technique):
+class Explode(sourdough.composite.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Dynamite(sourdough.components.Technique):
+class Dynamite(sourdough.composite.Technique):
     
     label: str = 'annihilate'
 
@@ -86,7 +86,7 @@ class Dynamite(sourdough.components.Technique):
     
 
 def test_project():
-    assert 'parser' in sourdough.Structure.registry
+    assert 'parser' in sourdough.options
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
