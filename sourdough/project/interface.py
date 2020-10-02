@@ -9,7 +9,6 @@ Contents:
 
 """
 from __future__ import annotations
-import abc
 import collections.abc
 import dataclasses
 import inspect
@@ -20,80 +19,77 @@ import warnings
 
 import sourdough 
 
-    
+
 @dataclasses.dataclass
-class Project(object):
+class Project(collections.abc.Iterable):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
-        settings (Union[sourdough.Settings, str, pathlib.Path]]): 
-            an instance of Settings or a str or pathlib.Path containing the 
-            file path where a file of a supported file type with settings for a 
-            Settings instance is located. Defaults to None.
+        settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
+            Settings or a str or pathlib.Path containing the file path where a 
+            file of a supported file type with settings for a Settings instance 
+            is located. If it is None, default settings will be used. Defaults 
+            to None.
         filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
             Filer or a str or pathlib.Path containing the full path of where the 
             root folder should be located for file input and output. A Filer
             instance contains all file path and import/export methods for use 
-            throughout sourdough. Defaults to None.
-        workflow (Union[sourdough.Workflow, Sequence[Union[sourdough.Workflow, 
-            str]]]): base Workflow class, a list of Workflow subclasses, or 
-            a list of str corresponding to Workflow subclasses in 
-            Workflow.library. These classes are used for the construction and
-            application of a sourdough project. Defaults to sourdough.Workflow
-            which will use the default subclasses of Draft, Publish, Apply.
-        design (sourdough.Component): base class for the pieces of the 
-            project's composite object. Defaults to sourdough.Component.
-            Component.library will automatically contain all imported 
-            subclasses and those will be the only permitted pieces of a 
-            sourdough composite object. One imported component must be Manager
-            or a subclass.
+            throughout sourdough. If it is None, the default Filer will be used. 
+            Defaults to None.
+        workflow (Union[sourdough.Workflow, str]): Workflow subclass, Workflow
+            subclass instance, or a str corresponding to a key in 'workflows'. 
+            Defaults to 'editor' which will be replaced with an Editor instance.
+        design (Union[sourdough.Component, str]): Component subclass, Component
+            subclass instance, or a str corresponding to a key in 'components'. 
+            Defaults to 'pipeline' which will be replaced with a Pipeline 
+            instance. The moment it will be replaced depends upon on 'workflow'.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the '_get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
-        identification (str): a unique identification name for a 
-            Project instance. The name is used for creating file folders
-            related to the 'Project'. If not provided, a string is created from
-            'name' and the date and time. This is a notable difference
-            between an ordinary Structure instancce and a Project instance. Other
-            Structures are not given unique identification. Defaults to None.   
+            sourdough classes. If it is None, the 'name' will be inferred from
+            the first section name in 'settings' after 'general' and 'files'.
+            Defaults to None. 
+        identification (str): a unique identification name for a Project 
+            instance. The name is used for creating file folders related to the 
+            project. If it is None, a str will be created from 'name' and the 
+            date and time. Defaults to None.   
         automatic (bool): whether to automatically advance 'workflow' (True) or 
-            whether the workflow must be changed manually by using the 'advance' 
-            or '__iter__' methods (False). Defaults to True.
+            whether the workflow must be advanced manually (False). Defaults to 
+            True.
         data (object): any data object for the project to be applied.         
-        bases ()
-    
-    Attributes:
-        design (sourdough.Structure): the iterable composite object created by
-            Project.
-        index (int): the current index of the iterator in the instance. It is
-            set to -1 in the '__post_init__' method.
-        stage (str): name of the last stage that has been implemented. It is set
-            to 'initialize' in the '__post_init__' method.
-        previous_stage (str): name of the previous stage to the last stage that
-            has been implemented. It is set by the 'advance' method.
+        results (Mapping[str, Any]): dictionary for storing results. Defaults
+            to an empty Lexicon.
+        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Workflow. It points to 
+            a Catalog instance at sourdough.library.workflows.
+        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Component. It points to 
+            a Catalog instance at sourdough.library.components.
+        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
+            which are subclass instances of or compatible with Component. It 
+            points to a Catalog instance at sourdough.library.options.    
             
     """
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
-    workflow: Union[str, sourdough.Workflow] = 'editor'
-    design: Union[str, sourdough.Structure] = 'pipeline'
+    workflow: Union[sourdough.Workflow, str] = 'editor'
+    design: Union[sourdough.Component, str] = 'pipeline'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    results: Mapping[str, object] = dataclasses.field(
+    results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Lexicon)
-    workflows: ClassVar[Mapping[str, Callable]] = sourdough.flows
-    components: ClassVar[Mapping[str, Callable]] = sourdough.options
-    library: ClassVar[Mapping[str, Callable]] = sourdough.library
+    workflows: ClassVar[Mapping[str, Callable]] = sourdough.library.workflows
+    components: ClassVar[Mapping[str, Callable]] = sourdough.library.components
+    options: ClassVar[Mapping[str, object]] = sourdough.library.options
+    hierarchy: ClassVar[Mapping[str, Callable]] = {
+        'workers': sourdough.Worker,
+        'steps': sourdough.composite.Step,
+        'techniques': sourdough.composite.Technique}
     
     """ Initialization Methods """
 
@@ -106,13 +102,15 @@ class Project(object):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Sets unique project 'identification', if not passed.
-        self.identification = self._get_identification()
         # Validates or converts 'settings' and 'filer'.
         self._validate_settings()
         self._validate_filer()
-        # Initializes 'workflow' instance.
-        self._initialize_workflow()
+        # Sets 'name' if it is None.
+        self.name = self.name or self._get_name()
+        # Sets unique project 'identification', if not passed.
+        self.identification = self.identification or self._get_identification()
+        # Validates or convers 'workflow'.
+        self._validate_workflow()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
@@ -129,28 +127,11 @@ class Project(object):
         return iter(self.workflow)
 
     """ Private Methods """
-
-    def _get_identification(self) -> None:
-        """Sets unique 'identification' str based upon date and time."""
-        if self.identification is None:
-            return sourdough.tools.datetime_string(prefix = self.name)
     
     def _validate_settings(self) -> None:
         """Validates 'settings' or converts it to a Settings instance."""
         if not isinstance(self.settings, sourdough.Settings):
-            self.settings = sourdough.Settings(
-                contents = self.settings,
-                defaults = {
-                    'general': {
-                        'verbose': False,
-                        'settings_priority': True,
-                        'early_validation': False,
-                        'conserve_memery': False},
-                    'files': {
-                        'source_format': 'csv',
-                        'interim_format': 'csv',
-                        'final_format': 'csv',
-                        'file_encoding': 'windows-1252'}})
+            self.settings = sourdough.Settings(contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
@@ -162,8 +143,19 @@ class Project(object):
                 root_folder = self.filer, 
                 settings = self.settings)
         return self
+    
+    def _get_name(self) -> None:
+        """Infers name as the first appropriate section name in 'settings'."""
+        for section in self.settings.keys():
+            if section not in ['general', 'files']:
+                return section
 
-    def _initialize_workflow(self) -> None:
+    def _get_identification(self) -> None:
+        """Creates unique 'identification' str based upon date and time."""
+        return sourdough.tools.datetime_string(prefix = self.name)
+
+
+    def _validate_workflow(self) -> None:
         """Validates or converts 'workflow' and initializes it."""
         if self.workflow is None:
             try:
@@ -180,117 +172,22 @@ class Project(object):
                 project = self)
         else:
             raise TypeError(
-                f'workflow must be a str matching a key in workflows or a '
-                f'Workflow subclass')
+                f'workflow must be a str matching a key in workflows, a '
+                f'Workflow subclass, or a Workflow subclass instance')
         return self
                      
     def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances."""
         for stage in self.workflow:
-
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.action} process')
             self = stage.perform(project = self)
         return self
 
 
-
-
-# @dataclasses.dataclass
-# class Workshop(sourdough.Catalog):
-
-#     contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
-#     project: Project = None
-
-#     """ Initialization Methods """
-
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent and/or mixin initialization method(s).
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass
-#         # Checks to see if 'project' exists.
-#         if self.project is None:
-#             raise ValueError(
-#                 f'{self.__class__.__name__} requires a Project instance')
-#         # Creates base classes with selected Quirk mixins.
-#         self.create_bases()
-#         # Point the 'bases' of Project to 'contents' attribute.
-#         Project.bases = self.contents
-    
-#     """ Public Methods """
-    
-#     def create_bases(self) -> None:
-#         """[summary]
-
-#         Returns:
-#             [type]: [description]
-#         """
-#         quirks = self._get_settings_quirks()
-#         for key, value in self.project.bases.items():
-#             self.contents[key] = self.create_class(
-#                 name = key, 
-#                 base = value, 
-#                 quirks = quirks)
-#         return self
-            
-#     def create_class(self, name: str, base: Callable, 
-#                      quirks: Sequence[sourdough.Quirk]) -> Callable:
-#         """[summary]
-
-#         Args:
-#             name (str): [description]
-#             base (Callable): [description]
-#             quirks (Sequence[sourdough.Quirk])
-
-#         Returns:
-#             Callable: [description]
-            
-#         """
-#         if quirks:
-#             bases = quirks.append(base)
-#             new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
-#             # Recursively adds quirks to items in the 'registry' of 'base'.
-#             if hasattr(base, 'registry'):
-#                 new_registry = {}
-#                 for key, value in base.registry.items():
-#                     new_registry[key] = self.create_class(
-#                         name = key,
-#                         base = value,
-#                         quirks = quirks)
-#                 new_base.registry = new_registry
-#         else:
-#             new_base = base
-#         return new_base
-             
-#     """ Private Methods """
-    
-#     def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
-#         """[summary]
-
-#         Returns:
-#             Sequence[sourdough.Quirk]: [description]
-            
-#         """
-#         settings_keys = {
-#             'verbose': 'talker', 
-#             'early_validation': 'validator', 
-#             'conserve_memory': 'conserver'}
-#         quirks = []
-#         for key, value in settings_keys.items():
-#             try:
-#                 if self.project.settings['general'][key]:
-#                     quirks.append(sourdough.Quirk.options[value])
-#             except KeyError:
-#                 pass
-#         return quirks
-
- 
 # @dataclasses.dataclass
 # class Overview(sourdough.Lexicon):
-#     """Dictionary of different Element types in a Structure instance.
+#     """Dictionary of different Element types in a Worker instance.
     
 #     Args:
 #         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 

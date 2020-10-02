@@ -14,7 +14,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Parser(sourdough.Structure):
+class Parser(sourdough.Worker):
 
     def perform(self):
         return
@@ -86,7 +86,7 @@ class Dynamite(sourdough.composite.Technique):
     
 
 def test_project():
-    assert 'parser' in sourdough.options
+    assert 'parser' in sourdough.library.components
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
@@ -111,7 +111,7 @@ def test_project():
 
 
 # @dataclasses.dataclass
-# class AStructure(sourdough.Structure):
+# class AWorker(sourdough.Worker):
     
 #     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {'new': NewAction()},
@@ -125,34 +125,34 @@ def test_project():
 #     other_value: str = 'nothing'
     
 
-# def test_Structure():
+# def test_Worker():
 #     new_operator = NewAction()
 #     other_operator = OtherAction()
 #     another_operator = OtherAction()
 #     some_data = SomeData()
 #     more_data = SomeData()
-#     # Tests Options of a Structure instance.
-#     AStructure.options.add(contents = {'other_operator': other_operator})
-#     assert len(AStructure.options['all']) == 2
-#     assert len(AStructure.options['none']) == 0
-#     # Tests the 'add' method of a Structure instance.
-#     a_Structure = AStructure()
-#     a_Structure.add('other_operator')
-#     a_Structure.add('new')
-#     a_Structure.add(another_operator)
-#     assert a_Structure['new_operator'] == new_operator
-#     a_Structure.add([other_operator, another_operator])
-#     assert a_Structure.contents == [
+#     # Tests Options of a Worker instance.
+#     AWorker.options.add(contents = {'other_operator': other_operator})
+#     assert len(AWorker.options['all']) == 2
+#     assert len(AWorker.options['none']) == 0
+#     # Tests the 'add' method of a Worker instance.
+#     a_Worker = AWorker()
+#     a_Worker.add('other_operator')
+#     a_Worker.add('new')
+#     a_Worker.add(another_operator)
+#     assert a_Worker['new_operator'] == new_operator
+#     a_Worker.add([other_operator, another_operator])
+#     assert a_Worker.contents == [
 #         other_operator, 
 #         new_operator, 
 #         another_operator,
 #         other_operator, 
 #         another_operator]
-#     # Tests 'perform' function of a Structure instance.
-#     some_data = a_Structure.perform(item = some_data)
+#     # Tests 'perform' function of a Worker instance.
+#     some_data = a_Worker.perform(item = some_data)
 #     assert some_data.other_value == 'something'
-#     # Tests manual iteration of a Structure instance.
-#     for element in a_Structure:
+#     # Tests manual iteration of a Worker instance.
+#     for element in a_Worker:
 #         more_data = element.perform(item = more_data)
 #     assert more_data.other_value == 'something'
 #     return

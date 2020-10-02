@@ -17,7 +17,6 @@ Contents:
 
 """
 from __future__ import annotations
-import abc
 import copy
 import dataclasses
 import pprint
@@ -52,6 +51,7 @@ class Details(sourdough.Slate):
     base: str = None
     contains: str = None
     design: str = None
+    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
 
     """ Dunder Methods """
@@ -86,8 +86,8 @@ class Outline(sourdough.Lexicon):
 
     """ Dunder Methods """
     
-    # def __str__(self) -> str:
-    #     return pprint.pformat(self.contents, sort_dicts = False, compact = True)
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
@@ -112,27 +112,14 @@ class Draft(sourdough.Stage):
             sourdough.Outline: [description]
             
         """       
-        suffixes = self._get_component_suffixes(project = project)
+        suffixes = tuple(project.hierarchy.keys())
         print('test suffixes', suffixes)
         outline  = self._create_outline(project = project, suffixes = suffixes)
-        self._set_product(name = 'outline', project = project, product = outline)
-        print('test project outline', project.results['outline'])
+        project.design = outline
+        print('test project outline', project.design)
         return project
         
     """ Private Methods """
-
-    def _get_component_suffixes(self, project: sourdough.Project) -> Tuple[str]:
-        """[summary]
-
-        Args:
-            key (str): [description]
-            settings (sourdough.Settings): [description]
-
-        Returns:
-            sourdough.Outline: [description]
-            
-        """
-        return tuple([item + 's' for item in project.components.keys()])
     
     def _create_outline(self, project: sourdough.Project, 
                         suffixes: Tuple[str]) -> Outline:
@@ -153,17 +140,20 @@ class Draft(sourdough.Stage):
             for key, value in section.items():
                 if key.endswith(suffixes):
                     name, suffix = self._divide_key(key = key)
+                    base = self._get_base(name = name, outline = outline)
                     contains = suffix.rstrip('s')
+                    design = self._get_design(name = name, project = project)
                     attributes = self._get_attributes(
                         name = name, 
                         project = project,
                         suffixes = suffixes)
+                    contents = sourdough.tools.listify(value)
                     outline[name] = Details(
                         name = name,
-                        base = self._get_base(name = name, outline = outline),
+                        base = base,
                         contains = contains,
-                        design = self._get_design(name = name, project = project),
-                        contents = sourdough.tools.listify(value),
+                        design = design,
+                        contents = contents,
                         attributes = attributes)
         return outline
 
@@ -232,7 +222,7 @@ class Draft(sourdough.Stage):
         Returns:
             str: [description]
         """
-        base = 'design'
+        base = 'pipeline'
         for key, details in outline.items():
             if name in details:
                 base = details.contains
@@ -261,218 +251,82 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        outline = project.results['outline']
-        root_key = list(outline.keys())[0]    
-        deliverable = self._create_structure(
-            name = root_key,
+        deliverable = self._create_component(
+            name = project.name,
             project = project)
         print('test deliverable', deliverable)
-        project.results['deliverable'] = deliverable
+        project.design = deliverable
         return project     
 
     """ Private Methods """
 
-    def _create_unknown(self, name: str,
-                        project: sourdough.Project) -> sourdough.Structure:        
-        try:
-            return self._create_structure(name = name, project = project)
-        except KeyError:
-            try:
-                return self._instance_component(name = name, project = project)
-            except KeyError:
-                raise KeyError(f'{name} component does not exist')   
-
-    def _create_structure(self, name: str,
-                          project: sourdough.Project) -> sourdough.Structure:
-        structure = self._instance_structure(name = name, project = project)
-        print('test structure', name, structure)
-        new_structure_contents = []
-        for item in structure:
-            print('test item structure contents', name, item)
-            new_structure_contents = self._create_unknown(
-                name = item, 
+    def _create_component(self, name: str, 
+                          project: sourdough.Project) -> sourdough.Component:
+        instance = self._instance_component(name = name, project = project)
+        print('test initialized component', instance)
+        if isinstance(instance, Iterable):
+            component = self._finalize_structure(
+                component = instance, 
                 project = project)
-        structure.conents = new_structure_contents
-        return structure
-    
-    def _instance_structure(self, name: str, 
-                            project: sourdough.Project) -> sourdough.Structure:
-        details = project.results['outline'][name]
-        kwargs = {'name': name, 'contents': details.contents}
-        print('test kwargs', kwargs)
-        try:
-            instance = project.bases[details.base].registry[name](kwargs)
-        except KeyError:
-            try:
-                instance = project.bases[details.base].registry[details.design](kwargs)
-            except KeyError:
-                raise KeyError(f'{name} structure cannot be found')
-        print('test instance.contents', instance)
-        return instance
-
+        else:
+            component = self._finalize_element(
+                component = instance, 
+                project = project)
+        print('test created component', component)
+        return component
+        
     def _instance_component(self, name: str, 
-                            project: sourdough.Project) -> sourdough.Structure:
-        details = project.results['outline'][name]
-        kwargs = {'name': name}
+                            project: sourdough.Project) -> sourdough.Component:
+        details = project.design[name]
+        bases = project.components
         try:
-            instance = project.bases[details.base].registry[name](kwargs)
+            base = bases[details.base]
         except KeyError:
             try:
-                instance = project.bases[details.base].registry[details.design](kwargs)
+                base = bases[details.design]
             except KeyError:
-                try:
-                    instance = copy.deepcopy(
-                        project.bases['components'].library[name])
-                    instance.name = name
-                    instance.contents = details.contents
-                except KeyError:
-                    raise KeyError(f'{name} component cannot be found')
-        return instance            
+                raise KeyError(f'{name} component cannot be found')  
+        component = base(name = name, contents = details.contents)
+        return component     
+
+    def _finalize_structure(self, component: sourdough.Component,
+                            project: sourdough.Project) -> sourdough.Component:
+        new_contents = []
+        for item in component:
+            print('test item', item)
+            new_contents.append(self._create_component(
+                name = item, 
+                project = project))
+        component.contents = new_contents
+        print('test component new contents', component)
+        # component = self._add_attributes(
+        #     component = component, 
+        #     project = project)
+        return component
+
+    def _finalize_element(self, component: sourdough.Component,
+                          project: sourdough.Project) -> sourdough.Component:
+        # component = self._add_attributes(
+        #     component = component, 
+        #     project = project)
+        return component
 
     def _add_attributes(self, 
             component: sourdough.Component,
-            project: sourdough.Project,
-            attributes: Mapping[str, Any]) -> sourdough.Component:
+            project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Returns:
             [type]: [description]
             
         """
+        attributes = project.design[component.name].attributes
         for key, value in attributes.items():
             if (project.settings['general']['settings_priority']
                     or not hasattr(component, key)):
                 setattr(component, key, value)
         return component  
-
-
-    # def _create_component(self, name: str, outline: Outline,
-    #                       project: sourdough.Project) -> sourdough.Structure:
-    #     """[summary]
-
-    #     Args:
-    #         name (str): [description]
-    #         details (Details): [description]
-    #         outline (Outline): [description]
-    #         project (sourdough.Project): [description]
-
-    #     Returns:
-    #         sourdough.Structure: [description]
-            
-    #     """
-    #     base = self._instance_component(
-    #         name = name,
-    #         base = outline[name].base,
-    #         design = outline[name].design,
-    #         contents = copy.deepcopy(outline[name].contents),
-    #         project = project)
-    #     base = self._add_attributes(
-    #         component = base, 
-    #         attributes = outline[name].attributes,
-    #         project = project)
-    #     if issubclass(base.__class__, sourdough.Structure):
-    #         print('test yes substructure')
-    #         print('test outline', outline)
-    #         for item in base.contents:
-    #             print('test outline', outline)
-    #             # print('test base', name, base)
-    #             # print('test outline[name]', outline[name])
-    #             # print('test item', item)
-    #             instance = self._create_component(
-    #                 name = item,
-    #                 outline = outline,
-    #                 project = project)
-    #             base.add(instance)
-    #     else:
-    #         print('test not structure')
-    #         # print('test yes instance component', base)
-    #         # print('test outline[name].base', outline[name].base)
-    #         # print('test outline[name].contents', outline[name].contents)
-    #         instance = self._instance_component(
-    #             name = name,
-    #             base = outline[name].base,
-    #             design = outline[name].design,
-    #             contents = copy.deepcopy(outline[name].contents),
-    #             project = project)
-    #         base.contents = instance
-    #     return base
-
-    # def _instance_component(self,
-    #         name: str, 
-    #         base: str,
-    #         design: str,
-    #         contents: Sequence[str],
-    #         project: sourdough.Project) -> sourdough.Component:
-    #     """[summary]
-
-    #     Args:
-    #         name (str): [description]
-    #         details (sourdough.project.containers.Details): [description]
-    #         project (sourdough.Project): [description]
-
-    #     Raises:
-    #         KeyError: [description]
-
-    #     Returns:
-    #         sourdough.Component: [description]
-            
-    #     """
-    #     try:
-    #         print('project.base', project.bases[base].registry)
-    #         print('test easy lookup', base, name)
-    #         instance = project.bases[base].instance(key = name)
-    #     except KeyError:
-    #         try:
-    #             print('test instance lookup', base, name)
-    #             instance = project.bases['component'].borrow(key = name)
-    #         except KeyError:
-    #             try:
-    #                 print('test design lookup', base, name)
-    #                 instance = project.bases[base].instance(
-    #                     key = design, 
-    #                     name = name)
-    #             except KeyError:
-    #                 raise KeyError('this class is screwed')
-    #     if contents:
-    #         instance.contents = contents
-    #     return instance  
  
-       
-    # def _set_parameters(self, 
-    #         component: sourdough.Component) -> sourdough.Component:
-    #     """
-        
-    #     """
-    #     if isinstance(component, sourdough.Technique):
-    #         return self._set_technique_parameters(technique = component)
-    #     elif isinstance(component, sourdough.Step):
-    #         return self._set_task_parameters(task = component)
-    #     else:
-    #         return component
-    
-    # def _set_technique_parameters(self, 
-    #         technique: sourdough.Technique) -> sourdough.Technique:
-    #     """
-        
-    #     """
-    #     if technique.name not in ['none', None, 'None']:
-    #         technique = self._get_settings(technique = technique)
-    #     return technique
-    
-    # def _set_task_parameters(self, task: sourdough.Step) -> sourdough.Step:
-    #     """
-        
-    #     """
-    #     if task.technique.name not in ['none', None, 'None']:
-    #         task = self._get_settings(technique = task)
-    #         try:
-    #             task.set_conditional_parameters()
-    #         except AttributeError:
-    #             pass
-    #         task.technique = self._set_technique_parameters(
-    #             technique = task.technique)
-    #     return task  
-     
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
@@ -491,7 +345,7 @@ class Apply(sourdough.Stage):
         kwargs = {}
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in project.results['deliverable']:
+        for component in project.design:
             component.perform(**kwargs)
         return project
 

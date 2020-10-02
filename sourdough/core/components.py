@@ -17,10 +17,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-options = sourdough.Catalog()
-
-library = sourdough.Catalog()
-
 
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, abc.ABC):
@@ -60,13 +56,13 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, abc.ABC)
     @classmethod
     def register(cls) -> None:
         key = sourdough.tools.snakify(cls.__name__)
-        options[key] = cls
+        sourdough.library.components[key] = cls
         return cls
     
     """ Public Methods """
     
     def shelve(self) -> None:
-        sourdough.library[self.name] = self
+        sourdough.library.options[self.name] = self
         return self
 
     """ Private Methods """
@@ -87,38 +83,38 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, abc.ABC)
 
     """ Dunder Methods """
         
-    def __str__(self) -> str:
-        """Returns pretty string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of an instance.
         
-        Returns:
-            str: pretty string representation of an instance.
+    #     Returns:
+    #         str: pretty string representation of an instance.
             
-        """
-        new_line = '\n'
-        representation = [f'sourdough {self.__class__.__name__}']
-        attributes = [a for a in self.__dict__ if not a.startswith('_')]
-        for attribute in attributes:
-            value = getattr(self, attribute)
-            if (isinstance(value, Component) 
-                    and isinstance(value, (Sequence, Mapping))):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value.contents), '    ')}''')            
-            elif (isinstance(value, (Sequence, Mapping)) 
-                    and not isinstance(value, str)):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value), '    ')}''')
-            else:
-                representation.append(f'{attribute}: {str(value)}')
-        return new_line.join(representation)  
+    #     """
+    #     new_line = '\n'
+    #     representation = [f'sourdough {self.__class__.__name__}']
+    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
+    #     for attribute in attributes:
+    #         value = getattr(self, attribute)
+    #         if (isinstance(value, Component) 
+    #                 and isinstance(value, (Sequence, Mapping))):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value.contents), '    ')}''')            
+    #         elif (isinstance(value, (Sequence, Mapping)) 
+    #                 and not isinstance(value, str)):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value), '    ')}''')
+    #         else:
+    #             representation.append(f'{attribute}: {str(value)}')
+    #     return new_line.join(representation)  
     
 
 @dataclasses.dataclass
-class Structure(Component, sourdough.Hybrid):
+class Worker(Component, sourdough.Hybrid):
     """Base class for composite objects in sourdough projects.
     
-    Structure differs from an ordinary Hybrid in 1 significant way:
+    Worker differs from an ordinary Hybrid in 1 significant way:
         1) It is mixed in with Sequencify which allows for type validation and 
             conversion, using the 'verify' and 'convert' methods.
             
@@ -160,7 +156,7 @@ class Structure(Component, sourdough.Hybrid):
         
         """
         raise NotImplementedError(
-            'subclasses of Structure must provide their own perform methods')
+            'subclasses of Worker must provide their own perform methods')
                    
     """ Required Subclass Methods """
     

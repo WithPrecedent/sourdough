@@ -22,7 +22,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.Structure):
+class Aggregation(sourdough.Worker):
     """Base class for composite objects in sourdough projects.
     
     Distinguishing characteristics of an Aggregation:
@@ -52,7 +52,7 @@ class Aggregation(sourdough.Structure):
        
 
 @dataclasses.dataclass
-class SerialStructure(sourdough.Structure, abc.ABC):
+class SerialWorker(sourdough.Worker, abc.ABC):
     """Base class for serial composite objects in sourdough projects.
         
     Args:
@@ -91,7 +91,7 @@ class SerialStructure(sourdough.Structure, abc.ABC):
             
     
 @dataclasses.dataclass
-class Pipeline(SerialStructure):
+class Pipeline(SerialWorker):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -121,7 +121,7 @@ class Pipeline(SerialStructure):
             
 
 @dataclasses.dataclass
-class ParallelStructure(sourdough.Structure, abc.ABC):
+class ParallelWorker(sourdough.Worker, abc.ABC):
     """Base class for parallel composite objects in sourdough projects.
         
     Args:
@@ -166,7 +166,7 @@ class ParallelStructure(sourdough.Structure, abc.ABC):
 
 
 @dataclasses.dataclass
-class Contest(ParallelStructure):
+class Contest(ParallelWorker):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Contest:
@@ -200,7 +200,7 @@ class Contest(ParallelStructure):
     
     
 @dataclasses.dataclass
-class Study(ParallelStructure):
+class Study(ParallelWorker):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Study:
@@ -239,10 +239,10 @@ class Study(ParallelStructure):
         """[summary]
 
         Args:
-            structure (sourdough.Structure): [description]
+            structure (sourdough.Worker): [description]
 
         Returns:
-            sourdough.Structure: [description]
+            sourdough.Worker: [description]
         """
         # new_contents = []
         # steps = list(self.contents.keys())
@@ -258,7 +258,7 @@ class Study(ParallelStructure):
         #         component = self._get_component(
         #             key = item, 
         #             generic = self.contents.generic)
-        #         if isinstance(item, sourdough.Structure):
+        #         if isinstance(item, sourdough.Worker):
         #             self.organize()
         #     new_contents.append(instance)
         # self.contents = new_contents
@@ -266,7 +266,7 @@ class Study(ParallelStructure):
         
     
 @dataclasses.dataclass
-class Survey(ParallelStructure):
+class Survey(ParallelWorker):
     """Base class for composite objects in sourdough projects.
 
     Distinguishing characteristics of a Survey:
@@ -391,14 +391,14 @@ class Step(sourdough.Element):
 
     Subclasses of Step can store additional methods and attributes to apply to 
     all possible technique instances that could be used. This is often useful 
-    when creating 'comparative' Structure instances which test a variety of 
+    when creating 'comparative' Worker instances which test a variety of 
     strategies with similar or identical parameters and/or methods.
 
     A Step instance will try to return attributes from 'technique' if the
     attribute is not found in the Step instance. 
 
     Args:
-        technique (Technique): technique object for this Structure in a sourdough
+        technique (Technique): technique object for this Worker in a sourdough
             sequence. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -416,7 +416,7 @@ class Step(sourdough.Element):
             containing 'technique'.
         containers (ClassVar[Sequence[str]]): list of snake-named base class
             types that can store this component. Defaults to a list containing
-            'Structure' and 'manager'. 
+            'Worker' and 'manager'. 
                         
     """
     contents: Union['Technique', str] = None
@@ -496,7 +496,7 @@ class Step(sourdough.Element):
         
 
 # @dataclasses.dataclass
-# class Graph(sourdough.Structure, sourdough.Component):
+# class Graph(sourdough.Worker, sourdough.Component):
 #     """Base class for composite objects in sourdough projects.
 
 #     Distinguishing characteristics of a Graph:
@@ -531,7 +531,7 @@ class Step(sourdough.Element):
 #         sourdough.quirks.Registry, 
 #         sourdough.Element, 
 #         abc.ABC):
-#     """Base class related to constructing and iterating Structure instances.
+#     """Base class related to constructing and iterating Worker instances.
     
 #     """
 #     name: str = None
@@ -546,52 +546,52 @@ class Step(sourdough.Element):
 #         """Initializes class instance attributes."""
 #         # Calls parent and/or mixin initialization method(s).
 #         super().__post_init__()
-#         # Sets 'index' for current location in 'Structure' for the iterator.
+#         # Sets 'index' for current location in 'Worker' for the iterator.
 #         self.index: int = -1
 
 #     """ Required Subclass Methods """
 
 #     @abc.abstractmethod
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
  
 #     @abc.abstractmethod
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
     
 #     """ Class Methods """
 
 #     @classmethod
-#     def validate(cls, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def validate(cls, Worker: sourdough.Worker) -> sourdough.Worker:
 #         """Returns a Role instance based upon 'structure'.
         
 #         Args:
-#             Structure (sourdough.Structure): Hybrid instance with 'structure' attribute
+#             Worker (sourdough.Worker): Hybrid instance with 'structure' attribute
 #                 to be validated.
                 
 #         Raises:
-#             TypeError: if 'Structure.structure' is neither a str nor Role type.
+#             TypeError: if 'Worker.structure' is neither a str nor Role type.
             
 #         Returns:
-#             sourdough.Structure: with a validated 'structure' attribute.
+#             sourdough.Worker: with a validated 'structure' attribute.
             
 #         """
-#         if isinstance(Structure.structure, str):
-#             Structure.structure = cls.library[Structure.structure]()
-#         elif (inspect.isclass(Structure.structure) 
-#                 and issubclass(Structure.structure, cls)):
-#             Structure.structure = Structure.structure() 
-#         elif isinstance(Structure.structure, cls):
-#             Structure.structure.__post_init__()
+#         if isinstance(Worker.structure, str):
+#             Worker.structure = cls.library[Worker.structure]()
+#         elif (inspect.isclass(Worker.structure) 
+#                 and issubclass(Worker.structure, cls)):
+#             Worker.structure = Worker.structure() 
+#         elif isinstance(Worker.structure, cls):
+#             Worker.structure.__post_init__()
 #         else:
 #             raise TypeError(
-#                 f'The structure attribute of Structure must be a str or {cls} type')
-#         return Structure
+#                 f'The structure attribute of Worker must be a str or {cls} type')
+#         return Worker
 
 #     """ Public Methods """
     
-#     def iterate(self, Structure: sourdough.Structure) -> Iterable:
-#         return more_itertools.collapse(Structure.contents)
+#     def iterate(self, Worker: sourdough.Worker) -> Iterable:
+#         return more_itertools.collapse(Worker.contents)
 
 #     """ Private Methods """
   
@@ -654,12 +654,12 @@ class Step(sourdough.Element):
 #                 print('test item in wrapped', item)
 #                 kwargs.update({generic.contains: key})
 #                 component = project.component.instance(key = key, **kwargs)
-#                 self.Structure.add(component) 
+#                 self.Worker.add(component) 
 #         # Otherwise uses the appropriate generic type.
 #         else:
 #             for item in wrapped:
 #                 kwargs.update({'name': key, generic.contains: key})
-#                 self.Structure.add(generic(**kwargs)) 
+#                 self.Worker.add(generic(**kwargs)) 
 #         return self   
 
 #     def _build_component(self,
@@ -676,7 +676,7 @@ class Step(sourdough.Element):
 #         except KeyError:
 #             kwargs.update({'name': key})
 #             component = generic(**kwargs)
-#         self.Structure.add(component)
+#         self.Worker.add(component)
 #         return self  
            
       
@@ -689,10 +689,10 @@ class Step(sourdough.Element):
     
 #     """ Public Methods """
 
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
 
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
 
       
@@ -705,13 +705,13 @@ class Step(sourdough.Element):
     
 #     """ Public Methods """
 
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
     
-#     def iterate(self, Structure: sourdough.Structure) -> Iterable:
-#         return itertools.repeat(Structure.contents, self.iterations)
+#     def iterate(self, Worker: sourdough.Worker) -> Iterable:
+#         return itertools.repeat(Worker.contents, self.iterations)
         
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
        
          
@@ -724,24 +724,24 @@ class Step(sourdough.Element):
 
 #     """ Public Methods """
 
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         """[summary]
 
 #         Args:
-#             Structure (sourdough.Structure): [description]
+#             Worker (sourdough.Worker): [description]
 
 #         Returns:
-#             sourdough.Structure: [description]
+#             sourdough.Worker: [description]
 #         """
 #         steps = components.pop([components.keys()[0]])
 #         possible = list(components.values())
 #         permutations = list(map(list, itertools.product(*possible)))
 #         for i, contained in enumerate(permutations):
-#             instance = sourdough.Structure(
+#             instance = sourdough.Worker(
 #                 _components = tuple(zip(steps, contained)))
-#         return Structure
+#         return Worker
     
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
 
          
@@ -754,10 +754,10 @@ class Step(sourdough.Element):
 
 #     """ Public Methods """
 
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
     
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
     
 
@@ -770,10 +770,10 @@ class Step(sourdough.Element):
     
 #     """ Public Methods """
 
-#     def organize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
     
-#     def finalize(self, Structure: sourdough.Structure) -> sourdough.Structure:
+#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
 #         pass
 
 
@@ -804,20 +804,20 @@ class Step(sourdough.Element):
 # class Tree(Role):
     
 #     name: str = None
-#     Structure: sourdough.Structure = None
+#     Worker: sourdough.Worker = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
-#             'Structure': sourdough.Structure})
+#             'Worker': sourdough.Worker})
   
 
 # @dataclasses.dataclass
 # class Graph(Role):
     
 #     name: str = None
-#     Structure: sourdough.Structure = None
+#     Worker: sourdough.Worker = None
 #     iterator: Union[str, Callable] = 'iterator'    
 #     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {
@@ -1023,7 +1023,7 @@ class Step(sourdough.Element):
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: sourdough.Structure) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -1037,7 +1037,7 @@ class Step(sourdough.Element):
     #         searched = searched)
         
     # def _topological_descend(self, 
-    #         graph: sourdough.Structure, 
+    #         graph: sourdough.Worker, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -1057,7 +1057,7 @@ class Step(sourdough.Element):
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: sourdough.Structure) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Worker) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -1071,7 +1071,7 @@ class Step(sourdough.Element):
     #         searched = searched)
         
     # def _dfs_descend(self, 
-    #         graph: sourdough.Structure, 
+    #         graph: sourdough.Worker, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -1122,7 +1122,7 @@ class Step(sourdough.Element):
     # """ Public Methods """
         
     # def get_sorted(self, 
-    #         graph: sourdough.Structure = None,
+    #         graph: sourdough.Worker = None,
     #         return_elements: bool = False) -> Sequence[sourdough.Component]:
     #     """Performs a topological sort on 'graph'.
         
@@ -1139,7 +1139,7 @@ class Step(sourdough.Element):
     #     else:
     #         return sorted_queue
 
-    # def validate(self, graph: sourdough.Structure) -> None:
+    # def validate(self, graph: sourdough.Worker) -> None:
     #     """
         
 

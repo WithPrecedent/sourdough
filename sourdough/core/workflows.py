@@ -18,8 +18,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-flows = sourdough.Catalog(defaults = 'editor')
-
 stages = sourdough.Catalog(
     defaults = ['draft', 'publish', 'apply'],
     always_return_list = True)
@@ -93,7 +91,7 @@ class Workflow(sourdough.quirks.Registrar, sourdough.Hybrid, abc.ABC):
     @classmethod
     def register(cls) -> None:
         key = sourdough.tools.snakify(cls.__name__)
-        flows[key] = cls
+        sourdough.library.workflows[key] = cls
         return cls
    
     """ Private Methods """

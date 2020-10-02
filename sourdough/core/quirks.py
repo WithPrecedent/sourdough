@@ -31,7 +31,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-
 @dataclasses.dataclass
 class Registrar(object):
     """Registry interface for core sourdough classes.
