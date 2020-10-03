@@ -62,26 +62,16 @@ class Details(sourdough.Slate):
 
 @dataclasses.dataclass
 class Outline(sourdough.Lexicon):
-    """Base class for pieces of sourdough composite objects.
+    """Output of the the drafting process.
+
+    Outline is a dictionary representation of the overall project design. All
+    Components are listed by key names and the information needed for Component
+    construction are stored in Details instances.
     
     Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__'). 
-        library (ClassVar[sourdough.Catalog]): the instance which 
-            automatically stores any subclass of Component.
               
     """
     contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
-    name: str = None
     project: sourdough.Project = dataclasses.field(repr = False, default = None) 
 
     """ Dunder Methods """
@@ -133,12 +123,11 @@ class Draft(sourdough.Stage):
             Outline: [description]
             
         """
-        outline = Outline(
-            project = project,
-            name = f'{project.name}_outline')
+        outline = Outline(project = project)
         for section in project.settings.values():
             for key, value in section.items():
                 if key.endswith(suffixes):
+                    details = self._create_details()
                     name, suffix = self._divide_key(key = key)
                     base = self._get_base(name = name, outline = outline)
                     contains = suffix.rstrip('s')
@@ -156,6 +145,12 @@ class Draft(sourdough.Stage):
                         contents = contents,
                         attributes = attributes)
         return outline
+
+    def _create_details(self, name: str, contents: Sequence[str],
+                        project: sourdough.Project) -> Details:
+        
+        
+
 
     def _divide_key(self, key: str) -> Sequence[str, str]:
         """[summary]
