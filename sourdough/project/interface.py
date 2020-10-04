@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (Hybrid): interface for sourdough projects.
+    Project (Iterable): interface for sourdough projects.
 
 """
 from __future__ import annotations

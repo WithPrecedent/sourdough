@@ -103,7 +103,6 @@ class Draft(sourdough.Stage):
             
         """       
         suffixes = tuple(project.hierarchy.keys())
-        print('test suffixes', suffixes)
         outline  = self._create_outline(project = project, suffixes = suffixes)
         project.design = outline
         print('test project outline', project.design)
@@ -127,31 +126,47 @@ class Draft(sourdough.Stage):
         for section in project.settings.values():
             for key, value in section.items():
                 if key.endswith(suffixes):
-                    details = self._create_details()
-                    name, suffix = self._divide_key(key = key)
-                    base = self._get_base(name = name, outline = outline)
-                    contains = suffix.rstrip('s')
-                    design = self._get_design(name = name, project = project)
-                    attributes = self._get_attributes(
-                        name = name, 
-                        project = project,
-                        suffixes = suffixes)
-                    contents = sourdough.tools.listify(value)
-                    outline[name] = Details(
-                        name = name,
-                        base = base,
-                        contains = contains,
-                        design = design,
-                        contents = contents,
-                        attributes = attributes)
+                    details = self._create_details(
+                        key = key,
+                        value = value,
+                        suffixes = suffixes,
+                        project = project)
+                    details.base = self._get_base(
+                        name = details.name, 
+                        outline = outline)
+                    outline[details.name] = details 
         return outline
 
-    def _create_details(self, name: str, contents: Sequence[str],
+    def _create_details(self, key: str, value: Sequence[str],
+                        suffixes: Sequence[str],
                         project: sourdough.Project) -> Details:
-        
-        
+        """[summary]
 
+        Args:
+            key (str): [description]
+            value (Sequence[str]): [description]
+            suffixes (Sequence[str]): [description]
+            project (sourdough.Project): [description]
 
+        Returns:
+            Details: [description]
+        """
+        name, suffix = self._divide_key(key = key)
+        contains = suffix.rstrip('s')
+        design = self._get_design(name = name, project = project)
+        attributes = self._get_attributes(
+            name = name, 
+            project = project,
+            suffixes = suffixes)
+        contents = sourdough.tools.listify(value)
+        details = Details(
+            name = name,
+            contains = contains,
+            design = design,
+            contents = contents,
+            attributes = attributes)
+        return details
+    
     def _divide_key(self, key: str) -> Sequence[str, str]:
         """[summary]
 
@@ -263,11 +278,12 @@ class Publish(sourdough.Stage):
             component = self._finalize_structure(
                 component = instance, 
                 project = project)
+            print('test created iterable component', component)
         else:
             component = self._finalize_element(
                 component = instance, 
                 project = project)
-        print('test created component', component)
+            print('test created static component', component)
         return component
         
     def _instance_component(self, name: str, 
