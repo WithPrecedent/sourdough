@@ -45,8 +45,8 @@ from .core.components import Element
 from .core.workflows import Stage
 from .core.workflows import Workflow
 from .project import editor
-from .project import composite
-from .project import graph
+from .project import elements
+from .project import workers
 from .project.interface import Project
 from .project import interface
 

@@ -11,12 +11,28 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import inspect
-import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
-import warnings
 
 import sourdough 
+
+
+@dataclasses.dataclass
+class Design(object):
+    
+    parallels: Sequence[str] = dataclasses.field(default_factory = list)
+    hierarchy: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
+    
+    
+@dataclasses.dataclass   
+class SimplifyDesign(Design):
+
+    parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
+    hierarchy: Mapping[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: {
+            'workers': ['workers', 'steps', 'techniques'],
+            'steps': ['techniques'],
+            'techniques': [None]}
 
 
 # @dataclasses.dataclass

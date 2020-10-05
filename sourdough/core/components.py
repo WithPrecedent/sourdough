@@ -182,7 +182,6 @@ class Worker(Component, sourdough.Hybrid):
     #         raise StopIteration
 
 
-
 @dataclasses.dataclass
 class Element(Component):
     """                     
@@ -262,6 +261,3 @@ class Element(Component):
 #             [type]: [description]
 #         """
 #         return {f'_{k}s': v for k, v in cls.library.items()}   
-
-    
- 

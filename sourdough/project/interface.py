@@ -84,12 +84,13 @@ class Project(collections.abc.Iterable):
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Lexicon)
     workflows: ClassVar[Mapping[str, Callable]] = sourdough.library.workflows
+    designs: ClassVar[Mapping[str, Callable]] = sourdough.library.designs
     components: ClassVar[Mapping[str, Callable]] = sourdough.library.components
     options: ClassVar[Mapping[str, object]] = sourdough.library.options
     hierarchy: ClassVar[Mapping[str, Callable]] = {
         'workers': sourdough.Worker,
-        'steps': sourdough.composite.Step,
-        'techniques': sourdough.composite.Technique}
+        'steps': sourdough.elements.Step,
+        'techniques': sourdough.elements.Technique}
     
     """ Initialization Methods """
 

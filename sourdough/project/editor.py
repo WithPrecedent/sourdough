@@ -264,6 +264,9 @@ class Publish(sourdough.Stage):
         deliverable = self._create_component(
             name = project.name,
             project = project)
+        deliverable = self._organize_component(
+            component = deliverable,
+            project = project)
         print('test deliverable', deliverable)
         project.design = deliverable
         return project     
@@ -273,17 +276,14 @@ class Publish(sourdough.Stage):
     def _create_component(self, name: str, 
                           project: sourdough.Project) -> sourdough.Component:
         instance = self._instance_component(name = name, project = project)
-        print('test initialized component', instance)
         if isinstance(instance, Iterable):
             component = self._finalize_structure(
                 component = instance, 
                 project = project)
-            print('test created iterable component', component)
         else:
             component = self._finalize_element(
                 component = instance, 
                 project = project)
-            print('test created static component', component)
         return component
         
     def _instance_component(self, name: str, 
@@ -338,6 +338,12 @@ class Publish(sourdough.Stage):
                 setattr(component, key, value)
         return component  
  
+    def _organize_component(self, component: sourdough.Component,
+                            project: sourdough.Project) -> sourdough.Component:
+        for item in component:
+            item.design = 
+            
+                self._origin
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
