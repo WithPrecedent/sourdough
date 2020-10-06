@@ -64,13 +64,13 @@ class Project(collections.abc.Iterable):
             to an empty Lexicon.
         workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
             which are subclasses of or compatible with Workflow. It points to 
-            a Catalog instance at sourdough.library.workflows.
+            a Catalog instance at sourdough.inventory.workflows.
         components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
             which are subclasses of or compatible with Component. It points to 
-            a Catalog instance at sourdough.library.components.
+            a Catalog instance at sourdough.inventory.components.
         options (ClassVar[Mapping[str, object]]): a dictionary of instances 
             which are subclass instances of or compatible with Component. It 
-            points to a Catalog instance at sourdough.library.options.    
+            points to a Catalog instance at sourdough.inventory.options.    
             
     """
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
@@ -83,10 +83,10 @@ class Project(collections.abc.Iterable):
     data: object = None
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Lexicon)
-    workflows: ClassVar[Mapping[str, Callable]] = sourdough.library.workflows
-    designs: ClassVar[Mapping[str, Callable]] = sourdough.library.designs
-    components: ClassVar[Mapping[str, Callable]] = sourdough.library.components
-    options: ClassVar[Mapping[str, object]] = sourdough.library.options
+    workflows: ClassVar[Mapping[str, Callable]] = sourdough.inventory.workflows
+    designs: ClassVar[Mapping[str, Callable]] = sourdough.inventory.designs
+    components: ClassVar[Mapping[str, Callable]] = sourdough.inventory.components
+    options: ClassVar[Mapping[str, object]] = sourdough.inventory.options
     hierarchy: ClassVar[Mapping[str, Callable]] = {
         'workers': sourdough.Worker,
         'steps': sourdough.elements.Step,

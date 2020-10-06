@@ -17,7 +17,6 @@ Contents:
 
 """
 from __future__ import annotations
-import copy
 import dataclasses
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -46,8 +45,8 @@ class Details(sourdough.Slate):
             version of the class name ('__class__.__name__'). 
         
     """
-    name: str = None
     contents: Sequence[str] = dataclasses.field(default_factory = list)
+    name: str = None
     base: str = None
     contains: str = None
     design: str = None
@@ -122,22 +121,45 @@ class Draft(sourdough.Stage):
             Outline: [description]
             
         """
+        bases = {}
         outline = Outline(project = project)
         for section in project.settings.values():
-            for key, value in section.items():
-                if key.endswith(suffixes):
-                    details = self._create_details(
-                        key = key,
-                        value = value,
-                        suffixes = suffixes,
-                        project = project)
-                    details.base = self._get_base(
-                        name = details.name, 
-                        outline = outline)
-                    outline[details.name] = details 
+            outline[section] = Details(name = section)
+            outline = self._process_section(
+                section = section, 
+                outline = outline,
+                project = project)
+            bases.update(self._add_bases(details = outline[section]))
+            outline[section].base = bases[section]
         return outline
 
-    def _create_details(self, key: str, value: Sequence[str],
+    def _process_section(self, section: Mapping[str, Any], outline: Outline,
+                         project: sourdough.Project) -> Dict[str, Details]:
+        # contents = []
+        # name = None
+        # base = None
+        # contains = None
+        # design = None
+        # parameters = {}
+        # attributes = {}
+        
+        for key, value in section.items():
+            if key.endswith(tuple(project.hierarchy.keys())):
+                details.contents = sourdough.tools.listify(value)
+                outline = self._process_value()
+                name, suffix = self._divide_key(key = key)
+                contains = suffix.rstrip('s')
+            elif key.endswith('design'):
+                details.design = value
+            else:
+                details.attributes[key] = value
+        
+    def _process_value(self, name: str, suffix: str) -> Dict[str, Details]:
+        
+        
+        
+                
+    def _get_details(self, key: str, value: Sequence[str],
                         suffixes: Sequence[str],
                         project: sourdough.Project) -> Details:
         """[summary]
@@ -338,12 +360,12 @@ class Publish(sourdough.Stage):
                 setattr(component, key, value)
         return component  
  
-    def _organize_component(self, component: sourdough.Component,
-                            project: sourdough.Project) -> sourdough.Component:
-        for item in component:
-            item.design = 
+    # def _organize_component(self, component: sourdough.Component,
+    #                         project: sourdough.Project) -> sourdough.Component:
+    #     for item in component:
+    #         item.design = 
             
-                self._origin
+    #             self._origin
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):

@@ -67,12 +67,12 @@ class Librarian(object):
         except AttributeError:
             pass
         # Stores subclass in Library.
-        self.shelve()
+        self.deposit()
     
     """ Class Methods """
 
     @abc.abstractmethod
-    def shelve(cls) -> None:
+    def deposit(cls) -> None:
         pass
 
 

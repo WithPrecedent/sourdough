@@ -91,7 +91,7 @@ class Workflow(sourdough.quirks.Registrar, sourdough.Hybrid, abc.ABC):
     @classmethod
     def register(cls) -> None:
         key = sourdough.tools.snakify(cls.__name__)
-        sourdough.library.workflows[key] = cls
+        sourdough.inventory.workflows[key] = cls
         return cls
    
     """ Private Methods """

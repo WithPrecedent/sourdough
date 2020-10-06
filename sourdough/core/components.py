@@ -56,13 +56,13 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, abc.ABC)
     @classmethod
     def register(cls) -> None:
         key = sourdough.tools.snakify(cls.__name__)
-        sourdough.library.components[key] = cls
+        sourdough.inventory.components[key] = cls
         return cls
     
     """ Public Methods """
     
-    def shelve(self) -> None:
-        sourdough.library.options[self.name] = self
+    def deposit(self) -> None:
+        sourdough.inventory.options[self.name] = self
         return self
 
     """ Private Methods """
@@ -240,7 +240,7 @@ class Element(Component):
 #             [type]: [description]
             
 #         """
-#         return [k for k, v in cls.library.items() if issubclass(v, component)]
+#         return [k for k, v in cls.inventory.items() if issubclass(v, component)]
 
 #     @classmethod
 #     def _get_values_by_type(cls, component: Component) -> Sequence[Component]:
@@ -251,7 +251,7 @@ class Element(Component):
 #             [type]: [description]
             
 #         """
-#         return [v for k, v in cls.library.items() if issubclass(v, component)]
+#         return [v for k, v in cls.inventory.items() if issubclass(v, component)]
    
 #     @classmethod
 #     def _suffixify(cls) -> Mapping[str, Component]:
@@ -260,4 +260,4 @@ class Element(Component):
 #         Returns:
 #             [type]: [description]
 #         """
-#         return {f'_{k}s': v for k, v in cls.library.items()}   
+#         return {f'_{k}s': v for k, v in cls.inventory.items()}   

@@ -35,7 +35,7 @@ from .core.types import Lexicon
 from .core.types import Catalog
 from .core.types import Slate
 from .core.types import Hybrid
-from .core import library
+from .core import inventory
 from .core import quirks
 from .configuration.settings import Settings
 from .configuration.filer import Filer

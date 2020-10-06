@@ -145,7 +145,25 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
     iterations: int = 10
     criteria: str = None
     name: str = None
-            
+
+    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+        """[summary]
+
+        Args:
+            Worker (sourdough.Worker): [description]
+
+        Returns:
+            sourdough.Worker: [description]
+        """
+        components = worker.contents
+        steps = components.pop([components.keys()[0]])
+        possible = list(components.values())
+        permutations = list(map(list, itertools.product(*possible)))
+        for i, contained in enumerate(permutations):
+            instance = sourdough.Worker(
+                _components = tuple(zip(steps, contained)))
+        return worker
+          
     """ Required Subclass Methods """
     
     # @abc.abstractmethod
@@ -398,12 +416,12 @@ class Survey(ParallelWorker):
             
 #         """
 #         structures = {}
-#         for key in project.components.library.keys():
+#         for key in project.components.inventory.keys():
 #             suffix = f'_{key}s'
 #             structures[key] = {
 #                 k: v for k, v in settings.items() if k.endswith(suffix)} 
             
-#         return {k: v for k, v in project.components.library.items()}
+#         return {k: v for k, v in project.components.inventory.items()}
     
 #     def _build_wrapper(self,
 #             key: str, 
