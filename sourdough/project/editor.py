@@ -26,11 +26,11 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Details(sourdough.Slate):
+class Details(sourdough.Lexicon):
     """Basic characteristics of a group of sourdough Components.
     
     Args:
-        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[str, str]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
@@ -45,10 +45,9 @@ class Details(sourdough.Slate):
             version of the class name ('__class__.__name__'). 
         
     """
-    contents: Sequence[str] = dataclasses.field(default_factory = list)
+    contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
     name: str = None
     base: str = None
-    contains: str = None
     design: str = None
     parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
@@ -95,21 +94,30 @@ class Draft(sourdough.Stage):
     """ Public Methods """
     
     def perform(self, project: sourdough.Project) -> sourdough.Project:
-        """Drafts an Outline instance based on 'settings'.
+        """Creates an Outline instance at 'design' based on 'settings'.
 
         Args:
-            settings (sourdough.Settings): [description]
+            project (sourdough.Project): a Project instance for which 'design'
+                should be created based on its 'settings' and other attributes.
 
         Returns:
-            sourdough.Outline: [description]
+            Project: with modifications made to its 'design' attribute.
             
         """ 
         outline = Outline(project = project)
-        for name in project.settings.key():     
-            outline = self._process_section(
-                name = name,
-                outline = outline,
-                project = project)
+        suffixes = tuple(project.hierarchy.keys())
+        for name, section in project.settings.items():
+            # Tests whether the section in 'settings' is related to the 
+            # construction of a project object by examining the key names to see
+            # if any end in a suffix corresponding to a known base type. If so, 
+            # that section is harvested for information which is added to 
+            # 'outline'.
+            if any([i.endswith(suffixes) for i in section.keys()]):
+                outline = self._process_section(
+                    name = name,
+                    outline = outline,
+                    project = project,
+                    base = 'worker')
         project.design = outline
         print('test project outline', project.design)
         return project
@@ -117,77 +125,62 @@ class Draft(sourdough.Stage):
     """ Private Methods """
     
     def _process_section(self, name: str, outline: Outline, 
-                         project: sourdough.Project) -> Outline:
-        if name not in outline:
-            outline[name] = Details(name = name)   
-        for key, value in outline[name].items():
-            if key.endswith(tuple(project.hierarchy.keys())):
-                key_name, key_suffix = self._divide_key(key = key)
-                kind = key_suffix.rstrip('s')
-                contents = sourdough.tools.listify(value)
-                if key_name == name:
-                    outline[name].contents = contents
-                    outline[name].contains = kind
-                for item in contents:
-                    outline = self._process_components(
-                        name = key_name,
-                        base = kind,
-                        contents = contents,
-                        outline = outline)
-            elif key.endswith('design'):
-                outline[name].design = value
-            else:
-                outline[name].attributes[key] = value
-        return outline
-    
-    def _process_components(self, name: str, base: str, 
-                            contents: Mapping[str, Sequence[str]],
-                            outline: Outline) -> Outline:
-        return outline
-        
-    def _get_details(self, key: str, value: Sequence[str],
-                     project: sourdough.Project) -> Details:
+                         project: sourdough.Project, base: str) -> Outline:
         """[summary]
 
         Args:
-            key (str): [description]
-            value (Sequence[str]): [description]
+            name (str): [description]
+            outline (Outline): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            Details: [description]
+            Outline: [description]
             
         """
-        
-        
-        design = self._get_design(name = name, project = project)
-        attributes = self._get_attributes(
-            name = name, 
-            project = project)
-        contents = sourdough.tools.listify(value)
-        details = Details(
-            name = name,
-            contains = contains,
-            design = design,
-            contents = contents,
-            attributes = attributes)
-        return details
-        
-    def _process_value(self, name: str, contents: Sequence[str],
-                       outline: Outline) -> Outline:
-        for item in contents:
-            outline[item].contents = contents
-            outline = self._process_value()
-            name, suffix = self._divide_key(key = key)
-            contains = suffix.rstrip('s')
-        
-        
- 
-    def _add_bases(details: Details) -> Dict[str, str]:
-        bases = {}
-        for item in details.contents:
-            bases[item] = details.contains
-        return bases
+        # Iterates through each key, value pair in section and stores or 
+        # extracts the information as appropriate.
+        for key, value in project.settings[name].items():
+            # keys ending with specific suffixes trigger further parsing and 
+            # searching throughout 'project.settings'.
+            if key.endswith(tuple(project.hierarchy.keys())):
+                # Each key contains a prefix which is the parent Component name 
+                # and a suffix which is what that parent Component contains.
+                key_name, key_suffix = self._divide_key(key = key)
+                contains = key_suffix.rstrip('s')
+                contents = dict.fromkeys(
+                    sourdough.tools.listify(value), 
+                    contains)
+                outline = self._add_details(
+                    name = key_name, 
+                    outline = outline,
+                    contents = contents,
+                    base = base)
+                for item in contents.keys():
+                    if item in project.settings:
+                        outline = self._process_section(
+                            name = item,
+                            outline = outline,
+                            project = project,
+                            base = contents[item])
+                    else:
+                        outline = self._add_details(
+                            name = item, 
+                            outline = outline,
+                            base = contents[item])
+            # keys ending with 'design' hold values of a Component's design.
+            elif key.endswith('design'):
+                outline = self._add_details(
+                    name = name, 
+                    outline = outline, 
+                    design = value)
+            # All other keys are presumed to be attributes to be added to a
+            # Component instance.
+            else:
+                outline = self._add_details(
+                    name = name,
+                    outline = outline,
+                    attributes = {key: value})
+        return outline
 
     def _divide_key(self, key: str) -> Sequence[str, str]:
         """[summary]
@@ -202,48 +195,8 @@ class Draft(sourdough.Stage):
         suffix = key.split('_')[-1][:-1]
         prefix = key[:-len(suffix) - 2]
         return prefix, suffix
-
-    def _get_design(self, name: str, project: sourdough.Project) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            project (sourdough.Project): [description]
-
-        Returns:
-            str: [description]
-            
-        """
-        try:
-            structure = project.settings[name][f'{name}_design']
-        except KeyError:
-            structure = 'pipeline'
-        return structure
-
-    def _get_attributes(self, name: str, 
-                        project: sourdough.Project) -> Mapping[str, Any]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            project (sourdough.Project): [description]
-
-        Returns:
-            Mapping[str, Any]: [description]
-            
-        """
-        attributes = {}
-        try:
-            for key, value in project.settings[name].items():
-                if not (key.endswith(tuple(project.hierarchy.keys())) 
-                        or key.endswith('_design')
-                        or key.endswith('workflow')):
-                    attributes[key] = value
-        except KeyError:
-            pass
-        return attributes
-
-    def _get_base(self, name: str, outline: Outline) -> str:
+        
+    def _add_details(self, name: str, outline: Outline, **kwargs) -> Outline:
         """[summary]
 
         Args:
@@ -251,13 +204,30 @@ class Draft(sourdough.Stage):
             outline (Outline): [description]
 
         Returns:
-            str: [description]
+            Outline: [description]
+            
         """
-        base = 'pipeline'
-        for key, details in outline.items():
-            if name in details:
-                base = details.contains
-        return base
+        # Stores a mostly empty Details instance in 'outline' if none currently
+        # exists corresponding to 'name'. This check is performed to prevent
+        # overwriting of existing information in 'outline' during recursive
+        # calls.
+        if name not in outline:
+            outline[name] = Details(name = name)
+        # Adds any kwargs to 'outline' as appropriate.
+        for key, value in kwargs.items():
+            if isinstance(getattr(outline[name], key), str):
+                pass
+            elif not getattr(outline[name], key):
+                setattr(outline[name], key, value)
+            else:
+                if isinstance(value, list):
+                    getattr(outline[name], key).extend(value)
+                else:
+                    try:
+                        getattr(outline[name], key).append(value)
+                    except (AttributeError, TypeError):
+                        getattr(outline[name], key).update(value)             
+        return outline
        
     
 @dataclasses.dataclass
@@ -282,89 +252,148 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        deliverable = self._create_component(
-            name = project.name,
+        # composite = project.components.build(
+        #     name = 'worker', 
+        #     design = project.design[project.name].design)
+        components = {}
+        for name, details in project.design.items():
+            components = self._add_component(
+                name = name, 
+                components = components,
+                project = project)
+        root = components.pop(project.name)
+        root = self._organize_worker(
+            worker = root,
+            components = components,
             project = project)
-        deliverable = self._organize_component(
-            component = deliverable,
-            project = project)
-        print('test deliverable', deliverable)
-        project.design = deliverable
-        return project     
-
+        print('test deliverable', root)
+        return root
+    
     """ Private Methods """
 
-    def _create_component(self, name: str, 
-                          project: sourdough.Project) -> sourdough.Component:
-        instance = self._instance_component(name = name, project = project)
-        if isinstance(instance, Iterable):
-            component = self._finalize_structure(
-                component = instance, 
-                project = project)
-        else:
-            component = self._finalize_element(
-                component = instance, 
-                project = project)
-        return component
-        
-    def _instance_component(self, name: str, 
-                            project: sourdough.Project) -> sourdough.Component:
-        details = project.design[name]
-        bases = project.components
-        try:
-            base = bases[details.base]
-        except KeyError:
-            try:
-                base = bases[details.design]
-            except KeyError:
-                raise KeyError(f'{name} component cannot be found')  
-        component = base(name = name, contents = details.contents)
-        return component     
-
-    def _finalize_structure(self, component: sourdough.Component,
-                            project: sourdough.Project) -> sourdough.Component:
-        new_contents = []
-        for item in component:
-            print('test item', item)
-            new_contents.append(self._create_component(
-                name = item, 
-                project = project))
-        component.contents = new_contents
-        print('test component new contents', component)
-        # component = self._add_attributes(
-        #     component = component, 
-        #     project = project)
-        return component
-
-    def _finalize_element(self, component: sourdough.Component,
-                          project: sourdough.Project) -> sourdough.Component:
-        # component = self._add_attributes(
-        #     component = component, 
-        #     project = project)
-        return component
-
-    def _add_attributes(self, 
-            component: sourdough.Component,
-            project: sourdough.Project) -> sourdough.Component:
+    def _add_component(self, name: str,
+                       components: Mapping[str, sourdough.Component],
+                       project: sourdough.Project) -> Mapping[
+                           str, sourdough.Component]:
         """[summary]
 
+        Args:
+            name (str): [description]
+            components (Mapping[str, sourdough.Component]): [description]
+            project (sourdough.Project): [description]
+
+        Raises:
+            KeyError: [description]
+
         Returns:
-            [type]: [description]
+            Mapping[ str, sourdough.Component]: [description]
             
         """
-        attributes = project.design[component.name].attributes
-        for key, value in attributes.items():
-            if (project.settings['general']['settings_priority']
-                    or not hasattr(component, key)):
-                setattr(component, key, value)
-        return component  
- 
-    # def _organize_component(self, component: sourdough.Component,
-    #                         project: sourdough.Project) -> sourdough.Component:
-    #     for item in component:
-    #         item.design = 
+        details = project.design[name]
+        try:
+            component = project.components[details.design]
+        except KeyError:
+            try:
+                component = project.components[details.base]
+            except KeyError:
+                try:
+                    component = project.options[details.name]
+                except KeyError:
+                    raise KeyError(f'{name} component does not exist')
+        components[name] = component(name = name)
+        return components   
             
-    #             self._origin
+    def _organize_worker(self, worker: sourdough.worker, 
+                         components: Mapping[str, sourdough.Component],
+                         project: sourdough.Project) -> sourdough.Worker:
+        """[summary]
+
+        Args:
+            worker (sourdough.worker): [description]
+            components (Mapping[str, sourdough.Component]): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Worker: [description]
+            
+        """
+        for item in project.design[worker.name].keys():
+            component = components.pop(item)
+            print('test item', item)
+            if isinstance(component, Iterable):
+                print('test yes iterable')
+                component = self._organize_worker(
+                    worker = component,
+                    components = components,
+                    project = project)
+            else:
+                try:
+                    component.contents = project.options[component.contents]
+                except (TypeError, KeyError):
+                    component.conents = None
+            worker.add(component)
+        return worker
+                
+            
+                
+                
+                      
+        # deliverable = self._create_component(
+        #     name = project.name,
+        #     project = project)
+        # deliverable = self._organize_component(
+        #     component = deliverable,
+        #     project = project)
+        # print('test deliverable', deliverable)
+        # project.design = deliverable
+        # return project     
+
+  
+
+    # def _finalize_design(self, component: sourdough.Component,
+    #                         project: sourdough.Project) -> sourdough.Component:
+    #     new_contents = []
+    #     for item in component:
+    #         print('test item', item)
+    #         new_contents.append(self._create_component(
+    #             name = item, 
+    #             project = project))
+    #     component.contents = new_contents
+    #     print('test component new contents', component)
+    #     # component = self._add_attributes(
+    #     #     component = component, 
+    #     #     project = project)
+    #     return component
+
+    # def _finalize_element(self, component: sourdough.Component,
+    #                       project: sourdough.Project) -> sourdough.Component:
+    #     # component = self._add_attributes(
+    #     #     component = component, 
+    #     #     project = project)
+    #     return component
+
+    # def _add_attributes(self, 
+    #         component: sourdough.Component,
+    #         project: sourdough.Project) -> sourdough.Component:
+    #     """[summary]
+
+    #     Returns:
+    #         [type]: [description]
+            
+    #     """
+    #     attributes = project.design[component.name].attributes
+    #     for key, value in attributes.items():
+    #         if (project.settings['general']['settings_priority']
+    #                 or not hasattr(component, key)):
+    #             setattr(component, key, value)
+    #     return component  
+ 
+    # # def _organize_component(self, component: sourdough.Component,
+    # #                         project: sourdough.Project) -> sourdough.Component:
+    # #     for item in component:
+    # #         item.design = 
+            
+    # #             self._origin
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):

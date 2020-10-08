@@ -19,7 +19,7 @@ settings = {
         'parser_design': 'compare',
         'parser_steps': ['divide'],
         'divide_techniques': ['slice', 'dice'],
-        'random_attribute': True},
+        'random_thing': True},
     'munger': {
         'munger_steps': ['search', 'destroy'],
         'search_techniques': ['find', 'locate'],

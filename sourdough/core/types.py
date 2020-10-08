@@ -518,7 +518,7 @@ class Slate(collections.abc.MutableSequence, Repository):
             int: length of iterable of 'contents'.
 
         """
-        return len(self.__iter__())
+        return len(self.contents)
     
    
 @dataclasses.dataclass
