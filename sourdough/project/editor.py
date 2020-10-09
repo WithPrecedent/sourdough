@@ -17,6 +17,7 @@ Contents:
 
 """
 from __future__ import annotations
+import copy
 import dataclasses
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -252,15 +253,13 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        # composite = project.components.build(
-        #     name = 'worker', 
-        #     design = project.design[project.name].design)
         components = {}
         for name, details in project.design.items():
             components = self._add_component(
                 name = name, 
                 components = components,
                 project = project)
+        print('test components', components)
         root = components.pop(project.name)
         root = self._organize_worker(
             worker = root,
@@ -290,17 +289,29 @@ class Publish(sourdough.Stage):
             
         """
         details = project.design[name]
+        kwargs = {
+            'name': name,
+            'contents': project.design[name].contents}
         try:
-            component = project.components[details.design]
+            component = copy.deepcopy(project.options[name])
+            for key, value in kwargs:
+                if value:
+                    setattr(component, key, value)
         except KeyError:
             try:
-                component = project.components[details.base]
+                component = project.components[name]
+                component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.options[details.name]
+                    component = project.components[details.design]
+                    component = component(**kwargs)
                 except KeyError:
-                    raise KeyError(f'{name} component does not exist')
-        components[name] = component(name = name)
+                    try:
+                        component = project.components[details.base]
+                        component = component(**kwargs)
+                    except KeyError:
+                        raise KeyError(f'{name} component does not exist')
+        components[name] = component
         return components   
             
     def _organize_worker(self, worker: sourdough.worker, 
@@ -317,22 +328,27 @@ class Publish(sourdough.Stage):
             sourdough.Worker: [description]
             
         """
+        print('test components at begin organize', components)
         for item in project.design[worker.name].keys():
-            component = components.pop(item)
             print('test item', item)
-            if isinstance(component, Iterable):
-                print('test yes iterable')
-                component = self._organize_worker(
-                    worker = component,
-                    components = components,
-                    project = project)
-            else:
-                try:
-                    component.contents = project.options[component.contents]
-                except (TypeError, KeyError):
-                    component.conents = None
-            worker.add(component)
+            if item in components:
+                print('test yes item in components')
+                component = components.pop(item)
+                print('test component', component)
+                if isinstance(component, Iterable):
+                    print('yes iterable')
+                    component = self._organize_worker(
+                        worker = component,
+                        components = components,
+                        project = project)
+                else:
+                    try:
+                        component.contents = project.options[component.contents]
+                    except (TypeError, KeyError):
+                        component.contents = None
+                worker.add(component)
         return worker
+            
                 
             
                 
