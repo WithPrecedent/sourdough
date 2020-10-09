@@ -31,7 +31,7 @@ class Details(sourdough.Lexicon):
     """Basic characteristics of a group of sourdough Components.
     
     Args:
-        contents (Mapping[str, str]): stored dictionary. Defaults to an empty 
+        contents (Sequence[str]): stored dictionary. Defaults to an empty 
             dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
@@ -46,7 +46,7 @@ class Details(sourdough.Lexicon):
             version of the class name ('__class__.__name__'). 
         
     """
-    contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
     name: str = None
     base: str = None
     design: str = None
@@ -72,9 +72,6 @@ class Outline(sourdough.Lexicon):
     """
     contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
     project: sourdough.Project = dataclasses.field(repr = False, default = None) 
-    _bases: Mapping[str, str] = dataclasses.field(
-        repr = False, 
-        default_factory = dict)
 
     """ Dunder Methods """
     
@@ -148,26 +145,24 @@ class Draft(sourdough.Stage):
                 # and a suffix which is what that parent Component contains.
                 key_name, key_suffix = self._divide_key(key = key)
                 contains = key_suffix.rstrip('s')
-                contents = dict.fromkeys(
-                    sourdough.tools.listify(value), 
-                    contains)
+                contents = sourdough.tools.listify(value) 
                 outline = self._add_details(
                     name = key_name, 
                     outline = outline,
                     contents = contents,
                     base = base)
-                for item in contents.keys():
+                for item in contents:
                     if item in project.settings:
                         outline = self._process_section(
                             name = item,
                             outline = outline,
                             project = project,
-                            base = contents[item])
+                            base = contains)
                     else:
                         outline = self._add_details(
                             name = item, 
                             outline = outline,
-                            base = contents[item])
+                            base = contains)
             # keys ending with 'design' hold values of a Component's design.
             elif key.endswith('design'):
                 outline = self._add_details(
@@ -218,16 +213,10 @@ class Draft(sourdough.Stage):
         for key, value in kwargs.items():
             if isinstance(getattr(outline[name], key), str):
                 pass
-            elif not getattr(outline[name], key):
-                setattr(outline[name], key, value)
+            elif isinstance(getattr(outline[name], key), dict):
+                getattr(outline[name], key).update(value) 
             else:
-                if isinstance(value, list):
-                    getattr(outline[name], key).extend(value)
-                else:
-                    try:
-                        getattr(outline[name], key).append(value)
-                    except (AttributeError, TypeError):
-                        getattr(outline[name], key).update(value)             
+                setattr(outline[name], key, value)           
         return outline
        
     
@@ -328,31 +317,24 @@ class Publish(sourdough.Stage):
             sourdough.Worker: [description]
             
         """
-        print('test components at begin organize', components)
-        for item in project.design[worker.name].keys():
+        for item in list(components.keys()):
             print('test item', item)
-            if item in components:
-                print('test yes item in components')
-                component = components.pop(item)
-                print('test component', component)
-                if isinstance(component, Iterable):
-                    print('yes iterable')
-                    component = self._organize_worker(
-                        worker = component,
-                        components = components,
-                        project = project)
-                else:
-                    try:
-                        component.contents = project.options[component.contents]
-                    except (TypeError, KeyError):
-                        component.contents = None
-                worker.add(component)
+            component = components.pop(item)
+            print('test component', component)
+            if isinstance(component, Iterable):
+                print('yes iterable')
+                component = self._organize_worker(
+                    worker = component,
+                    components = components,
+                    project = project)
+            else:
+                try:
+                    component.contents = project.options[component.contents]
+                except (TypeError, KeyError):
+                    component.contents = None
+            worker.add(component)
         return worker
             
-                
-            
-                
-                
                       
         # deliverable = self._create_component(
         #     name = project.name,
