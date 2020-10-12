@@ -85,7 +85,7 @@ class SerialWorker(sourdough.Worker, abc.ABC):
 
     
 @dataclasses.dataclass
-class Loop(SerialWorker):
+class Cycle(SerialWorker):
     """Ordered sourdough Components which will be repetitively called.
 
     Distinguishing characteristics of a Pipeline:
@@ -161,7 +161,7 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    iterations: int = 10
+    iterations: int = 1
     criteria: str = None
     
     """ Public Methods """
@@ -170,8 +170,11 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
                  components: Mapping[str, sourdough.Component]) -> None:
         """
         """
-        steps = []
+        steps = self.contents
         possible = []
+        for name, component in components.items():
+            if name in steps:
+                
         
         
         components = self.contents
