@@ -80,7 +80,7 @@ def deannotate(annotation: Any) -> Tuple[Any]:
         return annotation
     else:
         return typing.get_args(annotation)
-           
+          
 def importify(module: str, key: str) -> object:
     """Lazily loads object from 'module'.
 
@@ -422,10 +422,12 @@ def deduplicate(
             iterable with duplicate entries removed.
 
     """
-    try:
-        return list(more_itertools.unique_everseen(iterable))
-    except TypeError:
+    if isinstance(iterable, list):
+        return list(set(iterable))
+    elif isinstance(iterable, (pd.DataFrame, pd.Series)):
         return iterable.drop_duplicates(inplace = True)
+    else:
+        return iterable
 
 def drop_prefix(
         iterable: Union[Mapping[str, Any], Sequence[str]],
