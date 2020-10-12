@@ -1,12 +1,10 @@
 """
-workers: iterables in sourdough projects
+workers: structured iterables in sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
-
 
 """
 from __future__ import annotations
@@ -23,146 +21,167 @@ import sourdough
 
 @dataclasses.dataclass
 class Aggregation(sourdough.Worker):
-    """Base class for composite objects in sourdough projects.
+    """Aggregates unordered objects.
     
     Distinguishing characteristics of an Aggregation:
         1) Order doesn't matter.
-        2) All stored Components must be of the same type.
-        3) Stored Components do not need to be connected.
+        2) Stored Components do not need to be connected. If attributes of the
+            stored Components created connections, those connections will be 
+            left in tact.
         
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty set.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
-        default_factory = list)
+        default_factory = set)
     name: str = None
        
 
 @dataclasses.dataclass
 class SerialWorker(sourdough.Worker, abc.ABC):
-    """Base class for serial composite objects in sourdough projects.
+    """Base class for serially structures Workers in sourdough projects.
         
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
-    
-    """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-             
-    """ Required Subclass Methods """
-    
-    # @abc.abstractmethod
-    # def iterate(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def activate(self, **kwargs) -> Iterable:
-    #     pass    
-    
-    # @abc.abstractmethod
-    # def finalize(self, **kwargs) -> Iterable:
-    #     pass
-            
-    
-@dataclasses.dataclass
-class Pipeline(SerialWorker):
-    """Base class for composite objects in sourdough projects.
-
-    Distinguishing characteristics of a Contest:
-        1) Follows a sequence of instructions (serial structure).
-        2) It may pass data or other arguments to the next step in the sequence.
-        3) Only one connection or path exists between each object.
-        
-    Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
             
-
-@dataclasses.dataclass
-class ParallelWorker(sourdough.Worker, abc.ABC):
-    """Base class for parallel composite objects in sourdough projects.
-        
-    Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+    """ Public Methods """
     
-    """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-    iterations: int = 10
-    criteria: str = None
-    name: str = None
-
-    def organize(self, worker: sourdough.Worker) -> sourdough.Worker:
+    def organize(self, project: sourdough.Project, 
+                 components: Mapping[str, sourdough.Component]) -> None:
         """[summary]
 
         Args:
-            Worker (sourdough.Worker): [description]
+            project (sourdough.Project): [description]
+            components (Mapping[str, sourdough.Component]): [description]
 
-        Returns:
-            sourdough.Worker: [description]
         """
-        components = worker.contents
+        new_contents = []
+        for item in self.contents:
+            new_contents.append(components[item])
+        self.contents = new_contents
+        return self       
+
+    
+@dataclasses.dataclass
+class Loop(SerialWorker):
+    """Ordered sourdough Components which will be repetitively called.
+
+    Distinguishing characteristics of a Pipeline:
+        1) Follows a sequence of instructions (serial structure).
+        2) It may pass data or other arguments to the next step in the sequence.
+        3) Only one connection or path exists between each object.
+        4) It repeats the number of times set in the 'iterations' attribute.
+            If 'iteratations' is 'infinite', the loop will repeat until stopped
+            by a condition set in 'criteria'.
+        
+    Args:
+        contents (Sequence[Union[str, sourdough.Component]]): a set of str or
+            Components. 
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+    
+    """
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    iterations: int = 10
+    criteria: str = None
+    
+
+@dataclasses.dataclass
+class Pipeline(SerialWorker):
+    """Ordered sourdough Components without branching.
+
+    Distinguishing characteristics of a Pipeline:
+        1) Follows a sequence of instructions (serial structure).
+        2) It may pass data or other arguments to the next step in the sequence.
+        3) Only one connection or path exists between each object. There is no
+            branching or looping.
+        
+    Args:
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+    
+    """
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+        default_factory = list)
+    name: str = None           
+
+
+@dataclasses.dataclass
+class ParallelWorker(sourdough.Worker, abc.ABC):
+    """Base class for parallelly structured Workers in sourdough projects.
+        
+    Args:
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+    
+    """
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    iterations: int = 10
+    criteria: str = None
+    
+    """ Public Methods """
+
+    def organize(self, project: sourdough.Project, 
+                 components: Mapping[str, sourdough.Component]) -> None:
+        """
+        """
+        steps = []
+        possible = []
+        
+        
+        components = self.contents
         steps = components.pop([components.keys()[0]])
         possible = list(components.values())
         permutations = list(map(list, itertools.product(*possible)))
         for i, contained in enumerate(permutations):
             instance = sourdough.Worker(
                 _components = tuple(zip(steps, contained)))
-        return worker
+        return self
           
     """ Required Subclass Methods """
     
@@ -185,7 +204,7 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
 
 @dataclasses.dataclass
 class Contest(ParallelWorker):
-    """Base class for composite objects in sourdough projects.
+    """Stores Workers in a comparative parallel structure and chooses best.
 
     Distinguishing characteristics of a Contest:
         1) Repeats a Pipeline with different options (parallel structure).
@@ -195,19 +214,15 @@ class Contest(ParallelWorker):
             are simply part of the parallel structure).
         
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
     
     """
     contents: Sequence[sourdough.Pipeline] = dataclasses.field(
@@ -219,7 +234,7 @@ class Contest(ParallelWorker):
     
 @dataclasses.dataclass
 class Study(ParallelWorker):
-    """Base class for composite objects in sourdough projects.
+    """Stores Workers in a comparative parallel structure.
 
     Distinguishing characteristics of a Study:
         1) Repeats a Pipeline with different options (parallel structure).
@@ -230,19 +245,15 @@ class Study(ParallelWorker):
             are simply part of the parallel structure).
                       
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
     
     """
     contents: Union[
@@ -285,7 +296,7 @@ class Study(ParallelWorker):
     
 @dataclasses.dataclass
 class Survey(ParallelWorker):
-    """Base class for composite objects in sourdough projects.
+    """Stores Workers in a comparative parallel structure and averages results.
 
     Distinguishing characteristics of a Survey:
         1) Repeats a Pipeline with different options (parallel structure).
@@ -296,19 +307,15 @@ class Survey(ParallelWorker):
             are simply part of the parallel structure).    
                     
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a list of str or
-            Components. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__').
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
     
     """
     contents: Sequence[sourdough.Pipeline] = dataclasses.field(

@@ -16,9 +16,10 @@ settings = {
         'cool_project_design': 'pipeline',
         'workflow': 'editor'},
     'parser': {
-        'parser_design': 'compare',
-        'parser_steps': ['divide'],
+        'parser_design': 'contest',
+        'parser_steps': ['divide', 'extract'],
         'divide_techniques': ['slice', 'dice'],
+        'extract_techniques': ['harvest', 'process', 'something'],
         'random_thing': True},
     'munger': {
         'munger_steps': ['search', 'destroy'],

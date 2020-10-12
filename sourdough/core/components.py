@@ -37,7 +37,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, abc.ABC)
             sourdough classes. 
     
     """
-
+    
     """ Initialization Methods """
 
     def __post_init__(self) -> None:
@@ -119,7 +119,7 @@ class Worker(Component, sourdough.Hybrid):
             conversion, using the 'verify' and 'convert' methods.
             
     Args:
-        contents (Sequence[Union[str, Component]]): a list of str or Instances. 
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
             Defaults to an empty list.
         name (str): property which designates the internal reference of a class 
             instance that is used throughout sourdough. For example, if a 
@@ -128,9 +128,6 @@ class Worker(Component, sourdough.Hybrid):
             Defaults to None. If 'name' is None, it will be assigned to the 
             snake case version of the class name ('__name__' or 
             '__class__.__name__').
-        registry (ClassVar[Mapping[str, Callable]): stores subclasses. The keys 
-            are derived from the 'name' property of subclasses and values are
-            the subclasses themselves. Defaults to an empty Catalog instance.
                             
     """
     name: str = None
@@ -206,58 +203,4 @@ class Element(Component):
         
         """
         raise NotImplementedError(
-            'subclasses of Element must provide their own perform methods')
-   
- 
-# @dataclasses.dataclass
-# class Library(sourdough.Catalog):
-#     """Catalog for Component instances.
-
-#     Args:
-#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
-#             dict.
-#         defaults (Sequence[str]]): a list of keys in 'contents' which will be 
-#             used to return items when 'default' is sought. If not passed, 
-#             'default' will be set to all keys.
-#         always_return_list (bool): whether to return a list even when the key 
-#             passed is not a list or special access key (True) or to return a 
-#             list only when a list or special access key is used (False). 
-#             Defaults to False.
-                     
-#     """
-#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
-#     defaults: Sequence[str] = dataclasses.field(default_factory = list)
-#     always_return_list: bool = False
-    
-#     """ Private Class Methods """
-
-#     @classmethod
-#     def _get_keys_by_type(cls, component: Component) -> Sequence[Component]:
-#         """[summary]
-
-#         Returns:
-        
-#             [type]: [description]
-            
-#         """
-#         return [k for k, v in cls.inventory.items() if issubclass(v, component)]
-
-#     @classmethod
-#     def _get_values_by_type(cls, component: Component) -> Sequence[Component]:
-#         """[summary]
-
-#         Returns:
-        
-#             [type]: [description]
-            
-#         """
-#         return [v for k, v in cls.inventory.items() if issubclass(v, component)]
-   
-#     @classmethod
-#     def _suffixify(cls) -> Mapping[str, Component]:
-#         """[summary]
-
-#         Returns:
-#             [type]: [description]
-#         """
-#         return {f'_{k}s': v for k, v in cls.inventory.items()}   
+            'subclasses of Element must provide their own perform methods') 
