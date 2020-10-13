@@ -302,10 +302,42 @@ class Publish(sourdough.Stage):
                         raise KeyError(f'{name} component does not exist')
         components[name] = component
         return components   
-            
-    def _organize_worker(self, worker: sourdough.worker, 
+
+    def _create_parallel(self, worker: sourdough.worker, 
                          components: Mapping[str, sourdough.Component],
                          project: sourdough.Project) -> sourdough.Worker:
+        """[summary]
+
+        Args:
+            worker (sourdough.worker): [description]
+            components (Mapping[str, sourdough.Component]): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Worker: [description]
+            
+        """
+        for item in list(components.keys()):
+            print('test item', item)
+            component = components.pop(item)
+            print('test component', component)
+            if isinstance(component, Iterable):
+                print('yes iterable')
+                component = self._organize_worker(
+                    worker = component,
+                    components = components,
+                    project = project)
+            else:
+                try:
+                    component.contents = project.options[component.contents]
+                except (TypeError, KeyError):
+                    component.contents = None
+            worker.add(component)
+        return worker
+
+    def _create_serial(self, worker: sourdough.worker, 
+                       components: Mapping[str, sourdough.Component],
+                       project: sourdough.Project) -> sourdough.Worker:
         """[summary]
 
         Args:
@@ -392,6 +424,7 @@ class Publish(sourdough.Stage):
     # #         item.design = 
             
     # #             self._origin
+
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):

@@ -65,6 +65,7 @@ class SerialWorker(sourdough.Worker, abc.ABC):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
+    braches: bool = False
             
     """ Public Methods """
     
@@ -163,6 +164,7 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
     name: str = None
     iterations: int = 1
     criteria: str = None
+    branches: bool = True
     
     """ Public Methods """
 
@@ -170,20 +172,17 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
                  components: Mapping[str, sourdough.Component]) -> None:
         """
         """
-        steps = self.contents
         possible = []
-        for name, component in components.items():
-            if name in steps:
-                
-        
-        
-        components = self.contents
-        steps = components.pop([components.keys()[0]])
-        possible = list(components.values())
-        permutations = list(map(list, itertools.product(*possible)))
-        for i, contained in enumerate(permutations):
-            instance = sourdough.Worker(
-                _components = tuple(zip(steps, contained)))
+        for item in self.contents:
+            possible.append(components[item].contents)
+        combos = list(map(list, itertools.product(*possible)))
+        new_contents = []
+        for i, contained in enumerate(combos):
+            instance = Pipeline(
+                contents = tuple(zip(self.contents, contained)))
+            pipeline_contents = []
+            for item in instance.contents:
+                pipelines.contents
         return self
           
     """ Required Subclass Methods """
