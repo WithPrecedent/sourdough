@@ -127,6 +127,33 @@ class Pipeline(SerialWorker):
 
 
 @dataclasses.dataclass
+class Pipeline(SerialWorker):
+    """Ordered sourdough Components without branching.
+
+    Distinguishing characteristics of a Pipeline:
+        1) Follows a sequence of instructions (serial structure).
+        2) It may pass data or other arguments to the next step in the sequence.
+        3) Only one connection or path exists between each object. There is no
+            branching or looping.
+        
+    Args:
+        contents (Sequence[Union[str, Component]]): a list of str or Components. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+    
+    """
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+        default_factory = list)
+    name: str = None    
+    steps: Sequence[str] = dataclasses.field(default_factory = list)
+
+@dataclasses.dataclass
 class ParallelWorker(sourdough.Worker, abc.ABC):
     """Base class for parallelly structured Workers in sourdough projects.
         

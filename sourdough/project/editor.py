@@ -255,7 +255,7 @@ class Publish(sourdough.Stage):
                        project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
-        Args:
+        # Args:o
             name (str): [description]
             components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
@@ -334,19 +334,17 @@ class Publish(sourdough.Stage):
         possible = []
         for item in component.contents:
             possible.append(project.design[item].contents)
-        print('test possible', possible)
-            
-            
-            
-            
         combos = list(map(list, itertools.product(*possible)))
         new_contents = []
-        for i, contained in enumerate(combos):
-            instance = sourdough.Pipeline(
-                contents = tuple(zip(self.contents, contained)))
+        for combo in enumerate(combos):
+            combo = [self._get_component(i, project) for i in combo]
+            instance = sourdough.project.workers.Trial(
+                contents = combo,
+                steps = self.contents)
             pipeline_contents = []
             for item in instance.contents:
                 pipeline_contents
+            new_contents.append(instance)
         return self
 
     def _create_straight(self, component: sourdough.Component, 
