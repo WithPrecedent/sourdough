@@ -65,24 +65,7 @@ class SerialWorker(sourdough.Worker, abc.ABC):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    braches: bool = False
-            
-    """ Public Methods """
-    
-    def organize(self, project: sourdough.Project, 
-                 components: Mapping[str, sourdough.Component]) -> None:
-        """[summary]
-
-        Args:
-            project (sourdough.Project): [description]
-            components (Mapping[str, sourdough.Component]): [description]
-
-        """
-        new_contents = []
-        for item in self.contents:
-            new_contents.append(components[item])
-        self.contents = new_contents
-        return self       
+    branches: ClassVar[bool] = False   
 
     
 @dataclasses.dataclass
@@ -140,7 +123,7 @@ class Pipeline(SerialWorker):
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
-    name: str = None           
+    name: str = None    
 
 
 @dataclasses.dataclass
@@ -164,26 +147,7 @@ class ParallelWorker(sourdough.Worker, abc.ABC):
     name: str = None
     iterations: int = 1
     criteria: str = None
-    branches: bool = True
-    
-    """ Public Methods """
-
-    def organize(self, project: sourdough.Project, 
-                 components: Mapping[str, sourdough.Component]) -> None:
-        """
-        """
-        possible = []
-        for item in self.contents:
-            possible.append(components[item].contents)
-        combos = list(map(list, itertools.product(*possible)))
-        new_contents = []
-        for i, contained in enumerate(combos):
-            instance = Pipeline(
-                contents = tuple(zip(self.contents, contained)))
-            pipeline_contents = []
-            for item in instance.contents:
-                pipelines.contents
-        return self
+    branches: ClassVar[bool] = True
           
     """ Required Subclass Methods """
     

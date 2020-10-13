@@ -243,6 +243,7 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
+        print('test components', project.components)
         root = self._get_component(name = project.name, project = project)
         root = self._finalize_component(component = root, project = project)
         print('test root', root)
@@ -251,7 +252,7 @@ class Publish(sourdough.Stage):
     """ Private Methods """
 
     def _get_component(self, name: str,
-                       project: sourdough.Project) -> sourdough.Com ponent:
+                       project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -305,6 +306,7 @@ class Publish(sourdough.Stage):
         """
         if isinstance(component, Iterable):
             if component.branches:
+                print('test yes branches')
                 component = self._create_branching(
                     component = component, 
                     project = project)
@@ -331,15 +333,20 @@ class Publish(sourdough.Stage):
         """
         possible = []
         for item in component.contents:
-            instance = self._get_component(component = item, project = project)
+            possible.append(project.design[item].contents)
+        print('test possible', possible)
+            
+            
+            
+            
         combos = list(map(list, itertools.product(*possible)))
         new_contents = []
         for i, contained in enumerate(combos):
-            instance = Pipeline(
+            instance = sourdough.Pipeline(
                 contents = tuple(zip(self.contents, contained)))
             pipeline_contents = []
             for item in instance.contents:
-                pipelines.contents
+                pipeline_contents
         return self
 
     def _create_straight(self, component: sourdough.Component, 
@@ -355,34 +362,18 @@ class Publish(sourdough.Stage):
             sourdough.Worker: [description]
             
         """
-        for item in list(components.keys()):
-            print('test item', item)
-            component = components.pop(item)
-            print('test component', component)
-            if isinstance(component, Iterable):
-                print('yes iterable')
-                component = self._organize_component(
-                    component = component,
-                    components = components,
-                    project = project)
-            else:
-                try:
-                    component.contents = project.options[component.contents]
-                except (TypeError, KeyError):
-                    component.contents = None
-            component.add(component)
+        new_contents = []
+        for item in component.contents:
+            instance = self._get_component(
+                name = item, 
+                project = project)
+            instance = self._finalize_component(
+                component = instance, 
+                project = project)
+            new_contents.append(instance)
+        component.contents = new_contents
         return component
-            
-                      
-        # deliverable = self._create_component(
-        #     name = project.name,
-        #     project = project)
-        # deliverable = self._organize_component(
-        #     component = deliverable,
-        #     project = project)
-        # print('test deliverable', deliverable)
-        # project.design = deliverable
-        # return project     
+    
 
   
 
