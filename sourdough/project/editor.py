@@ -19,6 +19,7 @@ Contents:
 from __future__ import annotations
 import copy
 import dataclasses
+import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
@@ -242,27 +243,15 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        components = {}
-        for name, details in project.design.items():
-            components = self._add_component(
-                name = name, 
-                components = components,
-                project = project)
-        print('test components', components)
-        root = components.pop(project.name)
-        root = self._organize_worker(
-            worker = root,
-            components = components,
-            project = project)
-        print('test deliverable', root)
+        root = self._get_component(name = project.name, project = project)
+        root = self._finalize_component(component = root, project = project)
+        print('test root', root)
         return root
     
     """ Private Methods """
 
-    def _add_component(self, name: str,
-                       components: Mapping[str, sourdough.Component],
-                       project: sourdough.Project) -> Mapping[
-                           str, sourdough.Component]:
+    def _get_component(self, name: str,
+                       project: sourdough.Project) -> sourdough.Com ponent:
         """[summary]
 
         Args:
@@ -300,16 +289,65 @@ class Publish(sourdough.Stage):
                         component = component(**kwargs)
                     except KeyError:
                         raise KeyError(f'{name} component does not exist')
-        components[name] = component
-        return components   
+        return component
 
-    def _create_parallel(self, worker: sourdough.worker, 
-                         components: Mapping[str, sourdough.Component],
+    def _finalize_component(self, component: sourdough.Component,
+                            project: sourdough.Project) -> sourdough.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.Component): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Component: [description]
+            
+        """
+        if isinstance(component, Iterable):
+            if component.branches:
+                component = self._create_branching(
+                    component = component, 
+                    project = project)
+            else:
+                component = self._create_straight(
+                    component = component, 
+                    project = project)
+        else:
+            pass
+        return component
+
+    def _create_branching(self, component: sourdough.Component,
+                          project: sourdough.Project) -> sourdough.Worker:
+        """[summary]
+
+        Args:
+            component (sourdough.Component): [description]
+            components (Mapping[str, sourdough.Component]): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Worker: [description]
+            
+        """
+        possible = []
+        for item in component.contents:
+            instance = self._get_component(component = item, project = project)
+        combos = list(map(list, itertools.product(*possible)))
+        new_contents = []
+        for i, contained in enumerate(combos):
+            instance = Pipeline(
+                contents = tuple(zip(self.contents, contained)))
+            pipeline_contents = []
+            for item in instance.contents:
+                pipelines.contents
+        return self
+
+    def _create_straight(self, component: sourdough.Component, 
                          project: sourdough.Project) -> sourdough.Worker:
         """[summary]
 
         Args:
-            worker (sourdough.worker): [description]
+            component (sourdough.Component): [description]
             components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
@@ -323,8 +361,8 @@ class Publish(sourdough.Stage):
             print('test component', component)
             if isinstance(component, Iterable):
                 print('yes iterable')
-                component = self._organize_worker(
-                    worker = component,
+                component = self._organize_component(
+                    component = component,
                     components = components,
                     project = project)
             else:
@@ -332,40 +370,8 @@ class Publish(sourdough.Stage):
                     component.contents = project.options[component.contents]
                 except (TypeError, KeyError):
                     component.contents = None
-            worker.add(component)
-        return worker
-
-    def _create_serial(self, worker: sourdough.worker, 
-                       components: Mapping[str, sourdough.Component],
-                       project: sourdough.Project) -> sourdough.Worker:
-        """[summary]
-
-        Args:
-            worker (sourdough.worker): [description]
-            components (Mapping[str, sourdough.Component]): [description]
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Worker: [description]
-            
-        """
-        for item in list(components.keys()):
-            print('test item', item)
-            component = components.pop(item)
-            print('test component', component)
-            if isinstance(component, Iterable):
-                print('yes iterable')
-                component = self._organize_worker(
-                    worker = component,
-                    components = components,
-                    project = project)
-            else:
-                try:
-                    component.contents = project.options[component.contents]
-                except (TypeError, KeyError):
-                    component.contents = None
-            worker.add(component)
-        return worker
+            component.add(component)
+        return component
             
                       
         # deliverable = self._create_component(
