@@ -37,15 +37,13 @@ from .core.types import Slate
 from .core.types import Hybrid
 from .core import inventory
 from .core import quirks
+from .core.structures import Component
 from .configuration.settings import Settings
 from .configuration.filer import Filer
-from .core.components import Component
-from .core.components import Worker
-from .core.components import Element
 from .core.workflows import Stage
 from .core.workflows import Workflow
 from .project import editor
-from .project import elements
+from .project import components
 from .project import workers
 from .project.interface import Project
 from .project import interface

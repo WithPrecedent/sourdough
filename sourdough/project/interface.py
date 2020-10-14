@@ -88,9 +88,9 @@ class Project(collections.abc.Iterable):
     components: ClassVar[Mapping[str, Callable]] = sourdough.inventory.components
     options: ClassVar[Mapping[str, object]] = sourdough.inventory.options
     hierarchy: ClassVar[Mapping[str, Callable]] = {
-        'workers': sourdough.Worker,
-        'steps': sourdough.elements.Step,
-        'techniques': sourdough.elements.Technique}
+        'workers': sourdough.components.Worker,
+        'steps': sourdough.components.Step,
+        'techniques': sourdough.components.Technique}
     
     """ Initialization Methods """
 

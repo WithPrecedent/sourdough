@@ -21,63 +21,63 @@ class Parser(sourdough.project.workers.Contest):
 
 
 @dataclasses.dataclass
-class Search(sourdough.elements.Step):
+class Search(sourdough.components.Step):
 
     def perform(self):
         return   
 
 
 @dataclasses.dataclass
-class Divide(sourdough.elements.Step):
+class Divide(sourdough.components.Step):
 
     def perform(self):
         return   
     
     
 @dataclasses.dataclass
-class Destroy(sourdough.elements.Step):
+class Destroy(sourdough.components.Step):
 
     def perform(self):
         return   
     
 
 @dataclasses.dataclass
-class Slice(sourdough.elements.Technique):
+class Slice(sourdough.components.Technique):
 
     def perform(self):
         return  
 
 
 @dataclasses.dataclass
-class Dice(sourdough.elements.Technique):
+class Dice(sourdough.components.Technique):
 
     def perform(self):
         return 
     
     
 @dataclasses.dataclass
-class Find(sourdough.elements.Technique):
+class Find(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Locate(sourdough.elements.Technique):
+class Locate(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Explode(sourdough.elements.Technique):
+class Explode(sourdough.components.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Dynamite(sourdough.elements.Technique):
+class Dynamite(sourdough.components.Technique):
     
     label: str = 'annihilate'
 
@@ -111,7 +111,7 @@ def test_project():
 
 
 # @dataclasses.dataclass
-# class AWorker(sourdough.Worker):
+# class AWorker(sourdough.components.Worker):
     
 #     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {'new': NewAction()},

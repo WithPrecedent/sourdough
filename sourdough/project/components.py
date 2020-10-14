@@ -1,15 +1,14 @@
 """
-elements: non-iterable components in a sourdough projects
+components: classes for sourdough composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
-
-
+    
 """
 from __future__ import annotations
+import collections.abc
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
@@ -18,7 +17,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.quirks.Loader, sourdough.Element):
+class Technique(sourdough.quirks.Loader, sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -102,7 +101,7 @@ class Technique(sourdough.quirks.Loader, sourdough.Element):
 
              
 @dataclasses.dataclass
-class Step(sourdough.Element):
+class Step(sourdough.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
@@ -208,3 +207,100 @@ class Step(sourdough.Element):
             raise AttributeError(
                 f'{attribute} neither found in {self.name} nor '
                 f'{self.contents}') 
+   
+
+@dataclasses.dataclass
+class Worker(sourdough.Component, sourdough.Hybrid):
+    """Base class for composite objects in sourdough projects.
+    
+    Worker differs from an ordinary Hybrid in 1 significant way:
+        1) It is mixed in with Sequencify which allows for type validation and 
+            conversion, using the 'verify' and 'convert' methods.
+            
+    Args:
+        contents (collections.abc.Collection): a python Collection of items. 
+            Defaults to an empty list.
+        name (str): property which designates the internal reference of a class 
+            instance that is used throughout sourdough. For example, if a 
+            sourdough instance needs options from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            Defaults to None. If 'name' is None, it will be assigned to the 
+            snake case version of the class name ('__name__' or 
+            '__class__.__name__').
+                            
+    """
+    contents: collections.abc.Collection = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    branches: ClassVar[bool] = False 
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass 
+        # Initializes 'index' for iteration.
+        self.index = -1
+
+    """ Public Methods """
+    
+    def perform(self, data: object = None, **kwargs) -> NotImplementedError:
+        """Subclasses must provide their own methods.       
+        
+        """
+        raise NotImplementedError(
+            'subclasses of Worker must provide their own perform methods')
+                   
+    """ Required Subclass Methods """
+    
+    # @abc.abstractmethod
+    # def iterate(self, **kwargs) -> Iterable:
+    #     pass
+    
+    # @abc.abstractmethod
+    # def activate(self, **kwargs) -> Iterable:
+    #     pass    
+    
+    # @abc.abstractmethod
+    # def finalize(self, **kwargs) -> Iterable:
+    #     pass
+  
+    """ Dunder Methods """
+    
+    # def __iter__(self) -> Iterable:
+    #     if self.index + 1 < len(self.contents):
+    #         self.index += 1
+    #         yield self.iterate()
+    #     else:
+    #         raise StopIteration
+
+
+# @dataclasses.dataclass
+# class Element(Component):
+#     """                     
+#     """
+#     name: str = None
+#     contents: Union[object, Callable] = None
+    
+#     """ Initialization Methods """
+    
+#     def __post_init__(self) -> None:
+#         """Initializes class instance attributes."""
+#         # Calls parent and/or mixin initialization method(s).
+#         try:
+#             super().__post_init__()
+#         except AttributeError:
+#             pass 
+
+#     """ Public Methods """
+    
+#     def perform(self, data: object = None, **kwargs) -> NotImplementedError:
+#         """Subclasses must provide their own methods.       
+        
+#         """
+#         raise NotImplementedError(
+#             'subclasses of Element must provide their own perform methods') 

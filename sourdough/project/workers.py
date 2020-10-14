@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.Worker):
+class Aggregation(sourdough.components.Worker):
     """Aggregates unordered objects.
     
     Distinguishing characteristics of an Aggregation:
@@ -47,7 +47,7 @@ class Aggregation(sourdough.Worker):
        
 
 @dataclasses.dataclass
-class SerialWorker(sourdough.Worker, abc.ABC):
+class SerialWorker(sourdough.components.Worker, abc.ABC):
     """Base class for serially structures Workers in sourdough projects.
         
     Args:
@@ -127,34 +127,7 @@ class Pipeline(SerialWorker):
 
 
 @dataclasses.dataclass
-class Pipeline(SerialWorker):
-    """Ordered sourdough Components without branching.
-
-    Distinguishing characteristics of a Pipeline:
-        1) Follows a sequence of instructions (serial structure).
-        2) It may pass data or other arguments to the next step in the sequence.
-        3) Only one connection or path exists between each object. There is no
-            branching or looping.
-        
-    Args:
-        contents (Sequence[Union[str, Component]]): a list of str or Components. 
-            Defaults to an empty list.
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
-    
-    """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
-        default_factory = list)
-    name: str = None    
-    steps: Sequence[str] = dataclasses.field(default_factory = list)
-
-@dataclasses.dataclass
-class ParallelWorker(sourdough.Worker, abc.ABC):
+class ParallelWorker(sourdough.components.Worker, abc.ABC):
     """Base class for parallelly structured Workers in sourdough projects.
         
     Args:
@@ -261,10 +234,10 @@ class Study(ParallelWorker):
         """[summary]
 
         Args:
-            structure (sourdough.Worker): [description]
+            structure (sourdough.components.Worker): [description]
 
         Returns:
-            sourdough.Worker: [description]
+            sourdough.components.Worker: [description]
         """
         # new_contents = []
         # steps = list(self.contents.keys())
@@ -280,7 +253,7 @@ class Study(ParallelWorker):
         #         component = self._get_component(
         #             key = item, 
         #             generic = self.contents.generic)
-        #         if isinstance(item, sourdough.Worker):
+        #         if isinstance(item, sourdough.components.Worker):
         #             self.organize()
         #     new_contents.append(instance)
         # self.contents = new_contents
@@ -345,28 +318,28 @@ class Survey(ParallelWorker):
 #     """ Required Subclass Methods """
 
 #     @abc.abstractmethod
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
  
 #     @abc.abstractmethod
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
     
 #     """ Class Methods """
 
 #     @classmethod
-#     def validate(cls, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def validate(cls, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         """Returns a Role instance based upon 'structure'.
         
 #         Args:
-#             Worker (sourdough.Worker): Hybrid instance with 'structure' attribute
+#             Worker (sourdough.components.Worker): Hybrid instance with 'structure' attribute
 #                 to be validated.
                 
 #         Raises:
 #             TypeError: if 'Worker.structure' is neither a str nor Role type.
             
 #         Returns:
-#             sourdough.Worker: with a validated 'structure' attribute.
+#             sourdough.components.Worker: with a validated 'structure' attribute.
             
 #         """
 #         if isinstance(Worker.structure, str):
@@ -383,7 +356,7 @@ class Survey(ParallelWorker):
 
 #     """ Public Methods """
     
-#     def iterate(self, Worker: sourdough.Worker) -> Iterable:
+#     def iterate(self, Worker: sourdough.components.Worker) -> Iterable:
 #         return more_itertools.collapse(Worker.contents)
 
 #     """ Private Methods """
@@ -482,10 +455,10 @@ class Survey(ParallelWorker):
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
 
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
 
       
@@ -498,13 +471,13 @@ class Survey(ParallelWorker):
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
     
-#     def iterate(self, Worker: sourdough.Worker) -> Iterable:
+#     def iterate(self, Worker: sourdough.components.Worker) -> Iterable:
 #         return itertools.repeat(Worker.contents, self.iterations)
         
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
        
          
@@ -517,24 +490,24 @@ class Survey(ParallelWorker):
 
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         """[summary]
 
 #         Args:
-#             Worker (sourdough.Worker): [description]
+#             Worker (sourdough.components.Worker): [description]
 
 #         Returns:
-#             sourdough.Worker: [description]
+#             sourdough.components.Worker: [description]
 #         """
 #         steps = components.pop([components.keys()[0]])
 #         possible = list(components.values())
 #         permutations = list(map(list, itertools.product(*possible)))
 #         for i, contained in enumerate(permutations):
-#             instance = sourdough.Worker(
+#             instance = sourdough.components.Worker(
 #                 _components = tuple(zip(steps, contained)))
 #         return Worker
     
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
 
          
@@ -547,10 +520,10 @@ class Survey(ParallelWorker):
 
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
     
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
     
 
@@ -563,10 +536,10 @@ class Survey(ParallelWorker):
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
     
-#     def finalize(self, Worker: sourdough.Worker) -> sourdough.Worker:
+#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
 #         pass
 
 
@@ -597,10 +570,10 @@ class Survey(ParallelWorker):
 # class Tree(Role):
     
 #     name: str = None
-#     Worker: sourdough.Worker = None
+#     Worker: sourdough.components.Worker = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
-#             'Worker': sourdough.Worker})
+#             'Worker': sourdough.components.Worker})

@@ -243,13 +243,26 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """
-        print('test components', project.components)
-        root = self._get_component(name = project.name, project = project)
-        root = self._finalize_component(component = root, project = project)
+        root = self._create_component(name = project.name, project = project)
         print('test root', root)
         return root
     
     """ Private Methods """
+
+    def _create_component(self, name: str,
+                          project: sourdough.Project) -> sourdough.Component:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Component: [description]
+            
+        """
+        component = self._get_component(name = name, project = project)
+        return self._finalize_component(component = component, project = project)
 
     def _get_component(self, name: str,
                        project: sourdough.Project) -> sourdough.Component:
@@ -273,7 +286,7 @@ class Publish(sourdough.Stage):
             'contents': project.design[name].contents}
         try:
             component = copy.deepcopy(project.options[name])
-            for key, value in kwargs:
+            for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
@@ -319,7 +332,7 @@ class Publish(sourdough.Stage):
         return component
 
     def _create_branching(self, component: sourdough.Component,
-                          project: sourdough.Project) -> sourdough.Worker:
+                          project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
@@ -328,27 +341,29 @@ class Publish(sourdough.Stage):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Worker: [description]
+            sourdough.components.Worker: [description]
             
         """
         possible = []
         for item in component.contents:
             possible.append(project.design[item].contents)
         combos = list(map(list, itertools.product(*possible)))
+        wrappers = [self._get_component(i, project) for i in self.contents]
         new_contents = []
-        for combo in enumerate(combos):
+        for combo in combos:
+            wrappers = 
             combo = [self._get_component(i, project) for i in combo]
-            instance = sourdough.project.workers.Trial(
+            print('test combo', combo)
+            instance = sourdough.project.workers.Pipeline(
                 contents = combo,
-                steps = self.contents)
-            pipeline_contents = []
-            for item in instance.contents:
-                pipeline_contents
+                steps = component.contents)
+            instance.contents = [
+                self._create_straight(i, project) for i in instance.contents]
             new_contents.append(instance)
         return self
 
     def _create_straight(self, component: sourdough.Component, 
-                         project: sourdough.Project) -> sourdough.Worker:
+                         project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
@@ -357,7 +372,7 @@ class Publish(sourdough.Stage):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Worker: [description]
+            sourdough.components.Worker: [description]
             
         """
         new_contents = []

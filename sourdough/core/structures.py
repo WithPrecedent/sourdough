@@ -1,22 +1,22 @@
 """
-components: classes for sourdough composite objects
+structures: base classes for composite structures
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    
+
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
+import pprint
 import textwrap
-import typing
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
-import sourdough
+import sourdough 
 
 
 @dataclasses.dataclass
@@ -56,23 +56,12 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
         except AttributeError:
             pass
 
-    # """ Properties """
-    
-    # @property
-    # @classmethod
-    # @abc.abstractmethod
-    # def name(cls):
-    #     """Requires subclasses to define a 'name' attribute'.
-        
-    #     This method is used to raise an error when the subclass either doesn't
-    #     define 'name' or fails to call Component.__post_init__() which defines
-    #     'name' if it is not otherwise defined.
-        
-    #     Raises:
-    #         NotImplementedError: if a subclass does not define 'name'.
-            
-    #     """
-    #     raise NotImplementedError('name must be defined by a Component subclass')
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def perform(self, project: sourdough.Project) -> sourdough.Project:
+        """Subclasses must provide their own methods."""
+        return project
 
     """ Class Methods """
     
@@ -149,99 +138,23 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     #         else:
     #             representation.append(f'{attribute}: {str(value)}')
     #     return new_line.join(representation)  
-    
 
-@dataclasses.dataclass
-class Worker(Component, sourdough.Hybrid):
-    """Base class for composite objects in sourdough projects.
-    
-    Worker differs from an ordinary Hybrid in 1 significant way:
-        1) It is mixed in with Sequencify which allows for type validation and 
-            conversion, using the 'verify' and 'convert' methods.
-            
-    Args:
-        contents (collections.abc.Collection): a python Collection of items. 
-            Defaults to an empty list.
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
-                            
-    """
-    contents: collections.abc.Collection = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass 
-        # Initializes 'index' for iteration.
-        self.index = -1
-
-    """ Public Methods """
-    
-    def perform(self, data: object = None, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods.       
-        
-        """
-        raise NotImplementedError(
-            'subclasses of Worker must provide their own perform methods')
-                   
-    """ Required Subclass Methods """
-    
-    # @abc.abstractmethod
-    # def iterate(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def activate(self, **kwargs) -> Iterable:
-    #     pass    
-    
-    # @abc.abstractmethod
-    # def finalize(self, **kwargs) -> Iterable:
-    #     pass
-  
-    """ Dunder Methods """
-    
-    # def __iter__(self) -> Iterable:
-    #     if self.index + 1 < len(self.contents):
-    #         self.index += 1
-    #         yield self.iterate()
-    #     else:
-    #         raise StopIteration
 
 
 @dataclasses.dataclass
-class Element(Component):
-    """                     
-    """
-    name: str = None
-    contents: Union[object, Callable] = None
+class Design(object):
     
-    """ Initialization Methods """
+    parallels: Sequence[str] = dataclasses.field(default_factory = list)
+    hierarchy: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
     
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass 
+    
+@dataclasses.dataclass   
+class SimplifyDesign(Design):
 
-    """ Public Methods """
-    
-    def perform(self, data: object = None, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods.       
-        
-        """
-        raise NotImplementedError(
-            'subclasses of Element must provide their own perform methods') 
+    parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
+    hierarchy: Mapping[str, Sequence[str]] = dataclasses.field(
+        default_factory = lambda: {
+            'workers': ['workers', 'steps', 'techniques'],
+            'steps': ['techniques'],
+            'techniques': [None]})
+
