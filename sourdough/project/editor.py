@@ -351,7 +351,6 @@ class Publish(sourdough.Stage):
         wrappers = [self._get_component(i, project) for i in self.contents]
         new_contents = []
         for combo in combos:
-            wrappers = 
             combo = [self._get_component(i, project) for i in combo]
             print('test combo', combo)
             instance = sourdough.project.workers.Pipeline(
