@@ -92,7 +92,11 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
                 passed, nothing is returned.        
         
         """
-        self.contents = self.load(key = self.name)
+        if self.contents is None:
+            try:
+                self.contents = self.load(key = self.name)
+            except ImportError:
+                pass
         if data is None:
             self.contents.perform(**self.parameters, **kwargs)
             return self

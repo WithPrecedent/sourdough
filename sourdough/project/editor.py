@@ -242,10 +242,12 @@ class Publish(sourdough.Stage):
         Returns:
             sourdough.Outline: [description]
             
-        """
-        root = self._create_component(name = project.name, project = project)
-        print('test root', root)
-        return root
+        """ 
+        project.design = self._create_component(
+            name = project.name, 
+            project = project)
+        print('test root', project.design)
+        return project
     
     """ Private Methods """
 
@@ -348,18 +350,20 @@ class Publish(sourdough.Stage):
         for item in component.contents:
             possible.append(project.design[item].contents)
         combos = list(map(list, itertools.product(*possible)))
-        wrappers = [self._get_component(i, project) for i in self.contents]
+        wrappers = [self._get_component(i, project) for i in component.contents]
         new_contents = []
         for combo in combos:
             combo = [self._get_component(i, project) for i in combo]
-            print('test combo', combo)
-            instance = sourdough.project.workers.Pipeline(
-                contents = combo,
-                steps = component.contents)
-            instance.contents = [
-                self._create_straight(i, project) for i in instance.contents]
-            new_contents.append(instance)
-        return self
+            steps = []
+            for i, step in enumerate(wrappers):
+                step.contents = combo[i]
+                steps.append(step)
+            new_contents.append(steps)
+        component.contents = new_contents
+        component = self._add_attributes(
+            component = component, 
+            project = project)
+        return component
 
     def _create_straight(self, component: sourdough.Component, 
                          project: sourdough.Project) -> sourdough.components.Worker:
@@ -385,54 +389,23 @@ class Publish(sourdough.Stage):
             new_contents.append(instance)
         component.contents = new_contents
         return component
-    
 
-  
+    def _add_attributes(self, 
+            component: sourdough.Component,
+            project: sourdough.Project) -> sourdough.Component:
+        """[summary]
 
-    # def _finalize_design(self, component: sourdough.Component,
-    #                         project: sourdough.Project) -> sourdough.Component:
-    #     new_contents = []
-    #     for item in component:
-    #         print('test item', item)
-    #         new_contents.append(self._create_component(
-    #             name = item, 
-    #             project = project))
-    #     component.contents = new_contents
-    #     print('test component new contents', component)
-    #     # component = self._add_attributes(
-    #     #     component = component, 
-    #     #     project = project)
-    #     return component
-
-    # def _finalize_element(self, component: sourdough.Component,
-    #                       project: sourdough.Project) -> sourdough.Component:
-    #     # component = self._add_attributes(
-    #     #     component = component, 
-    #     #     project = project)
-    #     return component
-
-    # def _add_attributes(self, 
-    #         component: sourdough.Component,
-    #         project: sourdough.Project) -> sourdough.Component:
-    #     """[summary]
-
-    #     Returns:
-    #         [type]: [description]
+        Returns:
+            [type]: [description]
             
-    #     """
-    #     attributes = project.design[component.name].attributes
-    #     for key, value in attributes.items():
-    #         if (project.settings['general']['settings_priority']
-    #                 or not hasattr(component, key)):
-    #             setattr(component, key, value)
-    #     return component  
- 
-    # # def _organize_component(self, component: sourdough.Component,
-    # #                         project: sourdough.Project) -> sourdough.Component:
-    # #     for item in component:
-    # #         item.design = 
-            
-    # #             self._origin
+        """
+        attributes = project.design[component.name].attributes
+        print('test attributes', attributes)
+        for key, value in attributes.items():
+            # if (project.settings['general']['settings_priority']
+            #         or not hasattr(component, key)):
+            setattr(component, key, value)
+        return component    
 
                 
 @dataclasses.dataclass

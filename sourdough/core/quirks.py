@@ -305,58 +305,57 @@ class Loader(object):
             unnecessary re-importation. Defaults to an empty dict.
 
     """
-    pass
-    # modules: Union[str, Sequence[str]] = dataclasses.field(
-    #     default_factory = list)
-    # _loaded: ClassVar[Mapping[Any, Any]] = {}
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = list)
+    _loaded: ClassVar[Mapping[Any, Any]] = {}
 
-    # """ Class Methods """
+    """ Class Methods """
 
-    # @classmethod
-    # def inject(cls, item: Any) -> Any:
-    #     return item
+    @classmethod
+    def inject(cls, item: Any) -> Any:
+        return item
  
-    # """ Public Methods """
+    """ Public Methods """
 
-    # def load(self, 
-    #         key: str, 
-    #         check_attributes: bool = False, 
-    #         **kwargs) -> object:
-    #     """Returns object named by 'key'.
+    def load(self, 
+            key: str, 
+            check_attributes: bool = False, 
+            **kwargs) -> object:
+        """Returns object named by 'key'.
 
-    #     Args:
-    #         key (str): name of class, function, or variable to try to import 
-    #             from modules listed in 'modules'.
+        Args:
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
 
-    #     Returns:
-    #         object: imported from a python module.
+        Returns:
+            object: imported from a python module.
 
-    #     """
-    #     imported = None
-    #     if key in self._loaded:
-    #         imported = self._loaded[key]
-    #     else:
-    #         if check_attributes:
-    #             try:
-    #                 key = getattr(self, key)
-    #             except AttributeError:
-    #                 pass
-    #         for module in sourdough.tools.listify(self.modules):
-    #             try:
-    #                 imported = sourdough.tools.importify(
-    #                     module = module, 
-    #                     key = key)
-    #                 break
-    #             except (AttributeError, ImportError):
-    #                 pass
-    #     if imported is None:
-    #         raise ImportError(f'{key} was not found in {self.modules}')
-    #     elif kwargs:
-    #         self._loaded[key] = imported(**kwargs)
-    #         return self._loaded[key]
-    #     else:
-    #         self._loaded[key] = imported
-    #         return self._loaded[key]
+        """
+        imported = None
+        if key in self._loaded:
+            imported = self._loaded[key]
+        else:
+            if check_attributes:
+                try:
+                    key = getattr(self, key)
+                except AttributeError:
+                    pass
+            for module in sourdough.tools.listify(self.modules):
+                try:
+                    imported = sourdough.tools.importify(
+                        module = module, 
+                        key = key)
+                    break
+                except (AttributeError, ImportError):
+                    pass
+        if imported is None:
+            raise ImportError(f'{key} was not found in {self.modules}')
+        elif kwargs:
+            self._loaded[key] = imported(**kwargs)
+            return self._loaded[key]
+        else:
+            self._loaded[key] = imported
+            return self._loaded[key]
 
   
 # @dataclasses.dataclass
