@@ -415,9 +415,7 @@ class Survey(ParallelWorker):
 #         """
 #         # Checks if special prebuilt class exists.
 #         if key in project.component.library:
-#             print('test wrapped', wrapped)
 #             for item in wrapped:
-#                 print('test item in wrapped', item)
 #                 kwargs.update({generic.contains: key})
 #                 component = project.component.instance(key = key, **kwargs)
 #                 self.Worker.add(component) 

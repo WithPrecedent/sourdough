@@ -98,10 +98,14 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
             except ImportError:
                 pass
         if data is None:
-            self.contents.perform(**self.parameters, **kwargs)
+            if self.contents:
+                self.contents.perform(**self.parameters, **kwargs)
             return self
         else:
-            return self.contents.perform(data, **self.parameters, **kwargs)
+            if self.contents:
+                return self.contents.perform(data, **self.parameters, **kwargs)
+            else:
+                return self
 
              
 @dataclasses.dataclass

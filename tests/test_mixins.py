@@ -61,7 +61,6 @@ def test_mixins():
     
     # Tests Proxy
     # proxied_component = ProxiedComponent()
-    # print('test property', proxied_component.new_property)
     # assert proxied_component.new_property == 'value'
     return
 

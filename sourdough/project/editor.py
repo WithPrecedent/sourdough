@@ -118,7 +118,6 @@ class Draft(sourdough.Stage):
                     project = project,
                     base = 'worker')
         project.design = outline
-        print('test project outline', project.design)
         return project
         
     """ Private Methods """
@@ -246,7 +245,6 @@ class Publish(sourdough.Stage):
         project.design = self._create_component(
             name = project.name, 
             project = project)
-        print('test root', project.design)
         return project
     
     """ Private Methods """
@@ -321,7 +319,6 @@ class Publish(sourdough.Stage):
         """
         if isinstance(component, Iterable):
             if component.branches:
-                print('test yes branches')
                 component = self._create_branching(
                     component = component, 
                     project = project)
@@ -400,7 +397,6 @@ class Publish(sourdough.Stage):
             
         """
         attributes = project.design[component.name].attributes
-        print('test attributes', attributes)
         for key, value in attributes.items():
             # if (project.settings['general']['settings_priority']
             #         or not hasattr(component, key)):
