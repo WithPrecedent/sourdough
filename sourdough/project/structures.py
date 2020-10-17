@@ -1,5 +1,5 @@
 """
-structures: base classes for composite structures
+structures: base classes for composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -29,8 +29,8 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     to create a variety of composite data structures such as trees, cycles, 
     contests, studies, and graphs.
     
-    Required Subclass Attributes:
-        contents (collections.abc.Container): 
+    Args:
+        contents (Any): item(s) contained by a Component instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -40,7 +40,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
             sourdough classes. 
 
     """
-    contents: collections.abc.Container = None
+    contents: Any = None
     name: str = None
     
     """ Initialization Methods """

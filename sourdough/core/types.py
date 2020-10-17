@@ -15,8 +15,8 @@ Contents:
         matches if a list of keys is provided.
     Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
         with additional functionality.
-    Hybrid (Slate): iterable with both dict and list interfaces and methods
-        that stores items with a 'name' attribute.
+    Hybrid (Slate): iterable with both dict and list interfaces and methods that 
+        stores items with a 'name' attribute.
         
 """
 from __future__ import annotations
@@ -284,7 +284,7 @@ class Catalog(Lexicon):
 
     def instance(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
                  object, Sequence[object]]:
-        """Returns instance(s) of a stored class(es).
+        """Returns instance(s) of (a) stored class(es).
         
         This method acts as a factory for instancing stored classes.
         
@@ -305,8 +305,7 @@ class Catalog(Lexicon):
             instances = items(**kwargs)
         return instances
  
-    def select(self,key: Union[str, Sequence[str]]) -> Union[
-               Any, Sequence[Any]]:
+    def select(self,key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) stored in 'contents'.
 
         Args:

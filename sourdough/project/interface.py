@@ -84,7 +84,6 @@ class Project(collections.abc.Iterable):
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.Lexicon)
     workflows: ClassVar[Mapping[str, Callable]] = sourdough.inventory.workflows
-    designs: ClassVar[Mapping[str, Callable]] = sourdough.inventory.designs
     components: ClassVar[Mapping[str, Callable]] = sourdough.inventory.components
     options: ClassVar[Mapping[str, object]] = sourdough.inventory.options
     hierarchy: ClassVar[Mapping[str, Callable]] = {

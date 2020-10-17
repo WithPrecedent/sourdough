@@ -9,18 +9,11 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import copy
 import dataclasses
-import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
 import sourdough
-
-
-stages = sourdough.Catalog(
-    defaults = ['draft', 'publish', 'apply'],
-    always_return_list = True)
 
 
 @dataclasses.dataclass

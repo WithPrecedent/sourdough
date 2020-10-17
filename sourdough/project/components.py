@@ -24,7 +24,7 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
     to allow for runtime alterations.
     
     Args:
-        contents (object): core object used by the 'perform' method. Defaults 
+        contents (Callable): core object used by the 'perform' method. Defaults 
             to None.
         parameters (Mapping[Any, Any]]): parameters to be attached to
             'contents' when the 'perform' method is called. Defaults to an 
@@ -42,25 +42,13 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
-            loaded objects. This is checked first by the 'load' method to avoid
-            unnecessary re-importation. Defaults to an empty dict.
                                     
     """
-    contents: object = None
+    contents: Callable = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     modules: Union[str, Sequence[str]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    _loaded: ClassVar[Mapping[Any, Any]] = {}
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'library'.
-        if not hasattr(cls, '_base'):
-            cls._base = cls
 
     """ Properties """
     
@@ -117,7 +105,7 @@ class Step(sourdough.Component):
     when creating 'comparative' Worker instances which test a variety of 
     strategies with similar or identical parameters and/or methods.
 
-    A Step instance will try to return attributes from 'technique' if the
+    A Step instance will try to return attributes from Technique if the
     attribute is not found in the Step instance. 
 
     Args:
@@ -134,33 +122,19 @@ class Step(sourdough.Component):
             the 'get_name' method in Component. If that method is not 
             overridden by a subclass instance, 'name' will be assigned to the 
             snake case version of the class name ('__class__.__name__').
-        contains (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can be stored in this component. Defaults to a list
-            containing 'technique'.
-        containers (ClassVar[Sequence[str]]): list of snake-named base class
-            types that can store this component. Defaults to a list containing
-            'Worker' and 'manager'. 
                         
     """
-    contents: Union['Technique', str] = None
+    contents: Technique = None
     name: str = None
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        # Adds new subclass to 'library'.
-        if not hasattr(cls, '_base'):
-            cls._base = cls
                 
     """ Properties """
     
     @property
-    def technique(self) -> Union['Technique', str]:
+    def technique(self) -> Technique:
         return self.contents
     
     @technique.setter
-    def technique(self, value: Union['Technique', str]) -> None:
+    def technique(self, value: Technique) -> None:
         self.contents = value
         return self
     

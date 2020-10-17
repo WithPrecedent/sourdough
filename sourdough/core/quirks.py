@@ -5,19 +5,22 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Validator (Registry, Quirk, ABC): base class for type validators and 
-        converters. The class provides a universal 'verify' method for type
-        validation. All subclasses must have a 'convert' method for type 
-        conversion.
-    Loader (Quirk, ABC): lazy loader which uses a 'load' method to import python
+    Registrar (object): mixin for storing subclasses automatically.
+    Librarian (object): mixin for storing subclass instances automatically.
+    Loader (object): lazy loader which uses a 'load' method to import python
         classes, functions, and other items at runtime. 
-    Registry (ABC): abstract base class for storing subclasses and/or instancing
-        subclasses for a registry attribute, 'registry', which automatically
-        stores all concrete subclasses.
-                
+        
+    # Validator (Registry, Quirk, ABC): base class for type validators and 
+    #     converters. The class provides a universal 'verify' method for type
+    #     validation. All subclasses must have a 'convert' method for type 
+    #     conversion. 
     # ProxyMixin (Quirk, ABC): mixin which creates a python property which 
     #     refers to another attribute by using the 'proxify' method.
-    
+
+ToDo:
+    Add in Validator mixins.
+    Fix ProxyMixin as explained in its docs.
+
 """
 from __future__ import annotations
 import abc
@@ -34,6 +37,11 @@ import sourdough
 @dataclasses.dataclass
 class Registrar(object):
     """Registry interface for core sourdough classes.
+    
+    This mixin automatically registers all concrete (non-abstract) subclasses
+    using the 'registry' classmethod which must be provided by the class using
+    this quirk.
+    
     """
 
     """ Initialization Methods """
@@ -55,6 +63,10 @@ class Registrar(object):
 @dataclasses.dataclass
 class Librarian(object):
     """Library interface for core sourdough classes.
+    
+    This mixin automatically registers all subclass instances using the 
+    'deposit' method which must be provided by the class using this quirk.
+    
     """
 
     """ Initialization Methods """
@@ -74,6 +86,71 @@ class Librarian(object):
     @abc.abstractmethod
     def deposit(cls) -> None:
         pass
+
+
+@dataclasses.dataclass
+class Loader(object):
+    """ for lazy loading of python modules and objects.
+
+    Args:
+        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
+            load is/are located. Defaults to an empty list.
+        _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
+            loaded objects. This is checked first by the 'load' method to avoid
+            unnecessary re-importation. Defaults to an empty dict.
+
+    """
+    modules: Union[str, Sequence[str]] = dataclasses.field(
+        default_factory = list)
+    _loaded: ClassVar[Mapping[Any, Any]] = {}
+
+    """ Class Methods """
+
+    @classmethod
+    def inject(cls, item: Any) -> Any:
+        return item
+ 
+    """ Public Methods """
+
+    def load(self, 
+            key: str, 
+            check_attributes: bool = False, 
+            **kwargs) -> object:
+        """Returns object named by 'key'.
+
+        Args:
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
+
+        Returns:
+            object: imported from a python module.
+
+        """
+        imported = None
+        if key in self._loaded:
+            imported = self._loaded[key]
+        else:
+            if check_attributes:
+                try:
+                    key = getattr(self, key)
+                except AttributeError:
+                    pass
+            for module in sourdough.tools.listify(self.modules):
+                try:
+                    imported = sourdough.tools.importify(
+                        module = module, 
+                        key = key)
+                    break
+                except (AttributeError, ImportError):
+                    pass
+        if imported is None:
+            raise ImportError(f'{key} was not found in {self.modules}')
+        elif kwargs:
+            self._loaded[key] = imported(**kwargs)
+            return self._loaded[key]
+        else:
+            self._loaded[key] = imported
+            return self._loaded[key]
 
 
 # @dataclasses.dataclass
@@ -293,71 +370,6 @@ class Librarian(object):
 #                 f'{self.accepts}')        
 
 
-@dataclasses.dataclass
-class Loader(object):
-    """ for lazy loading of python modules and objects.
-
-    Args:
-        modules Union[str, Sequence[str]]: name(s) of module(s) where object to 
-            load is/are located. Defaults to an empty list.
-        _loaded (ClassVar[Mapping[Any, Any]]): dict of str keys and previously
-            loaded objects. This is checked first by the 'load' method to avoid
-            unnecessary re-importation. Defaults to an empty dict.
-
-    """
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = list)
-    _loaded: ClassVar[Mapping[Any, Any]] = {}
-
-    """ Class Methods """
-
-    @classmethod
-    def inject(cls, item: Any) -> Any:
-        return item
- 
-    """ Public Methods """
-
-    def load(self, 
-            key: str, 
-            check_attributes: bool = False, 
-            **kwargs) -> object:
-        """Returns object named by 'key'.
-
-        Args:
-            key (str): name of class, function, or variable to try to import 
-                from modules listed in 'modules'.
-
-        Returns:
-            object: imported from a python module.
-
-        """
-        imported = None
-        if key in self._loaded:
-            imported = self._loaded[key]
-        else:
-            if check_attributes:
-                try:
-                    key = getattr(self, key)
-                except AttributeError:
-                    pass
-            for module in sourdough.tools.listify(self.modules):
-                try:
-                    imported = sourdough.tools.importify(
-                        module = module, 
-                        key = key)
-                    break
-                except (AttributeError, ImportError):
-                    pass
-        if imported is None:
-            raise ImportError(f'{key} was not found in {self.modules}')
-        elif kwargs:
-            self._loaded[key] = imported(**kwargs)
-            return self._loaded[key]
-        else:
-            self._loaded[key] = imported
-            return self._loaded[key]
-
-  
 # @dataclasses.dataclass
 # class ProxyMixin(object):
 #     """ which creates a proxy name for a Element subclass attribute.

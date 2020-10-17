@@ -227,37 +227,6 @@ class Study(ParallelWorker):
         sourdough.Pipeline] = dataclasses.field(default_factory = list)
     iterations: int = None
     name: str = None
-
-    """ Public Methods """
-    
-    def organize(self, settings: sourdough.Settings) -> None:
-        """[summary]
-
-        Args:
-            structure (sourdough.components.Worker): [description]
-
-        Returns:
-            sourdough.components.Worker: [description]
-        """
-        # new_contents = []
-        # steps = list(self.contents.keys())
-        # possible = list(self.contents.values())
-        # permutations = list(map(list, itertools.product(*possible)))
-        # for pipeline in permutations:
-        #     instance = Pipeline()
-        #     for item in pipeline:
-        #         if isinstance(item, Sequence):
-                    
-        #         else:
-                    
-        #         component = self._get_component(
-        #             key = item, 
-        #             generic = self.contents.generic)
-        #         if isinstance(item, sourdough.components.Worker):
-        #             self.organize()
-        #     new_contents.append(instance)
-        # self.contents = new_contents
-        return self
         
     
 @dataclasses.dataclass

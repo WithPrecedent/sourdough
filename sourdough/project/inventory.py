@@ -16,8 +16,8 @@ import sourdough
 
 workflows = sourdough.Catalog()
 
-designs = sourdough.Catalog()
-
 components = sourdough.Catalog()
 
 options = sourdough.Catalog()
+
+algorithms = sourdough.Catalog()

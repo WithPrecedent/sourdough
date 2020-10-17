@@ -35,13 +35,13 @@ from .core.types import Lexicon
 from .core.types import Catalog
 from .core.types import Slate
 from .core.types import Hybrid
-from .core import inventory
 from .core import quirks
-from .core.structures import Component
 from .configuration.settings import Settings
 from .configuration.filer import Filer
 from .core.workflows import Stage
 from .core.workflows import Workflow
+from .project import inventory
+from .project.structures import Component
 from .project import editor
 from .project import components
 from .project import workers
