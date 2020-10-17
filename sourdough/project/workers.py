@@ -32,13 +32,13 @@ class Aggregation(sourdough.components.Worker):
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
             Defaults to an empty set.
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
     
     """
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(

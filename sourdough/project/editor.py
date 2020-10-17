@@ -5,15 +5,14 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Details (Slate):
-    Outline (Lexicon):
-    Draft (Stage): creates a Hybrid instance from passed arguments and/or a 
-        Settings instance.
-    Publish (Stage): finalizes a Hybrid instance based upon the initial
-        construction by an Draft instance and/or runtime user editing.
-    Apply (Stage): executes a Hybrid instance, storing changes and results
-        in the Apply instance and/or passed data object.
-    Editor (Workflow):
+    Details (Slate): basic information needed to construct composite objects.
+    Outline (Lexicon): dictionary of Details instances with complete information
+        needed to construct a composite object.
+    Draft (Stage): creates an Outline instance from a Settings instance.
+    Publish (Stage): converts an Outline instance to a Worker instance.
+    Apply (Stage): executes a Worker instance and possibly applies its methods
+        to external data.
+    Editor (Workflow): an iterable list of the Draft, Publish, and Apply Stages.
 
 """
 from __future__ import annotations
@@ -29,22 +28,17 @@ import sourdough
 
 @dataclasses.dataclass
 class Details(sourdough.Lexicon):
-    """Basic characteristics of a group of sourdough Components.
+    """Basic characteristics of a sourdough Component.
     
     Args:
-        contents (Sequence[str]): stored dictionary. Defaults to an empty 
-            dict.
+        contents (Sequence[str]): stored list of str. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Element is called, 'name' is set based upon
-            the 'get_name' method in Element. If that method is not overridden 
-            by a subclass instance, 'name' will be assigned to the snake case 
-            version of the class name ('__class__.__name__'). 
+            sourdough classes. 
         
     """
     contents: Sequence[str] = dataclasses.field(default_factory = list)
@@ -69,10 +63,11 @@ class Outline(sourdough.Lexicon):
     construction are stored in Details instances.
     
     Args:
-              
+        contents (Mapping[str, Details]]): stored dictionary with Details
+            instances as values. Defaults to an empty dict.
+                        
     """
     contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
-    project: sourdough.Project = dataclasses.field(repr = False, default = None) 
 
     """ Dunder Methods """
     
@@ -85,7 +80,8 @@ class Draft(sourdough.Stage):
     """Constructs an Outline instance from a project's settings.
     
     Args:
-        project (sourdough.Project): the related Project instance.
+        action (str): name of the action of the 'perform' method. It is used to
+            create clear and grammatically correct logging and console messages.
     
     """
     action: str = 'drafting'
@@ -103,7 +99,7 @@ class Draft(sourdough.Stage):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        outline = Outline(project = project)
+        outline = Outline()
         suffixes = tuple(project.hierarchy.keys())
         for name, section in project.settings.items():
             # Tests whether the section in 'settings' is related to the 
@@ -262,7 +258,9 @@ class Publish(sourdough.Stage):
             
         """
         component = self._get_component(name = name, project = project)
-        return self._finalize_component(component = component, project = project)
+        return self._finalize_component(
+            component = component, 
+            project = project)
 
     def _get_component(self, name: str,
                        project: sourdough.Project) -> sourdough.Component:
@@ -411,14 +409,13 @@ class Apply(sourdough.Stage):
 
     """ Public Methods """
         
-    def perform(self, project: sourdough.Project) -> sourdough.Project:
+    def perform(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
         """[summary]
 
         Returns:
-            [type] -- [description]
-            
+            [type] -- [description]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
         """
-        kwargs = {}
         if project.data is not None:
             kwargs['data'] = project.data
         for component in project.design:
