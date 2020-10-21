@@ -5,6 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Results (Container): container storing results of Workflow iteration.
     Project (Iterable): interface for sourdough projects.
 
 """
@@ -19,6 +20,39 @@ import warnings
 
 import sourdough 
 
+
+@dataclasses.dataclass
+class Results(collections.abc.Container):
+    """A container for any results produced by a Project instance.
+
+    Attributes are dynamically added by Workflow instances at runtime.
+
+    Args:
+        identification (str): a unique identification name for a Project 
+            instance. The name is used for creating file folders related to the 
+            project. If it is None, a str will be created from 'name' and the 
+            date and time. 'identification' is also stored in a Results
+            instance to connect it to any output if it is separated from a
+            Project instance.
+
+    """
+    identification: str = None
+
+    def __contains__(self, item: str) -> bool:
+        """Returns whether an attribute named 'item' exists.
+
+        This allows external methods and functions to use the "x in [Results 
+        instance]" syntax to see if a specific attribute has been added.
+
+        Args:
+            item (str): the name of the attribute to check for.
+
+        Returns:
+            bool: whether there is an attribute named 'item'
+            
+        """
+        return hasattr(self, item)
+   
 
 @dataclasses.dataclass
 class Project(collections.abc.Iterable):
@@ -81,8 +115,7 @@ class Project(collections.abc.Iterable):
     identification: str = None
     automatic: bool = True
     data: object = None
-    results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.Lexicon)
+    results: Results = Results()
     workflows: ClassVar[Mapping[str, Callable]] = sourdough.inventory.workflows
     components: ClassVar[Mapping[str, Callable]] = sourdough.inventory.components
     options: ClassVar[Mapping[str, object]] = sourdough.inventory.options
@@ -109,6 +142,7 @@ class Project(collections.abc.Iterable):
         self.name = self.name or self._get_name()
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._get_identification()
+        self.results.identification = self.identification
         # Validates or convers 'workflow'.
         self._validate_workflow()
         # Advances through 'workflow' if 'automatic' is True.

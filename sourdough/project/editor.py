@@ -7,7 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     Details (Slate): basic information needed to construct composite objects.
     Outline (Lexicon): dictionary of Details instances with complete information
-        needed to construct a set of composite objects.
+        needed to construct a set of related composite objects.
     Draft (Stage): creates an Outline instance from a Settings instance.
     Publish (Stage): creates a Worker instance from an Outline instance.
     Apply (Stage): executes a Worker instance and possibly applies its methods
@@ -31,7 +31,9 @@ class Details(sourdough.Lexicon):
     """Basic characteristics of a sourdough Component.
     
     Args:
-        contents (Sequence[str]): stored list of str. Defaults to an empty list.
+        contents (Sequence[str]): stored list of str. Included items should 
+            correspond to keys in an Outline and/or Component subclasses. 
+            Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
