@@ -91,7 +91,7 @@ def test_project():
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
-    print('test project', project.results)
+    print('test project', project.results.plan)
     return
 
 

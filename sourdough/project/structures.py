@@ -59,7 +59,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def perform(self, project: sourdough.Project) -> sourdough.Project:
+    def apply(self, project: sourdough.Project) -> sourdough.Project:
         """Subclasses must provide their own methods."""
         return project
 

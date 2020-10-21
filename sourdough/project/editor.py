@@ -124,7 +124,7 @@ class Draft(sourdough.Stage):
                     outline = outline,
                     project = project,
                     base = 'worker')
-        project.design = outline
+        project.results.outline = outline
         return project
         
     """ Private Methods """
@@ -249,7 +249,7 @@ class Publish(sourdough.Stage):
             sourdough.Outline: [description]
             
         """ 
-        project.design = self._create_component(
+        project.results.plan = self._create_component(
             name = project.name, 
             project = project)
         return project
@@ -289,10 +289,10 @@ class Publish(sourdough.Stage):
             Mapping[ str, sourdough.Component]: [description]
             
         """
-        details = project.design[name]
+        details = project.results.outline[name]
         kwargs = {
             'name': name,
-            'contents': project.design[name].contents}
+            'contents': project.results.outline[name].contents}
         try:
             component = copy.deepcopy(project.options[name])
             for key, value in kwargs.items():
@@ -354,7 +354,7 @@ class Publish(sourdough.Stage):
         """
         possible = []
         for item in component.contents:
-            possible.append(project.design[item].contents)
+            possible.append(project.results.outline[item].contents)
         combos = list(map(list, itertools.product(*possible)))
         wrappers = [self._get_component(i, project) for i in component.contents]
         new_contents = []
@@ -405,7 +405,7 @@ class Publish(sourdough.Stage):
             [type]: [description]
             
         """
-        attributes = project.design[component.name].attributes
+        attributes = project.results.outline[component.name].attributes
         for key, value in attributes.items():
             # if (project.settings['general']['settings_priority']
             #         or not hasattr(component, key)):
@@ -415,13 +415,18 @@ class Publish(sourdough.Stage):
                 
 @dataclasses.dataclass
 class Apply(sourdough.Stage):
+    """
     
+    """
     action: str = 'application' 
 
     """ Public Methods """
         
     def perform(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
-        """[summary]
+        """Applies the action plan created by 'Publish'.
+    
+        If 'project.data' isn't None, it will be added to the kwargs passed to 
+        the 'perform' method of each Component in 'project.results.plan'.
 
         Returns:
             [type] -- [description]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -429,8 +434,8 @@ class Apply(sourdough.Stage):
         """
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in project.design:
-            component.perform(**kwargs)
+        for component in project.results.plan:
+            component.apply(**kwargs)
         return project
 
 

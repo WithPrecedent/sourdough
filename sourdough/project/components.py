@@ -24,10 +24,10 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
     to allow for runtime alterations.
     
     Args:
-        contents (Callable): core object used by the 'perform' method. Defaults 
+        contents (Callable): core object used by the 'apply' method. Defaults 
             to None.
         parameters (Mapping[Any, Any]]): parameters to be attached to
-            'contents' when the 'perform' method is called. Defaults to an 
+            'contents' when the 'apply' method is called. Defaults to an 
             empty dict.
         modules Union[str, Sequence[str]]: name(s) of module(s) where the 
             contents to load is/are located. Defaults to an empty list.
@@ -68,7 +68,7 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
         
     """ Public Methods """
     
-    def perform(self, data: object = None, **kwargs) -> object:
+    def apply(self, data: object = None, **kwargs) -> object:
         """Applies stored 'contents' with 'parameters'.
         
         Args:
@@ -87,11 +87,11 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
                 pass
         if data is None:
             if self.contents:
-                self.contents.perform(**self.parameters, **kwargs)
+                self.contents.apply(**self.parameters, **kwargs)
             return self
         else:
             if self.contents:
-                return self.contents.perform(data, **self.parameters, **kwargs)
+                return self.contents.apply(data, **self.parameters, **kwargs)
             else:
                 return self
 
@@ -145,7 +145,7 @@ class Step(sourdough.Component):
     
     """ Public Methods """
     
-    def perform(self, data: object = None, **kwargs) -> object:
+    def apply(self, data: object = None, **kwargs) -> object:
         """Subclasses must provide their own methods.
         
         The code below outlines a basic method that a subclass should build on
@@ -162,11 +162,12 @@ class Step(sourdough.Component):
                 passed, nothing is returned.        
         
         """
+        print('test contents', self.contents)
         if data is None:
-            self.contents.perform(**kwargs)
+            self.contents.apply(**kwargs)
             return self
         else:
-            return self.contents.perform(item = data, **kwargs)
+            return self.contents.apply(item = data, **kwargs)
 
     """ Dunder Methods """
 
@@ -230,12 +231,12 @@ class Worker(sourdough.Component, sourdough.Hybrid):
 
     """ Public Methods """
     
-    def perform(self, data: object = None, **kwargs) -> NotImplementedError:
+    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
         """Subclasses must provide their own methods.       
         
         """
         raise NotImplementedError(
-            'subclasses of Worker must provide their own perform methods')
+            'subclasses of Worker must provide their own apply methods')
                    
     """ Required Subclass Methods """
     
@@ -280,9 +281,9 @@ class Worker(sourdough.Component, sourdough.Hybrid):
 
 #     """ Public Methods """
     
-#     def perform(self, data: object = None, **kwargs) -> NotImplementedError:
+#     def apply(self, data: object = None, **kwargs) -> NotImplementedError:
 #         """Subclasses must provide their own methods.       
         
 #         """
 #         raise NotImplementedError(
-#             'subclasses of Element must provide their own perform methods') 
+#             'subclasses of Element must provide their own apply methods') 
