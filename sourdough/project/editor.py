@@ -328,19 +328,19 @@ class Publish(sourdough.Stage):
         """
         if isinstance(component, Iterable):
             if component.branches:
-                component = self._create_branching(
+                component = self._create_parallel(
                     component = component, 
                     project = project)
             else:
-                component = self._create_straight(
+                component = self._create_serial(
                     component = component, 
                     project = project)
         else:
             pass
         return component
 
-    def _create_branching(self, component: sourdough.Component,
-                          project: sourdough.Project) -> sourdough.components.Worker:
+    def _create_parallel(self, component: sourdough.Component,
+                         project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
@@ -371,8 +371,8 @@ class Publish(sourdough.Stage):
             project = project)
         return component
 
-    def _create_straight(self, component: sourdough.Component, 
-                         project: sourdough.Project) -> sourdough.components.Worker:
+    def _create_serial(self, component: sourdough.Component, 
+                       project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
