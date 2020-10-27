@@ -358,12 +358,12 @@ class Survey(ParallelWorker):
             
 #         """
 #         structures = {}
-#         for key in project.components.inventory.keys():
+#         for key in project.components.resources.keys():
 #             suffix = f'_{key}s'
 #             structures[key] = {
 #                 k: v for k, v in settings.items() if k.endswith(suffix)} 
             
-#         return {k: v for k, v in project.components.inventory.items()}
+#         return {k: v for k, v in project.components.resources.items()}
     
 #     def _build_wrapper(self,
 #             key: str, 

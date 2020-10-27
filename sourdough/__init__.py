@@ -33,20 +33,10 @@ For example:
 from .utilities import tools
 from .core.types import Lexicon
 from .core.types import Catalog
-from .core.types import Slate
+from .core.types import Progression
 from .core.types import Hybrid
 from .core import quirks
-from .configuration.settings import Settings
-from .configuration.filer import Filer
-from .core.workflows import Stage
-from .core.workflows import Workflow
-from .project import inventory
-from .project.structures import Component
-from .project import editor
-from .project import components
-from .project import workers
-from .project.interface import Project
-from .project import interface
+from . import project
 
 
 __version__ = '0.1.1'

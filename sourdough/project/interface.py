@@ -68,6 +68,33 @@ class Results(collections.abc.Container):
 class Resources(object):
     """Constructs, organizes, and implements a sourdough project.
         
+    Args:    
+        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Workflow. It points to 
+            a Catalog instance at sourdough.project.resources.workflows.
+        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Component. It points to 
+            a Catalog instance at sourdough.project.resources.components.
+        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
+            which are subclass instances of or compatible with Component. It 
+            points to a Catalog instance at sourdough.project.resources.options.    
+            
+    """ 
+    workflows: Mapping[str, Callable] = sourdough.project.resources.workflows
+    components: Mapping[str, Callable] = sourdough.project.resources.components
+    options: Mapping[str, object] = sourdough.project.resources.options
+    algorithms: Mapping[str, object] = sourdough.project.resources.algorithms
+    hierarchy: Mapping[str, Callable] = dataclasses.field(
+        default_factory = lambda: {
+            'workers': sourdough.components.Worker,
+            'steps': sourdough.components.Step,
+            'techniques': sourdough.components.Technique})
+        
+
+@dataclasses.dataclass
+class Project(collections.abc.Iterable):
+    """Constructs, organizes, and implements a sourdough project.
+        
     Args:
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
@@ -79,54 +106,7 @@ class Resources(object):
             root folder should be located for file input and output. A Filer
             instance contains all file path and import/export methods for use 
             throughout sourdough. If it is None, the default Filer will be used. 
-            Defaults to the default Filer instance.      
-        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Workflow. It points to 
-            a Catalog instance at sourdough.inventory.workflows.
-        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Component. It points to 
-            a Catalog instance at sourdough.inventory.components.
-        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
-            which are subclass instances of or compatible with Component. It 
-            points to a Catalog instance at sourdough.inventory.options.    
-            
-    """ 
-    __slots__ = ('settings', 'filer', 'workflows', 'components', 'options', 
-                 'algorithms', 'hierarchy')
-    
-    settings: Union[sourdough.Settings, str, pathlib.Path]
-    filer: Union[sourdough.Filer, str, pathlib.Path]
-    workflows: Mapping[str, Callable]
-    components: Mapping[str, Callable]
-    options: Mapping[str, object]
-    algorithms: Mapping[str, object]
-    hierarchy: Mapping[str, Callable]
-    defaults: ClassVar[Mapping[str, object]] = {
-        'settings': sourdough.Settings,
-        'filer': sourdough.Filer,
-        'workflows': sourdough.inventory.workflows,
-        'components': sourdough.inventory.components,
-        'options': sourdough.inventory.options,
-        'algorithms': sourdough.inventory.algorithms,
-        'hierarchy': {
-            'workers': sourdough.components.Worker,
-            'steps': sourdough.components.Step,
-            'techniques': sourdough.components.Technique}}
-    
-    def __post_init__(self) -> None:
-        for key, value in Resources.defaults:
-            if not getattr(self, key):
-                setattr(self, key, value)
-        
-    
- 
-
-@dataclasses.dataclass
-class Project(collections.abc.Iterable):
-    """Constructs, organizes, and implements a sourdough project.
-        
-    Args:
-
+            Defaults to the default Filer instance.  
         workflow (Union[sourdough.Workflow, str]): Workflow subclass, Workflow
             subclass instance, or a str corresponding to a key in 'workflows'. 
             Defaults to 'editor' which will be replaced with an Editor instance.
@@ -153,18 +133,11 @@ class Project(collections.abc.Iterable):
         data (object): any data object for the project to be applied.         
         results (Mapping[str, Any]): dictionary for storing results. Defaults
             to an empty Lexicon.
-        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Workflow. It points to 
-            a Catalog instance at sourdough.inventory.workflows.
-        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Component. It points to 
-            a Catalog instance at sourdough.inventory.components.
-        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
-            which are subclass instances of or compatible with Component. It 
-            points to a Catalog instance at sourdough.inventory.options.    
+
             
     """
-
+    settings: Union[sourdough.Settings, str, pathlib.Path] = None
+    filer: Union[sourdough.Filer, str, pathlib.Path] = None
     workflow: Union[sourdough.Workflow, str] = 'editor'
     design: Union[sourdough.Component, str] = 'pipeline'
     name: str = None

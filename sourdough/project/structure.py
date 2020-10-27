@@ -1,5 +1,5 @@
 """
-structures: base classes for composite objects
+structure: base classes for composite objects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -69,14 +69,14 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     def register(cls) -> None:
         """Registers a subclass in a Catalog."""
         key = sourdough.tools.snakify(cls.__name__)
-        sourdough.inventory.components[key] = cls
+        sourdough.project.resources.components[key] = cls
         return cls
     
     """ Public Methods """
     
     def deposit(self) -> None:
         """Stores a subclass instance in a Catalog."""
-        sourdough.inventory.options[self.name] = self
+        sourdough.project.resources.options[self.name] = self
         return self
 
     """ Private Methods """
@@ -141,20 +141,20 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
 
 
 
-@dataclasses.dataclass
-class Design(object):
+# @dataclasses.dataclass
+# class Design(object):
     
-    parallels: Sequence[str] = dataclasses.field(default_factory = list)
-    hierarchy: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
+#     parallels: Sequence[str] = dataclasses.field(default_factory = list)
+#     hierarchy: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
     
     
-@dataclasses.dataclass   
-class SimplifyDesign(Design):
+# @dataclasses.dataclass   
+# class SimplifyDesign(Design):
 
-    parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
-    hierarchy: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = lambda: {
-            'workers': ['workers', 'steps', 'techniques'],
-            'steps': ['techniques'],
-            'techniques': [None]})
+#     parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
+#     hierarchy: Mapping[str, Sequence[str]] = dataclasses.field(
+#         default_factory = lambda: {
+#             'workers': ['workers', 'steps', 'techniques'],
+#             'steps': ['techniques'],
+#             'techniques': [None]})
 

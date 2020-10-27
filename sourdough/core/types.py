@@ -5,17 +5,17 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Repository (Iterable, ABC): abstract base class for sourdough iterables. 
+    Receptable (Iterable, ABC): abstract base class for sourdough iterables. 
         All subclasses must have an 'add' method as well as store their contents 
         in the 'contents' attribute.
-    Lexicon (MutableMapping, Repository): sourdough's drop-in replacement for 
+    Lexicon (MutableMapping, Receptable): sourdough's drop-in replacement for 
         python dicts with some added functionality.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
-    Slate (MutableSequence, Repository): sourdough drop-in replacement for list 
+    Progression (MutableSequence, Receptable): sourdough drop-in replacement for list 
         with additional functionality.
-    Hybrid (Slate): iterable with both dict and list interfaces and methods that 
+    Hybrid (Progression): iterable with both dict and list interfaces and methods that 
         stores items with a 'name' attribute.
         
 """
@@ -34,16 +34,16 @@ import sourdough
 
     
 @dataclasses.dataclass
-class Repository(collections.abc.Iterable, abc.ABC):
+class Receptable(collections.abc.Iterable, abc.ABC):
     """Interface for sourdough iterables.
   
-    A Repository differs from a general python iterable in 3 ways:
+    A Receptable differs from a general python iterable in 3 ways:
         1) It must include an 'add' method which provides the default mechanism
             for adding new items to the iterable.
-        2) It allows the '+' operator to be used to join a Repository subclass 
+        2) It allows the '+' operator to be used to join a Receptable subclass 
             instance of the same general type (Mapping, Sequence, Tuple, etc.). 
-            The '+' operator calls the Repository subclass 'add' method to 
-            implement how the added item(s) is/are added to the Repository 
+            The '+' operator calls the Receptable subclass 'add' method to 
+            implement how the added item(s) is/are added to the Receptable 
             subclass instance.
         3) The internally stored iterable must be located in the 'contents'
             attribute. This allows for consistent coordination among classes
@@ -114,7 +114,7 @@ class Repository(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, Repository):
+class Lexicon(collections.abc.MutableMapping, Receptable):
     """Basic sourdough dict replacement.
     
     Args:
@@ -416,7 +416,7 @@ class Catalog(Lexicon):
 
   
 @dataclasses.dataclass
-class Slate(collections.abc.MutableSequence, Repository):
+class Progression(collections.abc.MutableSequence, Receptable):
     """Basic sourdough list replacement.
 
     Args:
@@ -521,7 +521,7 @@ class Slate(collections.abc.MutableSequence, Repository):
     
    
 @dataclasses.dataclass
-class Hybrid(Slate):
+class Hybrid(Progression):
     """Base class for ordered iterables in sourdough composite objects.
     
     Hybrid combines the functionality and interfaces of python dicts and lists.
@@ -532,10 +532,10 @@ class Hybrid(Slate):
     Hybrid is the primary iterable base class used in sourdough composite 
     objects.
     
-    A Hybrid inherits the differences between a Slate and an ordinary python 
-    list.
+    A Hybrid inherits the differences between a Progression and an ordinary 
+    python list.
     
-    A Hybrid differs from a Slate in 3 significant ways:
+    A Hybrid differs from a Progression in 3 significant ways:
         1) It only store items with 'name' attributes or properties.
         2) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
