@@ -8,14 +8,10 @@ Contents:
 
 
 """
-from . import resources
-from .settings import Settings
-from .filer import Filer
-from .workflow import Stage
-from .workflow import Workflow
-from .structure import Component
-from .interface import Results
-from .interface import Project
+
+from .structures import components
+from .structures import workers
+from .workflows.editor import Editor
 
 
 __version__ = '0.1.1'

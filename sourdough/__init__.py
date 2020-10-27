@@ -36,6 +36,14 @@ from .core.types import Catalog
 from .core.types import Progression
 from .core.types import Hybrid
 from .core import quirks
+from .project import resources
+from .project.settings import Settings
+from .project.filer import Filer
+from .project.workflow import Stage
+from .project.workflow import Workflow
+from .project.structure import Component
+from .project.interface import Results
+from .project.interface import Project
 from . import project
 
 

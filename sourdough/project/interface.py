@@ -84,11 +84,6 @@ class Resources(object):
     components: Mapping[str, Callable] = sourdough.project.resources.components
     options: Mapping[str, object] = sourdough.project.resources.options
     algorithms: Mapping[str, object] = sourdough.project.resources.algorithms
-    hierarchy: Mapping[str, Callable] = dataclasses.field(
-        default_factory = lambda: {
-            'workers': sourdough.components.Worker,
-            'steps': sourdough.components.Step,
-            'techniques': sourdough.components.Technique})
         
 
 @dataclasses.dataclass
