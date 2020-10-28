@@ -62,29 +62,7 @@ class Results(collections.abc.Container):
             
         """
         return hasattr(self, item)
-
-
-@dataclasses.dataclass
-class Resources(object):
-    """Constructs, organizes, and implements a sourdough project.
-        
-    Args:    
-        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Workflow. It points to 
-            a Catalog instance at sourdough.project.resources.workflows.
-        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Component. It points to 
-            a Catalog instance at sourdough.project.resources.components.
-        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
-            which are subclass instances of or compatible with Component. It 
-            points to a Catalog instance at sourdough.project.resources.options.    
-            
-    """ 
-    workflows: Mapping[str, Callable] = sourdough.project.resources.workflows
-    components: Mapping[str, Callable] = sourdough.project.resources.components
-    options: Mapping[str, object] = sourdough.project.resources.options
-    algorithms: Mapping[str, object] = sourdough.project.resources.algorithms
-        
+   
 
 @dataclasses.dataclass
 class Project(collections.abc.Iterable):
@@ -128,7 +106,15 @@ class Project(collections.abc.Iterable):
         data (object): any data object for the project to be applied.         
         results (Mapping[str, Any]): dictionary for storing results. Defaults
             to an empty Lexicon.
-
+        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Workflow. It points to 
+            a Catalog instance at sourdough.project.resources.workflows.
+        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
+            which are subclasses of or compatible with Component. It points to 
+            a Catalog instance at sourdough.project.resources.components.
+        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
+            which are subclass instances of or compatible with Component. It 
+            points to a Catalog instance at sourdough.project.resources.options.   
             
     """
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
@@ -140,7 +126,11 @@ class Project(collections.abc.Iterable):
     automatic: bool = True
     data: object = None
     results: Results = Results()
-    resources: Resources = Resources()
+    workflows: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.workflows
+    components: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.components
+    options: ClassVar[Mapping[str, object]] = sourdough.project.resources.options
+    algorithms: ClassVar[Mapping[str, object]] = sourdough.project.resources.algorithms
+    hierarchy: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.hierarchy
     
     """ Initialization Methods """
 

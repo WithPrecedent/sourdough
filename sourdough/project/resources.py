@@ -20,4 +20,9 @@ components = sourdough.Catalog()
 
 options = sourdough.Catalog()
 
+hierarchy = {
+    'workers': sourdough.components.Worker,
+    'steps': sourdough.components.Step,
+    'techniques': sourdough.components.Technique}
+
 algorithms = sourdough.Catalog()
