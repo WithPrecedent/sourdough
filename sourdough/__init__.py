@@ -1,5 +1,5 @@
 """
-sourdough: getting a head start on python projects
+sourdough: get a head start on python projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -31,14 +31,20 @@ For example:
     
 """
 from .utilities import tools
+
 from .core.types import Lexicon
 from .core.types import Catalog
 from .core.types import Progression
 from .core.types import Hybrid
-from .core import quirks
+from .core.quirks import Registrar
+from .core.quirks import Librarian
+from .core.quirks import Loader
+
+from .configuration.settings import Settings
+from .configuration.filer import Filer
+
 from .project import resources
-from .project.settings import Settings
-from .project.filer import Filer
+
 from .project.workflow import Stage
 from .project.workflow import Workflow
 from .project.structure import Component
