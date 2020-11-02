@@ -48,6 +48,10 @@ from .project import resources
 from .project.workflow import Stage
 from .project.workflow import Workflow
 from .project.structure import Component
+
+from . import structures
+from . import workflows
+
 from .project.interface import Project
 from . import project
 

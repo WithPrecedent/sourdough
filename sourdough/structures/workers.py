@@ -263,7 +263,7 @@ class Survey(ParallelWorker):
 
 # @dataclasses.dataclass
 # class Role(
-#         sourdough.quirks.Registry, 
+#         sourdough.Registry, 
 #         sourdough.Element, 
 #         abc.ABC):
 #     """Base class related to constructing and iterating Worker instances.

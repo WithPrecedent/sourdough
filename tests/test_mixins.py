@@ -13,7 +13,7 @@ import sourdough
 @dataclasses.dataclass
 class AComponent(
     sourdough.Receptable,
-    sourdough.quirks.Registry,
+    sourdough.Registry,
     sourdough.Element):
     pass
 

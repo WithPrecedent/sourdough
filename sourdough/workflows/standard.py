@@ -52,7 +52,7 @@ class Draft(sourdough.Stage):
             
         """ 
         outline = Outline()
-        suffixes = tuple(project.hierarchy.keys())
+        suffixes = tuple(project.bases.keys())
         for name, section in project.settings.items():
             # Tests whether the section in 'settings' is related to the 
             # construction of a project object by examining the key names to see
@@ -88,7 +88,7 @@ class Draft(sourdough.Stage):
         for key, value in project.settings[name].items():
             # keys ending with specific suffixes trigger further parsing and 
             # searching throughout 'project.settings'.
-            if key.endswith(tuple(project.hierarchy.keys())):
+            if key.endswith(tuple(project.bases.keys())):
                 # Each key contains a prefix which is the parent Component name 
                 # and a suffix which is what that parent Component contains.
                 key_name, key_suffix = self._divide_key(key = key)

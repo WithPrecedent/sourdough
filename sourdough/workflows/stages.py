@@ -94,7 +94,7 @@ class Outline(sourdough.Stage):
             outline = cls()
         else:
             outline = cls.__class__()
-        suffixes = tuple(project.hierarchy.keys())
+        suffixes = tuple(project.bases.keys())
         for name, section in settings.items():
             # Tests whether the section in 'settings' is related to the 
             # construction of a project object by examining the key names to see
@@ -132,7 +132,7 @@ class Outline(sourdough.Stage):
         for key, value in settings[name].items():
             # keys ending with specific suffixes trigger further parsing and 
             # searching throughout 'settings'.
-            if key.endswith(tuple(project.hierarchy.keys())):
+            if key.endswith(tuple(project.bases.keys())):
                 # Each key contains a prefix which is the parent Component name 
                 # and a suffix which is what that parent Component contains.
                 key_name, key_suffix = cls._divide_key(key = key)

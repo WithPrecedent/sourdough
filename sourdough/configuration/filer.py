@@ -688,7 +688,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.quirks.Loader):
+class FileFormat(sourdough.Loader):
     """File format information.
 
     Args:

@@ -14,7 +14,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Parser(sourdough.project.structures.workers.Contest):
+class Parser(sourdough.structures.workers.Contest):
 
     def perform(self):
         return

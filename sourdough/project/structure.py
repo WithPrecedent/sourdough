@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, 
+class Component(sourdough.Registrar, sourdough.Librarian, 
                 collections.abc.Container):
     """Base container class for sourdough composite objects.
     
@@ -147,14 +147,14 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
 # class Design(object):
     
 #     parallels: Sequence[str] = dataclasses.field(default_factory = list)
-#     hierarchy: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
+#     bases: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
     
     
 # @dataclasses.dataclass   
 # class SimplifyDesign(Design):
 
 #     parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
-#     hierarchy: Mapping[str, Sequence[str]] = dataclasses.field(
+#     bases: Mapping[str, Sequence[str]] = dataclasses.field(
 #         default_factory = lambda: {
 #             'workers': ['workers', 'steps', 'techniques'],
 #             'steps': ['techniques'],
