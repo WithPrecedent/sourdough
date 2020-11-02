@@ -5,8 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Results (Container): container storing results of Workflow iteration.
-    Project (Iterable): interface for sourdough projects.
+    Project (Lexicon): interface for sourdough projects.
 
 """
 from __future__ import annotations
@@ -20,55 +19,16 @@ import warnings
 
 import sourdough 
 
-
-@dataclasses.dataclass
-class Results(collections.abc.Container):
-    """A container for any results produced by a Project instance.
-
-    Attributes are dynamically added by Workflow instances at runtime.
-
-    Args:
-        identification (str): a unique identification name for a Project 
-            instance. The name is used for creating file folders related to the 
-            project. If it is None, a str will be created from 'name' and the 
-            date and time. 'identification' is also stored in a Results
-            instance to connect it to any output if it is separated from a
-            Project instance.
-
-    """
-    identification: str = None
-
-    """ Public Methods """
-    
-    def add(self, name: str, value: Any) -> None:
-        """
-        """
-        setattr(self, name, value)
-        return self
-
-    """ Dunder Methods """
-
-    def __contains__(self, item: str) -> bool:
-        """Returns whether an attribute named 'item' exists.
-
-        This allows external methods and functions to use the "x in [Results 
-        instance]" syntax to see if a specific attribute has been added.
-
-        Args:
-            item (str): the name of the attribute to check for.
-
-        Returns:
-            bool: whether there is an attribute named 'item'
-            
-        """
-        return hasattr(self, item)
    
 
 @dataclasses.dataclass
-class Project(collections.abc.Iterable):
+class Project(sourdough.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
+        contents (Mapping[Any, Stage]]): stored dictionary that stores completed
+            Stage instances created by a Workflow instance. Defaults to an empty 
+            dict.
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
             file of a supported file type with settings for a Settings instance 
@@ -117,20 +77,16 @@ class Project(collections.abc.Iterable):
             points to a Catalog instance at sourdough.project.resources.options.   
             
     """
+    contents: Mapping[Any, sourdough.Stage] = dataclasses.field(
+        default_factory = dict)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
     workflow: Union[sourdough.Workflow, str] = 'editor'
-    design: Union[sourdough.Component, str] = 'pipeline'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    results: Results = Results()
-    workflows: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.workflows
-    components: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.components
-    options: ClassVar[Mapping[str, object]] = sourdough.project.resources.options
-    algorithms: ClassVar[Mapping[str, object]] = sourdough.project.resources.algorithms
-    hierarchy: ClassVar[Mapping[str, Callable]] = sourdough.project.resources.hierarchy
+    resources: Any = sourdough.project.resources
     
     """ Initialization Methods """
 

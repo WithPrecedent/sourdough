@@ -112,7 +112,9 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
             return item in self.contents
         except TypeError:
             return item == self.contents
-            
+    
+    
+           
     # def __str__(self) -> str:
     #     """Returns pretty string representation of an instance.
         

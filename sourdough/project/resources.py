@@ -1,5 +1,5 @@
 """
-library: dictionaries for storing classes and instances.
+resources: dictionaries for storing classes and instances.
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -16,13 +16,15 @@ import sourdough
 
 workflows = sourdough.Catalog()
 
+stages = sourdough.Catalog()
+
 components = sourdough.Catalog()
 
 options = sourdough.Catalog()
+
+algorithms = sourdough.Catalog()
 
 hierarchy = {
     'workers': sourdough.components.Worker,
     'steps': sourdough.components.Step,
     'techniques': sourdough.components.Technique}
-
-algorithms = sourdough.Catalog()

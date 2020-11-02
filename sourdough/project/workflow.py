@@ -9,18 +9,20 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
 import sourdough
-
+   
 
 @dataclasses.dataclass
-class Stage(sourdough.quirks.Registrar, abc.ABC):
+class Stage(sourdough.quirks.Registrar, collections.abc.Container):
     """Base class for a stage in a Workflow.
     
     Args:
+        contents (Any): item(s) contained by an instance. Defaults to None.
         action (str): name of action performed by the class. This is used in
             messages in the terminal and logging. It is usually the verb form
             of the class name (i.e., for Draft, the action is 'drafting').
@@ -30,29 +32,46 @@ class Stage(sourdough.quirks.Registrar, abc.ABC):
 
     """ Required Subclass Methods """
     
+    @classmethod
     @abc.abstractmethod
-    def perform(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+    def create(cls, project: sourdough.Project, **kwargs) -> Stage:
         """Performs some action based on 'project' with kwargs (optional).
         
         Subclasses must provide their own methods.
         
         """
         pass
-                
-    """ Private Methods """
+
+    """ Dunder Methods """
     
-    def _get_need(self, name: str, project: sourdough.Project) -> Any:
-        try:
-            return getattr(project, name)
-        except AttributeError:
-            return project.results[name]
+    def __contains__(self, item: Any) -> bool:
+        """Returns whether 'item' is in the 'contents' attribute.
         
-    def _set_product(self, name: str, product: Any, 
-                     project: sourdough.Project) -> None:
-        project.results[name] = product
-        return project
+        Args:
+            item (Any): item to look for in 'contents'.
+            
+        Returns:
+            bool: whether 'item' is in 'contents' if it is a Collection.
+                Otherwise, it evaluates if 'item' is equivalent to 'contents'.
+                
+        """
+        try:
+            return item in self.contents
+        except TypeError:
+            return item == self.contents
     
-    
+    def __iter__(self) -> Iterable:
+        """[summary]
+
+        Returns:
+            Iterable: [description]
+        """
+        if not isinstance(self.contents, str):
+            return iter(self.contents)
+        else:
+            return TypeError('This Stage''s contents are not iterable.')
+
+   
 @dataclasses.dataclass
 class Workflow(sourdough.quirks.Registrar, sourdough.Hybrid, abc.ABC):
     """Base class for sourdough workflows.
@@ -109,3 +128,8 @@ class Workflow(sourdough.quirks.Registrar, sourdough.Hybrid, abc.ABC):
                 raise TypeError('All stages must be str or Stage type')
         self.contents = new_stages
         return self
+
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        return tuple(stage.create for stage in self.contents)

@@ -1,11 +1,12 @@
 """
-editor: Workflow integrating settings while allowing runtime editing.
+standard: basic Workflow
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Details (Progression): basic information needed to construct composite objects.
+    Details (Progression): basic information needed to construct composite 
+        objects.
     Outline (Lexicon): dictionary of Details instances with complete information
         needed to construct a set of related composite objects.
     Draft (Stage): creates an Outline instance from a Settings instance.
