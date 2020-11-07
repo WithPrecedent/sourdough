@@ -11,12 +11,12 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AComponent(sourdough.Component):
+class AComponent(sourdough.structure.Component):
     pass
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.Component):
+class AnotherComponent(sourdough.structure.Component):
     pass
 
 
@@ -27,7 +27,7 @@ def test_lexicon():
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
     
     # Tests Lexicon
-    lexicon = sourdough.Lexicon()
+    lexicon = sourdough.types.Lexicon()
     try:
         lexicon.add(test_element)
         raise TypeError('TypeError message not properly triggered')

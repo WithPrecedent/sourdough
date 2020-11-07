@@ -41,7 +41,7 @@ class Aggregation(sourdough.components.Worker):
             sourdough classes. 
     
     """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
         default_factory = set)
     name: str = None
        
@@ -62,7 +62,7 @@ class SerialWorker(sourdough.components.Worker, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     branches: ClassVar[bool] = False   
@@ -81,7 +81,7 @@ class Cycle(SerialWorker):
             by a condition set in 'criteria'.
         
     Args:
-        contents (Sequence[Union[str, sourdough.Component]]): a set of str or
+        contents (Sequence[Union[str, sourdough.structure.Component]]): a set of str or
             Components. 
         name (str): property which designates the internal reference of a class 
             instance that is used throughout sourdough. For example, if a 
@@ -92,7 +92,7 @@ class Cycle(SerialWorker):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 10
@@ -121,7 +121,7 @@ class Pipeline(SerialWorker):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None    
 
@@ -142,7 +142,7 @@ class ParallelWorker(sourdough.components.Worker, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 1
@@ -270,9 +270,9 @@ class Survey(ParallelWorker):
     
 #     """
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 1
-#     library: ClassVar[sourdough.Catalog] = sourdough.Catalog(
+#     library: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         stored_types = ('Role'))
 
 #     """ Initialization Methods """
@@ -367,7 +367,7 @@ class Survey(ParallelWorker):
     
 #     def _build_wrapper(self,
 #             key: str, 
-#             generic: sourdough.Component,
+#             generic: sourdough.structure.Component,
 #             wrapped: Mapping[str, Sequence[str]],
 #             project: sourdough.Project,
 #             **kwargs) -> None:
@@ -397,7 +397,7 @@ class Survey(ParallelWorker):
 
 #     def _build_component(self,
 #             key: str, 
-#             generic: sourdough.Component,
+#             generic: sourdough.structure.Component,
 #             project: sourdough.Project,
 #             **kwargs) -> None:
 #         """[summary]
@@ -417,7 +417,7 @@ class Survey(ParallelWorker):
 # class Obey(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 1
     
 #     """ Public Methods """
@@ -433,7 +433,7 @@ class Survey(ParallelWorker):
 # class Repeat(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 2
     
 #     """ Public Methods """
@@ -452,7 +452,7 @@ class Survey(ParallelWorker):
 # class Compare(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 1
 
 #     """ Public Methods """
@@ -482,7 +482,7 @@ class Survey(ParallelWorker):
 # class Judge(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 10
 
 #     """ Public Methods """
@@ -498,7 +498,7 @@ class Survey(ParallelWorker):
 # class Survey(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     workflow: sourdough.workflow.Workflow = None
 #     iterations: int = 10
     
 #     """ Public Methods """
@@ -512,7 +512,7 @@ class Survey(ParallelWorker):
 
 
 # @dataclasses.dataclass
-# class LazyIterable(collections.abc.Iterable, sourdough.Component, abc.ABC):
+# class LazyIterable(collections.abc.Iterable, sourdough.structure.Component, abc.ABC):
     
     
 #     @abc.abstractmethod
@@ -539,7 +539,7 @@ class Survey(ParallelWorker):
 #     name: str = None
 #     Worker: sourdough.components.Worker = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
-#     options: ClassVar[sourdough.Catalog] = sourdough.Catalog(
+#     options: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,

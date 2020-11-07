@@ -19,10 +19,9 @@ import warnings
 
 import sourdough 
 
-   
 
 @dataclasses.dataclass
-class Project(sourdough.Lexicon):
+class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
         
     Args:
@@ -40,13 +39,10 @@ class Project(sourdough.Lexicon):
             instance contains all file path and import/export methods for use 
             throughout sourdough. If it is None, the default Filer will be used. 
             Defaults to the default Filer instance.  
-        workflow (Union[sourdough.Workflow, str]): Workflow subclass, Workflow
-            subclass instance, or a str corresponding to a key in 'workflows'. 
-            Defaults to 'editor' which will be replaced with an Editor instance.
-        design (Union[sourdough.Component, str]): Component subclass, Component
-            subclass instance, or a str corresponding to a key in 'components'. 
-            Defaults to 'pipeline' which will be replaced with a Pipeline 
-            instance. The moment it will be replaced depends upon on 'workflow'.
+        workflow (Union[sourdough.workflow.Workflow, str]): Workflow subclass, 
+            Workflow subclass instance, or a str corresponding to a key in 
+            'workflows'. Defaults to 'editor' which will be replaced with an 
+            Editor instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -64,29 +60,19 @@ class Project(sourdough.Lexicon):
             whether the workflow must be advanced manually (False). Defaults to 
             True.
         data (object): any data object for the project to be applied.         
-        results (Mapping[str, Any]): dictionary for storing results. Defaults
-            to an empty Lexicon.
-        workflows (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Workflow. It points to 
-            a Catalog instance at sourdough.project.resources.workflows.
-        components (ClassVar[Mapping[str, Callable]]): a dictionary of classes 
-            which are subclasses of or compatible with Component. It points to 
-            a Catalog instance at sourdough.project.resources.components.
-        options (ClassVar[Mapping[str, object]]): a dictionary of instances 
-            which are subclass instances of or compatible with Component. It 
-            points to a Catalog instance at sourdough.project.resources.options.   
+  
             
     """
-    contents: Mapping[Any, sourdough.Stage] = dataclasses.field(
+    contents: Mapping[Any, sourdough.workflow.Stage] = dataclasses.field(
         default_factory = dict)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     filer: Union[sourdough.Filer, str, pathlib.Path] = None
-    workflow: Union[sourdough.Workflow, str] = 'editor'
+    workflow: Union[sourdough.workflow.Workflow, str] = 'editor'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    resources: Any = sourdough.project.resources
+    resources: ClassVarAny = sourdough.project.resources
     
     """ Initialization Methods """
 
@@ -106,13 +92,18 @@ class Project(sourdough.Lexicon):
         self.name = self.name or self._get_name()
         # Sets unique project 'identification', if not passed.
         self.identification = self.identification or self._get_identification()
-        self.results.identification = self.identification
         # Validates or convers 'workflow'.
         self._validate_workflow()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
-          
+
+    """ Class Methods """
+
+    def add_resource(cls, name: str, resource: sourdough.types.Lexicon) -> None:
+        setattr(cls.resources, name, resource)
+        return cls
+    
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
@@ -184,7 +175,7 @@ class Project(sourdough.Lexicon):
 
 
 # @dataclasses.dataclass
-# class Overview(sourdough.Lexicon):
+# class Overview(sourdough.types.Lexicon):
 #     """Dictionary of different Element types in a Worker instance.
     
 #     Args:

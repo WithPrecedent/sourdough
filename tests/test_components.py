@@ -22,7 +22,7 @@ class NewAction(sourdough.Element):
         
 
 @dataclasses.dataclass
-class OtherComponent(sourdough.Component):
+class OtherComponent(sourdough.structure.Component):
     
     def perform(self, data: object) -> object:
         data.other_value = 'something'

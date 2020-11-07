@@ -10,7 +10,7 @@ import pathlib
 import sourdough
 
 
-class Divide(sourdough.Component):
+class Divide(sourdough.structure.Component):
     pass
 
 

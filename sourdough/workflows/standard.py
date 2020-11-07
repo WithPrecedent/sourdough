@@ -28,7 +28,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Draft(sourdough.Stage):
+class Draft(sourdough.workflow.Stage):
     """Constructs an Outline instance from a project's settings.
     
     Args:
@@ -169,7 +169,7 @@ class Draft(sourdough.Stage):
        
     
 @dataclasses.dataclass
-class Publish(sourdough.Stage):
+class Publish(sourdough.workflow.Stage):
     """Finalizes a composite object from user settings.
     
     Args:
@@ -198,7 +198,7 @@ class Publish(sourdough.Stage):
     """ Private Methods """
 
     def _create_component(self, name: str,
-                          project: sourdough.Project) -> sourdough.Component:
+                          project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
         Args:
@@ -206,7 +206,7 @@ class Publish(sourdough.Stage):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.structure.Component: [description]
             
         """
         component = self._get_component(name = name, project = project)
@@ -215,19 +215,19 @@ class Publish(sourdough.Stage):
             project = project)
 
     def _get_component(self, name: str,
-                       project: sourdough.Project) -> sourdough.Component:
+                       project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
         # Args:o
             name (str): [description]
-            components (Mapping[str, sourdough.Component]): [description]
+            components (Mapping[str, sourdough.structure.Component]): [description]
             project (sourdough.Project): [description]
 
         Raises:
             KeyError: [description]
 
         Returns:
-            Mapping[ str, sourdough.Component]: [description]
+            Mapping[ str, sourdough.structure.Component]: [description]
             
         """
         details = project.results.outline[name]
@@ -255,16 +255,16 @@ class Publish(sourdough.Stage):
                         raise KeyError(f'{name} component does not exist')
         return component
 
-    def _finalize_component(self, component: sourdough.Component,
-                            project: sourdough.Project) -> sourdough.Component:
+    def _finalize_component(self, component: sourdough.structure.Component,
+                            project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.structure.Component): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.structure.Component: [description]
             
         """
         if isinstance(component, Iterable):
@@ -280,13 +280,13 @@ class Publish(sourdough.Stage):
             pass
         return component
 
-    def _create_parallel(self, component: sourdough.Component,
+    def _create_parallel(self, component: sourdough.structure.Component,
                          project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
-            components (Mapping[str, sourdough.Component]): [description]
+            component (sourdough.structure.Component): [description]
+            components (Mapping[str, sourdough.structure.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
@@ -312,13 +312,13 @@ class Publish(sourdough.Stage):
             project = project)
         return component
 
-    def _create_serial(self, component: sourdough.Component, 
+    def _create_serial(self, component: sourdough.structure.Component, 
                        project: sourdough.Project) -> sourdough.components.Worker:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
-            components (Mapping[str, sourdough.Component]): [description]
+            component (sourdough.structure.Component): [description]
+            components (Mapping[str, sourdough.structure.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
@@ -338,8 +338,8 @@ class Publish(sourdough.Stage):
         return component
 
     def _add_attributes(self, 
-            component: sourdough.Component,
-            project: sourdough.Project) -> sourdough.Component:
+            component: sourdough.structure.Component,
+            project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
         Returns:
@@ -355,7 +355,7 @@ class Publish(sourdough.Stage):
 
                 
 @dataclasses.dataclass
-class Apply(sourdough.Stage):
+class Apply(sourdough.workflow.Stage):
     """
     
     """
@@ -381,7 +381,7 @@ class Apply(sourdough.Stage):
 
 
 @dataclasses.dataclass
-class Editor(sourdough.Workflow):
+class Editor(sourdough.workflow.Workflow):
     """Three-step workflow that allows user editing and easy serialization.
     
     Args:
@@ -390,7 +390,7 @@ class Editor(sourdough.Workflow):
         project (sourdough.Project): related project instance.
         
     """
-    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Stage]] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     project: sourdough.Project = None
     name: str = None

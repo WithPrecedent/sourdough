@@ -11,12 +11,12 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AComponent(sourdough.Component):
+class AComponent(sourdough.structure.Component):
     pass
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.Component):
+class AnotherComponent(sourdough.structure.Component):
     pass
 
 
@@ -25,7 +25,7 @@ def test_catalog():
     another_element = AnotherComponent()
     test_mapping = {'a_key': AComponent(), 'another_key': AnotherComponent()}
     test_sequence = [AComponent(), AnotherComponent(name = 'test_name')]
-    catalog = sourdough.Catalog(contents = {
+    catalog = sourdough.types.Catalog(contents = {
         'test' : test_element,
         'another': another_element})
     assert catalog['all'] == [test_element, another_element]

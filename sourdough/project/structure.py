@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(sourdough.Registrar, sourdough.Librarian, 
+class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, 
                 collections.abc.Container):
     """Base container class for sourdough composite objects.
     

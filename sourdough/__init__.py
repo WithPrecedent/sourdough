@@ -27,33 +27,30 @@ or second-level access.
 For example:
 
     Instead of acccesing Hybrid via sourdough.core.types.Hybrid,
-    you can just use: sourdough.Hybrid
+    you can just use: sourdough.types.Hybrid
     
 """
 from .utilities import tools
 
-from .core.types import Lexicon
-from .core.types import Catalog
-from .core.types import Progression
-from .core.types import Hybrid
-from .core.quirks import Registrar
-from .core.quirks import Librarian
-from .core.quirks import Loader
+from .core import types
+from .core import quirks
 
-from .configuration.settings import Settings
-from .configuration.filer import Filer
+from .core.configuration import Settings
+from .core.transfer import Filer
 
 from .project import resources
+from .project import structure
+from .project import workflow
 
-from .project.workflow import Stage
-from .project.workflow import Workflow
-from .project.structure import Component
+from .structures import components
+from .structures import graphs
+from .structures import workers
 
-from . import structures
-from . import workflows
+from .workflows import editor
+from .workflows import stages
 
 from .project.interface import Project
-from . import project
+
 
 
 __version__ = '0.1.1'

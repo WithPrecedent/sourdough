@@ -19,7 +19,7 @@ import sourdough
 
 
 # @dataclasses.dataclass
-# class Workshop(sourdough.Catalog):
+# class Workshop(sourdough.types.Catalog):
 
 #     contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
 #     project: Project = None

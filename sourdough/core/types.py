@@ -599,7 +599,7 @@ class Hybrid(Progression):
         """
         new_contents = []
         for item in iter(self.contents):
-            if isinstance(item, sourdough.Hybrid):
+            if isinstance(item, sourdough.types.Hybrid):
                 if recursive:
                     new_item = item.apply(
                         tool = tool, 
@@ -656,7 +656,7 @@ class Hybrid(Progression):
             matches = []
         for item in iter(self.contents):
             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.Hybrid):
+            if isinstance(item, sourdough.types.Hybrid):
                 if recursive:
                     matches.extend(item.find(
                         tool = tool, 

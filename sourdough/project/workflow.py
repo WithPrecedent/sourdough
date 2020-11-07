@@ -18,7 +18,7 @@ import sourdough
    
 
 @dataclasses.dataclass
-class Stage(sourdough.Registrar, collections.abc.Container):
+class Stage(sourdough.quirks.Registrar, collections.abc.Container):
     """Base class for a stage in a Workflow.
     
     Args:
@@ -73,7 +73,7 @@ class Stage(sourdough.Registrar, collections.abc.Container):
 
    
 @dataclasses.dataclass
-class Workflow(sourdough.Registrar, sourdough.Hybrid, abc.ABC):
+class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
     """Base class for sourdough workflows.
     
     Args:

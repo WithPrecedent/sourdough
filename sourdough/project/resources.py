@@ -14,14 +14,14 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough 
 
 
-workflows = sourdough.Catalog()
+workflows = sourdough.types.Catalog()
 
-stages = sourdough.Catalog()
+stages = sourdough.types.Catalog()
 
-bases = sourdough.Catalog()
+bases = sourdough.types.Catalog()
 
-components = sourdough.Catalog()
+components = sourdough.types.Catalog()
 
-options = sourdough.Catalog()
+options = sourdough.types.Catalog()
 
-algorithms = sourdough.Catalog()
+algorithms = sourdough.types.Catalog()
