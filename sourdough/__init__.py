@@ -17,6 +17,8 @@ area of the documentation that could be made clearer, please don't hesitate
 to email me - I want to ensure the package is as accessible as possible.
 
 """
+import importlib
+import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
@@ -30,13 +32,15 @@ For example:
     you can just use: sourdough.types.Hybrid
     
 """
+
+""" Shared Utility Imports """
+
 from .utilities import tools
+
+""" Second-level Imports """
 
 from .core import types
 from .core import quirks
-
-from .core.configuration import Settings
-from .core.transfer import Filer
 
 from .project import resources
 from .project import structure
@@ -49,6 +53,10 @@ from .structures import workers
 from .workflows import editor
 from .workflows import stages
 
+""" First-level Imports """
+
+from .core.configuration import Settings
+from .core.manager import Filer
 from .project.interface import Project
 
 
@@ -58,3 +66,4 @@ __version__ = '0.1.1'
 __author__ = 'Corey Rayburn Yung'
 
 __all__ = []
+

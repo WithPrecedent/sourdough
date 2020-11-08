@@ -156,7 +156,7 @@ class Project(sourdough.types.Lexicon):
                      or self.workflow == self.workflows)):
             self.workflow = self.workflow(project = self)
         elif isinstance(self.workflow, str):
-            self.workflow = self.workflows.instance(
+            self.workflow = self.resources.workflows.instance(
                 key = self.workflow,
                 project = self)
         else:
