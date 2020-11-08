@@ -5,11 +5,11 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    base: core structural classes and mixins.
-    configuration: classes related to configuration options and file management.
-    project: classes applying 'base' to composite object projects.
-    utilities: functions and decorators that make complex and tedious tasks 
-        easier.
+    core: core structural classes and mixins.
+    project: base classes for sourdough projects.
+    structures: composite object classes.
+    workflows: classes containing workflow sequences for sourdough projects.
+    utilities: functions that make complex and tedious tasks easier.
 
 In general, python files in sourdough are over-documented to allow beginning
 programmers to understand basic design choices that were made. If there is any
@@ -17,8 +17,6 @@ area of the documentation that could be made clearer, please don't hesitate
 to email me - I want to ensure the package is as accessible as possible.
 
 """
-import importlib
-import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
@@ -41,25 +39,24 @@ from .utilities import tools
 
 from .core import types
 from .core import quirks
+from .core import workshop
 
 from .project import resources
 from .project import structure
-from .project import workflow
+# from .project import workflow
+
+from .core.configuration import Settings
+from .core.files import Manager
+from .project.workflow import Stage
+from .project.workflow import Workflow
+from .project.interface import Project
 
 from .structures import components
 from .structures import graphs
 from .structures import workers
 
-from .workflows import editor
 from .workflows import stages
-
-""" First-level Imports """
-
-from .core.configuration import Settings
-from .core.manager import Filer
-from .project.interface import Project
-
-
+from .workflows import editor
 
 __version__ = '0.1.1'
 

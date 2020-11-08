@@ -270,7 +270,7 @@ class Survey(ParallelWorker):
     
 #     """
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 1
 #     library: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         stored_types = ('Role'))
@@ -417,7 +417,7 @@ class Survey(ParallelWorker):
 # class Obey(Role):
     
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 1
     
 #     """ Public Methods """
@@ -433,7 +433,7 @@ class Survey(ParallelWorker):
 # class Repeat(Role):
     
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 2
     
 #     """ Public Methods """
@@ -452,7 +452,7 @@ class Survey(ParallelWorker):
 # class Compare(Role):
     
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 1
 
 #     """ Public Methods """
@@ -482,7 +482,7 @@ class Survey(ParallelWorker):
 # class Judge(Role):
     
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 10
 
 #     """ Public Methods """
@@ -498,7 +498,7 @@ class Survey(ParallelWorker):
 # class Survey(Role):
     
 #     name: str = None
-#     workflow: sourdough.workflow.Workflow = None
+#     workflow: sourdough.Workflow = None
 #     iterations: int = 10
     
 #     """ Public Methods """

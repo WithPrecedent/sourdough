@@ -1,11 +1,11 @@
 """
-manager: sourdough file management classes
+files: sourdough file management classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Filer: interface for sourdough file management classes and methods.
+    Manager: interface for sourdough file management classes and methods.
 
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ def importify(
     return loaded
 
 @dataclasses.dataclass
-class Filer(object):
+class Manager(object):
     """File and folder management for sourdough.
 
     Creates and stores dynamic and static file paths, properly formats files
@@ -79,7 +79,7 @@ class Filer(object):
             if 'settings' is None, internal defaults will be used. Defaults to
             None.
         root_folder (Union[str, pathlib.Path]): the complete path from which the 
-            other paths and folders used by Filer are ordinarily derived 
+            other paths and folders used by Manager are ordinarily derived 
             (unless you decide to use full paths for all other options). 
             Defaults to None. If not passed, the parent folder of the current 
             working directory is used.
@@ -428,11 +428,11 @@ class Distributor(abc.ABC):
     """Base class for sourdough FileLoader and FileSaver.
 
     Args:
-        filer (Filer): a related Filer instance.
+        filer (Manager): a related Manager instance.
 
     """
 
-    filer: Filer
+    filer: Manager
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
@@ -576,10 +576,10 @@ class FileLoader(Distributor):
     """Manages file importing for sourdough.
 
     Args:
-        filer (Filer): related Filer instance.
+        filer (Manager): related Manager instance.
 
     """
-    filer: Filer
+    filer: Manager
 
     """ Public Methods """
 
@@ -634,10 +634,10 @@ class FileSaver(Distributor):
     """Manages file exporting for sourdough.
 
     Args:
-        filer (Filer): related Filer instance.
+        filer (Manager): related Manager instance.
 
     """
-    filer: Filer
+    filer: Manager
 
     """ Public Methods """
 

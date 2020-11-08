@@ -1,5 +1,5 @@
 """
-project: interface for sourdough project construction and iteration
+interface: user interface for sourdough project construction and iteration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -13,6 +13,7 @@ import collections.abc
 import dataclasses
 import inspect
 import pathlib
+import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 import warnings
@@ -31,15 +32,14 @@ class Project(sourdough.types.Lexicon):
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
             file of a supported file type with settings for a Settings instance 
-            is located. If it is None, default settings will be used. Defaults 
-            to the default Settings instance.
-        filer (Union[sourdough.Filer, str, pathlib.Path]]): an instance of 
-            Filer or a str or pathlib.Path containing the full path of where the 
-            root folder should be located for file input and output. A Filer
-            instance contains all file path and import/export methods for use 
-            throughout sourdough. If it is None, the default Filer will be used. 
-            Defaults to the default Filer instance.  
-        workflow (Union[sourdough.workflow.Workflow, str]): Workflow subclass, 
+            is located. Defaults to the default Settings instance.
+        manager (Union[sourdough.Manager, str, pathlib.Path]]): an instance of 
+            Manager or a str or pathlib.Path containing the full path of where 
+            the root folder should be located for file input and output. A 
+            Manager instance contains all file path and import/export methods 
+            for use throughout sourdough. Defaults to the default Manager 
+            instance.  
+        workflow (Union[sourdough.Workflow, str]): Workflow subclass, 
             Workflow subclass instance, or a str corresponding to a key in 
             'workflows'. Defaults to 'editor' which will be replaced with an 
             Editor instance.
@@ -63,16 +63,16 @@ class Project(sourdough.types.Lexicon):
   
             
     """
-    contents: Mapping[Any, sourdough.workflow.Stage] = dataclasses.field(
+    contents: Mapping[Any, sourdough.Stage] = dataclasses.field(
         default_factory = dict)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
-    filer: Union[sourdough.Filer, str, pathlib.Path] = None
-    workflow: Union[sourdough.workflow.Workflow, str] = 'editor'
+    manager: Union[sourdough.Manager, str, pathlib.Path] = None
+    workflow: Union[sourdough.Workflow, str] = 'editor'
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    resources: ClassVarAny = sourdough.project.resources
+    resources: ClassVar[types.ModuleType] = sourdough.project.resources
     
     """ Initialization Methods """
 
@@ -85,9 +85,9 @@ class Project(sourdough.types.Lexicon):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Validates or converts 'settings' and 'filer'.
+        # Validates or converts 'settings' and 'manager'.
         self._validate_settings()
-        self._validate_filer()
+        self._validate_manager()
         # Sets 'name' if it is None.
         self.name = self.name or self._get_name()
         # Sets unique project 'identification', if not passed.
@@ -100,20 +100,30 @@ class Project(sourdough.types.Lexicon):
 
     """ Class Methods """
 
+    @classmethod
     def add_resource(cls, name: str, resource: sourdough.types.Lexicon) -> None:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            resource (sourdough.types.Lexicon): [description]
+            
+        """
         setattr(cls.resources, name, resource)
         return cls
     
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'workflow'.
-        
-        Returns:
-            Iterable: 'workflow' iterable.
+    @classmethod
+    def add_to_resource(cls, name: str, key: str, value: Any) -> None:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            key (str): [description]
+            value (Any): [description]
             
         """
-        return iter(self.workflow)
+        getattr(cls.resources, name).add(item = {key: value})
+        return cls
 
     """ Private Methods """
     
@@ -125,11 +135,11 @@ class Project(sourdough.types.Lexicon):
         self.settings.inject(instance = self)
         return self
 
-    def _validate_filer(self) -> None:
-        """Validates 'filer' or converts it to a Filer instance."""
-        if not isinstance(self.filer, sourdough.Filer):
-            self.filer = sourdough.Filer(
-                root_folder = self.filer, 
+    def _validate_manager(self) -> None:
+        """Validates 'manager' or converts it to a Manager instance."""
+        if not isinstance(self.manager, sourdough.Manager):
+            self.manager = sourdough.Manager(
+                root_folder = self.manager, 
                 settings = self.settings)
         return self
     
@@ -143,17 +153,14 @@ class Project(sourdough.types.Lexicon):
         """Creates unique 'identification' str based upon date and time."""
         return sourdough.tools.datetime_string(prefix = self.name)
 
-
     def _validate_workflow(self) -> None:
         """Validates or converts 'workflow' and initializes it."""
-        if self.workflow is None:
-            try:
-                self.workflow = self.settings[self.name]['workflow']
-            except KeyError:
+        try:
+            self.workflow = self.settings[self.name]['workflow']
+        except KeyError:
+            if self.workflow is None:
                 self.workflow = 'editor'
-        if (inspect.isclass(self.workflow) 
-                and (issubclass(self.workflow, self.workflows)
-                     or self.workflow == self.workflows)):
+        if inspect.isclass(self.workflow):
             self.workflow = self.workflow(project = self)
         elif isinstance(self.workflow, str):
             self.workflow = self.resources.workflows.instance(
@@ -173,6 +180,10 @@ class Project(sourdough.types.Lexicon):
             self = stage.perform(project = self)
         return self
 
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable:
+        return iter(self.workflow)
 
 # @dataclasses.dataclass
 # class Overview(sourdough.types.Lexicon):

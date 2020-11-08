@@ -14,7 +14,7 @@ import sourdough
 def test_filer():
     settings = sourdough.Settings(
         contents = pathlib.Path('tests') / 'ini_settings.ini')
-    filer = sourdough.Filer(settings = settings)
+    filer = sourdough.Manager(settings = settings)
     # Tests injection from settings.
     assert str(filer.root_folder) == '..'
     assert str(filer.input_folder) == '../input'

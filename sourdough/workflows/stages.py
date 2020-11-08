@@ -8,9 +8,11 @@ Contents:
 
 """
 from __future__ import annotations
+import copy
 import dataclasses
 import functools
 import inspect
+import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
@@ -58,7 +60,7 @@ class Details(sourdough.types.Progression):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.workflow.Stage):
+class Outline(sourdough.Stage, sourdough.types.Lexicon):
     """Output of the the drafting process.
 
     Outline is a dictionary representation of the overall project design. All
@@ -78,7 +80,7 @@ class Outline(sourdough.workflow.Stage):
     @classmethod
     @functools.singledispatchmethod    
     def create(cls, settings: sourdough.Settings, 
-               project: sourdough.Project) -> sourdough.workflow.Stage:
+               project: sourdough.Project) -> sourdough.Stage:
         """Creates an Outline instance based on 'settings'.
 
         Args:
@@ -221,7 +223,7 @@ class Outline(sourdough.workflow.Stage):
 
 
 @dataclasses.dataclass
-class Agenda( sourdough.workflow.Stage, sourdough.types.Hybrid):
+class Agenda(sourdough.Stage, sourdough.types.Hybrid):
     """Output of the the drafting process.
 
     Outline is a dictionary representation of the overall project design. All
@@ -234,9 +236,11 @@ class Agenda( sourdough.workflow.Stage, sourdough.types.Hybrid):
     contents: sourdough.structure.Component = None
     action: str = 'publishing'
 
+    """ Public Methods """
+
     @classmethod
     @functools.singledispatchmethod    
-    def create(cls, outline: Outline, project: sourdough.Project) -> sourdough.workflow.Stage:
+    def create(self, outline: Outline, project: sourdough.Project) -> sourdough.Stage:
         """Drafts a Plan instance based on 'outline'.
             
         """ 
@@ -405,7 +409,7 @@ class Agenda( sourdough.workflow.Stage, sourdough.types.Hybrid):
 
 
 @dataclasses.dataclass
-class Results(sourdough.workflow.Stage, sourdough.types.Lexicon):
+class Results(sourdough.Stage, sourdough.types.Lexicon):
     """A container for any results produced by a Project instance.
 
     Attributes are dynamically added by Workflow instances at runtime.
@@ -432,10 +436,23 @@ class Results(sourdough.workflow.Stage, sourdough.types.Lexicon):
         setattr(self, name, value)
         return self
     
-    def from_worker(cls, worker: sourdough.Worker, 
-                    project: sourdough.Project) -> sourdough.Output:
-        outline = sourdough.workflows.interims.Outline()
-        return outline
+    """ Public Methods """
+
+    @classmethod
+    @functools.singledispatchmethod    
+    def create(self, agenda: Agenda, project: sourdough.Project) -> sourdough.Stage:
+        """Drafts a Plan instance based on 'outline'.
+            
+        """
+        kwargs = {}
+        results = self.__class__(
+            contents = self.contents, 
+            identification = self.identification)
+        if project.data is not None:
+            kwargs['data'] = project.data
+        for component in agenda:
+            component.apply(**kwargs)
+        return project
 
     """ Dunder Methods """
 

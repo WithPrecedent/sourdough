@@ -28,7 +28,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Draft(sourdough.workflow.Stage):
+class Draft(sourdough.Stage):
     """Constructs an Outline instance from a project's settings.
     
     Args:
@@ -169,7 +169,7 @@ class Draft(sourdough.workflow.Stage):
        
     
 @dataclasses.dataclass
-class Publish(sourdough.workflow.Stage):
+class Publish(sourdough.Stage):
     """Finalizes a composite object from user settings.
     
     Args:
@@ -355,7 +355,7 @@ class Publish(sourdough.workflow.Stage):
 
                 
 @dataclasses.dataclass
-class Apply(sourdough.workflow.Stage):
+class Apply(sourdough.Stage):
     """
     
     """
@@ -381,7 +381,7 @@ class Apply(sourdough.workflow.Stage):
 
 
 @dataclasses.dataclass
-class Editor(sourdough.workflow.Workflow):
+class Editor(sourdough.Workflow):
     """Three-step workflow that allows user editing and easy serialization.
     
     Args:
@@ -390,7 +390,7 @@ class Editor(sourdough.workflow.Workflow):
         project (sourdough.Project): related project instance.
         
     """
-    contents: Sequence[Union[str, sourdough.workflow.Stage]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
         default_factory = lambda: [Draft, Publish, Apply])
     project: sourdough.Project = None
     name: str = None
