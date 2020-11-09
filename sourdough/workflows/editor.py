@@ -26,6 +26,25 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+@dataclasses.dataclass
+class Editor(sourdough.Workflow):
+    """Three-step workflow that allows user editing and easy serialization.
+    
+    Args:
+        contents (Sequence[Union[str, Stage]]): a list of str or Stages. 
+            Defaults to an empty list.
+        project (sourdough.Project): related project instance.
+        
+    """
+    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
+        default_factory = lambda: [
+            sourdough.stages.Outline,
+            sourdough.stages.Agenda,
+            sourdough.stages.Results])
+    project: sourdough.Project = dataclasses.field(default = None, repr = False)
+    
+    
+
 # @dataclasses.dataclass
 # class Draft(sourdough.Stage):
 #     """Constructs an Outline instance from a project's settings.
@@ -379,20 +398,3 @@ import sourdough
 #         return project
 
 
-@dataclasses.dataclass
-class Editor(sourdough.Workflow):
-    """Three-step workflow that allows user editing and easy serialization.
-    
-    Args:
-        contents (Sequence[Union[str, Stage]]): a list of str or Stages. 
-            Defaults to an empty list.
-        project (sourdough.Project): related project instance.
-        
-    """
-    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
-        default_factory = lambda: [
-            sourdough.stages.Outline,
-            sourdough.stages.Agenda,
-            sourdough.stages.Results])
-    project: sourdough.Project = None
-    name: str = None

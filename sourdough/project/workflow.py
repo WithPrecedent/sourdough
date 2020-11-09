@@ -35,9 +35,10 @@ class Stage(sourdough.quirks.Registrar, collections.abc.Container):
 
     """ Required Subclass Methods """
     
-    @classmethod
-    @abc.abstractmethod
-    def create(cls, project: sourdough.Project, **kwargs) -> Stage:
+    # @classmethod
+    # @abc.abstractmethod
+    def create(self, previous: Stage, 
+               project: sourdough.Project, **kwargs) -> Stage:
         """Performs some action based on 'project' with kwargs (optional).
         
         Subclasses must provide their own methods.
@@ -91,7 +92,7 @@ class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
     """
     contents: Union[Sequence[str], Sequence[Stage]] = dataclasses.field(
         default_factory = list)
-    project: sourdough.Project = None
+    project: sourdough.Project = dataclasses.field(default = None, repr = False)
 
     """ Initialization Methods """
 
@@ -102,6 +103,7 @@ class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
             super().__post_init__()
         except AttributeError:
             pass
+        self.index = -1
         # Validates or converts 'contents'.
         self._initialize_stages()
 
@@ -128,8 +130,8 @@ class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
         new_stages = []
         for stage in self.contents:
             if isinstance(stage, str):
-                new_stages.append(Stage.instance(stage))
-            elif issubclass(stage, Stage):
+                new_stages.append(self.project.resources.stages.instance(stage))
+            elif issubclass(stage, self.project.defaults['stage']):
                 new_stages.append(stage())
             else:
                 raise TypeError('All stages must be str or Stage type')
@@ -144,10 +146,19 @@ class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
     """ Dunder Methods """
     
     def __next__(self) -> Stage:
-        previous_stage = self._get_last_stage()
-        key = sourdough.tools.snakify(stage.__class__.__name__)
-        self.add({key : stage.create(project = self)})
+        if self.index < 0:
+            previous = self.project.settings
+        else:
+            previous = self.project.contents[self.index]
+        self.index += 1
+        current = self.contents[self.index]
+        print('test current in next', current)
+        if hasattr(self.project, 'verbose') and self.project.verbose:
+            print(f'Beginning {current.action} process')
+        creation = current.create(previous = previous, project = self.project)
+        print('test creation', creation)
+        return creation
     
     def __iter__(self) -> Iterable:
-        
-        
+        return self
+          

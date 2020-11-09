@@ -77,9 +77,7 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
 
     """ Public Methods """
     
-    @classmethod
-    @functools.singledispatchmethod    
-    def create(cls, settings: sourdough.Settings, 
+    def create(self, previous: sourdough.Stage, 
                project: sourdough.Project) -> sourdough.Stage:
         """Creates an Outline instance based on 'settings'.
 
@@ -92,30 +90,31 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        if inspect.isclass(cls):
-            outline = cls()
+        if inspect.isclass(self):
+            outline = self()
         else:
-            outline = cls.__class__()
-        suffixes = tuple(project.bases.keys())
-        for name, section in settings.items():
+            outline = self.__class__()
+        suffixes = tuple(project.resources.bases.keys())
+        for name, section in previous.items():
             # Tests whether the section in 'settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'outline'.
+            print('test iter settings', name)
             if any([i.endswith(suffixes) for i in section.keys()]):
-                outline = cls._process_section(
+                outline = self._process_section(
                     name = name,
                     outline = outline,
-                    settings = settings,
+                    settings = previous,
                     project = project,
                     base = 'worker')
+        print('test outline', outline)
         return outline
         
     """ Private Methods """
     
-    @classmethod
-    def _process_section(cls, name: str, outline: Outline,
+    def _process_section(self, name: str, outline: Outline,
                          settings: sourdough.Settings, 
                          project: sourdough.Project, base: str) -> Outline:
         """[summary]
@@ -137,36 +136,36 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
             if key.endswith(tuple(project.bases.keys())):
                 # Each key contains a prefix which is the parent Component name 
                 # and a suffix which is what that parent Component contains.
-                key_name, key_suffix = cls._divide_key(key = key)
+                key_name, key_suffix = self._divide_key(key = key)
                 contains = key_suffix.rstrip('s')
                 contents = sourdough.tools.listify(value) 
-                outline = cls._add_details(
+                outline = self._add_details(
                     name = key_name, 
                     outline = outline,
                     contents = contents,
                     base = base)
                 for item in contents:
                     if item in settings:
-                        outline = cls._process_section(
+                        outline = self._process_section(
                             name = item,
                             outline = outline,
                             project = project,
                             base = contains)
                     else:
-                        outline = cls._add_details(
+                        outline = self._add_details(
                             name = item, 
                             outline = outline,
                             base = contains)
             # keys ending with 'design' hold values of a Component's design.
             elif key.endswith('design'):
-                outline = cls._add_details(
+                outline = self._add_details(
                     name = name, 
                     outline = outline, 
                     design = value)
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                outline = cls._add_details(
+                outline = self._add_details(
                     name = name,
                     outline = outline,
                     attributes = {key: value})
@@ -238,20 +237,20 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
 
     """ Public Methods """
 
-    @classmethod
-    @functools.singledispatchmethod    
-    def create(self, outline: Outline, project: sourdough.Project) -> sourdough.Stage:
+    def create(self, previous: sourdough.Stage, 
+               project: sourdough.Project) -> sourdough.Stage:
         """Drafts a Plan instance based on 'outline'.
             
         """ 
         project.results.plan = self._create_component(
             name = project.name, 
+            previous = previous,
             project = project)
         return project
     
     """ Private Methods """
 
-    def _create_component(self, name: str,
+    def _create_component(self, name: str, previous: sourdough.Stage,
                           project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
@@ -263,12 +262,13 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             sourdough.structure.Component: [description]
             
         """
-        component = self._get_component(name = name, project = project)
+        component = self._get_component(name = name, previous = previous, 
+                                        project = project)
         return self._finalize_component(
             component = component, 
             project = project)
 
-    def _get_component(self, name: str,
+    def _get_component(self, name: str, previous: sourdough.Stage,
                        project: sourdough.Project) -> sourdough.structure.Component:
         """[summary]
 
@@ -284,26 +284,25 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             Mapping[ str, sourdough.structure.Component]: [description]
             
         """
-        details = project.results.outline[name]
-        kwargs = {
-            'name': name,
-            'contents': project.results.outline[name].contents}
+        print('test previous', previous)
+        details = previous[name]
+        kwargs = {'name': name, 'contents': previous.contents}
         try:
-            component = copy.deepcopy(project.options[name])
+            component = copy.deepcopy(project.resources.options[name])
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = project.components[name]
+                component = project.resources.components[name]
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.components[details.design]
+                    component = project.resources.components[details.design]
                     component = component(**kwargs)
                 except KeyError:
                     try:
-                        component = project.components[details.base]
+                        component = project.resources.components[details.base]
                         component = component(**kwargs)
                     except KeyError:
                         raise KeyError(f'{name} component does not exist')
@@ -349,7 +348,7 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
         """
         possible = []
         for item in component.contents:
-            possible.append(project.results.outline[item].contents)
+            possible.append(previous[item].contents)
         combos = list(map(list, itertools.product(*possible)))
         wrappers = [self._get_component(i, project) for i in component.contents]
         new_contents = []
@@ -400,7 +399,7 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             [type]: [description]
             
         """
-        attributes = project.results.outline[component.name].attributes
+        attributes = previous[component.name].attributes
         for key, value in attributes.items():
             # if (project.settings['general']['settings_priority']
             #         or not hasattr(component, key)):
@@ -440,7 +439,8 @@ class Results(sourdough.Stage, sourdough.types.Lexicon):
 
     @classmethod
     @functools.singledispatchmethod    
-    def create(self, agenda: Agenda, project: sourdough.Project) -> sourdough.Stage:
+    def create(self, previous: sourdough.Stage, 
+               project: sourdough.Project) -> sourdough.Stage:        
         """Drafts a Plan instance based on 'outline'.
             
         """

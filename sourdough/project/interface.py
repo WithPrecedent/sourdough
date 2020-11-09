@@ -23,15 +23,17 @@ import sourdough
 DEFAULTS = {
     'settings': sourdough.Settings,
     'manager': sourdough.Manager,
+    'stage': sourdough.Stage,
     'workflow': 'editor'}
 
 
 @dataclasses.dataclass
-class Project(sourdough.types.Lexicon):
+class Project(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a sourdough project.
     
-    Unlike an ordinary Lexicon, a Project instance will iterate 'workflow' 
-    instead of 'contents'.
+    Unlike an ordinary Hybrid, a Project instance will iterate 'workflow' 
+    instead of 'contents'. However, all getters and setters still point to 
+    'contents', which is where the results of 'workflow' are stored.
         
     Args:
         contents (Mapping[Any, Stage]]): stored dictionary that stores completed
@@ -70,8 +72,8 @@ class Project(sourdough.types.Lexicon):
   
             
     """
-    contents: Mapping[Any, sourdough.Stage] = dataclasses.field(
-        default_factory = dict)
+    contents: Sequence[sourdough.Stage] = dataclasses.field(
+        default_factory = list)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     manager: Union[sourdough.Manager, str, pathlib.Path] = None
     workflow: Union[sourdough.Workflow, str] = None
@@ -231,21 +233,17 @@ class Project(sourdough.types.Lexicon):
                 f'workflow must be a str matching a key in workflows, a '
                 f'Workflow subclass, or a Workflow subclass instance.')
         return self
-
                      
     def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances."""
         for stage in self.workflow:
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'Beginning {stage.action} process')
-            key = sourdough.tools.snakify(stage.__class__.__name__)
-            self.add({key : stage.create(project = self)})
+            self.append(stage)
         return self
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        return iter(self.workflow)
+        return iter(self._auto_workflow)
 
 
 # @dataclasses.dataclass
