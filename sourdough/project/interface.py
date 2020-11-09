@@ -9,7 +9,6 @@ Contents:
 
 """
 from __future__ import annotations
-import collections.abc
 import dataclasses
 import inspect
 import pathlib
@@ -20,6 +19,10 @@ import warnings
 
 import sourdough 
 
+
+DEFAULTS = {'settings': sourdough.Settings,
+            'manager': sourdough.Manager,
+            'workflow': 'editor'}
 
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
@@ -41,8 +44,7 @@ class Project(sourdough.types.Lexicon):
             instance.  
         workflow (Union[sourdough.Workflow, str]): Workflow subclass, 
             Workflow subclass instance, or a str corresponding to a key in 
-            'workflows'. Defaults to 'editor' which will be replaced with an 
-            Editor instance.
+            'workflows'. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -67,12 +69,14 @@ class Project(sourdough.types.Lexicon):
         default_factory = dict)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     manager: Union[sourdough.Manager, str, pathlib.Path] = None
-    workflow: Union[sourdough.Workflow, str] = 'editor'
+    workflow: Union[sourdough.Workflow, str] = None
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
     resources: ClassVar[types.ModuleType] = sourdough.project.resources
+    _validations: ClassVar[Sequence[str]] = [
+        'settings', 'name', 'identification', 'manager', 'workflow']
     
     """ Initialization Methods """
 
@@ -85,15 +89,9 @@ class Project(sourdough.types.Lexicon):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Validates or converts 'settings' and 'manager'.
-        self._validate_settings()
-        self._validate_manager()
-        # Sets 'name' if it is None.
-        self.name = self.name or self._get_name()
-        # Sets unique project 'identification', if not passed.
-        self.identification = self.identification or self._get_identification()
-        # Validates or convers 'workflow'.
-        self._validate_workflow()
+        # Calls validation methods based on items listed in '_validations'.
+        for validation in self._validations:
+            getattr(self, f'_validate_{validation}')()
         # Advances through 'workflow' if 'automatic' is True.
         if self.automatic:
             self._auto_workflow()
@@ -135,6 +133,24 @@ class Project(sourdough.types.Lexicon):
         self.settings.inject(instance = self)
         return self
 
+    def _validate_name(self) -> None:
+        """Infers name as the first appropriate section name in 'settings'."""
+        if not self.name:
+            for section in self.settings.keys():
+                if section not in ['general', 'files']:
+                    self.name = section
+                    break
+        if not self.name:
+            self.name = sourdough.tools.snakify(self.__class__)
+        return self
+
+    def _validate_identification(self) -> None:
+        """Creates unique 'identification' str based upon date and time."""
+        if not self.identification:
+            self.identification = sourdough.tools.datetime_string(
+                prefix = self.name)
+        return self
+
     def _validate_manager(self) -> None:
         """Validates 'manager' or converts it to a Manager instance."""
         if not isinstance(self.manager, sourdough.Manager):
@@ -143,16 +159,6 @@ class Project(sourdough.types.Lexicon):
                 settings = self.settings)
         return self
     
-    def _get_name(self) -> None:
-        """Infers name as the first appropriate section name in 'settings'."""
-        for section in self.settings.keys():
-            if section not in ['general', 'files']:
-                return section
-
-    def _get_identification(self) -> None:
-        """Creates unique 'identification' str based upon date and time."""
-        return sourdough.tools.datetime_string(prefix = self.name)
-
     def _validate_workflow(self) -> None:
         """Validates or converts 'workflow' and initializes it."""
         try:
@@ -166,7 +172,7 @@ class Project(sourdough.types.Lexicon):
             self.workflow = self.resources.workflows.instance(
                 key = self.workflow,
                 project = self)
-        else:
+        elif not isinstance(self.workflow, sourdough.Workflow):
             raise TypeError(
                 f'workflow must be a str matching a key in workflows, a '
                 f'Workflow subclass, or a Workflow subclass instance')
