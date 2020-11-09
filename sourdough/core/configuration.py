@@ -21,7 +21,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-DEFAULT_SETTINGS = {
+DEFAULTS = {
     'general': {
         'verbose': False,
         'settings_priority': True,
@@ -76,7 +76,7 @@ class Settings(sourdough.types.Lexicon):
             default_factory = dict)
     infer_types: bool = True
     defaults: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: DEFAULT_SETTINGS)
+        default_factory = lambda: DEFAULTS)
 
     """ Initialization Methods """
 

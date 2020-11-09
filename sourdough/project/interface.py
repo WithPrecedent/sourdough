@@ -20,13 +20,18 @@ import warnings
 import sourdough 
 
 
-DEFAULTS = {'settings': sourdough.Settings,
-            'manager': sourdough.Manager,
-            'workflow': 'editor'}
+DEFAULTS = {
+    'settings': sourdough.Settings,
+    'manager': sourdough.Manager,
+    'workflow': 'editor'}
+
 
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
+    
+    Unlike an ordinary Lexicon, a Project instance will iterate 'workflow' 
+    instead of 'contents'.
         
     Args:
         contents (Mapping[Any, Stage]]): stored dictionary that stores completed
@@ -74,7 +79,10 @@ class Project(sourdough.types.Lexicon):
     identification: str = None
     automatic: bool = True
     data: object = None
-    resources: ClassVar[types.ModuleType] = sourdough.project.resources
+    resources: types.ModuleType = dataclasses.field(
+        default_factory = lambda: sourdough.project.resources)
+    defaults: Mapping[str, Any] = dataclasses.field(
+        default_factory = lambda: DEFAULTS)
     _validations: ClassVar[Sequence[str]] = [
         'settings', 'name', 'identification', 'manager', 'workflow']
     
@@ -126,15 +134,27 @@ class Project(sourdough.types.Lexicon):
     """ Private Methods """
     
     def _validate_settings(self) -> None:
-        """Validates 'settings' or converts it to a Settings instance."""
-        if not isinstance(self.settings, sourdough.Settings):
-            self.settings = sourdough.Settings(contents = self.settings)
+        """Validates 'settings' or converts it to a Settings instance.
+        
+        The method also injects the 'general' section of a Settings instance
+        into this Project instance as attributes. This allows easy, direct 
+        access of settings like 'verbose'.
+        
+        """
+        if not isinstance(self.settings, self.defaults['settings']):
+            self.settings = self.defaults['settings'](contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
 
     def _validate_name(self) -> None:
-        """Infers name as the first appropriate section name in 'settings'."""
+        """Creates 'name' if one doesn't exist.
+        
+        The method first tries to infers 'name' as the first appropriate section 
+        name in 'settings'. If that doesn't work, it uses the snake case of the
+        class.
+        
+        """
         if not self.name:
             for section in self.settings.keys():
                 if section not in ['general', 'files']:
@@ -145,7 +165,12 @@ class Project(sourdough.types.Lexicon):
         return self
 
     def _validate_identification(self) -> None:
-        """Creates unique 'identification' str based upon date and time."""
+        """Creates unique 'identification' if one doesn't exist.
+        
+        By default, 'identification' is set to the 'name' attribute followed by
+        an underscore and the date and time.
+        
+        """
         if not self.identification:
             self.identification = sourdough.tools.datetime_string(
                 prefix = self.name)
@@ -153,43 +178,75 @@ class Project(sourdough.types.Lexicon):
 
     def _validate_manager(self) -> None:
         """Validates 'manager' or converts it to a Manager instance."""
-        if not isinstance(self.manager, sourdough.Manager):
-            self.manager = sourdough.Manager(
+        if not isinstance(self.manager, self.defaults['manager']):
+            self.manager = self.defaults['manager'](
                 root_folder = self.manager, 
                 settings = self.settings)
         return self
-    
-    def _validate_workflow(self) -> None:
-        """Validates or converts 'workflow' and initializes it."""
+
+    def _set_missing_workflow(self) -> None:
+        """[summary]
+
+        Returns:
+            sourdough.Workflow: [description]
+        """
         try:
             self.workflow = self.settings[self.name]['workflow']
         except KeyError:
             if self.workflow is None:
-                self.workflow = 'editor'
+                self.workflow = self.defaults['workflow']
+        return self
+    
+    def _validate_workflow(self) -> None:
+        """Validates or converts 'workflow' and initializes it.
+        
+        If a Workflow subclass, Workflow subclass instance, or str matching a
+        recognized Workflow subclass is passed to this Project instance, it is 
+        used. Otherwise, the method looks in settings or uses the Workflow 
+        listed in 'defaults'. If a mismatched name of a Workflow is passed, a
+        default option will be used. If 'verbose' is False or there is no 
+        'verbose' attribute, this substitution will be done silently.
+        
+        """
+        if self.workflow is None:
+            self._set_missing_workflow()
         if inspect.isclass(self.workflow):
             self.workflow = self.workflow(project = self)
         elif isinstance(self.workflow, str):
-            self.workflow = self.resources.workflows.instance(
-                key = self.workflow,
-                project = self)
-        elif not isinstance(self.workflow, sourdough.Workflow):
+            try:
+                self.workflow = self.resources.workflows.instance(
+                    key = self.workflow,
+                    project = self)
+            except KeyError:
+                if hasattr(self, 'verbose') and self.verbose:
+                    print(
+                        f'{self.workflow} is not a recognized Workflow.'
+                        f'A default option will be used.')
+                self._set_missing_workflow()
+                self._validate_workflow()
+        elif isinstance(self.workflow, sourdough.Workflow):
+            self.workflow.project = self
+        else:
             raise TypeError(
                 f'workflow must be a str matching a key in workflows, a '
-                f'Workflow subclass, or a Workflow subclass instance')
+                f'Workflow subclass, or a Workflow subclass instance.')
         return self
+
                      
     def _auto_workflow(self) -> None:
         """Advances through the stored Workflow instances."""
         for stage in self.workflow:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Beginning {stage.action} process')
-            self = stage.perform(project = self)
+            key = sourdough.tools.snakify(stage.__class__.__name__)
+            self.add({key : stage.create(project = self)})
         return self
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
         return iter(self.workflow)
+
 
 # @dataclasses.dataclass
 # class Overview(sourdough.types.Lexicon):

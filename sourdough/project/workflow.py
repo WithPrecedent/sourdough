@@ -5,7 +5,9 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
+    Stage (Registrar, Container):
+    Workflow (Registrar, Hybrid, ABC):
+    
 """
 from __future__ import annotations
 import abc
@@ -28,6 +30,7 @@ class Stage(sourdough.quirks.Registrar, collections.abc.Container):
             of the class name (i.e., for Draft, the action is 'drafting').
             
     """
+    contents: Any = None
     action: str = None
 
     """ Required Subclass Methods """
@@ -61,10 +64,14 @@ class Stage(sourdough.quirks.Registrar, collections.abc.Container):
             return item == self.contents
     
     def __iter__(self) -> Iterable:
-        """[summary]
+        """Returns iterable of 'contents'.
+
+        Raises:
+            TypeError: if 'contents' is not iterable or if it is a str type.
 
         Returns:
-            Iterable: [description]
+            Iterable: of 'contents'.
+            
         """
         if not isinstance(self.contents, str):
             return iter(self.contents)
@@ -129,7 +136,18 @@ class Workflow(sourdough.quirks.Registrar, sourdough.types.Hybrid, abc.ABC):
         self.contents = new_stages
         return self
 
+    
+    def _get_last_stage(self) -> sourdough.Stage:
+        last_key = self.project.contents.keys()[:-1]
+        return self.project.contents[last_key]
+        
     """ Dunder Methods """
     
+    def __next__(self) -> Stage:
+        previous_stage = self._get_last_stage()
+        key = sourdough.tools.snakify(stage.__class__.__name__)
+        self.add({key : stage.create(project = self)})
+    
     def __iter__(self) -> Iterable:
-        return tuple(stage.create for stage in self.contents)
+        
+        
