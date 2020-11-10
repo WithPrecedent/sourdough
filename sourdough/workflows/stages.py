@@ -1,5 +1,5 @@
 """
-outputs: interim classes for sourdough Workflows
+stages: interim classes for sourdough Workflows
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -22,7 +22,7 @@ import sourdough
 
 @dataclasses.dataclass
 class Details(sourdough.types.Progression):
-    """Basic characteristics of a sourdough Component.
+    """Information to construct a sourdough Component.
     
     Args:
         contents (Sequence[str]): stored list of str. Included items should 
@@ -56,12 +56,18 @@ class Details(sourdough.types.Progression):
     """ Dunder Methods """
 
     def __str__(self) -> str:
+        """Returns pretty string representation of a class instance.
+        
+        Returns:
+            str: normal representation of a class instance.
+        
+        """
         return pprint.pformat(self, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
 class Outline(sourdough.Stage, sourdough.types.Lexicon):
-    """Output of the the drafting process.
+    """Basic description of a project design without refined structure.
 
     Outline is a dictionary representation of the overall project design. All
     Components are listed by key names and the information needed for Component
@@ -77,23 +83,21 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
 
     """ Public Methods """
     
-    def create(self, previous: sourdough.Stage, 
+    def create(self, previous: sourdough.Settings, 
                project: sourdough.Project) -> sourdough.Stage:
         """Creates an Outline instance based on 'settings'.
 
         Args:
-            settings (sourdough.Settings):
-            project (sourdough.Project): a Project instance for which 'design'
-                should be created based on its 'settings' and other attributes.
+            previous (sourdough.Settings): sourdough configuration options to
+                create an Outline instance.
+            project (sourdough.Project): a Project instance with resources and
+                other information needed for Outline construction.
 
         Returns:
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        if inspect.isclass(self):
-            outline = self()
-        else:
-            outline = self.__class__()
+        outline = self.__class__()
         suffixes = tuple(project.resources.bases.keys())
         for name, section in previous.items():
             # Tests whether the section in 'settings' is related to the 
