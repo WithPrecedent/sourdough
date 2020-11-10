@@ -1,5 +1,5 @@
 """
-editor: Workflow integrating settings while allowing runtime editing.
+editor: Director integrating settings while allowing runtime editing.
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -8,11 +8,11 @@ Contents:
     Details (Progression): basic information needed to construct composite objects.
     Outline (Lexicon): dictionary of Details instances with complete information
         needed to construct a set of related composite objects.
-    Draft (Stage): creates an Outline instance from a Settings instance.
-    Publish (Stage): creates a Worker instance from an Outline instance.
-    Apply (Stage): executes a Worker instance and possibly applies its methods
+    Draft (Specialist): creates an Outline instance from a Settings instance.
+    Publish (Specialist): creates a Flow instance from an Outline instance.
+    Apply (Specialist): executes a Flow instance and possibly applies its methods
         to external data.
-    Editor (Workflow): an iterable list of the Draft, Publish, and Apply Stages.
+    Editor (Director): an iterable list of the Draft, Publish, and Apply Specialists.
 
 """
 from __future__ import annotations
@@ -27,26 +27,26 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Editor(sourdough.Workflow):
-    """Three-step workflow that allows user editing and easy serialization.
+class Editor(sourdough.Director):
+    """Three-step director that allows user editing and easy serialization.
     
     Args:
-        contents (Sequence[Union[str, Stage]]): a list of str or Stages. 
+        contents (Sequence[Union[str, Specialist]]): a list of str or Specialists. 
             Defaults to an empty list.
         project (sourdough.Project): related project instance.
         
     """
-    contents: Sequence[Union[str, sourdough.Stage]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Specialist]] = dataclasses.field(
         default_factory = lambda: [
-            sourdough.stages.Outline,
-            sourdough.stages.Agenda,
-            sourdough.stages.Results])
+            sourdough.specialists.Outline,
+            sourdough.specialists.Agenda,
+            sourdough.specialists.Results])
     project: sourdough.Project = dataclasses.field(default = None, repr = False)
     
     
 
 # @dataclasses.dataclass
-# class Draft(sourdough.Stage):
+# class Draft(sourdough.Specialist):
 #     """Constructs an Outline instance from a project's settings.
     
 #     Args:
@@ -82,7 +82,7 @@ class Editor(sourdough.Workflow):
 #                     name = name,
 #                     outline = outline,
 #                     project = project,
-#                     base = 'worker')
+#                     base = 'flow')
 #         project.results.outline = outline
 #         return project
         
@@ -187,7 +187,7 @@ class Editor(sourdough.Workflow):
        
     
 # @dataclasses.dataclass
-# class Publish(sourdough.Stage):
+# class Publish(sourdough.Specialist):
 #     """Finalizes a composite object from user settings.
     
 #     Args:
@@ -216,7 +216,7 @@ class Editor(sourdough.Workflow):
 #     """ Private Methods """
 
 #     def _create_component(self, name: str,
-#                           project: sourdough.Project) -> sourdough.structure.Component:
+#                           project: sourdough.Project) -> sourdough.workflow.Component:
 #         """[summary]
 
 #         Args:
@@ -224,7 +224,7 @@ class Editor(sourdough.Workflow):
 #             project (sourdough.Project): [description]
 
 #         Returns:
-#             sourdough.structure.Component: [description]
+#             sourdough.workflow.Component: [description]
             
 #         """
 #         component = self._get_component(name = name, project = project)
@@ -233,19 +233,19 @@ class Editor(sourdough.Workflow):
 #             project = project)
 
 #     def _get_component(self, name: str,
-#                        project: sourdough.Project) -> sourdough.structure.Component:
+#                        project: sourdough.Project) -> sourdough.workflow.Component:
 #         """[summary]
 
 #         # Args:o
 #             name (str): [description]
-#             components (Mapping[str, sourdough.structure.Component]): [description]
+#             components (Mapping[str, sourdough.workflow.Component]): [description]
 #             project (sourdough.Project): [description]
 
 #         Raises:
 #             KeyError: [description]
 
 #         Returns:
-#             Mapping[ str, sourdough.structure.Component]: [description]
+#             Mapping[ str, sourdough.workflow.Component]: [description]
             
 #         """
 #         details = project.results.outline[name]
@@ -273,16 +273,16 @@ class Editor(sourdough.Workflow):
 #                         raise KeyError(f'{name} component does not exist')
 #         return component
 
-#     def _finalize_component(self, component: sourdough.structure.Component,
-#                             project: sourdough.Project) -> sourdough.structure.Component:
+#     def _finalize_component(self, component: sourdough.workflow.Component,
+#                             project: sourdough.Project) -> sourdough.workflow.Component:
 #         """[summary]
 
 #         Args:
-#             component (sourdough.structure.Component): [description]
+#             component (sourdough.workflow.Component): [description]
 #             project (sourdough.Project): [description]
 
 #         Returns:
-#             sourdough.structure.Component: [description]
+#             sourdough.workflow.Component: [description]
             
 #         """
 #         if isinstance(component, Iterable):
@@ -298,17 +298,17 @@ class Editor(sourdough.Workflow):
 #             pass
 #         return component
 
-#     def _create_parallel(self, component: sourdough.structure.Component,
-#                          project: sourdough.Project) -> sourdough.components.Worker:
+#     def _create_parallel(self, component: sourdough.workflow.Component,
+#                          project: sourdough.Project) -> sourdough.components.Flow:
 #         """[summary]
 
 #         Args:
-#             component (sourdough.structure.Component): [description]
-#             components (Mapping[str, sourdough.structure.Component]): [description]
+#             component (sourdough.workflow.Component): [description]
+#             components (Mapping[str, sourdough.workflow.Component]): [description]
 #             project (sourdough.Project): [description]
 
 #         Returns:
-#             sourdough.components.Worker: [description]
+#             sourdough.components.Flow: [description]
             
 #         """
 #         possible = []
@@ -330,17 +330,17 @@ class Editor(sourdough.Workflow):
 #             project = project)
 #         return component
 
-#     def _create_serial(self, component: sourdough.structure.Component, 
-#                        project: sourdough.Project) -> sourdough.components.Worker:
+#     def _create_serial(self, component: sourdough.workflow.Component, 
+#                        project: sourdough.Project) -> sourdough.components.Flow:
 #         """[summary]
 
 #         Args:
-#             component (sourdough.structure.Component): [description]
-#             components (Mapping[str, sourdough.structure.Component]): [description]
+#             component (sourdough.workflow.Component): [description]
+#             components (Mapping[str, sourdough.workflow.Component]): [description]
 #             project (sourdough.Project): [description]
 
 #         Returns:
-#             sourdough.components.Worker: [description]
+#             sourdough.components.Flow: [description]
             
 #         """
 #         new_contents = []
@@ -356,8 +356,8 @@ class Editor(sourdough.Workflow):
 #         return component
 
 #     def _add_attributes(self, 
-#             component: sourdough.structure.Component,
-#             project: sourdough.Project) -> sourdough.structure.Component:
+#             component: sourdough.workflow.Component,
+#             project: sourdough.Project) -> sourdough.workflow.Component:
 #         """[summary]
 
 #         Returns:
@@ -373,7 +373,7 @@ class Editor(sourdough.Workflow):
 
                 
 # @dataclasses.dataclass
-# class Apply(sourdough.Stage):
+# class Apply(sourdough.Specialist):
 #     """
     
 #     """

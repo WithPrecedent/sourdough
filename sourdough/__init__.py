@@ -7,8 +7,8 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     core: core structural classes and mixins.
     project: base classes for sourdough projects.
-    structures: composite object classes.
-    workflows: classes containing workflow sequences for sourdough projects.
+    workflows: composite object classes.
+    directors: classes containing director sequences for sourdough projects.
     utilities: functions that make complex and tedious tasks easier.
 
 In general, python files in sourdough are over-documented to allow beginning
@@ -39,24 +39,22 @@ from .utilities import tools
 
 from .core import types
 from .core import quirks
-from .core import workshop
 
 from .project import resources
-from .project import structure
-# from .project import workflow
+from .project import workflow
 
 from .core.configuration import Settings
 from .core.files import Manager
-from .project.workflow import Stage
-from .project.workflow import Workflow
+from .project.labor import Specialist
+from .project.labor import Director
 from .project.interface import Project
 
-from .structures import components
-from .structures import graphs
-from .structures import workers
+from .workflows import components
+from .workflows import graphs
+from .workflows import flows
 
-from .workflows import stages
-from .workflows import editor
+from .workers import specialists
+from .workers import directors
 
 __version__ = '0.1.1'
 

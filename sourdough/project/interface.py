@@ -23,21 +23,21 @@ import sourdough
 DEFAULTS = {
     'settings': sourdough.Settings,
     'manager': sourdough.Manager,
-    'stage': sourdough.Stage,
-    'workflow': 'editor'}
+    'specialist': sourdough.Specialist,
+    'director': 'editor'}
 
 
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a sourdough project.
     
-    Unlike an ordinary Hybrid, a Project instance will iterate 'workflow' 
+    Unlike an ordinary Hybrid, a Project instance will iterate 'director' 
     instead of 'contents'. However, all getters and setters still point to 
-    'contents', which is where the results of 'workflow' are stored.
+    'contents', which is where the results of 'director' are stored.
         
     Args:
-        contents (Mapping[Any, Stage]]): stored dictionary that stores completed
-            Stage instances created by a Workflow instance. Defaults to an empty 
+        contents (Mapping[Any, Specialist]]): stored dictionary that stores completed
+            Specialist instances created by a Director instance. Defaults to an empty 
             dict.
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
@@ -49,9 +49,9 @@ class Project(sourdough.types.Hybrid):
             Manager instance contains all file path and import/export methods 
             for use throughout sourdough. Defaults to the default Manager 
             instance.  
-        workflow (Union[sourdough.Workflow, str]): Workflow subclass, 
-            Workflow subclass instance, or a str corresponding to a key in 
-            'workflows'. Defaults to None.
+        director (Union[sourdough.Director, str]): Director subclass, 
+            Director subclass instance, or a str corresponding to a key in 
+            'directors'. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -65,18 +65,18 @@ class Project(sourdough.types.Hybrid):
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
-        automatic (bool): whether to automatically advance 'workflow' (True) or 
-            whether the workflow must be advanced manually (False). Defaults to 
+        automatic (bool): whether to automatically advance 'director' (True) or 
+            whether the director must be advanced manually (False). Defaults to 
             True.
         data (object): any data object for the project to be applied.         
   
             
     """
-    contents: Sequence[sourdough.Stage] = dataclasses.field(
+    contents: Sequence[sourdough.Specialist] = dataclasses.field(
         default_factory = list)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     manager: Union[sourdough.Manager, str, pathlib.Path] = None
-    workflow: Union[sourdough.Workflow, str] = None
+    director: Union[sourdough.Director, str] = None
     name: str = None
     identification: str = None
     automatic: bool = True
@@ -86,7 +86,7 @@ class Project(sourdough.types.Hybrid):
     defaults: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: DEFAULTS)
     _validations: ClassVar[Sequence[str]] = [
-        'settings', 'name', 'identification', 'manager', 'workflow']
+        'settings', 'name', 'identification', 'manager', 'director']
     
     """ Initialization Methods """
 
@@ -102,9 +102,9 @@ class Project(sourdough.types.Hybrid):
         # Calls validation methods based on items listed in '_validations'.
         for validation in self._validations:
             getattr(self, f'_validate_{validation}')()
-        # Advances through 'workflow' if 'automatic' is True.
+        # Advances through 'director' if 'automatic' is True.
         if self.automatic:
-            self._auto_workflow()
+            self._auto_director()
 
     """ Class Methods """
 
@@ -186,69 +186,69 @@ class Project(sourdough.types.Hybrid):
                 settings = self.settings)
         return self
 
-    def _set_missing_workflow(self) -> None:
+    def _set_missing_director(self) -> None:
         """[summary]
 
         Returns:
-            sourdough.Workflow: [description]
+            sourdough.Director: [description]
         """
         try:
-            self.workflow = self.settings[self.name]['workflow']
+            self.director = self.settings[self.name]['director']
         except KeyError:
-            if self.workflow is None:
-                self.workflow = self.defaults['workflow']
+            if self.director is None:
+                self.director = self.defaults['director']
         return self
     
-    def _validate_workflow(self) -> None:
-        """Validates or converts 'workflow' and initializes it.
+    def _validate_director(self) -> None:
+        """Validates or converts 'director' and initializes it.
         
-        If a Workflow subclass, Workflow subclass instance, or str matching a
-        recognized Workflow subclass is passed to this Project instance, it is 
-        used. Otherwise, the method looks in settings or uses the Workflow 
-        listed in 'defaults'. If a mismatched name of a Workflow is passed, a
+        If a Director subclass, Director subclass instance, or str matching a
+        recognized Director subclass is passed to this Project instance, it is 
+        used. Otherwise, the method looks in settings or uses the Director 
+        listed in 'defaults'. If a mismatched name of a Director is passed, a
         default option will be used. If 'verbose' is False or there is no 
         'verbose' attribute, this substitution will be done silently.
         
         """
-        if self.workflow is None:
-            self._set_missing_workflow()
-        if inspect.isclass(self.workflow):
-            self.workflow = self.workflow(project = self)
-        elif isinstance(self.workflow, str):
+        if self.director is None:
+            self._set_missing_director()
+        if inspect.isclass(self.director):
+            self.director = self.director(project = self)
+        elif isinstance(self.director, str):
             try:
-                self.workflow = self.resources.workflows.instance(
-                    key = self.workflow,
+                self.director = self.resources.directors.instance(
+                    key = self.director,
                     project = self)
             except KeyError:
                 if hasattr(self, 'verbose') and self.verbose:
                     print(
-                        f'{self.workflow} is not a recognized Workflow.'
+                        f'{self.director} is not a recognized Director.'
                         f'A default option will be used.')
-                self._set_missing_workflow()
-                self._validate_workflow()
-        elif isinstance(self.workflow, sourdough.Workflow):
-            self.workflow.project = self
+                self._set_missing_director()
+                self._validate_director()
+        elif isinstance(self.director, sourdough.Director):
+            self.director.project = self
         else:
             raise TypeError(
-                f'workflow must be a str matching a key in workflows, a '
-                f'Workflow subclass, or a Workflow subclass instance.')
+                f'director must be a str matching a key in directors, a '
+                f'Director subclass, or a Director subclass instance.')
         return self
                      
-    def _auto_workflow(self) -> None:
-        """Advances through the stored Workflow instances."""
-        for stage in self.workflow:
-            self.append(stage)
+    def _auto_director(self) -> None:
+        """Advances through the stored Director instances."""
+        for specialist in self.director:
+            self.append(specialist)
         return self
 
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable:
-        return iter(self._auto_workflow)
+        return iter(self._auto_director)
 
 
 # @dataclasses.dataclass
 # class Overview(sourdough.types.Lexicon):
-#     """Dictionary of different Element types in a Worker instance.
+#     """Dictionary of different Element types in a Flow instance.
     
 #     Args:
 #         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
@@ -275,19 +275,19 @@ class Project(sourdough.types.Hybrid):
 #         """Initializes class instance attributes."""
 #         # Calls parent and/or mixin initialization method(s).
 #         super().__post_init__()
-#         if self.structure.structure is not None:
+#         if self.workflow.workflow is not None:
 #             self.add({
-#                 'name': self.structure.name, 
-#                 'structure': self.structure.structure.name})
-#             for key, value in self.structure.structure.options.items():
-#                 matches = self.structure.find(
+#                 'name': self.workflow.name, 
+#                 'workflow': self.workflow.workflow.name})
+#             for key, value in self.workflow.workflow.options.items():
+#                 matches = self.workflow.find(
 #                     self._get_type, 
 #                     element = value)
 #                 if len(matches) > 0:
 #                     self.contents[f'{key}s'] = matches
 #         else:
 #             raise ValueError(
-#                 'structure must be a Role for an overview to be created.')
+#                 'workflow must be a Role for an overview to be created.')
 #         return self          
     
 #     """ Dunder Methods """

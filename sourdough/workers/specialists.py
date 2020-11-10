@@ -1,5 +1,5 @@
 """
-stages: interim classes for sourdough Workflows
+specialists: interim classes for sourdough Directors
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -66,8 +66,8 @@ class Details(sourdough.types.Progression):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.Stage, sourdough.types.Lexicon):
-    """Basic description of a project design without refined structure.
+class Outline(sourdough.Specialist, sourdough.types.Lexicon):
+    """Basic description of a project design without refined workflow.
 
     Outline is a dictionary representation of the overall project design. All
     Components are listed by key names and the information needed for Component
@@ -84,7 +84,7 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
     """ Public Methods """
     
     def create(self, previous: sourdough.Settings, 
-               project: sourdough.Project) -> sourdough.Stage:
+               project: sourdough.Project) -> sourdough.Specialist:
         """Creates an Outline instance based on 'settings'.
 
         Args:
@@ -112,7 +112,7 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
                     outline = outline,
                     settings = previous,
                     project = project,
-                    base = 'worker')
+                    base = 'flow')
         print('test outline', outline)
         return outline
         
@@ -226,7 +226,7 @@ class Outline(sourdough.Stage, sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Agenda(sourdough.Stage, sourdough.types.Hybrid):
+class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
     """Output of the the drafting process.
 
     Outline is a dictionary representation of the overall project design. All
@@ -236,13 +236,13 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
     Args:
                         
     """
-    contents: sourdough.structure.Component = None
+    contents: sourdough.workflow.Component = None
     action: str = 'publishing'
 
     """ Public Methods """
 
-    def create(self, previous: sourdough.Stage, 
-               project: sourdough.Project) -> sourdough.Stage:
+    def create(self, previous: sourdough.Specialist, 
+               project: sourdough.Project) -> sourdough.Specialist:
         """Drafts a Plan instance based on 'outline'.
             
         """ 
@@ -254,8 +254,8 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
     
     """ Private Methods """
 
-    def _create_component(self, name: str, previous: sourdough.Stage,
-                          project: sourdough.Project) -> sourdough.structure.Component:
+    def _create_component(self, name: str, previous: sourdough.Specialist,
+                          project: sourdough.Project) -> sourdough.workflow.Component:
         """[summary]
 
         Args:
@@ -263,7 +263,7 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.structure.Component: [description]
+            sourdough.workflow.Component: [description]
             
         """
         component = self._get_component(name = name, previous = previous, 
@@ -272,20 +272,20 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             component = component, 
             project = project)
 
-    def _get_component(self, name: str, previous: sourdough.Stage,
-                       project: sourdough.Project) -> sourdough.structure.Component:
+    def _get_component(self, name: str, previous: sourdough.Specialist,
+                       project: sourdough.Project) -> sourdough.workflow.Component:
         """[summary]
 
         # Args:o
             name (str): [description]
-            components (Mapping[str, sourdough.structure.Component]): [description]
+            components (Mapping[str, sourdough.workflow.Component]): [description]
             project (sourdough.Project): [description]
 
         Raises:
             KeyError: [description]
 
         Returns:
-            Mapping[ str, sourdough.structure.Component]: [description]
+            Mapping[ str, sourdough.workflow.Component]: [description]
             
         """
         print('test previous', previous)
@@ -312,16 +312,16 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
                         raise KeyError(f'{name} component does not exist')
         return component
 
-    def _finalize_component(self, component: sourdough.structure.Component,
-                            project: sourdough.Project) -> sourdough.structure.Component:
+    def _finalize_component(self, component: sourdough.workflow.Component,
+                            project: sourdough.Project) -> sourdough.workflow.Component:
         """[summary]
 
         Args:
-            component (sourdough.structure.Component): [description]
+            component (sourdough.workflow.Component): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.structure.Component: [description]
+            sourdough.workflow.Component: [description]
             
         """
         if isinstance(component, Iterable):
@@ -337,17 +337,17 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             pass
         return component
 
-    def _create_parallel(self, component: sourdough.structure.Component,
-                         project: sourdough.Project) -> sourdough.components.Worker:
+    def _create_parallel(self, component: sourdough.workflow.Component,
+                         project: sourdough.Project) -> sourdough.components.Flow:
         """[summary]
 
         Args:
-            component (sourdough.structure.Component): [description]
-            components (Mapping[str, sourdough.structure.Component]): [description]
+            component (sourdough.workflow.Component): [description]
+            components (Mapping[str, sourdough.workflow.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.components.Worker: [description]
+            sourdough.components.Flow: [description]
             
         """
         possible = []
@@ -369,17 +369,17 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
             project = project)
         return component
 
-    def _create_serial(self, component: sourdough.structure.Component, 
-                       project: sourdough.Project) -> sourdough.components.Worker:
+    def _create_serial(self, component: sourdough.workflow.Component, 
+                       project: sourdough.Project) -> sourdough.components.Flow:
         """[summary]
 
         Args:
-            component (sourdough.structure.Component): [description]
-            components (Mapping[str, sourdough.structure.Component]): [description]
+            component (sourdough.workflow.Component): [description]
+            components (Mapping[str, sourdough.workflow.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.components.Worker: [description]
+            sourdough.components.Flow: [description]
             
         """
         new_contents = []
@@ -395,8 +395,8 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
         return component
 
     def _add_attributes(self, 
-            component: sourdough.structure.Component,
-            project: sourdough.Project) -> sourdough.structure.Component:
+            component: sourdough.workflow.Component,
+            project: sourdough.Project) -> sourdough.workflow.Component:
         """[summary]
 
         Returns:
@@ -412,10 +412,10 @@ class Agenda(sourdough.Stage, sourdough.types.Hybrid):
 
 
 @dataclasses.dataclass
-class Results(sourdough.Stage, sourdough.types.Lexicon):
+class Results(sourdough.Specialist, sourdough.types.Lexicon):
     """A container for any results produced by a Project instance.
 
-    Attributes are dynamically added by Workflow instances at runtime.
+    Attributes are dynamically added by Director instances at runtime.
 
     Args:
         contents (Mapping[str, Details]]): stored dictionary with Details
@@ -443,8 +443,8 @@ class Results(sourdough.Stage, sourdough.types.Lexicon):
 
     @classmethod
     @functools.singledispatchmethod    
-    def create(self, previous: sourdough.Stage, 
-               project: sourdough.Project) -> sourdough.Stage:        
+    def create(self, previous: sourdough.Specialist, 
+               project: sourdough.Project) -> sourdough.Specialist:        
         """Drafts a Plan instance based on 'outline'.
             
         """

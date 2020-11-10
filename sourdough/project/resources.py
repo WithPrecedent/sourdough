@@ -14,9 +14,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough 
 
 
-workflows = sourdough.types.Catalog()
+directors = sourdough.types.Catalog()
 
-stages = sourdough.types.Catalog()
+specialists = sourdough.types.Catalog()
 
 bases = sourdough.types.Catalog()
 

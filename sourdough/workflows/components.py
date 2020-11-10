@@ -17,7 +17,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.quirks.Loader, sourdough.structure.Component):
+class Technique(sourdough.quirks.Loader, sourdough.workflow.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -97,19 +97,19 @@ class Technique(sourdough.quirks.Loader, sourdough.structure.Component):
 
              
 @dataclasses.dataclass
-class Step(sourdough.structure.Component):
+class Step(sourdough.workflow.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
     all possible technique instances that could be used. This is often useful 
-    when creating 'comparative' Worker instances which test a variety of 
+    when creating 'comparative' Flow instances which test a variety of 
     strategies with similar or identical parameters and/or methods.
 
     A Step instance will try to return attributes from Technique if the
     attribute is not found in the Step instance. 
 
     Args:
-        technique (Technique): technique object for this Worker in a sourdough
+        technique (Technique): technique object for this Flow in a sourdough
             sequence. Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -193,10 +193,10 @@ class Step(sourdough.structure.Component):
    
 
 @dataclasses.dataclass
-class Worker(sourdough.structure.Component, sourdough.types.Hybrid):
+class Flow(sourdough.workflow.Component, sourdough.types.Hybrid):
     """Base class for composite objects in sourdough projects.
     
-    Worker differs from an ordinary Hybrid in 1 significant way:
+    Flow differs from an ordinary Hybrid in 1 significant way:
         1) It is mixed in with Sequencify which allows for type validation and 
             conversion, using the 'verify' and 'convert' methods.
             
@@ -236,7 +236,7 @@ class Worker(sourdough.structure.Component, sourdough.types.Hybrid):
         
         """
         raise NotImplementedError(
-            'subclasses of Worker must provide their own apply methods')
+            'subclasses of Flow must provide their own apply methods')
                    
     """ Required Subclass Methods """
     

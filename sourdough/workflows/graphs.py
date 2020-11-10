@@ -1,5 +1,5 @@
 """
-graph: flexible graph structure (not yet implemented)
+graph: flexible graph workflow (not yet implemented)
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -22,17 +22,17 @@ import sourdough
 
 
 # @dataclasses.dataclass
-# class Graph(sourdough.components.Worker):
+# class Graph(sourdough.components.Flow):
 #     """Base class for composite objects in sourdough projects.
 
 #     Distinguishing characteristics of a Graph:
 #         1) Iteration is not defined by ordering of contents.
-#         2) Incorporates Edges as part of its structure.
+#         2) Incorporates Edges as part of its workflow.
 #         3) All Components must be connected (sourdough does not presently
 #             support graphs with unconnected graphs).
             
 #     Args:
-#         contents (Sequence[Union[str, sourdough.structure.Component]]): a list of str or
+#         contents (Sequence[Union[str, sourdough.workflow.Component]]): a list of str or
 #             Components. 
 #         name (str): designates the name of a class instance that is used for 
 #             internal referencing throughout sourdough. For example if a 
@@ -47,7 +47,7 @@ import sourdough
 #             snake case version of the class name ('__class__.__name__').
     
 #     """
-#     contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+#     contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
 #         default_factory = list)
 #     name: str = None
 
@@ -57,14 +57,14 @@ import sourdough
 # class Graph(Role):
     
 #     name: str = None
-#     Worker: sourdough.components.Worker = None
+#     Flow: sourdough.components.Flow = None
 #     iterator: Union[str, Callable] = 'iterator'    
 #     options: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         contents = {
 #             'edge': sourdough.Edge,
 #             'node': sourdough.Node})
         
-    # contents: Sequence[Union[sourdough.structure.Component, str]] = dataclasses.field(
+    # contents: Sequence[Union[sourdough.workflow.Component, str]] = dataclasses.field(
     #     default_factory = list)
     # design: str = 'chained'
     # identification: str = None
@@ -123,13 +123,13 @@ import sourdough
           
     # def add_node(self,
     #         name: str = None,
-    #         element: sourdough.structure.Component = None) -> None:
+    #         element: sourdough.workflow.Component = None) -> None:
     #     """Adds a node to the graph."""
     #     if element and not name:
     #         name = element.name
     #     elif not name:
     #         raise ValueError('element or name must be passed to add_node')
-    #     node = sourdough.structure.Component(name = name, element = element)
+    #     node = sourdough.workflow.Component(name = name, element = element)
     #     self.contents.append(node)
     #     return self
 
@@ -263,7 +263,7 @@ import sourdough
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: sourdough.components.Worker) -> Sequence[sourdough.structure.Component]:
+    #         graph: sourdough.components.Flow) -> Sequence[sourdough.workflow.Component]:
     #     """[summary]
 
     #     Returns:
@@ -277,9 +277,9 @@ import sourdough
     #         searched = searched)
         
     # def _topological_descend(self, 
-    #         graph: sourdough.components.Worker, 
-    #         node: sourdough.structure.Component,
-    #         searched: list[str]) -> Sequence[sourdough.structure.Component]: 
+    #         graph: sourdough.components.Flow, 
+    #         node: sourdough.workflow.Component,
+    #         searched: list[str]) -> Sequence[sourdough.workflow.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -297,7 +297,7 @@ import sourdough
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: sourdough.components.Worker) -> Sequence[sourdough.structure.Component]:
+    #         graph: sourdough.components.Flow) -> Sequence[sourdough.workflow.Component]:
     #     """[summary]
 
     #     Returns:
@@ -311,9 +311,9 @@ import sourdough
     #         searched = searched)
         
     # def _dfs_descend(self, 
-    #         graph: sourdough.components.Worker, 
-    #         node: sourdough.structure.Component,
-    #         searched: list[str]) -> Sequence[sourdough.structure.Component]: 
+    #         graph: sourdough.components.Flow, 
+    #         node: sourdough.workflow.Component,
+    #         searched: list[str]) -> Sequence[sourdough.workflow.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -331,7 +331,7 @@ import sourdough
     #     """ Properties """
     
     # @property
-    # def root(self) -> sourdough.structure.Component:
+    # def root(self) -> sourdough.workflow.Component:
     #     """[summary]
 
     #     Raises:
@@ -350,7 +350,7 @@ import sourdough
     #         return rootless[0]
  
     # @property
-    # def endpoints(self) -> Sequence[sourdough.structure.Component]:
+    # def endpoints(self) -> Sequence[sourdough.workflow.Component]:
     #     """[summary]
 
     #     Returns:
@@ -362,8 +362,8 @@ import sourdough
     # """ Public Methods """
         
     # def get_sorted(self, 
-    #         graph: sourdough.components.Worker = None,
-    #         return_elements: bool = False) -> Sequence[sourdough.structure.Component]:
+    #         graph: sourdough.components.Flow = None,
+    #         return_elements: bool = False) -> Sequence[sourdough.workflow.Component]:
     #     """Performs a topological sort on 'graph'.
         
     #     If 'graph' is not passed, the 'contents' attribute is used instead.
@@ -379,7 +379,7 @@ import sourdough
     #     else:
     #         return sorted_queue
 
-    # def validate(self, graph: sourdough.components.Worker) -> None:
+    # def validate(self, graph: sourdough.components.Flow) -> None:
     #     """
         
 

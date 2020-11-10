@@ -1,5 +1,5 @@
 """
-workers: structured iterables in sourdough projects
+flows: workflowd iterables in sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.components.Worker):
+class Aggregation(sourdough.components.Flow):
     """Aggregates unordered objects.
     
     Distinguishing characteristics of an Aggregation:
@@ -41,14 +41,14 @@ class Aggregation(sourdough.components.Worker):
             sourdough classes. 
     
     """
-    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
         default_factory = set)
     name: str = None
        
 
 @dataclasses.dataclass
-class SerialWorker(sourdough.components.Worker, abc.ABC):
-    """Base class for serially structures Workers in sourdough projects.
+class SerialFlow(sourdough.components.Flow, abc.ABC):
+    """Base class for serially workflows Flows in sourdough projects.
         
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
@@ -62,18 +62,18 @@ class SerialWorker(sourdough.components.Worker, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     branches: ClassVar[bool] = False   
 
     
 @dataclasses.dataclass
-class Cycle(SerialWorker):
+class Cycle(SerialFlow):
     """Ordered sourdough Components which will be repetitively called.
 
     Distinguishing characteristics of a Pipeline:
-        1) Follows a sequence of instructions (serial structure).
+        1) Follows a sequence of instructions (serial workflow).
         2) It may pass data or other arguments to the next step in the sequence.
         3) Only one connection or path exists between each object.
         4) It repeats the number of times set in the 'iterations' attribute.
@@ -81,7 +81,7 @@ class Cycle(SerialWorker):
             by a condition set in 'criteria'.
         
     Args:
-        contents (Sequence[Union[str, sourdough.structure.Component]]): a set of str or
+        contents (Sequence[Union[str, sourdough.workflow.Component]]): a set of str or
             Components. 
         name (str): property which designates the internal reference of a class 
             instance that is used throughout sourdough. For example, if a 
@@ -92,7 +92,7 @@ class Cycle(SerialWorker):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 10
@@ -100,11 +100,11 @@ class Cycle(SerialWorker):
     
 
 @dataclasses.dataclass
-class Pipeline(SerialWorker):
+class Pipeline(SerialFlow):
     """Ordered sourdough Components without branching.
 
     Distinguishing characteristics of a Pipeline:
-        1) Follows a sequence of instructions (serial structure).
+        1) Follows a sequence of instructions (serial workflow).
         2) It may pass data or other arguments to the next step in the sequence.
         3) Only one connection or path exists between each object. There is no
             branching or looping.
@@ -121,14 +121,14 @@ class Pipeline(SerialWorker):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None    
 
 
 @dataclasses.dataclass
-class ParallelWorker(sourdough.components.Worker, abc.ABC):
-    """Base class for parallelly structured Workers in sourdough projects.
+class ParallelFlow(sourdough.components.Flow, abc.ABC):
+    """Base class for parallelly workflowd Flows in sourdough projects.
         
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
@@ -142,7 +142,7 @@ class ParallelWorker(sourdough.components.Worker, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.structure.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 1
@@ -169,15 +169,15 @@ class ParallelWorker(sourdough.components.Worker, abc.ABC):
 
 
 @dataclasses.dataclass
-class Contest(ParallelWorker):
-    """Stores Workers in a comparative parallel structure and chooses best.
+class Contest(ParallelFlow):
+    """Stores Flows in a comparative parallel workflow and chooses best.
 
     Distinguishing characteristics of a Contest:
-        1) Repeats a Pipeline with different options (parallel structure).
+        1) Repeats a Pipeline with different options (parallel workflow).
         2) Chooses the best option based upon selected criteria.
         3) Each stored Component is only attached to the Contest with exactly 
             one connection (these connections are not defined separately - they
-            are simply part of the parallel structure).
+            are simply part of the parallel workflow).
         
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
@@ -199,16 +199,16 @@ class Contest(ParallelWorker):
     
     
 @dataclasses.dataclass
-class Study(ParallelWorker):
-    """Stores Workers in a comparative parallel structure.
+class Study(ParallelFlow):
+    """Stores Flows in a comparative parallel workflow.
 
     Distinguishing characteristics of a Study:
-        1) Repeats a Pipeline with different options (parallel structure).
+        1) Repeats a Pipeline with different options (parallel workflow).
         2) Maintains all of the repetitions without selecting or averaging the 
             results.
         3) Each stored Component is only attached to the Study with exactly 
             one connection (these connections are not defined separately - they
-            are simply part of the parallel structure).
+            are simply part of the parallel workflow).
                       
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
@@ -230,16 +230,16 @@ class Study(ParallelWorker):
         
     
 @dataclasses.dataclass
-class Survey(ParallelWorker):
-    """Stores Workers in a comparative parallel structure and averages results.
+class Survey(ParallelFlow):
+    """Stores Flows in a comparative parallel workflow and averages results.
 
     Distinguishing characteristics of a Survey:
-        1) Repeats a Pipeline with different options (parallel structure).
+        1) Repeats a Pipeline with different options (parallel workflow).
         2) Averages or otherwise combines the results based upon selected 
             criteria.
         3) Each stored Component is only attached to the Survey with exactly 
             one connection (these connections are not defined separately - they
-            are simply part of the parallel structure).    
+            are simply part of the parallel workflow).    
                     
     Args:
         contents (Sequence[Union[str, Component]]): a list of str or Components. 
@@ -266,11 +266,11 @@ class Survey(ParallelWorker):
 #         sourdough.Registry, 
 #         sourdough.Element, 
 #         abc.ABC):
-#     """Base class related to constructing and iterating Worker instances.
+#     """Base class related to constructing and iterating Flow instances.
     
 #     """
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 1
 #     library: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         stored_types = ('Role'))
@@ -281,52 +281,52 @@ class Survey(ParallelWorker):
 #         """Initializes class instance attributes."""
 #         # Calls parent and/or mixin initialization method(s).
 #         super().__post_init__()
-#         # Sets 'index' for current location in 'Worker' for the iterator.
+#         # Sets 'index' for current location in 'Flow' for the iterator.
 #         self.index: int = -1
 
 #     """ Required Subclass Methods """
 
 #     @abc.abstractmethod
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
  
 #     @abc.abstractmethod
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
     
 #     """ Class Methods """
 
 #     @classmethod
-#     def validate(cls, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
-#         """Returns a Role instance based upon 'structure'.
+#     def validate(cls, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#         """Returns a Role instance based upon 'workflow'.
         
 #         Args:
-#             Worker (sourdough.components.Worker): Hybrid instance with 'structure' attribute
+#             Flow (sourdough.components.Flow): Hybrid instance with 'workflow' attribute
 #                 to be validated.
                 
 #         Raises:
-#             TypeError: if 'Worker.structure' is neither a str nor Role type.
+#             TypeError: if 'Flow.workflow' is neither a str nor Role type.
             
 #         Returns:
-#             sourdough.components.Worker: with a validated 'structure' attribute.
+#             sourdough.components.Flow: with a validated 'workflow' attribute.
             
 #         """
-#         if isinstance(Worker.structure, str):
-#             Worker.structure = cls.library[Worker.structure]()
-#         elif (inspect.isclass(Worker.structure) 
-#                 and issubclass(Worker.structure, cls)):
-#             Worker.structure = Worker.structure() 
-#         elif isinstance(Worker.structure, cls):
-#             Worker.structure.__post_init__()
+#         if isinstance(Flow.workflow, str):
+#             Flow.workflow = cls.library[Flow.workflow]()
+#         elif (inspect.isclass(Flow.workflow) 
+#                 and issubclass(Flow.workflow, cls)):
+#             Flow.workflow = Flow.workflow() 
+#         elif isinstance(Flow.workflow, cls):
+#             Flow.workflow.__post_init__()
 #         else:
 #             raise TypeError(
-#                 f'The structure attribute of Worker must be a str or {cls} type')
-#         return Worker
+#                 f'The workflow attribute of Flow must be a str or {cls} type')
+#         return Flow
 
 #     """ Public Methods """
     
-#     def iterate(self, Worker: sourdough.components.Worker) -> Iterable:
-#         return more_itertools.collapse(Worker.contents)
+#     def iterate(self, Flow: sourdough.components.Flow) -> Iterable:
+#         return more_itertools.collapse(Flow.contents)
 
 #     """ Private Methods """
   
@@ -357,17 +357,17 @@ class Survey(ParallelWorker):
 #             Mapping[ str, Mapping[str, Sequence[str]]]: [description]
             
 #         """
-#         structures = {}
+#         workflows = {}
 #         for key in project.components.resources.keys():
 #             suffix = f'_{key}s'
-#             structures[key] = {
+#             workflows[key] = {
 #                 k: v for k, v in settings.items() if k.endswith(suffix)} 
             
 #         return {k: v for k, v in project.components.resources.items()}
     
 #     def _build_wrapper(self,
 #             key: str, 
-#             generic: sourdough.structure.Component,
+#             generic: sourdough.workflow.Component,
 #             wrapped: Mapping[str, Sequence[str]],
 #             project: sourdough.Project,
 #             **kwargs) -> None:
@@ -387,17 +387,17 @@ class Survey(ParallelWorker):
 #             for item in wrapped:
 #                 kwargs.update({generic.contains: key})
 #                 component = project.component.instance(key = key, **kwargs)
-#                 self.Worker.add(component) 
+#                 self.Flow.add(component) 
 #         # Otherwise uses the appropriate generic type.
 #         else:
 #             for item in wrapped:
 #                 kwargs.update({'name': key, generic.contains: key})
-#                 self.Worker.add(generic(**kwargs)) 
+#                 self.Flow.add(generic(**kwargs)) 
 #         return self   
 
 #     def _build_component(self,
 #             key: str, 
-#             generic: sourdough.structure.Component,
+#             generic: sourdough.workflow.Component,
 #             project: sourdough.Project,
 #             **kwargs) -> None:
 #         """[summary]
@@ -409,7 +409,7 @@ class Survey(ParallelWorker):
 #         except KeyError:
 #             kwargs.update({'name': key})
 #             component = generic(**kwargs)
-#         self.Worker.add(component)
+#         self.Flow.add(component)
 #         return self  
            
       
@@ -417,15 +417,15 @@ class Survey(ParallelWorker):
 # class Obey(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 1
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
 
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
 
       
@@ -433,18 +433,18 @@ class Survey(ParallelWorker):
 # class Repeat(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 2
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
     
-#     def iterate(self, Worker: sourdough.components.Worker) -> Iterable:
-#         return itertools.repeat(Worker.contents, self.iterations)
+#     def iterate(self, Flow: sourdough.components.Flow) -> Iterable:
+#         return itertools.repeat(Flow.contents, self.iterations)
         
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
        
          
@@ -452,29 +452,29 @@ class Survey(ParallelWorker):
 # class Compare(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 1
 
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         """[summary]
 
 #         Args:
-#             Worker (sourdough.components.Worker): [description]
+#             Flow (sourdough.components.Flow): [description]
 
 #         Returns:
-#             sourdough.components.Worker: [description]
+#             sourdough.components.Flow: [description]
 #         """
 #         steps = components.pop([components.keys()[0]])
 #         possible = list(components.values())
 #         permutations = list(map(list, itertools.product(*possible)))
 #         for i, contained in enumerate(permutations):
-#             instance = sourdough.components.Worker(
+#             instance = sourdough.components.Flow(
 #                 _components = tuple(zip(steps, contained)))
-#         return Worker
+#         return Flow
     
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
 
          
@@ -482,15 +482,15 @@ class Survey(ParallelWorker):
 # class Judge(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 10
 
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
     
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
     
 
@@ -498,21 +498,21 @@ class Survey(ParallelWorker):
 # class Survey(Role):
     
 #     name: str = None
-#     workflow: sourdough.Workflow = None
+#     director: sourdough.Director = None
 #     iterations: int = 10
     
 #     """ Public Methods """
 
-#     def organize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
     
-#     def finalize(self, Worker: sourdough.components.Worker) -> sourdough.components.Worker:
+#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
 #         pass
 
 
 
 # @dataclasses.dataclass
-# class LazyIterable(collections.abc.Iterable, sourdough.structure.Component, abc.ABC):
+# class LazyIterable(collections.abc.Iterable, sourdough.workflow.Component, abc.ABC):
     
     
 #     @abc.abstractmethod
@@ -537,10 +537,10 @@ class Survey(ParallelWorker):
 # class Tree(Role):
     
 #     name: str = None
-#     Worker: sourdough.components.Worker = None
+#     Flow: sourdough.components.Flow = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
-#             'Worker': sourdough.components.Worker})
+#             'Flow': sourdough.components.Flow})
