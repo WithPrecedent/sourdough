@@ -79,7 +79,7 @@ class Explode(sourdough.elements.Technique):
 @dataclasses.dataclass
 class Dynamite(sourdough.elements.Technique):
     
-    label: str = 'annihilate'
+    name: str = 'annihilate'
 
     def perform(self):
         return 
@@ -91,7 +91,7 @@ def test_project():
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
-    print('test project', project.results.plan)
+    print('test project', project['results'])
     return
 
 

@@ -22,7 +22,7 @@ import sourdough
 
 
 # @dataclasses.dataclass
-# class Graph(sourdough.elements.Flow):
+# class Graph(sourdough.Workflow):
 #     """Base class for composite objects in sourdough projects.
 
 #     Distinguishing characteristics of a Graph:
@@ -57,7 +57,7 @@ import sourdough
 # class Graph(Role):
     
 #     name: str = None
-#     Flow: sourdough.elements.Flow = None
+#     Flow: sourdough.Workflow = None
 #     iterator: Union[str, Callable] = 'iterator'    
 #     options: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         contents = {
@@ -263,7 +263,7 @@ import sourdough
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: sourdough.elements.Flow) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Workflow) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -277,7 +277,7 @@ import sourdough
     #         searched = searched)
         
     # def _topological_descend(self, 
-    #         graph: sourdough.elements.Flow, 
+    #         graph: sourdough.Workflow, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -297,7 +297,7 @@ import sourdough
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: sourdough.elements.Flow) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.Workflow) -> Sequence[sourdough.Component]:
     #     """[summary]
 
     #     Returns:
@@ -311,7 +311,7 @@ import sourdough
     #         searched = searched)
         
     # def _dfs_descend(self, 
-    #         graph: sourdough.elements.Flow, 
+    #         graph: sourdough.Workflow, 
     #         node: sourdough.Component,
     #         searched: list[str]) -> Sequence[sourdough.Component]: 
     #     """[summary]
@@ -362,7 +362,7 @@ import sourdough
     # """ Public Methods """
         
     # def get_sorted(self, 
-    #         graph: sourdough.elements.Flow = None,
+    #         graph: sourdough.Workflow = None,
     #         return_elements: bool = False) -> Sequence[sourdough.Component]:
     #     """Performs a topological sort on 'graph'.
         
@@ -379,7 +379,7 @@ import sourdough
     #     else:
     #         return sorted_queue
 
-    # def validate(self, graph: sourdough.elements.Flow) -> None:
+    # def validate(self, graph: sourdough.Workflow) -> None:
     #     """
         
 

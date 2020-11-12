@@ -27,12 +27,12 @@ DEFAULTS = {
 
 
 @dataclasses.dataclass
-class Project(sourdough.types.Hybrid):
+class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
     
-    Unlike an ordinary Hybrid, a Project instance will iterate 'crators' 
+    Unlike an ordinary Lexicon, a Project instance will iterate 'creators' 
     instead of 'contents'. However, all getters and setters still point to 
-    'contents', which is where the results of 'creators' are stored.
+    'contents', which is where the results of iterating the class are stored.
         
     Args:
         contents (Mapping[str, object]]): stored dictionary that stores objects
@@ -70,7 +70,7 @@ class Project(sourdough.types.Hybrid):
             
     """
     contents: Sequence[sourdough.Creator] = dataclasses.field(
-        default_factory = list)
+        default_factory = dict)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     manager: Union[sourdough.Manager, str, pathlib.Path] = None
     creators: Sequence[Union[sourdough.Creator, str]] = None
@@ -99,9 +99,11 @@ class Project(sourdough.types.Hybrid):
         # Calls validation methods based on items listed in '_validations'.
         for validation in self._validations:
             getattr(self, f'_validate_{validation}')()
+        # Sets index for iteration.
+        self.index = 0
         # Advances through 'director' if 'automatic' is True.
         if self.automatic:
-            self._auto_director()
+            self._auto_create()
 
     """ Class Methods """
 
@@ -198,9 +200,9 @@ class Project(sourdough.types.Hybrid):
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
-                new_creators.append(self.resources.creators.instance(creator))
+                new_creators.append(self.resources.creators.select(creator))
             elif issubclass(creator, self.defaults['creator']):
-                new_creators.append(creator())
+                new_creators.append(creator)
             else:
                 raise TypeError(
                     f'All creators must be str or {self.defaults["creator"]} ' 
@@ -208,19 +210,11 @@ class Project(sourdough.types.Hybrid):
         self.creators = new_creators
         return self
 
-    def _get_last_product(self) -> object:
-        """[summary]
-
-        Returns:
-            object: [description]
-        """
-        last_key = self.contents.keys()[:-1]
-        return self.contents[last_key]
-
     def _auto_create(self) -> None:
         """Advances through the stored Creator instances."""
-        for creator in self.creators:
-            self.append(creator)
+        for creator in iter(self):
+            self.contents.update({creator.produces: self.__next__()})
+            break
         return self
     
     """ Dunder Methods """
@@ -232,21 +226,21 @@ class Project(sourdough.types.Hybrid):
             Project: [description]
             
         """
-        if self.index < 0:
-            previous = self.settings
+        if self.index < len(self.creators):
+            creator = self.creators[self.index]()
+            if hasattr(self, 'verbose') and self.verbose:
+                print(f'{creator.action} {creator.produces} from {creator.needs}')
+            creation = creator.create(project = self)
+            print(f'test {creator.produces}', creation)
+            print('test instances', self.resources.instances)
+            print('test cool project', 'cool_project' in self.resources.instances)
+            self.index += 1
         else:
-            previous = self.contents[self.index]
-        self.index += 1
-        current = self.contents[self.index]
-        print('test current in next', current)
-        if hasattr(self.project, 'verbose') and self.verbose:
-            print(f'Beginning {current.action} process')
-        creation = current.create(previous = previous, project = self.project)
-        print('test creation', creation)
+            raise IndexError()
         return creation
     
     def __iter__(self) -> Iterable:
-        return self
+        return iter(self.creators)
 
 
 # @dataclasses.dataclass

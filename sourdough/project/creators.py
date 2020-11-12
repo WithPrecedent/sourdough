@@ -21,7 +21,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Details(sourdough.types.Progression):
+class Instructions(sourdough.types.Progression):
     """Information to construct a sourdough Component.
     
     Args:
@@ -69,29 +69,23 @@ class Details(sourdough.types.Progression):
 class Architect(sourdough.Creator):
     """Creates a blueprint of a workflow.
 
-    Architect is a dictionary representation of the overall project workflow. 
-    in the blueprint produced, all components are listed by key names and the 
-    information needed for Component construction are stored in Details 
-    instances, which are stored as values.
+    Architect creates a dictionary representation, a blueprint, of the overall 
+    project workflow. In the blueprint produced, keys are the names of 
+    components and values are Instruction instances.
     
     Args:
-        contents (Mapping[str, Details]]): stored dictionary with Details
-            instances as values. Defaults to an empty dict.
                         
     """
-    action: str = 'drafting'
-    needs: str = 'blueprint'
-    produces: str = 'outline'
+    action: ClassVar[str] = 'Drafting'
+    needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
+    produces: ClassVar[str] = 'blueprint'
 
     """ Public Methods """
     
-    def create(self, previous: sourdough.Settings, 
-               project: sourdough.Project) -> sourdough.Creator:
-        """Creates a blueprint based on 'settings'.
+    def create(self, project: sourdough.Project) -> sourdough.Lexicon:
+        """Creates a blueprint based on 'project.settings'.
 
         Args:
-            previous (sourdough.Settings): sourdough configuration options to
-                create an blueprint.
             project (sourdough.Project): a Project instance with resources and
                 other information needed for blueprint construction.
 
@@ -100,29 +94,28 @@ class Architect(sourdough.Creator):
             
         """ 
         blueprint = sourdough.types.Lexicon()
-        suffixes = tuple(project.resources.bases.keys())
-        for name, section in previous.items():
-            # Tests whether the section in 'settings' is related to the 
+        suffixes = project.resources.components.keys()
+        suffixes = tuple(item + 's' for item in suffixes)
+        for name, section in project.settings.items():
+            # Tests whether the section in 'project.settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'blueprint'.
-            print('test iter settings', name)
             if any([i.endswith(suffixes) for i in section.keys()]):
                 blueprint = self._process_section(
                     name = name,
                     blueprint = blueprint,
-                    settings = previous,
                     project = project,
+                    suffixes = suffixes,
                     base = 'workflow')
-        print('test blueprint', blueprint)
         return blueprint
         
     """ Private Methods """
     
     def _process_section(self, name: str, blueprint: sourdough.Lexicon,
-                         settings: sourdough.Settings, 
-                         project: sourdough.Project, base: str) -> sourdough.Lexicon:
+                         project: sourdough.Project, suffixes: Tuple[str],
+                         base: str) -> sourdough.Lexicon:
         """[summary]
 
         Args:
@@ -136,42 +129,43 @@ class Architect(sourdough.Creator):
         """
         # Iterates through each key, value pair in section and stores or 
         # extracts the information as appropriate.
-        for key, value in settings[name].items():
+        for key, value in project.settings[name].items():
             # keys ending with specific suffixes trigger further parsing and 
-            # searching throughout 'settings'.
-            if key.endswith(tuple(project.bases.keys())):
+            # searching throughout 'project.settings'.
+            if key.endswith(suffixes):
                 # Each key contains a prefix which is the parent Component name 
                 # and a suffix which is what that parent Component contains.
                 key_name, key_suffix = self._divide_key(key = key)
                 contains = key_suffix.rstrip('s')
                 contents = sourdough.tools.listify(value) 
-                blueprint = self._add_details(
+                blueprint = self._add_instructions(
                     name = key_name, 
                     blueprint = blueprint,
                     contents = contents,
                     base = base)
                 for item in contents:
-                    if item in settings:
+                    if item in project.settings:
                         blueprint = self._process_section(
                             name = item,
                             blueprint = blueprint,
                             project = project,
+                            suffixes = suffixes,
                             base = contains)
                     else:
-                        blueprint = self._add_details(
+                        blueprint = self._add_instructions(
                             name = item, 
                             blueprint = blueprint,
                             base = contains)
             # keys ending with 'design' hold values of a Component's design.
             elif key.endswith('design'):
-                blueprint = self._add_details(
+                blueprint = self._add_instructions(
                     name = name, 
                     blueprint = blueprint, 
                     design = value)
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                blueprint = self._add_details(
+                blueprint = self._add_instructions(
                     name = name,
                     blueprint = blueprint,
                     attributes = {key: value})
@@ -194,7 +188,8 @@ class Architect(sourdough.Creator):
         return prefix, suffix
     
     @staticmethod    
-    def _add_details(name: str, blueprint: sourdough.Lexicon, **kwargs) -> sourdough.Lexicon:
+    def _add_instructions(name: str, blueprint: sourdough.Lexicon, 
+                     **kwargs) -> sourdough.Lexicon:
         """[summary]
 
         Args:
@@ -205,12 +200,12 @@ class Architect(sourdough.Creator):
             sourdough.Lexicon: [description]
             
         """
-        # Stores a mostly empty Details instance in 'blueprint' if none currently
-        # exists corresponding to 'name'. This check is performed to prevent
-        # overwriting of existing information in 'blueprint' during recursive
-        # calls.
+        # Stores a mostly empty Instructions instance in 'blueprint' if none 
+        # currently exists corresponding to 'name'. This check is performed to 
+        # prevent overwriting of existing information in 'blueprint' during 
+        # recursive calls.
         if name not in blueprint:
-            blueprint[name] = Details(name = name)
+            blueprint[name] = Instructions(name = name)
         # Adds any kwargs to 'blueprint' as appropriate.
         for key, value in kwargs.items():
             if isinstance(getattr(blueprint[name], key), str):
@@ -234,26 +229,21 @@ class Supervisor(sourdough.Creator):
     Args:
                         
     """
-    action: str = 'publishing'
-    needs: str = 'blueprint'
-    produces: str = 'workflow'
+    action: ClassVar[str] = 'Creating'
+    needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
+    produces: ClassVar[str] = 'workflow'
 
     """ Public Methods """
 
-    def create(self, previous: sourdough.Lexicon, 
-               project: sourdough.Project) -> sourdough.Component:
-        """Drafts a Plan instance based on 'blueprint'.
+    def create(self, project: sourdough.Project) -> sourdough.Component:
+        """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
-        project.results.plan = self._create_component(
-            name = project.name, 
-            previous = previous,
-            project = project)
-        return project
+        return self._create_component(name = project.name, project = project)
     
     """ Private Methods """
 
-    def _create_component(self, name: str, previous: sourdough.Creator,
+    def _create_component(self, name: str, 
                           project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
@@ -265,17 +255,14 @@ class Supervisor(sourdough.Creator):
             sourdough.Component: [description]
             
         """
-        component = self._get_component(name = name, previous = previous, 
-                                        project = project)
-        return self._finalize_component(
-            component = component, 
-            project = project)
+        component = self._get_component(name = name, project = project)
+        return self._finalize_component(component = component, project = project)
 
-    def _get_component(self, name: str, previous: sourdough.Creator,
+    def _get_component(self, name: str, 
                        project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
-        # Args:o
+        Args:
             name (str): [description]
             components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
@@ -287,11 +274,10 @@ class Supervisor(sourdough.Creator):
             Mapping[ str, sourdough.Component]: [description]
             
         """
-        print('test previous', previous)
-        details = previous[name]
-        kwargs = {'name': name, 'contents': previous.contents}
+        instructions = project['blueprint'][name]
+        kwargs = {'name': name, 'contents': project['blueprint'].contents}
         try:
-            component = copy.deepcopy(project.resources.options[name])
+            component = copy.deepcopy(project.resources.instances[name])
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
@@ -301,11 +287,11 @@ class Supervisor(sourdough.Creator):
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.resources.components[details.design]
+                    component = project.resources.components[instructions.design]
                     component = component(**kwargs)
                 except KeyError:
                     try:
-                        component = project.resources.components[details.base]
+                        component = project.resources.components[instructions.base]
                         component = component(**kwargs)
                     except KeyError:
                         raise KeyError(f'{name} component does not exist')
@@ -337,7 +323,7 @@ class Supervisor(sourdough.Creator):
         return component
 
     def _create_parallel(self, component: sourdough.Component,
-                         project: sourdough.Project) -> sourdough.elements.Flow:
+                         project: sourdough.Project) -> sourdough.Workflow:
         """[summary]
 
         Args:
@@ -346,12 +332,12 @@ class Supervisor(sourdough.Creator):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.elements.Flow: [description]
+            sourdough.WorkFlow: [description]
             
         """
         possible = []
         for item in component.contents:
-            possible.append(previous[item].contents)
+            possible.append(project['blueprint'][item].contents)
         combos = list(map(list, itertools.product(*possible)))
         wrappers = [self._get_component(i, project) for i in component.contents]
         new_contents = []
@@ -369,7 +355,7 @@ class Supervisor(sourdough.Creator):
         return component
 
     def _create_serial(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> sourdough.elements.Flow:
+                       project: sourdough.Project) -> sourdough.Workflow:
         """[summary]
 
         Args:
@@ -378,7 +364,7 @@ class Supervisor(sourdough.Creator):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.elements.Flow: [description]
+            sourdough.Workflow: [description]
             
         """
         new_contents = []
@@ -393,45 +379,31 @@ class Supervisor(sourdough.Creator):
         component.contents = new_contents
         return component
 
-    def _add_attributes(self, 
-            component: sourdough.Component,
-            project: sourdough.Project) -> sourdough.Component:
+    def _add_attributes(self, component: sourdough.Component,
+                        project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Returns:
             [type]: [description]
             
         """
-        attributes = previous[component.name].attributes
+        attributes = project['blueprint'][component.name].attributes
         for key, value in attributes.items():
-            # if (project.settings['general']['settings_priority']
-            #         or not hasattr(component, key)):
             setattr(component, key, value)
         return component    
 
 
 @dataclasses.dataclass
-class Results(sourdough.Creator, sourdough.types.Lexicon):
-    """A container for any results produced by a Project instance.
-
-    Attributes are dynamically added by Director instances at runtime.
+class Worker(sourdough.Creator):
+    """Applies a project Workflow and produces results.
 
     Args:
-        contents (Mapping[str, Details]]): stored dictionary with Details
-            instances as values. Defaults to an empty dict.
-        identification (str): a unique identification name for a Project 
-            instance. The name is used for creating file folders related to the 
-            project. If it is None, a str will be created from 'name' and the 
-            date and time. 'identification' is also stored in a Results
-            instance to connect it to any output if it is separated from a
-            Project instance.
 
     """
-    action: str = 'applying'
-    needs: str = 'workflow'
-    produces: str = 'results'
-    identification: str = None
-
+    action: ClassVar[str] = 'Computing'
+    needs: ClassVar[Union[str, Tuple[str]]] = 'workflow'
+    produces: ClassVar[str] = 'results'
+    
     """ Public Methods """
     
     def add(self, name: str, value: Any) -> None:
@@ -442,8 +414,8 @@ class Results(sourdough.Creator, sourdough.types.Lexicon):
     
     """ Public Methods """
  
-    def create(self, previous: sourdough.Creator, 
-               project: sourdough.Project) -> sourdough.Creator:        
+    def create(self, workflow: sourdough.Component, 
+               project: sourdough.Project) -> sourdough.Lexicon:        
         """Drafts a Plan instance based on 'blueprint'.
             
         """
@@ -453,8 +425,8 @@ class Results(sourdough.Creator, sourdough.types.Lexicon):
             identification = self.identification)
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in previous:
+        for component in workflow:
             component.apply(**kwargs)
-        return project
+        return results
 
     

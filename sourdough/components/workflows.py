@@ -67,6 +67,11 @@ class SerialFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     name: str = None
     branches: ClassVar[bool] = False   
 
+    """ Public Methods """
+
+    def apply(self, project: sourdough.Project) -> sourdough.Project:
+        return project
+    
     
 @dataclasses.dataclass
 class Cycle(SerialFlow):
@@ -149,23 +154,10 @@ class ParallelFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     criteria: str = None
     branches: ClassVar[bool] = True
           
-    """ Required Subclass Methods """
-    
-    # @abc.abstractmethod
-    # def organize(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def iterate(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def activate(self, **kwargs) -> Iterable:
-    #     pass    
-    
-    # @abc.abstractmethod
-    # def finalize(self, **kwargs) -> Iterable:
-    #     pass
+    """ Public Methods """
+
+    def apply(self, project: sourdough.Project) -> sourdough.Project:
+        return project
 
 
 @dataclasses.dataclass

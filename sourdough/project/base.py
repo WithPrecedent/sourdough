@@ -5,8 +5,8 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Creator (Registrar, Container):
-    Director (Registrar, Hybrid, ABC):
+    Creator (Registrar):
+    Component ():
     
 """
 from __future__ import annotations
@@ -29,10 +29,24 @@ class Creator(sourdough.quirks.Registrar):
             of the class name (i.e., for Draft, the action is 'drafting').
             
     """
-    action: str = None
-    needs: Union[str, Tuple[str]] = None
-    produces: Union[str, Tuple[str]] = None
+    name: str = None
+    action: ClassVar[str]
+    needs: ClassVar[Union[str, Tuple[str]]]
+    produces: ClassVar[str]
+    
+    """ Initialization Methods """
 
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Sets 'name' attribute.
+        if not hasattr(self, 'name') or self.name is None:  
+            self.name = self._get_name()
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        
     """ Required Subclass Methods """
     
     @abc.abstractmethod
@@ -53,8 +67,60 @@ class Creator(sourdough.quirks.Registrar):
         key = sourdough.tools.snakify(cls.__name__)
         sourdough.project.resources.creators[key] = cls
         return cls
-    
 
+    @classmethod
+    def parameterize(cls, project: sourdough.Project) -> Mapping[str, Any]:
+        """[summary]
+
+        Args:
+            project (sourdough.Project): [description]
+
+        Returns:
+            Mapping[str, Any]: [description]
+            
+        """
+        parameters = {}
+        for item in sourdough.tools.tuplify(cls.needs):
+            try:
+                parameters.update({item: project[item]})
+            except KeyError:
+                parameters.update({item: getattr(project, item)})
+        parameters.update({'project': project})
+        return parameters
+    
+    # @classmethod
+    # def store(cls, project: sourdough.Project, product: Any) -> None:
+    #     """[summary]
+
+    #     Args:
+    #         project (sourdough.Project): [description]
+    #         product (Any): [description]
+
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     project.update({cls.produces: product})
+    #     return cls
+
+
+    """ Private Methods """
+    
+    @classmethod
+    def _get_name(cls) -> str:
+        """Returns 'name' of class instance for use throughout sourdough.
+        
+        This method converts the class name from CapitalCase to snake_case.
+        
+        If a user wishes to use an alternate naming system, a subclass should
+        simply override this method. 
+        
+        Returns:
+            str: name of class for internal referencing and some access methods.
+        
+        """
+        return sourdough.tools.snakify(cls.__name__)
+                
+    
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, 
                 collections.abc.Container):
