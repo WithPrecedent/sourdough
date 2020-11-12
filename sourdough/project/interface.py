@@ -10,7 +10,6 @@ Contents:
 """
 from __future__ import annotations
 import dataclasses
-import inspect
 import pathlib
 import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -23,22 +22,21 @@ import sourdough
 DEFAULTS = {
     'settings': sourdough.Settings,
     'manager': sourdough.Manager,
-    'specialist': sourdough.Specialist,
-    'director': 'editor'}
+    'creator': sourdough.Creator,
+    'creators': ['architect', 'supervisor', 'worker']}
 
 
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a sourdough project.
     
-    Unlike an ordinary Hybrid, a Project instance will iterate 'director' 
+    Unlike an ordinary Hybrid, a Project instance will iterate 'crators' 
     instead of 'contents'. However, all getters and setters still point to 
-    'contents', which is where the results of 'director' are stored.
+    'contents', which is where the results of 'creators' are stored.
         
     Args:
-        contents (Mapping[Any, Specialist]]): stored dictionary that stores completed
-            Specialist instances created by a Director instance. Defaults to an empty 
-            dict.
+        contents (Mapping[str, object]]): stored dictionary that stores objects
+            created by 'creators'.
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
             file of a supported file type with settings for a Settings instance 
@@ -48,10 +46,9 @@ class Project(sourdough.types.Hybrid):
             the root folder should be located for file input and output. A 
             Manager instance contains all file path and import/export methods 
             for use throughout sourdough. Defaults to the default Manager 
-            instance.  
-        director (Union[sourdough.Director, str]): Director subclass, 
-            Director subclass instance, or a str corresponding to a key in 
-            'directors'. Defaults to None.
+            instance. 
+        creators (Sequence[Union[sourdough.Creator, str]]):
+        
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
@@ -72,21 +69,21 @@ class Project(sourdough.types.Hybrid):
   
             
     """
-    contents: Sequence[sourdough.Specialist] = dataclasses.field(
+    contents: Sequence[sourdough.Creator] = dataclasses.field(
         default_factory = list)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     manager: Union[sourdough.Manager, str, pathlib.Path] = None
-    director: Union[sourdough.Director, str] = None
+    creators: Sequence[Union[sourdough.Creator, str]] = None
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
     resources: types.ModuleType = dataclasses.field(
-        default_factory = lambda: sourdough.project.resources)
+        default_factory = lambda: sourdough.resources)
     defaults: Mapping[str, Any] = dataclasses.field(
         default_factory = lambda: DEFAULTS)
     _validations: ClassVar[Sequence[str]] = [
-        'settings', 'name', 'identification', 'manager', 'director']
+        'settings', 'name', 'identification', 'manager', 'creators']
     
     """ Initialization Methods """
 
@@ -186,64 +183,70 @@ class Project(sourdough.types.Hybrid):
                 settings = self.settings)
         return self
 
-    def _set_missing_director(self) -> None:
+    def _validate_creators(self) -> None:
+        """[summary]
+
+        Raises:
+            TypeError: [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        if self.creators is None:
+            self.creators = self.defaults['creators']
+        new_creators = []
+        for creator in self.creators:
+            if isinstance(creator, str):
+                new_creators.append(self.resources.creators.instance(creator))
+            elif issubclass(creator, self.defaults['creator']):
+                new_creators.append(creator())
+            else:
+                raise TypeError(
+                    f'All creators must be str or {self.defaults["creator"]} ' 
+                    f'type')
+        self.creators = new_creators
+        return self
+
+    def _get_last_product(self) -> object:
         """[summary]
 
         Returns:
-            sourdough.Director: [description]
+            object: [description]
         """
-        try:
-            self.director = self.settings[self.name]['director']
-        except KeyError:
-            if self.director is None:
-                self.director = self.defaults['director']
+        last_key = self.contents.keys()[:-1]
+        return self.contents[last_key]
+
+    def _auto_create(self) -> None:
+        """Advances through the stored Creator instances."""
+        for creator in self.creators:
+            self.append(creator)
         return self
     
-    def _validate_director(self) -> None:
-        """Validates or converts 'director' and initializes it.
-        
-        If a Director subclass, Director subclass instance, or str matching a
-        recognized Director subclass is passed to this Project instance, it is 
-        used. Otherwise, the method looks in settings or uses the Director 
-        listed in 'defaults'. If a mismatched name of a Director is passed, a
-        default option will be used. If 'verbose' is False or there is no 
-        'verbose' attribute, this substitution will be done silently.
-        
-        """
-        if self.director is None:
-            self._set_missing_director()
-        if inspect.isclass(self.director):
-            self.director = self.director(project = self)
-        elif isinstance(self.director, str):
-            try:
-                self.director = self.resources.directors.instance(
-                    key = self.director,
-                    project = self)
-            except KeyError:
-                if hasattr(self, 'verbose') and self.verbose:
-                    print(
-                        f'{self.director} is not a recognized Director.'
-                        f'A default option will be used.')
-                self._set_missing_director()
-                self._validate_director()
-        elif isinstance(self.director, sourdough.Director):
-            self.director.project = self
-        else:
-            raise TypeError(
-                f'director must be a str matching a key in directors, a '
-                f'Director subclass, or a Director subclass instance.')
-        return self
-                     
-    def _auto_director(self) -> None:
-        """Advances through the stored Director instances."""
-        for specialist in self.director:
-            self.append(specialist)
-        return self
-
     """ Dunder Methods """
     
+    def __next__(self) -> Project:
+        """[summary]
+
+        Returns:
+            Project: [description]
+            
+        """
+        if self.index < 0:
+            previous = self.settings
+        else:
+            previous = self.contents[self.index]
+        self.index += 1
+        current = self.contents[self.index]
+        print('test current in next', current)
+        if hasattr(self.project, 'verbose') and self.verbose:
+            print(f'Beginning {current.action} process')
+        creation = current.create(previous = previous, project = self.project)
+        print('test creation', creation)
+        return creation
+    
     def __iter__(self) -> Iterable:
-        return iter(self._auto_director)
+        return self
 
 
 # @dataclasses.dataclass

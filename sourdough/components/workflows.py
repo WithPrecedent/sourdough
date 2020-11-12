@@ -1,5 +1,5 @@
 """
-flows: workflowd iterables in sourdough projects
+workflows: iterables in sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,7 +20,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.components.Flow):
+class Aggregation(sourdough.Component, sourdough.types.Hybrid):
     """Aggregates unordered objects.
     
     Distinguishing characteristics of an Aggregation:
@@ -41,13 +41,13 @@ class Aggregation(sourdough.components.Flow):
             sourdough classes. 
     
     """
-    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = set)
     name: str = None
        
 
 @dataclasses.dataclass
-class SerialFlow(sourdough.components.Flow, abc.ABC):
+class SerialFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     """Base class for serially workflows Flows in sourdough projects.
         
     Args:
@@ -62,7 +62,7 @@ class SerialFlow(sourdough.components.Flow, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     branches: ClassVar[bool] = False   
@@ -81,7 +81,7 @@ class Cycle(SerialFlow):
             by a condition set in 'criteria'.
         
     Args:
-        contents (Sequence[Union[str, sourdough.workflow.Component]]): a set of str or
+        contents (Sequence[Union[str, sourdough.Component]]): a set of str or
             Components. 
         name (str): property which designates the internal reference of a class 
             instance that is used throughout sourdough. For example, if a 
@@ -92,7 +92,7 @@ class Cycle(SerialFlow):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 10
@@ -121,13 +121,13 @@ class Pipeline(SerialFlow):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None    
 
 
 @dataclasses.dataclass
-class ParallelFlow(sourdough.components.Flow, abc.ABC):
+class ParallelFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     """Base class for parallelly workflowd Flows in sourdough projects.
         
     Args:
@@ -142,7 +142,7 @@ class ParallelFlow(sourdough.components.Flow, abc.ABC):
             '__class__.__name__').
     
     """
-    contents: Sequence[Union[str, sourdough.workflow.Component]] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: int = 1
@@ -287,28 +287,28 @@ class Survey(ParallelFlow):
 #     """ Required Subclass Methods """
 
 #     @abc.abstractmethod
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
  
 #     @abc.abstractmethod
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
     
 #     """ Class Methods """
 
 #     @classmethod
-#     def validate(cls, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def validate(cls, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         """Returns a Role instance based upon 'workflow'.
         
 #         Args:
-#             Flow (sourdough.components.Flow): Hybrid instance with 'workflow' attribute
+#             Flow (sourdough.Component, sourdough.types.Hybrid): Hybrid instance with 'workflow' attribute
 #                 to be validated.
                 
 #         Raises:
 #             TypeError: if 'Flow.workflow' is neither a str nor Role type.
             
 #         Returns:
-#             sourdough.components.Flow: with a validated 'workflow' attribute.
+#             sourdough.Component, sourdough.types.Hybrid: with a validated 'workflow' attribute.
             
 #         """
 #         if isinstance(Flow.workflow, str):
@@ -325,7 +325,7 @@ class Survey(ParallelFlow):
 
 #     """ Public Methods """
     
-#     def iterate(self, Flow: sourdough.components.Flow) -> Iterable:
+#     def iterate(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> Iterable:
 #         return more_itertools.collapse(Flow.contents)
 
 #     """ Private Methods """
@@ -367,7 +367,7 @@ class Survey(ParallelFlow):
     
 #     def _build_wrapper(self,
 #             key: str, 
-#             generic: sourdough.workflow.Component,
+#             generic: sourdough.Component,
 #             wrapped: Mapping[str, Sequence[str]],
 #             project: sourdough.Project,
 #             **kwargs) -> None:
@@ -397,7 +397,7 @@ class Survey(ParallelFlow):
 
 #     def _build_component(self,
 #             key: str, 
-#             generic: sourdough.workflow.Component,
+#             generic: sourdough.Component,
 #             project: sourdough.Project,
 #             **kwargs) -> None:
 #         """[summary]
@@ -422,10 +422,10 @@ class Survey(ParallelFlow):
     
 #     """ Public Methods """
 
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
 
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
 
       
@@ -438,13 +438,13 @@ class Survey(ParallelFlow):
     
 #     """ Public Methods """
 
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
     
-#     def iterate(self, Flow: sourdough.components.Flow) -> Iterable:
+#     def iterate(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> Iterable:
 #         return itertools.repeat(Flow.contents, self.iterations)
         
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
        
          
@@ -457,24 +457,24 @@ class Survey(ParallelFlow):
 
 #     """ Public Methods """
 
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         """[summary]
 
 #         Args:
-#             Flow (sourdough.components.Flow): [description]
+#             Flow (sourdough.Component, sourdough.types.Hybrid): [description]
 
 #         Returns:
-#             sourdough.components.Flow: [description]
+#             sourdough.Component, sourdough.types.Hybrid: [description]
 #         """
 #         steps = components.pop([components.keys()[0]])
 #         possible = list(components.values())
 #         permutations = list(map(list, itertools.product(*possible)))
 #         for i, contained in enumerate(permutations):
-#             instance = sourdough.components.Flow(
+#             instance = sourdough.Component, sourdough.types.Hybrid(
 #                 _components = tuple(zip(steps, contained)))
 #         return Flow
     
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
 
          
@@ -487,10 +487,10 @@ class Survey(ParallelFlow):
 
 #     """ Public Methods """
 
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
     
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
     
 
@@ -503,16 +503,16 @@ class Survey(ParallelFlow):
     
 #     """ Public Methods """
 
-#     def organize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def organize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
     
-#     def finalize(self, Flow: sourdough.components.Flow) -> sourdough.components.Flow:
+#     def finalize(self, Flow: sourdough.Component, sourdough.types.Hybrid) -> sourdough.Component, sourdough.types.Hybrid:
 #         pass
 
 
 
 # @dataclasses.dataclass
-# class LazyIterable(collections.abc.Iterable, sourdough.workflow.Component, abc.ABC):
+# class LazyIterable(collections.abc.Iterable, sourdough.Component, abc.ABC):
     
     
 #     @abc.abstractmethod
@@ -537,10 +537,10 @@ class Survey(ParallelFlow):
 # class Tree(Role):
     
 #     name: str = None
-#     Flow: sourdough.components.Flow = None
+#     Flow: sourdough.Component, sourdough.types.Hybrid = None
 #     iterator: Union[str, Callable] = more_itertools.collapse
 #     options: ClassVar[sourdough.types.Catalog] = sourdough.types.Catalog(
 #         contents = {
 #             'task': sourdough.Step,
 #             'technique': sourdough.Technique,
-#             'Flow': sourdough.components.Flow})
+#             'Flow': sourdough.Component, sourdough.types.Hybrid})

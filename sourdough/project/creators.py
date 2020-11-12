@@ -1,5 +1,5 @@
 """
-specialists: interim classes for sourdough Directors
+Creators: interim classes for sourdough Directors
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -66,70 +66,72 @@ class Details(sourdough.types.Progression):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.Specialist, sourdough.types.Lexicon):
-    """Basic description of a project design without refined workflow.
+class Architect(sourdough.Creator):
+    """Creates a blueprint of a workflow.
 
-    Outline is a dictionary representation of the overall project design. All
-    Components are listed by key names and the information needed for Component
-    construction are stored in Details instances.
+    Architect is a dictionary representation of the overall project workflow. 
+    in the blueprint produced, all components are listed by key names and the 
+    information needed for Component construction are stored in Details 
+    instances, which are stored as values.
     
     Args:
         contents (Mapping[str, Details]]): stored dictionary with Details
             instances as values. Defaults to an empty dict.
                         
     """
-    contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
     action: str = 'drafting'
+    needs: str = 'blueprint'
+    produces: str = 'outline'
 
     """ Public Methods """
     
     def create(self, previous: sourdough.Settings, 
-               project: sourdough.Project) -> sourdough.Specialist:
-        """Creates an Outline instance based on 'settings'.
+               project: sourdough.Project) -> sourdough.Creator:
+        """Creates a blueprint based on 'settings'.
 
         Args:
             previous (sourdough.Settings): sourdough configuration options to
-                create an Outline instance.
+                create an blueprint.
             project (sourdough.Project): a Project instance with resources and
-                other information needed for Outline construction.
+                other information needed for blueprint construction.
 
         Returns:
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        outline = self.__class__()
+        blueprint = sourdough.types.Lexicon()
         suffixes = tuple(project.resources.bases.keys())
         for name, section in previous.items():
             # Tests whether the section in 'settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
-            # 'outline'.
+            # 'blueprint'.
             print('test iter settings', name)
             if any([i.endswith(suffixes) for i in section.keys()]):
-                outline = self._process_section(
+                blueprint = self._process_section(
                     name = name,
-                    outline = outline,
+                    blueprint = blueprint,
                     settings = previous,
                     project = project,
-                    base = 'flow')
-        print('test outline', outline)
-        return outline
+                    base = 'workflow')
+        print('test blueprint', blueprint)
+        return blueprint
         
     """ Private Methods """
     
-    def _process_section(self, name: str, outline: Outline,
+    def _process_section(self, name: str, blueprint: sourdough.Lexicon,
                          settings: sourdough.Settings, 
-                         project: sourdough.Project, base: str) -> Outline:
+                         project: sourdough.Project, base: str) -> sourdough.Lexicon:
         """[summary]
 
         Args:
             name (str): [description]
-            outline (Outline): [description]
+            blueprint (sourdough.Lexicon): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            Outline: [description]
+            sourdough.Lexicon: [description]
             
         """
         # Iterates through each key, value pair in section and stores or 
@@ -143,37 +145,37 @@ class Outline(sourdough.Specialist, sourdough.types.Lexicon):
                 key_name, key_suffix = self._divide_key(key = key)
                 contains = key_suffix.rstrip('s')
                 contents = sourdough.tools.listify(value) 
-                outline = self._add_details(
+                blueprint = self._add_details(
                     name = key_name, 
-                    outline = outline,
+                    blueprint = blueprint,
                     contents = contents,
                     base = base)
                 for item in contents:
                     if item in settings:
-                        outline = self._process_section(
+                        blueprint = self._process_section(
                             name = item,
-                            outline = outline,
+                            blueprint = blueprint,
                             project = project,
                             base = contains)
                     else:
-                        outline = self._add_details(
+                        blueprint = self._add_details(
                             name = item, 
-                            outline = outline,
+                            blueprint = blueprint,
                             base = contains)
             # keys ending with 'design' hold values of a Component's design.
             elif key.endswith('design'):
-                outline = self._add_details(
+                blueprint = self._add_details(
                     name = name, 
-                    outline = outline, 
+                    blueprint = blueprint, 
                     design = value)
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                outline = self._add_details(
+                blueprint = self._add_details(
                     name = name,
-                    outline = outline,
+                    blueprint = blueprint,
                     attributes = {key: value})
-        return outline
+        return blueprint
 
     @staticmethod
     def _divide_key(key: str) -> Sequence[str, str]:
@@ -192,32 +194,32 @@ class Outline(sourdough.Specialist, sourdough.types.Lexicon):
         return prefix, suffix
     
     @staticmethod    
-    def _add_details(name: str, outline: Outline, **kwargs) -> Outline:
+    def _add_details(name: str, blueprint: sourdough.Lexicon, **kwargs) -> sourdough.Lexicon:
         """[summary]
 
         Args:
             name (str): [description]
-            outline (Outline): [description]
+            blueprint (sourdough.Lexicon): [description]
 
         Returns:
-            Outline: [description]
+            sourdough.Lexicon: [description]
             
         """
-        # Stores a mostly empty Details instance in 'outline' if none currently
+        # Stores a mostly empty Details instance in 'blueprint' if none currently
         # exists corresponding to 'name'. This check is performed to prevent
-        # overwriting of existing information in 'outline' during recursive
+        # overwriting of existing information in 'blueprint' during recursive
         # calls.
-        if name not in outline:
-            outline[name] = Details(name = name)
-        # Adds any kwargs to 'outline' as appropriate.
+        if name not in blueprint:
+            blueprint[name] = Details(name = name)
+        # Adds any kwargs to 'blueprint' as appropriate.
         for key, value in kwargs.items():
-            if isinstance(getattr(outline[name], key), str):
+            if isinstance(getattr(blueprint[name], key), str):
                 pass
-            elif isinstance(getattr(outline[name], key), dict):
-                getattr(outline[name], key).update(value) 
+            elif isinstance(getattr(blueprint[name], key), dict):
+                getattr(blueprint[name], key).update(value) 
             else:
-                setattr(outline[name], key, value)           
-        return outline
+                setattr(blueprint[name], key, value)           
+        return blueprint
 
     """ Dunder Methods """
     
@@ -226,24 +228,21 @@ class Outline(sourdough.Specialist, sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
-    """Output of the the drafting process.
-
-    Outline is a dictionary representation of the overall project design. All
-    Components are listed by key names and the information needed for Component
-    construction are stored in Details instances.
+class Supervisor(sourdough.Creator):
+    """Constructs finalized workflow.
     
     Args:
                         
     """
-    contents: sourdough.workflow.Component = None
     action: str = 'publishing'
+    needs: str = 'blueprint'
+    produces: str = 'workflow'
 
     """ Public Methods """
 
-    def create(self, previous: sourdough.Specialist, 
-               project: sourdough.Project) -> sourdough.Specialist:
-        """Drafts a Plan instance based on 'outline'.
+    def create(self, previous: sourdough.Lexicon, 
+               project: sourdough.Project) -> sourdough.Component:
+        """Drafts a Plan instance based on 'blueprint'.
             
         """ 
         project.results.plan = self._create_component(
@@ -254,8 +253,8 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
     
     """ Private Methods """
 
-    def _create_component(self, name: str, previous: sourdough.Specialist,
-                          project: sourdough.Project) -> sourdough.workflow.Component:
+    def _create_component(self, name: str, previous: sourdough.Creator,
+                          project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -263,7 +262,7 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.workflow.Component: [description]
+            sourdough.Component: [description]
             
         """
         component = self._get_component(name = name, previous = previous, 
@@ -272,20 +271,20 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
             component = component, 
             project = project)
 
-    def _get_component(self, name: str, previous: sourdough.Specialist,
-                       project: sourdough.Project) -> sourdough.workflow.Component:
+    def _get_component(self, name: str, previous: sourdough.Creator,
+                       project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         # Args:o
             name (str): [description]
-            components (Mapping[str, sourdough.workflow.Component]): [description]
+            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Raises:
             KeyError: [description]
 
         Returns:
-            Mapping[ str, sourdough.workflow.Component]: [description]
+            Mapping[ str, sourdough.Component]: [description]
             
         """
         print('test previous', previous)
@@ -312,16 +311,16 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
                         raise KeyError(f'{name} component does not exist')
         return component
 
-    def _finalize_component(self, component: sourdough.workflow.Component,
-                            project: sourdough.Project) -> sourdough.workflow.Component:
+    def _finalize_component(self, component: sourdough.Component,
+                            project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
-            component (sourdough.workflow.Component): [description]
+            component (sourdough.Component): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.workflow.Component: [description]
+            sourdough.Component: [description]
             
         """
         if isinstance(component, Iterable):
@@ -337,17 +336,17 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
             pass
         return component
 
-    def _create_parallel(self, component: sourdough.workflow.Component,
-                         project: sourdough.Project) -> sourdough.components.Flow:
+    def _create_parallel(self, component: sourdough.Component,
+                         project: sourdough.Project) -> sourdough.elements.Flow:
         """[summary]
 
         Args:
-            component (sourdough.workflow.Component): [description]
-            components (Mapping[str, sourdough.workflow.Component]): [description]
+            component (sourdough.Component): [description]
+            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.components.Flow: [description]
+            sourdough.elements.Flow: [description]
             
         """
         possible = []
@@ -369,17 +368,17 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
             project = project)
         return component
 
-    def _create_serial(self, component: sourdough.workflow.Component, 
-                       project: sourdough.Project) -> sourdough.components.Flow:
+    def _create_serial(self, component: sourdough.Component, 
+                       project: sourdough.Project) -> sourdough.elements.Flow:
         """[summary]
 
         Args:
-            component (sourdough.workflow.Component): [description]
-            components (Mapping[str, sourdough.workflow.Component]): [description]
+            component (sourdough.Component): [description]
+            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.components.Flow: [description]
+            sourdough.elements.Flow: [description]
             
         """
         new_contents = []
@@ -395,8 +394,8 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
         return component
 
     def _add_attributes(self, 
-            component: sourdough.workflow.Component,
-            project: sourdough.Project) -> sourdough.workflow.Component:
+            component: sourdough.Component,
+            project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Returns:
@@ -412,7 +411,7 @@ class Agenda(sourdough.Specialist, sourdough.types.Hybrid):
 
 
 @dataclasses.dataclass
-class Results(sourdough.Specialist, sourdough.types.Lexicon):
+class Results(sourdough.Creator, sourdough.types.Lexicon):
     """A container for any results produced by a Project instance.
 
     Attributes are dynamically added by Director instances at runtime.
@@ -428,7 +427,9 @@ class Results(sourdough.Specialist, sourdough.types.Lexicon):
             Project instance.
 
     """
-    contents: Mapping[str, Details] = dataclasses.field(default_factory = dict)
+    action: str = 'applying'
+    needs: str = 'workflow'
+    produces: str = 'results'
     identification: str = None
 
     """ Public Methods """
@@ -440,12 +441,10 @@ class Results(sourdough.Specialist, sourdough.types.Lexicon):
         return self
     
     """ Public Methods """
-
-    @classmethod
-    @functools.singledispatchmethod    
-    def create(self, previous: sourdough.Specialist, 
-               project: sourdough.Project) -> sourdough.Specialist:        
-        """Drafts a Plan instance based on 'outline'.
+ 
+    def create(self, previous: sourdough.Creator, 
+               project: sourdough.Project) -> sourdough.Creator:        
+        """Drafts a Plan instance based on 'blueprint'.
             
         """
         kwargs = {}
@@ -454,24 +453,8 @@ class Results(sourdough.Specialist, sourdough.types.Lexicon):
             identification = self.identification)
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in agenda:
+        for component in previous:
             component.apply(**kwargs)
         return project
 
-    """ Dunder Methods """
-
-    def __contains__(self, item: str) -> bool:
-        """Returns whether an attribute named 'item' exists.
-
-        This allows external methods and functions to use the "x in [Results 
-        instance]" syntax to see if a specific attribute has been added.
-
-        Args:
-            item (str): the name of the attribute to check for.
-
-        Returns:
-            bool: whether there is an attribute named 'item'
-            
-        """
-        return hasattr(self, item)
     

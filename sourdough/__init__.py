@@ -7,8 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     core: core structural classes and mixins.
     project: base classes for sourdough projects.
-    workflows: composite object classes.
-    directors: classes containing director sequences for sourdough projects.
+    components: composite object classes.
     utilities: functions that make complex and tedious tasks easier.
 
 In general, python files in sourdough are over-documented to allow beginning
@@ -31,34 +30,26 @@ For example:
     
 """
 
-""" Shared Utility Imports """
-
 from .utilities import tools
-
-""" Second-level Imports """
 
 from .core import types
 from .core import quirks
-
-from .project import resources
-from .project import workflow
-
 from .core.configuration import Settings
 from .core.files import Manager
-from .project.labor import Specialist
-from .project.labor import Director
+
+from .project import resources
+from .project.base import Creator
+from .project.base import Component
+from .project import creators
 from .project.interface import Project
 
-from .workflows import components
-from .workflows import graphs
-from .workflows import flows
+from .components import workflows
+from .components import elements
+from .components import graphs
 
-from .workers import specialists
-from .workers import directors
 
 __version__ = '0.1.1'
 
 __author__ = 'Corey Rayburn Yung'
 
 __all__ = []
-

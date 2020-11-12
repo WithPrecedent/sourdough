@@ -17,7 +17,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.quirks.Loader, sourdough.workflow.Component):
+class Technique(sourdough.quirks.Loader, sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -97,7 +97,7 @@ class Technique(sourdough.quirks.Loader, sourdough.workflow.Component):
 
              
 @dataclasses.dataclass
-class Step(sourdough.workflow.Component):
+class Step(sourdough.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
@@ -193,7 +193,7 @@ class Step(sourdough.workflow.Component):
    
 
 @dataclasses.dataclass
-class Flow(sourdough.workflow.Component, sourdough.types.Hybrid):
+class Flow(sourdough.Component, sourdough.types.Hybrid):
     """Base class for composite objects in sourdough projects.
     
     Flow differs from an ordinary Hybrid in 1 significant way:

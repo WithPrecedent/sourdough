@@ -11,12 +11,12 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AComponent(sourdough.workflow.Component):
+class AComponent(sourdough.Component):
     pass
 
 
 @dataclasses.dataclass
-class AnotherComponent(sourdough.workflow.Component):
+class AnotherComponent(sourdough.Component):
     pass
 
 

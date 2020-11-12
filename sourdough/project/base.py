@@ -1,23 +1,59 @@
 """
-workflow: base classes for composite objects
+creator: base class for workflow construction and application
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
+    Creator (Registrar, Container):
+    Director (Registrar, Hybrid, ABC):
+    
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-import pprint
-import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Union)
 
-import sourdough 
+import sourdough
+   
 
+@dataclasses.dataclass
+class Creator(sourdough.quirks.Registrar):
+    """Base class for creating objects for a Project.
+    
+    Args:
+        action (str): name of action performed by the class. This is used in
+            messages in the terminal and logging. It is usually the verb form
+            of the class name (i.e., for Draft, the action is 'drafting').
+            
+    """
+    action: str = None
+    needs: Union[str, Tuple[str]] = None
+    produces: Union[str, Tuple[str]] = None
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, previous: Any, 
+               project: sourdough.Project, **kwargs) -> Any:
+        """Performs some action based on 'project' with kwargs (optional).
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass
+
+    """ Class Methods """
+    
+    @classmethod
+    def register(cls) -> None:
+        """Registers a subclass in a Catalog."""
+        key = sourdough.tools.snakify(cls.__name__)
+        sourdough.project.resources.creators[key] = cls
+        return cls
+    
 
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, 
@@ -76,7 +112,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     
     def deposit(self) -> None:
         """Stores a subclass instance in a Catalog."""
-        sourdough.project.resources.options[self.name] = self
+        sourdough.project.resources.instances[self.name] = self
         return self
 
     """ Private Methods """
@@ -141,22 +177,4 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     #             representation.append(f'{attribute}: {str(value)}')
     #     return new_line.join(representation)  
 
-
-
-# @dataclasses.dataclass
-# class Design(object):
-    
-#     parallels: Sequence[str] = dataclasses.field(default_factory = list)
-#     bases: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
-    
-    
-# @dataclasses.dataclass   
-# class SimplifyDesign(Design):
-
-#     parallels: Sequence[str] = dataclasses.field(default_factory = ['steps'])
-#     bases: Mapping[str, Sequence[str]] = dataclasses.field(
-#         default_factory = lambda: {
-#             'flows': ['flows', 'steps', 'techniques'],
-#             'steps': ['techniques'],
-#             'techniques': [None]})
-
+ 

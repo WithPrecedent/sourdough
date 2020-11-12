@@ -14,70 +14,70 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Parser(sourdough.workflows.flows.Contest):
+class Parser(sourdough.workflows.Contest):
 
     def perform(self):
         return
 
 
 @dataclasses.dataclass
-class Search(sourdough.components.Step):
+class Search(sourdough.elements.Step):
 
     def perform(self):
         return   
 
 
 @dataclasses.dataclass
-class Divide(sourdough.components.Step):
+class Divide(sourdough.elements.Step):
 
     def perform(self):
         return   
     
     
 @dataclasses.dataclass
-class Destroy(sourdough.components.Step):
+class Destroy(sourdough.elements.Step):
 
     def perform(self):
         return   
     
 
 @dataclasses.dataclass
-class Slice(sourdough.components.Technique):
+class Slice(sourdough.elements.Technique):
 
     def perform(self):
         return  
 
 
 @dataclasses.dataclass
-class Dice(sourdough.components.Technique):
+class Dice(sourdough.elements.Technique):
 
     def perform(self):
         return 
     
     
 @dataclasses.dataclass
-class Find(sourdough.components.Technique):
+class Find(sourdough.elements.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Locate(sourdough.components.Technique):
+class Locate(sourdough.elements.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Explode(sourdough.components.Technique):
+class Explode(sourdough.elements.Technique):
 
     def perform(self):
         return 
 
     
 @dataclasses.dataclass
-class Dynamite(sourdough.components.Technique):
+class Dynamite(sourdough.elements.Technique):
     
     label: str = 'annihilate'
 
