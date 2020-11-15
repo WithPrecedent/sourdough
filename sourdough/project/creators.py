@@ -10,8 +10,6 @@ Contents:
 from __future__ import annotations
 import copy
 import dataclasses
-import functools
-import inspect
 import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -82,7 +80,7 @@ class Architect(sourdough.Creator):
 
     """ Public Methods """
     
-    def create(self, project: sourdough.Project) -> sourdough.Lexicon:
+    def create(self, project: sourdough.Project) -> sourdough.types.Lexicon:
         """Creates a blueprint based on 'project.settings'.
 
         Args:
@@ -113,18 +111,18 @@ class Architect(sourdough.Creator):
         
     """ Private Methods """
     
-    def _process_section(self, name: str, blueprint: sourdough.Lexicon,
+    def _process_section(self, name: str, blueprint: sourdough.types.Lexicon,
                          project: sourdough.Project, suffixes: Tuple[str],
-                         base: str) -> sourdough.Lexicon:
+                         base: str) -> sourdough.types.Lexicon:
         """[summary]
 
         Args:
             name (str): [description]
-            blueprint (sourdough.Lexicon): [description]
+            blueprint (sourdough.types.Lexicon): [description]
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Lexicon: [description]
+            sourdough.types.Lexicon: [description]
             
         """
         # Iterates through each key, value pair in section and stores or 
@@ -188,16 +186,16 @@ class Architect(sourdough.Creator):
         return prefix, suffix
     
     @staticmethod    
-    def _add_instructions(name: str, blueprint: sourdough.Lexicon, 
-                     **kwargs) -> sourdough.Lexicon:
+    def _add_instructions(name: str, blueprint: sourdough.types.Lexicon, 
+                     **kwargs) -> sourdough.types.Lexicon:
         """[summary]
 
         Args:
             name (str): [description]
-            blueprint (sourdough.Lexicon): [description]
+            blueprint (sourdough.types.Lexicon): [description]
 
         Returns:
-            sourdough.Lexicon: [description]
+            sourdough.types.Lexicon: [description]
             
         """
         # Stores a mostly empty Instructions instance in 'blueprint' if none 
@@ -223,7 +221,7 @@ class Architect(sourdough.Creator):
 
 
 @dataclasses.dataclass
-class Supervisor(sourdough.Creator):
+class Builder(sourdough.Creator):
     """Constructs finalized workflow.
     
     Args:
@@ -258,7 +256,7 @@ class Supervisor(sourdough.Creator):
         component = self._get_component(name = name, project = project)
         return self._finalize_component(component = component, project = project)
 
-    def _get_component(self, name: str, 
+    def _get_component(self, name: str,
                        project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
@@ -271,11 +269,11 @@ class Supervisor(sourdough.Creator):
             KeyError: [description]
 
         Returns:
-            Mapping[ str, sourdough.Component]: [description]
+            Mapping[str, sourdough.Component]: [description]
             
         """
         instructions = project['blueprint'][name]
-        kwargs = {'name': name, 'contents': project['blueprint'].contents}
+        kwargs = {'name': name, 'contents': instructions.contents}
         try:
             component = copy.deepcopy(project.resources.instances[name])
             for key, value in kwargs.items():
@@ -414,19 +412,14 @@ class Worker(sourdough.Creator):
     
     """ Public Methods """
  
-    def create(self, workflow: sourdough.Component, 
-               project: sourdough.Project) -> sourdough.Lexicon:        
+    def create(self, project: sourdough.Project) -> sourdough.types.Lexicon:        
         """Drafts a Plan instance based on 'blueprint'.
             
         """
         kwargs = {}
-        results = self.__class__(
-            contents = self.contents, 
-            identification = self.identification)
+        results = sourdough.types.Lexicon()
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in workflow:
-            component.apply(**kwargs)
+        for component in project['workflow']:
+            results.add(component.apply(**kwargs))
         return results
-
-    

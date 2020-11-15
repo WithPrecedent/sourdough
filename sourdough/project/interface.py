@@ -23,7 +23,7 @@ DEFAULTS = {
     'settings': sourdough.Settings,
     'manager': sourdough.Manager,
     'creator': sourdough.Creator,
-    'creators': ['architect', 'supervisor', 'worker']}
+    'creators': ['architect', 'builder', 'worker']}
 
 
 @dataclasses.dataclass
@@ -214,7 +214,6 @@ class Project(sourdough.types.Lexicon):
         """Advances through the stored Creator instances."""
         for creator in iter(self):
             self.contents.update({creator.produces: self.__next__()})
-            break
         return self
     
     """ Dunder Methods """
