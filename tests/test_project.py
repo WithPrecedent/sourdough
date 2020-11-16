@@ -16,63 +16,63 @@ import sourdough
 @dataclasses.dataclass
 class Parser(sourdough.workflows.Contest):
 
-    def perform(self):
+    def apply(self):
         return
 
 
 @dataclasses.dataclass
 class Search(sourdough.elements.Step):
 
-    def perform(self):
+    def apply(self):
         return   
 
 
 @dataclasses.dataclass
 class Divide(sourdough.elements.Step):
 
-    def perform(self):
+    def apply(self):
         return   
     
     
 @dataclasses.dataclass
 class Destroy(sourdough.elements.Step):
 
-    def perform(self):
+    def apply(self):
         return   
     
 
 @dataclasses.dataclass
 class Slice(sourdough.elements.Technique):
 
-    def perform(self):
+    def apply(self):
         return  
 
 
 @dataclasses.dataclass
 class Dice(sourdough.elements.Technique):
 
-    def perform(self):
+    def apply(self):
         return 
     
     
 @dataclasses.dataclass
 class Find(sourdough.elements.Technique):
 
-    def perform(self):
+    def apply(self):
         return 
 
     
 @dataclasses.dataclass
 class Locate(sourdough.elements.Technique):
 
-    def perform(self):
+    def apply(self):
         return 
 
     
 @dataclasses.dataclass
 class Explode(sourdough.elements.Technique):
 
-    def perform(self):
+    def apply(self):
         return 
 
     
@@ -81,7 +81,7 @@ class Dynamite(sourdough.elements.Technique):
     
     name: str = 'annihilate'
 
-    def perform(self):
+    def apply(self):
         return 
     
 

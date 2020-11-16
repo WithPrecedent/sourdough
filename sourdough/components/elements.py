@@ -1,10 +1,14 @@
 """
-components: classes for sourdough composite objects
+elements: primitive Component subclasses
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Technique (Loader, Component): base-level class to apply algorithms as
+        part of a Workflow.
+    Step (Component): wrapper for a Technique used in construction of parallel
+        Workflows.
     
 """
 from __future__ import annotations
@@ -17,38 +21,30 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.quirks.Loader, sourdough.Component):
+class Technique(sourdough.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
     to allow for runtime alterations.
     
     Args:
-        contents (Callable): core object used by the 'apply' method. Defaults 
+        contents (Callable, str): core object used by the 'apply' method or a
+            str matching a callable object in the algorithms resource. Defaults 
             to None.
-        parameters (Mapping[Any, Any]]): parameters to be attached to
-            'contents' when the 'apply' method is called. Defaults to an 
-            empty dict.
-        modules Union[str, Sequence[str]]: name(s) of module(s) where the 
-            contents to load is/are located. Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            sourdough classes. 
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'apply' method is called. Defaults to an empty dict.
                                     
     """
-    contents: Callable = None
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    modules: Union[str, Sequence[str]] = dataclasses.field(
-        default_factory = list)
+    contents: Union[Callable, str]= None
     name: str = None
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
 
     """ Properties """
     
@@ -80,20 +76,15 @@ class Technique(sourdough.quirks.Loader, sourdough.Component):
                 passed, nothing is returned.        
         
         """
-        if self.contents is None:
-            try:
-                self.contents = self.load(key = self.name)
-            except ImportError:
-                pass
         if data is None:
             if self.contents:
-                self.contents.apply(**self.parameters, **kwargs)
-            return self
+                data = self.contents.apply(**self.parameters, **kwargs)
+            return data
         else:
             if self.contents:
                 return self.contents.apply(data, **self.parameters, **kwargs)
             else:
-                return self
+                return None
 
              
 @dataclasses.dataclass
@@ -102,29 +93,25 @@ class Step(sourdough.Component):
 
     Subclasses of Step can store additional methods and attributes to apply to 
     all possible technique instances that could be used. This is often useful 
-    when creating 'comparative' Flow instances which test a variety of 
-    strategies with similar or identical parameters and/or methods.
+    when using parallel Worklow instances which test a variety of strategies 
+    with similar or identical parameters and/or methods.
 
     A Step instance will try to return attributes from Technique if the
     attribute is not found in the Step instance. 
 
     Args:
-        technique (Technique): technique object for this Flow in a sourdough
-            sequence. Defaults to None.
+        contents (Technique): technique instance to be used in a Workflow.
+            Defaults ot None.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
+            internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
-            sourdough classes. Defaults to None. If 'name' is None and 
-            '__post_init__' of Component is called, 'name' is set based upon
-            the 'get_name' method in Component. If that method is not 
-            overridden by a subclass instance, 'name' will be assigned to the 
-            snake case version of the class name ('__class__.__name__').
+            sourdough classes. 
                         
     """
-    contents: Technique = None
+    contents: Union[Technique, str] = None
     name: str = None
                 
     """ Properties """
@@ -146,7 +133,7 @@ class Step(sourdough.Component):
     """ Public Methods """
     
     def apply(self, data: object = None, **kwargs) -> object:
-        """Subclasses must provide their own methods.
+        """Applies Technique instance in 'contents'.
         
         The code below outlines a basic method that a subclass should build on
         for a properly functioning Step.
@@ -162,12 +149,11 @@ class Step(sourdough.Component):
                 passed, nothing is returned.        
         
         """
-        print('test contents', self.contents)
         if data is None:
             self.contents.apply(**kwargs)
             return self
         else:
-            return self.contents.apply(item = data, **kwargs)
+            return self.contents.apply(data = data, **kwargs)
 
     """ Dunder Methods """
 
@@ -190,100 +176,3 @@ class Step(sourdough.Component):
             raise AttributeError(
                 f'{attribute} neither found in {self.name} nor '
                 f'{self.contents}') 
-   
-
-@dataclasses.dataclass
-class Flow(sourdough.Component, sourdough.types.Hybrid):
-    """Base class for composite objects in sourdough projects.
-    
-    Flow differs from an ordinary Hybrid in 1 significant way:
-        1) It is mixed in with Sequencify which allows for type validation and 
-            conversion, using the 'verify' and 'convert' methods.
-            
-    Args:
-        contents (collections.abc.Collection): a python Collection of items. 
-            Defaults to an empty list.
-        name (str): property which designates the internal reference of a class 
-            instance that is used throughout sourdough. For example, if a 
-            sourdough instance needs options from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            Defaults to None. If 'name' is None, it will be assigned to the 
-            snake case version of the class name ('__name__' or 
-            '__class__.__name__').
-                            
-    """
-    contents: collections.abc.Collection = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    branches: ClassVar[bool] = False 
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass 
-        # Initializes 'index' for iteration.
-        self.index = -1
-
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods.       
-        
-        """
-        raise NotImplementedError(
-            'subclasses of Flow must provide their own apply methods')
-                   
-    """ Required Subclass Methods """
-    
-    # @abc.abstractmethod
-    # def iterate(self, **kwargs) -> Iterable:
-    #     pass
-    
-    # @abc.abstractmethod
-    # def activate(self, **kwargs) -> Iterable:
-    #     pass    
-    
-    # @abc.abstractmethod
-    # def finalize(self, **kwargs) -> Iterable:
-    #     pass
-  
-    """ Dunder Methods """
-    
-    # def __iter__(self) -> Iterable:
-    #     if self.index + 1 < len(self.contents):
-    #         self.index += 1
-    #         yield self.iterate()
-    #     else:
-    #         raise StopIteration
-
-
-# @dataclasses.dataclass
-# class Element(Component):
-#     """                     
-#     """
-#     name: str = None
-#     contents: Union[object, Callable] = None
-    
-#     """ Initialization Methods """
-    
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent and/or mixin initialization method(s).
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass 
-
-#     """ Public Methods """
-    
-#     def apply(self, data: object = None, **kwargs) -> NotImplementedError:
-#         """Subclasses must provide their own methods.       
-        
-#         """
-#         raise NotImplementedError(
-#             'subclasses of Element must provide their own apply methods') 

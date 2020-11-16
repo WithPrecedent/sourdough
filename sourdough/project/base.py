@@ -29,7 +29,6 @@ class Creator(sourdough.quirks.Registrar):
             of the class name (i.e., for Draft, the action is 'drafting').
             
     """
-    name: str = None
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
     produces: ClassVar[str]
@@ -183,11 +182,9 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
 
     """ Private Methods """
     
-    def _get_name(cls) -> str:
-        """Returns 'name' of class instance for use throughout sourdough.
-        
-        This method converts the class name from CapitalCase to snake_case.
-        
+    def _get_name(self) -> str:
+        """Returns snakecase of the class name.
+
         If a user wishes to use an alternate naming system, a subclass should
         simply override this method. 
         
@@ -195,7 +192,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
             str: name of class for internal referencing and some access methods.
         
         """
-        return sourdough.tools.snakify(cls.__name__)
+        return sourdough.tools.snakify(self.__class__.__name__)
 
     """ Dunder Methods """
     
@@ -243,4 +240,34 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     #             representation.append(f'{attribute}: {str(value)}')
     #     return new_line.join(representation)  
 
- 
+
+
+@dataclasses.dataclass
+class Workflow(sourdough.Component, sourdough.types.Hybrid):
+    """Iterable base class in a sourdough composite object.
+            
+    Args:
+        contents (Sequence[Component]): Component subclass instances. Defaults 
+            to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+                            
+    """
+    contents: Sequence[Component] = dataclasses.field(default_factory = list)
+    name: str = None
+    parallel: ClassVar[bool] = False 
+    
+
+    """ Public Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
+        """Subclasses must provide their own methods.       
+        
+        """
+        raise NotImplementedError(
+            'subclasses of Flow must provide their own apply methods')

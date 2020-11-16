@@ -403,23 +403,15 @@ class Worker(sourdough.Creator):
     produces: ClassVar[str] = 'results'
     
     """ Public Methods """
-    
-    def add(self, name: str, value: Any) -> None:
-        """
-        """
-        setattr(self, name, value)
-        return self
-    
-    """ Public Methods """
  
-    def create(self, project: sourdough.Project) -> sourdough.types.Lexicon:        
-        """Drafts a Plan instance based on 'blueprint'.
+    def create(self, project: sourdough.Project, 
+               **kwargs) -> sourdough.types.Lexicon:        
+        """Computes results based on a workflow.
             
         """
-        kwargs = {}
         results = sourdough.types.Lexicon()
         if project.data is not None:
             kwargs['data'] = project.data
         for component in project['workflow']:
-            results.add(component.apply(**kwargs))
+            results.update({component.name: component.apply(**kwargs)})
         return results
