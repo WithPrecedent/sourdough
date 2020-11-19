@@ -243,7 +243,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.Component, sourdough.types.Hybrid):
+class Workflow(Component, sourdough.types.Hybrid):
     """Iterable base class in a sourdough composite object.
             
     Args:

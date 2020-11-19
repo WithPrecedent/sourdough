@@ -31,8 +31,8 @@ class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
     
     Unlike an ordinary Lexicon, a Project instance will iterate 'creators' 
-    instead of 'contents'. However, all getters and setters still point to 
-    'contents', which is where the results of iterating the class are stored.
+    instead of 'contents'. However, all access methods still point to 'contents', 
+    which is where the results of iterating the class are stored.
         
     Args:
         contents (Mapping[str, object]]): stored dictionary that stores objects
