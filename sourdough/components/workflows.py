@@ -65,7 +65,7 @@ class SerialFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     contents: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
         default_factory = list)
     name: str = None
-    branches: ClassVar[bool] = False   
+    parallel: ClassVar[bool] = False   
 
     """ Public Methods """
 
@@ -152,7 +152,7 @@ class ParallelFlow(sourdough.Component, sourdough.types.Hybrid, abc.ABC):
     name: str = None
     iterations: int = 1
     criteria: str = None
-    branches: ClassVar[bool] = True
+    parallel: ClassVar[bool] = True
           
     """ Public Methods """
 

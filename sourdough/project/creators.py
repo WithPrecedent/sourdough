@@ -308,7 +308,7 @@ class Builder(sourdough.Creator):
             
         """
         if isinstance(component, Iterable):
-            if component.branches:
+            if component.parallel:
                 component = self._create_parallel(
                     component = component, 
                     project = project)
