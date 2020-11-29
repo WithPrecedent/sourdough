@@ -8,7 +8,7 @@
 
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
 

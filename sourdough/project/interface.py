@@ -13,17 +13,26 @@ import dataclasses
 import pathlib
 import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 import warnings
 
 import sourdough 
 
 
-DEFAULTS = {
-    'settings': sourdough.Settings,
-    'manager': sourdough.Manager,
-    'creator': sourdough.Creator,
-    'creators': ['architect', 'builder', 'worker']}
+class Prospectus(object):
+    """[summary]
+
+    Args:
+        
+    """
+    resources: types.ModuleType = sourdough.project.resources
+    settings: Type = sourdough.Settings
+    manager: Type = sourdough.Manager
+    creator: Type = sourdough.Creator
+    creators: Sequence[Union[str, Type]] = dataclasses.field(
+        default_factory = lambda: ['architect', 'builder', 'worker'])
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'settings', 'name', 'identification', 'manager', 'creators'])
 
 
 @dataclasses.dataclass
@@ -78,12 +87,7 @@ class Project(sourdough.types.Lexicon):
     identification: str = None
     automatic: bool = True
     data: object = None
-    resources: types.ModuleType = dataclasses.field(
-        default_factory = lambda: sourdough.resources)
-    defaults: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: DEFAULTS)
-    _validations: ClassVar[Sequence[str]] = [
-        'settings', 'name', 'identification', 'manager', 'creators']
+    prospectus: ClassVar[object] = Prospectus()
     
     """ Initialization Methods """
 
@@ -96,9 +100,12 @@ class Project(sourdough.types.Lexicon):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Calls validation methods based on items listed in '_validations'.
-        for validation in self._validations:
-            getattr(self, f'_validate_{validation}')()
+        # Calls validation methods based on items listed in 'prospectus'.
+        try:
+            for validation in self.prospectus.validations:
+                getattr(self, f'_validate_{validation}')()
+        except AttributeError:
+            pass
         # Sets index for iteration.
         self.index = 0
         # Advances through 'director' if 'automatic' is True.
@@ -116,7 +123,7 @@ class Project(sourdough.types.Lexicon):
             resource (sourdough.types.Lexicon): [description]
             
         """
-        setattr(cls.resources, name, resource)
+        setattr(cls.prospectus.resources, name, resource)
         return cls
     
     @classmethod
@@ -129,7 +136,7 @@ class Project(sourdough.types.Lexicon):
             value (Any): [description]
             
         """
-        getattr(cls.resources, name).add(item = {key: value})
+        getattr(cls.prospectus.resources, name).add(item = {key: value})
         return cls
 
     """ Private Methods """
@@ -142,8 +149,9 @@ class Project(sourdough.types.Lexicon):
         access of settings like 'verbose'.
         
         """
-        if not isinstance(self.settings, self.defaults['settings']):
-            self.settings = self.defaults['settings'](contents = self.settings)
+        if not isinstance(self.settings, self.prospectus.settings):
+            self.settings = self.prospectus.settings(
+                contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
@@ -179,8 +187,8 @@ class Project(sourdough.types.Lexicon):
 
     def _validate_manager(self) -> None:
         """Validates 'manager' or converts it to a Manager instance."""
-        if not isinstance(self.manager, self.defaults['manager']):
-            self.manager = self.defaults['manager'](
+        if not isinstance(self.manager, self.prospectus.manager):
+            self.manager = self.prospectus.manager(
                 root_folder = self.manager, 
                 settings = self.settings)
         return self
@@ -196,16 +204,16 @@ class Project(sourdough.types.Lexicon):
             
         """
         if self.creators is None:
-            self.creators = self.defaults['creators']
+            self.creators = self.prospectus.creators
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
                 new_creators.append(self.resources.creators.select(creator))
-            elif issubclass(creator, self.defaults['creator']):
+            elif issubclass(creator, self.prospectus.creator):
                 new_creators.append(creator)
             else:
                 raise TypeError(
-                    f'All creators must be str or {self.defaults["creator"]} ' 
+                    f'All creators must be str or {sourdough.defaults["creator"]} ' 
                     f'type')
         self.creators = new_creators
         return self

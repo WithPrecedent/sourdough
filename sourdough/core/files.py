@@ -17,7 +17,7 @@ import importlib
 import pathlib
 import sys
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 import sourdough
 
 
@@ -63,6 +63,7 @@ def importify(
         except AttributeError:
             raise ImportError(f'{key} not found in {module}')
     return loaded
+
 
 @dataclasses.dataclass
 class Manager(object):

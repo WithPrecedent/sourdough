@@ -14,10 +14,10 @@ import abc
 import collections.abc
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-   
+
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar):
@@ -27,8 +27,13 @@ class Creator(sourdough.quirks.Registrar):
         action (str): name of action performed by the class. This is used in
             messages in the terminal and logging. It is usually the verb form
             of the class name (i.e., for Draft, the action is 'drafting').
+        needs (ClassVar[Union[str, Tuple[str]]]): name(s) of item(s) needed
+            by the class's 'create' method.
+        produces (ClassVar[str]): name of item produced by the class's 'create'
+            method.
             
     """
+    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
     produces: ClassVar[str]
@@ -49,11 +54,17 @@ class Creator(sourdough.quirks.Registrar):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, previous: Any, 
-               project: sourdough.Project, **kwargs) -> Any:
+    def create(self, project: sourdough.Project, **kwargs) -> Any:
         """Performs some action based on 'project' with kwargs (optional).
         
         Subclasses must provide their own methods.
+
+        Args:
+            project (sourdough.Project): a Project instance.
+            kwargs: any additional parameters to pass to a 'create' method.
+
+        Return:
+            Any: object created by a 'create' method.
         
         """
         pass
@@ -64,7 +75,7 @@ class Creator(sourdough.quirks.Registrar):
     def register(cls) -> None:
         """Registers a subclass in a Catalog."""
         key = sourdough.tools.snakify(cls.__name__)
-        sourdough.project.resources.creators[key] = cls
+        sourdough.Project.prospectus.resources.creators[key] = cls
         return cls
 
     @classmethod

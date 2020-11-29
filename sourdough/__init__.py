@@ -17,7 +17,7 @@ to email me - I want to ensure the package is as accessible as possible.
 
 """
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 
 """ 
 sourdough imports are designed to allow key classes and functions to have first 
@@ -34,13 +34,15 @@ from .utilities import tools
 
 from .core import types
 from .core import quirks
+   
 from .core.configuration import Settings
 from .core.files import Manager
-
 from .project import resources
 from .project.base import Creator
+
 from .project.base import Component
 from .project import creators
+from .project.interface import Prospectus
 from .project.interface import Project
 
 from .components import workflows

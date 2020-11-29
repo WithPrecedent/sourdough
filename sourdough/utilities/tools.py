@@ -14,7 +14,7 @@ import pathlib
 import re
 import typing
 from typing import (
-    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Union)
+    Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Type, Union)
 
 import more_itertools
 
@@ -98,7 +98,7 @@ def importify(module: str, key: str) -> object:
     try:
         return getattr(importlib.import_module(module), key)
     except (ImportError, AttributeError):
-       raise ImportError(f'failed to load {key} in {module}')
+        raise ImportError(f'failed to load {key} in {module}')
              
 def instancify(
         variable: Any, 

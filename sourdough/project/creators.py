@@ -13,7 +13,7 @@ import dataclasses
 import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
 
@@ -74,6 +74,7 @@ class Architect(sourdough.Creator):
     Args:
                         
     """
+    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Drafting'
     needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
     produces: ClassVar[str] = 'blueprint'
@@ -227,6 +228,7 @@ class Builder(sourdough.Creator):
     Args:
                         
     """
+    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Creating'
     needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
     produces: ClassVar[str] = 'workflow'
@@ -398,6 +400,7 @@ class Worker(sourdough.Creator):
     Args:
 
     """
+    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Computing'
     needs: ClassVar[Union[str, Tuple[str]]] = 'workflow'
     produces: ClassVar[str] = 'results'

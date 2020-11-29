@@ -26,7 +26,7 @@ import dataclasses
 import pprint
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Union)
+                    Optional, Sequence, Tuple, Type, Union)
 
 import more_itertools
 
