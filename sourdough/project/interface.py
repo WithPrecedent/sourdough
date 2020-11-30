@@ -19,7 +19,7 @@ import warnings
 import sourdough 
 
 
-class Prospectus(object):
+class Abstract(object):
     """[summary]
 
     Args:
@@ -44,8 +44,8 @@ class Project(sourdough.types.Lexicon):
     which is where the results of iterating the class are stored.
         
     Args:
-        contents (Mapping[str, object]]): stored dictionary that stores objects
-            created by 'creators'.
+        contents (Mapping[str, object]]): stored objects created by 'creators'.
+             defaults to an empty dict.
         settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
             Settings or a str or pathlib.Path containing the file path where a 
             file of a supported file type with settings for a Settings instance 
@@ -75,7 +75,7 @@ class Project(sourdough.types.Lexicon):
             whether the director must be advanced manually (False). Defaults to 
             True.
         data (object): any data object for the project to be applied.         
-  
+        abstract (ClassVar[object]):
             
     """
     contents: Sequence[sourdough.Creator] = dataclasses.field(
@@ -87,7 +87,7 @@ class Project(sourdough.types.Lexicon):
     identification: str = None
     automatic: bool = True
     data: object = None
-    prospectus: ClassVar[object] = Prospectus()
+    abstract: ClassVar[object] = Abstract()
     
     """ Initialization Methods """
 
@@ -100,15 +100,15 @@ class Project(sourdough.types.Lexicon):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Calls validation methods based on items listed in 'prospectus'.
+        # Calls validation methods based on items listed in 'abstract'.
         try:
-            for validation in self.prospectus.validations:
+            for validation in self.abstract.validations:
                 getattr(self, f'_validate_{validation}')()
         except AttributeError:
             pass
         # Sets index for iteration.
         self.index = 0
-        # Advances through 'director' if 'automatic' is True.
+        # Advances through 'creators' if 'automatic' is True.
         if self.automatic:
             self._auto_create()
 
@@ -123,7 +123,7 @@ class Project(sourdough.types.Lexicon):
             resource (sourdough.types.Lexicon): [description]
             
         """
-        setattr(cls.prospectus.resources, name, resource)
+        setattr(cls.abstract.resources, name, resource)
         return cls
     
     @classmethod
@@ -136,7 +136,7 @@ class Project(sourdough.types.Lexicon):
             value (Any): [description]
             
         """
-        getattr(cls.prospectus.resources, name).add(item = {key: value})
+        getattr(cls.abstract.resources, name).add(item = {key: value})
         return cls
 
     """ Private Methods """
@@ -149,8 +149,8 @@ class Project(sourdough.types.Lexicon):
         access of settings like 'verbose'.
         
         """
-        if not isinstance(self.settings, self.prospectus.settings):
-            self.settings = self.prospectus.settings(
+        if not isinstance(self.settings, self.abstract.settings):
+            self.settings = self.abstract.settings(
                 contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
@@ -187,8 +187,8 @@ class Project(sourdough.types.Lexicon):
 
     def _validate_manager(self) -> None:
         """Validates 'manager' or converts it to a Manager instance."""
-        if not isinstance(self.manager, self.prospectus.manager):
-            self.manager = self.prospectus.manager(
+        if not isinstance(self.manager, self.abstract.manager):
+            self.manager = self.abstract.manager(
                 root_folder = self.manager, 
                 settings = self.settings)
         return self
@@ -204,12 +204,12 @@ class Project(sourdough.types.Lexicon):
             
         """
         if self.creators is None:
-            self.creators = self.prospectus.creators
+            self.creators = self.abstract.creators
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
                 new_creators.append(self.resources.creators.select(creator))
-            elif issubclass(creator, self.prospectus.creator):
+            elif issubclass(creator, self.abstract.creator):
                 new_creators.append(creator)
             else:
                 raise TypeError(

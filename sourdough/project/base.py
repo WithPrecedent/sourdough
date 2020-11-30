@@ -75,7 +75,7 @@ class Creator(sourdough.quirks.Registrar):
     def register(cls) -> None:
         """Registers a subclass in a Catalog."""
         key = sourdough.tools.snakify(cls.__name__)
-        sourdough.Project.prospectus.resources.creators[key] = cls
+        cls.project.abstract.resources.creators[key] = cls
         return cls
 
     @classmethod
