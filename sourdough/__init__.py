@@ -31,23 +31,24 @@ For example:
 """
 
 from .utilities import tools
+
 from .core import types
 from .core import quirks
-   
 from .core.configuration import Settings
 from .core.files import Manager
-from .project.interface import Abstract
-from .project.interface import Project
-from .project import resources
-from .project.base import Creator
+from . import core
 
+from .project.base import Creator
 from .project.base import Component
 from .project import creators
-
+from .project.interface import Abstract
+from .project.interface import Project
+from . import project
 
 from .components import workflows
 from .components import elements
 from .components import graphs
+from . import components
 
 
 __version__ = '0.1.1'

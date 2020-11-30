@@ -76,13 +76,13 @@ import sourdough
 #             new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
 #             # Recursively adds quirks to items in the 'registry' of 'base'.
 #             if hasattr(base, 'registry'):
-#                 new_registry = {}
+#                 newregistry = {}
 #                 for key, value in base.registry.items():
-#                     new_registry[key] = self.create_class(
+#                     newregistry[key] = self.create_class(
 #                         name = key,
 #                         base = value,
 #                         quirks = quirks)
-#                 new_base.registry = new_registry
+#                 new_base.registry = newregistry
 #         else:
 #             new_base = base
 #         return new_base

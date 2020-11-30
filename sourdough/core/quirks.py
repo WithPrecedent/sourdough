@@ -43,6 +43,7 @@ class Registrar(object):
     this quirk.
     
     """
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
 
     """ Initialization Methods """
     
@@ -51,13 +52,15 @@ class Registrar(object):
         super().__init_subclass__(**kwargs)
         if not abc.ABC in cls.__bases__:
             cls.register()
-   
+        
     """ Class Methods """
 
     @classmethod
-    @abc.abstractmethod
     def register(cls) -> None:
-        pass
+        """Registers a subclass in a Catalog."""
+        key = sourdough.tools.snakify(cls.__name__)
+        cls.registry[key] = cls
+        return cls
     
     
 @dataclasses.dataclass
@@ -68,6 +71,7 @@ class Librarian(object):
     'deposit' method which must be provided by the class using this quirk.
     
     """
+    library: ClassVar[Mapping[str, object]] = sourdough.types.Catalog()
 
     """ Initialization Methods """
 
@@ -79,13 +83,21 @@ class Librarian(object):
         except AttributeError:
             pass
         # Stores subclass in Library.
+        print('test yes deposited')
         self.deposit()
     
     """ Class Methods """
 
-    @abc.abstractmethod
-    def deposit(cls) -> None:
-        pass
+    def deposit(self) -> None:
+        """Stores a subclass instance in a Catalog."""
+        try:
+            self.library[self.name] = self
+        except (AttributeError, TypeError):
+            try:
+                self.library[self.__name__] = self
+            except (AttributeError, TypeError):
+                self.library[self.__class__.__name__] = self 
+        return self
 
 
 @dataclasses.dataclass

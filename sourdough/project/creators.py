@@ -93,7 +93,7 @@ class Architect(sourdough.Creator):
             
         """ 
         blueprint = sourdough.types.Lexicon()
-        suffixes = project.resources.components.keys()
+        suffixes = project.abstract.component.registry.keys()
         suffixes = tuple(item + 's' for item in suffixes)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
@@ -137,7 +137,7 @@ class Architect(sourdough.Creator):
                 key_name, key_suffix = self._divide_key(key = key)
                 contains = key_suffix.rstrip('s')
                 contents = sourdough.tools.listify(value) 
-                blueprint = self._add_instructions(
+                blueprint = self._add_design(
                     name = key_name, 
                     blueprint = blueprint,
                     contents = contents,
@@ -151,20 +151,20 @@ class Architect(sourdough.Creator):
                             suffixes = suffixes,
                             base = contains)
                     else:
-                        blueprint = self._add_instructions(
+                        blueprint = self._add_design(
                             name = item, 
                             blueprint = blueprint,
                             base = contains)
             # keys ending with 'design' hold values of a Component's design.
             elif key.endswith('design'):
-                blueprint = self._add_instructions(
+                blueprint = self._add_design(
                     name = name, 
                     blueprint = blueprint, 
                     design = value)
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                blueprint = self._add_instructions(
+                blueprint = self._add_design(
                     name = name,
                     blueprint = blueprint,
                     attributes = {key: value})
@@ -187,7 +187,7 @@ class Architect(sourdough.Creator):
         return prefix, suffix
     
     @staticmethod    
-    def _add_instructions(name: str, blueprint: sourdough.types.Lexicon, 
+    def _add_design(name: str, blueprint: sourdough.types.Lexicon, 
                      **kwargs) -> sourdough.types.Lexicon:
         """[summary]
 
@@ -274,24 +274,29 @@ class Builder(sourdough.Creator):
             Mapping[str, sourdough.Component]: [description]
             
         """
+        print('test blueprint', project['blueprint'])
         instructions = project['blueprint'][name]
+        print('test instructions', instructions)
+        print('test library', project.abstract.component.library)
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = copy.deepcopy(project.resources.instances[name])
+            component = copy.deepcopy(project.abstract.component.library[name])
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = project.resources.components[name]
+                component = project.abstract.component.library[name]
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.resources.components[instructions.design]
+                    component = project.abstract.component.library[
+                        instructions.design]
                     component = component(**kwargs)
                 except KeyError:
                     try:
-                        component = project.resources.components[instructions.base]
+                        component = project.abstract.component.library[
+                            instructions.base]
                         component = component(**kwargs)
                     except KeyError:
                         raise KeyError(f'{name} component does not exist')

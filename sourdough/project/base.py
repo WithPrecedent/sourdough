@@ -19,6 +19,15 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+creators = sourdough.types.Catalog()
+
+components = sourdough.types.Catalog()
+
+instances = sourdough.types.Catalog()
+
+algorithms = sourdough.types.Catalog()
+
+
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar):
     """Base class for creating objects for a Project.
@@ -37,6 +46,7 @@ class Creator(sourdough.quirks.Registrar):
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
     produces: ClassVar[str]
+    registry: ClassVar[Mapping[str, Type]] = creators
     
     """ Initialization Methods """
 
@@ -68,15 +78,6 @@ class Creator(sourdough.quirks.Registrar):
         
         """
         pass
-
-    """ Class Methods """
-    
-    @classmethod
-    def register(cls) -> None:
-        """Registers a subclass in a Catalog."""
-        key = sourdough.tools.snakify(cls.__name__)
-        cls.project.abstract.resources.creators[key] = cls
-        return cls
 
     @classmethod
     def parameterize(cls, project: sourdough.Project) -> Mapping[str, Any]:
@@ -132,7 +133,7 @@ class Creator(sourdough.quirks.Registrar):
                 
     
 @dataclasses.dataclass
-class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian, 
+class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
                 collections.abc.Container):
     """Base container class for sourdough composite objects.
     
@@ -154,6 +155,8 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     """
     contents: Any = None
     name: str = None
+    registry: ClassVar[Mapping[str, Type]] = components
+    library: ClassVar[Mapping[str, object]] = instances
     
     """ Initialization Methods """
 
@@ -174,22 +177,6 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Librarian,
     def apply(self, project: sourdough.Project) -> sourdough.Project:
         """Subclasses must provide their own methods."""
         return project
-
-    """ Class Methods """
-    
-    @classmethod
-    def register(cls) -> None:
-        """Registers a subclass in a Catalog."""
-        key = sourdough.tools.snakify(cls.__name__)
-        sourdough.project.resources.components[key] = cls
-        return cls
-    
-    """ Public Methods """
-    
-    def deposit(self) -> None:
-        """Stores a subclass instance in a Catalog."""
-        sourdough.project.resources.instances[self.name] = self
-        return self
 
     """ Private Methods """
     
