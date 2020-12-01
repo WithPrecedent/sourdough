@@ -10,6 +10,7 @@ Contents:
 """
 from __future__ import annotations
 import dataclasses
+import inspect
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
@@ -19,29 +20,12 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Abstract(object):
-    """[summary]
-
-    Args:
-        
-    """
-    settings: Type = sourdough.Settings
-    manager: Type = sourdough.Manager
-    creator: Type = sourdough.Creator
-    creators: Sequence[Union[str, Type]] = dataclasses.field(
-        default_factory = lambda: ['architect', 'builder', 'worker'])
-    component: Type = sourdough.Component
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'manager', 'creators'])
-
-
-@dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
     
     Unlike an ordinary Lexicon, a Project instance will iterate 'creators' 
-    instead of 'contents'. However, all access methods still point to 'contents', 
-    which is where the results of iterating the class are stored.
+    instead of 'contents'. However, all access methods still point to 
+    'contents', which is where the results of iterating the class are stored.
         
     Args:
         contents (Mapping[str, object]]): stored objects created by 'creators'.
@@ -56,7 +40,8 @@ class Project(sourdough.types.Lexicon):
             Manager instance contains all file path and import/export methods 
             for use throughout sourdough. Defaults to the default Manager 
             instance. 
-        abstract (object):
+        resources (object):
+        
         creators (Sequence[Union[sourdough.Creator, str]]):
         
         name (str): designates the name of a class instance that is used for 
@@ -75,20 +60,21 @@ class Project(sourdough.types.Lexicon):
         automatic (bool): whether to automatically advance 'director' (True) or 
             whether the director must be advanced manually (False). Defaults to 
             True.
-        data (object): any data object for the project to be applied.         
-        
+        data (object): any data object for the project to be applied.           
             
     """
-    contents: Sequence[sourdough.Creator] = dataclasses.field(
-        default_factory = dict)
-    settings: Union[sourdough.Settings, str, pathlib.Path] = None
-    manager: Union[sourdough.Manager, str, pathlib.Path] = None
-    abstract: object = dataclasses.field(default_factory = Abstract)
-    creators: Sequence[Union[sourdough.Creator, str]] = None
+    contents: Sequence[Any] = dataclasses.field(default_factory = dict)
+    settings: Union[object, Type, str, pathlib.Path] = None
+    manager: Union[object, Type, str, pathlib.Path] = None
+    resources: object = dataclasses.field(default_factory = sourdough.Resources)
+    creators: Sequence[Union[object, Type, str]] = dataclasses.field(
+        default_factory = lambda: ['architect', 'builder', 'worker'])
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
+    _validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'settings', 'name', 'identification', 'manager', 'creators'])
     
     """ Initialization Methods """
 
@@ -101,9 +87,9 @@ class Project(sourdough.types.Lexicon):
             pass
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
-        # Calls validation methods based on items listed in 'abstract'.
+        # Calls validation methods based on items listed in 'validations'.
         try:
-            for validation in self.abstract.validations:
+            for validation in self._validations:
                 getattr(self, f'_validate_{validation}')()
         except AttributeError:
             pass
@@ -123,9 +109,11 @@ class Project(sourdough.types.Lexicon):
         access of settings like 'verbose'.
         
         """
-        if not isinstance(self.settings, self.abstract.settings):
-            self.settings = self.abstract.settings(
-                contents = self.settings)
+        if inspect.isclass(self.settings):
+            self.settings = self.settings()
+        elif (self.settings is None 
+              or isinstance(self.settings, (str, pathlib.Path))):
+            self.settings = self.resources.settings(contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
@@ -161,10 +149,15 @@ class Project(sourdough.types.Lexicon):
 
     def _validate_manager(self) -> None:
         """Validates 'manager' or converts it to a Manager instance."""
-        if not isinstance(self.manager, self.abstract.manager):
-            self.manager = self.abstract.manager(
+        if inspect.isclass(self.manager):
+            self.manager = self.manager(settings = self.settings)
+        elif (self.manager is None 
+              or not isinstance(self.manager, (str, pathlib.Path))):
+            self.manager = self.resources.manager(
                 root_folder = self.manager, 
                 settings = self.settings)
+        else:
+            self.manager.settings = self.settings
         return self
 
     def _validate_creators(self) -> None:
@@ -177,18 +170,15 @@ class Project(sourdough.types.Lexicon):
             [type]: [description]
             
         """
-        if self.creators is None:
-            self.creators = self.abstract.creators
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
-                new_creators.append(
-                    self.abstract.creator.registry.select(creator))
-            elif issubclass(creator, self.abstract.creator):
-                new_creators.append(creator)
+                new_creators.append(self.resources.creator.acquire(creator)())
+            elif inspect.isclass(creator):
+                new_creators.append(creator())
             else:
-                raise TypeError(
-                    f'All creators must be str or {self.abstract.creator} type')
+                new_creators.append(creator)
+        print('test creators', new_creators)
         self.creators = new_creators
         return self
 
@@ -200,11 +190,11 @@ class Project(sourdough.types.Lexicon):
     
     """ Dunder Methods """
     
-    def __next__(self) -> Project:
+    def __next__(self) -> Any:
         """[summary]
 
         Returns:
-            Project: [description]
+            Any:
             
         """
         if self.index < len(self.creators):

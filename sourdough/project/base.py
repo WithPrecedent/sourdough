@@ -26,7 +26,7 @@ components = sourdough.types.Catalog()
 instances = sourdough.types.Catalog()
 
 algorithms = sourdough.types.Catalog()
-
+    
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar):
@@ -42,25 +42,11 @@ class Creator(sourdough.quirks.Registrar):
             method.
             
     """
-    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
     produces: ClassVar[str]
     registry: ClassVar[Mapping[str, Type]] = creators
-    
-    """ Initialization Methods """
 
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets 'name' attribute.
-        if not hasattr(self, 'name') or self.name is None:  
-            self.name = self._get_name()
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        
     """ Required Subclass Methods """
     
     @abc.abstractmethod
@@ -79,6 +65,8 @@ class Creator(sourdough.quirks.Registrar):
         """
         pass
 
+    """ Class Methods """
+    
     @classmethod
     def parameterize(cls, project: sourdough.Project) -> Mapping[str, Any]:
         """[summary]
@@ -98,38 +86,6 @@ class Creator(sourdough.quirks.Registrar):
                 parameters.update({item: getattr(project, item)})
         parameters.update({'project': project})
         return parameters
-    
-    # @classmethod
-    # def store(cls, project: sourdough.Project, product: Any) -> None:
-    #     """[summary]
-
-    #     Args:
-    #         project (sourdough.Project): [description]
-    #         product (Any): [description]
-
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     project.update({cls.produces: product})
-    #     return cls
-
-
-    """ Private Methods """
-    
-    @classmethod
-    def _get_name(cls) -> str:
-        """Returns 'name' of class instance for use throughout sourdough.
-        
-        This method converts the class name from CapitalCase to snake_case.
-        
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        return sourdough.tools.snakify(cls.__name__)
                 
     
 @dataclasses.dataclass
@@ -209,8 +165,6 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             return item in self.contents
         except TypeError:
             return item == self.contents
-    
-    
            
     # def __str__(self) -> str:
     #     """Returns pretty string representation of an instance.
@@ -239,33 +193,19 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     #     return new_line.join(representation)  
 
 
-
 @dataclasses.dataclass
-class Workflow(Component, sourdough.types.Hybrid):
-    """Iterable base class in a sourdough composite object.
-            
+class Resources(object):
+    """[summary]
+    
     Args:
-        contents (Sequence[Component]): Component subclass instances. Defaults 
-            to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-                            
-    """
-    contents: Sequence[Component] = dataclasses.field(default_factory = list)
-    name: str = None
-    parallel: ClassVar[bool] = False 
-    
-
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods.       
         
-        """
-        raise NotImplementedError(
-            'subclasses of Flow must provide their own apply methods')
+    """
+    settings: Type = sourdough.Settings
+    manager: Type = sourdough.Manager
+    creator: Type = Creator
+    creators: Mapping[str, Type] = creators
+    component: Type = Component
+    components: Mapping[str, Type] = components
+    instances: Mapping[str, object] = instances
+    algortihms: Mapping[str, Type] = algorithms
+    

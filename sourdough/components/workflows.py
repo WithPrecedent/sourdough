@@ -20,6 +20,37 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Workflow(sourdough.Component, sourdough.types.Hybrid):
+    """Iterable base class in a sourdough composite object.
+            
+    Args:
+        contents (Sequence[Component]): Component subclass instances. Defaults 
+            to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+                            
+    """
+    contents: Sequence[sourdough.Component] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    parallel: ClassVar[bool] = False 
+    
+    """ Public Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
+        """Subclasses must provide their own methods.       
+        
+        """
+        raise NotImplementedError(
+            'subclasses of Flow must provide their own apply methods')
+
+
+@dataclasses.dataclass
 class Aggregation(sourdough.Component, sourdough.types.Hybrid):
     """Aggregates unordered objects.
     

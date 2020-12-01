@@ -24,6 +24,7 @@ ToDo:
 """
 from __future__ import annotations
 import abc
+import copy
 import dataclasses
 import inspect
 from sourdough.utilities.tools import deannotate
@@ -61,6 +62,19 @@ class Registrar(object):
         key = sourdough.tools.snakify(cls.__name__)
         cls.registry[key] = cls
         return cls
+
+    @classmethod
+    def acquire(cls, key: str) -> Any:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            Any: [description]
+            
+        """
+        return cls.registry.select(key)
     
     
 @dataclasses.dataclass
@@ -83,21 +97,27 @@ class Librarian(object):
         except AttributeError:
             pass
         # Stores subclass in Library.
-        print('test yes deposited')
         self.deposit()
     
     """ Class Methods """
 
-    def deposit(self) -> None:
+    @classmethod
+    def deposit(cls) -> None:
         """Stores a subclass instance in a Catalog."""
         try:
-            self.library[self.name] = self
+            cls.library[cls.name] = cls
         except (AttributeError, TypeError):
             try:
-                self.library[self.__name__] = self
+                cls.library[cls.__name__] = cls
             except (AttributeError, TypeError):
-                self.library[self.__class__.__name__] = self 
-        return self
+                cls.library[cls.__class__.__name__] = cls 
+        return cls
+
+    @classmethod
+    def borrow(cls, key: str) -> Any:
+        """
+        """
+        return copy.deepcopy(cls.library.select(key))
 
 
 @dataclasses.dataclass

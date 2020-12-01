@@ -74,7 +74,6 @@ class Architect(sourdough.Creator):
     Args:
                         
     """
-    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Drafting'
     needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
     produces: ClassVar[str] = 'blueprint'
@@ -93,7 +92,7 @@ class Architect(sourdough.Creator):
             
         """ 
         blueprint = sourdough.types.Lexicon()
-        suffixes = project.abstract.component.registry.keys()
+        suffixes = project.resources.component.registry.keys()
         suffixes = tuple(item + 's' for item in suffixes)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
@@ -228,7 +227,6 @@ class Builder(sourdough.Creator):
     Args:
                         
     """
-    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Creating'
     needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
     produces: ClassVar[str] = 'workflow'
@@ -256,7 +254,8 @@ class Builder(sourdough.Creator):
             
         """
         component = self._get_component(name = name, project = project)
-        return self._finalize_component(component = component, project = project)
+        return self._finalize_component(component = component, 
+                                        project = project)
 
     def _get_component(self, name: str,
                        project: sourdough.Project) -> sourdough.Component:
@@ -274,28 +273,25 @@ class Builder(sourdough.Creator):
             Mapping[str, sourdough.Component]: [description]
             
         """
-        print('test blueprint', project['blueprint'])
         instructions = project['blueprint'][name]
-        print('test instructions', instructions)
-        print('test library', project.abstract.component.library)
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = copy.deepcopy(project.abstract.component.library[name])
+            component = copy.deepcopy(project.resources.component.library[name])
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = project.abstract.component.library[name]
+                component = project.resources.component.registry[name]
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.abstract.component.library[
+                    component = project.resources.component.registry[
                         instructions.design]
                     component = component(**kwargs)
                 except KeyError:
                     try:
-                        component = project.abstract.component.library[
+                        component = project.resources.component.registry[
                             instructions.base]
                         component = component(**kwargs)
                     except KeyError:
@@ -405,7 +401,6 @@ class Worker(sourdough.Creator):
     Args:
 
     """
-    project: Any = dataclasses.field(repr = False, default = None)
     action: ClassVar[str] = 'Computing'
     needs: ClassVar[Union[str, Tuple[str]]] = 'workflow'
     produces: ClassVar[str] = 'results'
