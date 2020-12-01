@@ -28,31 +28,34 @@ class Project(sourdough.types.Lexicon):
     'contents', which is where the results of iterating the class are stored.
         
     Args:
-        contents (Mapping[str, object]]): stored objects created by 'creators'.
-             defaults to an empty dict.
-        settings (Union[sourdough.Settings, str, pathlib.Path]]): an instance of 
-            Settings or a str or pathlib.Path containing the file path where a 
-            file of a supported file type with settings for a Settings instance 
-            is located. Defaults to the default Settings instance.
-        manager (Union[sourdough.Manager, str, pathlib.Path]]): an instance of 
-            Manager or a str or pathlib.Path containing the full path of where 
-            the root folder should be located for file input and output. A 
-            Manager instance contains all file path and import/export methods 
-            for use throughout sourdough. Defaults to the default Manager 
-            instance. 
-        resources (object):
-        
-        creators (Sequence[Union[sourdough.Creator, str]]):
-        
+        contents (Mapping[str, object]]): stored objects created by the 
+            'create' methods of 'creators'. Defaults to an empty dict.
+        settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
+            a str or pathlib.Path containing the file path where a file of a 
+            supported file type with settings for a Settings instance is located. 
+            Defaults to the default Settings instance.
+        manager (Union[Type, str, pathlib.Path]]): a Manager-compatible class,
+            or a str or pathlib.Path containing the full path of where the root 
+            folder should be located for file input and output. A 'manager'
+            must contain all file path and import/export methods for use 
+            throughout sourdough. Defaults to the default Manager instance. 
+        resources (object): contains information about default classes and 
+            mappings of stored classes and instances used by a Project instance.
+            Defaults to an instance of sourdough.Resources.
+        creators (Sequence[Union[Type, str]]): a Creator-compatible classes or
+            strings corresponding to the keys in registry of the default
+            'creator' in 'resources'. Defaults to a list of 'architect', 
+            'builder', and 'worker'. 
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
-            sourdough classes. If it is None, the 'name' will be inferred from
-            the first section name in 'settings' after 'general' and 'files'.
-            Defaults to None. 
+            sourdough classes. If it is None, the 'name' will be attempted to be 
+            inferred from the first section name in 'settings' after 'general' 
+            and 'files'. If that fails, 'name' will be the snakecase name of the
+            class. Defaults to None. 
         identification (str): a unique identification name for a Project 
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
@@ -60,21 +63,30 @@ class Project(sourdough.types.Lexicon):
         automatic (bool): whether to automatically advance 'director' (True) or 
             whether the director must be advanced manually (False). Defaults to 
             True.
-        data (object): any data object for the project to be applied.           
+        data (object): any data object for the project to be applied. If it is
+            None, an instance will still execute its workflow, but it won't
+            apply it to any external data. Defaults to None.  
+        _validations (Sequence[str]): names of suffixes of the validation
+            methods to be called when instanced. The names should correspond to
+            methods with the following format: f'_validate_{name}'. This
+            attribute is included to allow for easier subclassing with alternate
+            validation methods. Defaults to a list of 'settings', 'name', 
+            'identification', 'manager', and 'creators'.
             
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = dict)
     settings: Union[object, Type, str, pathlib.Path] = None
     manager: Union[object, Type, str, pathlib.Path] = None
     resources: object = dataclasses.field(default_factory = sourdough.Resources)
-    creators: Sequence[Union[object, Type, str]] = dataclasses.field(
+    creators: Sequence[Union[Type, str]] = dataclasses.field(
         default_factory = lambda: ['architect', 'builder', 'worker'])
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    _validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'manager', 'creators'])
+    _validations: Sequence[str] = dataclasses.field(default_factory = lambda: 
+        ['settings', 'name', 'identification', 'manager', 'creators'], 
+        repr = False)
     
     """ Initialization Methods """
 
@@ -88,11 +100,8 @@ class Project(sourdough.types.Lexicon):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        try:
-            for validation in self._validations:
-                getattr(self, f'_validate_{validation}')()
-        except AttributeError:
-            pass
+        for validation in self._validations:
+            getattr(self, f'_validate_{validation}')()
         # Sets index for iteration.
         self.index = 0
         # Advances through 'creators' if 'automatic' is True.
@@ -148,11 +157,19 @@ class Project(sourdough.types.Lexicon):
         return self
 
     def _validate_manager(self) -> None:
-        """Validates 'manager' or converts it to a Manager instance."""
+        """Validates 'manager' or converts it to a Manager instance.
+        
+        If a file path is passed, that becomes the root folder with the default
+        file structure in the default Manager instance.
+        
+        If an object is passed, its 'settings' attribute is replaced with the 
+        Project instance's 'settings'.
+        
+        """
         if inspect.isclass(self.manager):
             self.manager = self.manager(settings = self.settings)
         elif (self.manager is None 
-              or not isinstance(self.manager, (str, pathlib.Path))):
+              or isinstance(self.manager, (str, pathlib.Path))):
             self.manager = self.resources.manager(
                 root_folder = self.manager, 
                 settings = self.settings)
@@ -161,29 +178,28 @@ class Project(sourdough.types.Lexicon):
         return self
 
     def _validate_creators(self) -> None:
-        """[summary]
-
-        Raises:
-            TypeError: [description]
-
-        Returns:
-            [type]: [description]
-            
+        """Validates 'creators' or converts it to a list of Creator instances.
+        
+        If strings are passed, those are converted to classes from the registry
+        of the designated 'creator' in resources'.
+        
         """
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
-                new_creators.append(self.resources.creator.acquire(creator)())
-            elif inspect.isclass(creator):
-                new_creators.append(creator())
+                new_creators.append(self.resources.creator.acquire(creator))
             else:
                 new_creators.append(creator)
-        print('test creators', new_creators)
         self.creators = new_creators
         return self
 
     def _auto_create(self) -> None:
-        """Advances through the stored Creator instances."""
+        """Advances through the stored Creator instances.
+        
+        The results of the iteration is that each item produced is stored in 
+        'content's with a key of the 'produces' attribute of each creator.
+        
+        """
         for creator in iter(self):
             self.contents.update({creator.produces: self.__next__()})
         return self
@@ -191,107 +207,29 @@ class Project(sourdough.types.Lexicon):
     """ Dunder Methods """
     
     def __next__(self) -> Any:
-        """[summary]
+        """Returns creations of the next Creator in 'creators'.
 
         Returns:
-            Any:
+            Any: item creator by the 'create' method of a Creator.
             
         """
         if self.index < len(self.creators):
             creator = self.creators[self.index]()
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'{creator.action} {creator.produces} from {creator.needs}')
-            creation = creator.create(project = self)
+                print(
+                    f'{creator.action} {creator.produces} from {creator.needs}')
             self.index += 1
+            creation = creator.create(project = self)
         else:
             raise IndexError()
         return creation
     
     def __iter__(self) -> Iterable:
+        """Returns iterable of 'creators'.
+        
+        Returns:
+            Iterable: iterable sequence of 'creators'.
+            
+        """
         return iter(self.creators)
-
-
-# @dataclasses.dataclass
-# class Overview(sourdough.types.Lexicon):
-#     """Dictionary of different Element types in a Flow instance.
-    
-#     Args:
-#         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
-#             dict.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Settings instance, 'name' 
-#             should match the appropriate section name in the Settings instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes. Defaults to None. If 'name' is None and 
-#             '__post_init__' of Element is called, 'name' is set based upon
-#             the 'get_name' method in Element. If that method is not overridden 
-#             by a subclass instance, 'name' will be assigned to the snake case 
-#             version of the class name ('__class__.__name__').
-              
-#     """
-#     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-#     name: str = None
-    
-#     """ Initialization Methods """
-    
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent and/or mixin initialization method(s).
-#         super().__post_init__()
-#         if self.workflow.workflow is not None:
-#             self.add({
-#                 'name': self.workflow.name, 
-#                 'workflow': self.workflow.workflow.name})
-#             for key, value in self.workflow.workflow.options.items():
-#                 matches = self.workflow.find(
-#                     self._get_type, 
-#                     element = value)
-#                 if len(matches) > 0:
-#                     self.contents[f'{key}s'] = matches
-#         else:
-#             raise ValueError(
-#                 'workflow must be a Role for an overview to be created.')
-#         return self          
-    
-#     """ Dunder Methods """
-    
-#     def __str__(self) -> str:
-#         """Returns pretty string representation of an instance.
-        
-#         Returns:
-#             str: pretty string representation of an instance.
-            
-#         """
-#         new_line = '\n'
-#         representation = [f'sourdough {self.get_name}']
-#         for key, value in self.contents.items():
-#             if isinstance(value, Sequence):
-#                 names = [v.name for v in value]
-#                 representation.append(f'{key}: {", ".join(names)}')
-#             else:
-#                 representation.append(f'{key}: {value}')
-#         return new_line.join(representation)    
-
-#     """ Private Methods """
-
-#     def _get_type(self, 
-#             item: sourdough.Element, 
-#             element: sourdough.Element) -> Sequence[sourdough.Element]: 
-#         """[summary]
-
-#         Args:
-#             item (self.stored_types): [description]
-#             self.stored_types (self.stored_types): [description]
-
-#         Returns:
-#             Sequence[self.stored_types]:
-            
-#         """
-#         if isinstance(item, element):
-#             return [item]
-#         else:
-#             return []
-
-        
+      
