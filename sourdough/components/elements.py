@@ -173,6 +173,5 @@ class Step(sourdough.Component):
         try:
             return getattr(self.contents, attribute)
         except AttributeError:
-            raise AttributeError(
-                f'{attribute} neither found in {self.name} nor '
-                f'{self.contents}') 
+            raise AttributeError(f'{attribute} neither found in {self.name} '
+                                 f'nor {self.contents}') 

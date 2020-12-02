@@ -263,8 +263,8 @@ class Builder(sourdough.Creator):
             sourdough.Component: [description]
             
         """
-        component = self._get_component(name = name, project = project)
-        return self._finalize_component(component = component, 
+        workflow = self._get_component(name = name, project = project)
+        return self._finalize_component(component = workflow, 
                                         project = project)
 
     def _get_component(self, name: str,
@@ -273,7 +273,6 @@ class Builder(sourdough.Creator):
 
         Args:
             name (str): [description]
-            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Raises:
