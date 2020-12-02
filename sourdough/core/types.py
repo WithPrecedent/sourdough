@@ -133,11 +133,11 @@ class Lexicon(collections.abc.MutableMapping, Vessel):
         self.contents.update(item)
         return self
                 
-    def subsetify(self, subset: Union[str, Sequence[str]], **kwargs) -> Lexicon:
+    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
         Args:
-            subset (Union[str, Sequence[str]]): key(s) for which key/value pairs 
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
                 from 'contents' should be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
@@ -350,7 +350,7 @@ class Catalog(Lexicon):
         # Returns list of matching values if 'key' is list-like.        
         elif isinstance(key, Sequence) and not isinstance(key, str):
             return [self.contents[k] for k in key if k in self.contents]
-        # Returns matching value if key is a str.
+        # Returns matching value if key is not a non-str Sequence or wildcard.
         else:
             try:
                 if self.always_return_list:
@@ -471,7 +471,7 @@ class Progression(collections.abc.MutableSequence, Vessel):
         """
         self.contents[key] = value
 
-    def __delitem__(self, key: Union[str, int]) -> None:
+    def __delitem__(self, key: Union[Any, int]) -> None:
         """Deletes item at 'key' index in 'contents'.
 
         Args:
@@ -671,7 +671,7 @@ class Hybrid(Progression):
         """Pops item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or key for value in 'contents'.
+            key (Union[Any, int]): index or key for value in 'contents'.
                 
         Returns:
             Union[Any, Sequence[Any]]: item(s) popped from 'contents'.

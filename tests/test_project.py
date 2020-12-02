@@ -87,6 +87,11 @@ class Dynamite(sourdough.elements.Technique):
 
 def test_project():
     assert 'parser' in sourdough.Component.registry
+    parser = Parser()
+    dynamite = Dynamite()
+    assert 'parser' in sourdough.Component.library
+    assert 'annihilate' in sourdough.Component.library
+    assert 'annihilate' not in sourdough.Component.registry
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',

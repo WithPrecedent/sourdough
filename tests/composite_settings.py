@@ -4,7 +4,8 @@ settings = {
         'seed': 43,
         'settings_priority': True,
         'early_validation': False,
-        'conserve_memery': False},
+        'conserve_memery': False,
+        'parallelize': True},
     'files': {
         'source_format': 'csv',
         'interim_format': 'csv',

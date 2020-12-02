@@ -40,6 +40,7 @@ from . import core
 
 from .project.base import Creator
 from .project.base import Component
+from .project.base import Workflow
 from .project.base import Resources
 from .project import creators
 from .project.interface import Project

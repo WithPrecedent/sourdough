@@ -98,20 +98,21 @@ class Librarian(object):
             pass
         # Stores subclass in Library.
         self.deposit()
-    
-    """ Class Methods """
 
-    @classmethod
-    def deposit(cls) -> None:
+    """ Public Methods """
+
+    def deposit(self) -> None:
         """Stores a subclass instance in a Catalog."""
         try:
-            cls.library[cls.name] = cls
+            self.library[self.name] = self
         except (AttributeError, TypeError):
             try:
-                cls.library[cls.__name__] = cls
+                self.library[self.__name__] = self
             except (AttributeError, TypeError):
-                cls.library[cls.__class__.__name__] = cls 
-        return cls
+                self.library[self.__class__.__name__] = self 
+        return self
+    
+    """ Class Methods """
 
     @classmethod
     def borrow(cls, key: str) -> Any:

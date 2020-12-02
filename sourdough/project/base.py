@@ -11,9 +11,9 @@ Contents:
         names of the subclasses are used as the keys.
     instances (Catalog): stored instances of Component subclasses. By default,
         the 'name' attribute of the instances are used as the keys.
-    algorithms (Catalog): stored classes of algorithms embedded in Technique
-        instances. By default, the 'name' attribute of the Technique instances
-        are used as the keys.
+    algorithms (Catalog): stored classes of algorithms, usually from other
+        packages. The keys are assigned by the user or a package utilizing the
+        sourdough framework.
     Creator (Registrar): base class for creating outputs for a sourdough
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
@@ -41,7 +41,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-""" Catalogs of objects and classes created by sourdough projects """
+""" Catalogs of objects and classes for sourdough projects """
 
 creators = sourdough.types.Catalog()
 
@@ -78,7 +78,7 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, project: object, **kwargs) -> Any:
+    def create(self, project: sourdough.Project, **kwargs) -> Any:
         """Performs some action based on 'project' with kwargs (optional).
         
         Subclasses must provide their own methods.
@@ -221,6 +221,58 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     #             representation.append(f'{attribute}: {str(value)}')
     #     return new_line.join(representation)  
 
+
+@dataclasses.dataclass
+class Workflow(Component, sourdough.types.Hybrid):
+    """Iterable base class in a sourdough composite object.
+            
+    Args:
+        contents (Sequence[Component]): Component subclass instances. Defaults 
+            to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes.
+        iterations (Union[int, str]): number of times the 'apply' method should 
+            be called. If 'iterations' is 'infinite', the 'apply' method will
+            continue indefinitely unless the method stops further iteration.
+            Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            'algorithms' Catalog for the sourdough project. Defaults to None.
+        parallel (ClassVar[bool]): whether the 'contents' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+                            
+    """
+    contents: Sequence[Component] = dataclasses.field(default_factory = list)
+    name: str = None
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False 
+    
+    """ Public Methods """
+    
+    def apply(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+        """[summary]
+
+        Args:
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Project: [description]
+            
+        """
+        if 'data' not in kwargs and project.data:
+            kwargs['data'] = project.data
+        for i in self.iterations:
+            project = super().apply(project = project, **kwargs)
+        return project   
+     
 
 @dataclasses.dataclass
 class Resources(collections.abc.Container):

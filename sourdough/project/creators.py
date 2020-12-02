@@ -12,6 +12,7 @@ Contents:
     
 """
 from __future__ import annotations
+import abc
 import copy
 import dataclasses
 import itertools
@@ -20,6 +21,11 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
+
+
+magic_words = ['design', 'iterations', 'criteria']
+
+suffixes = ['workflows', 'steps', 'techniques']
 
 
 @dataclasses.dataclass
@@ -222,38 +228,7 @@ class Architect(sourdough.Creator):
     
     def __str__(self) -> str:
         return pprint.pformat(self, sort_dicts = False, compact = True)
-
-
-@dataclasses.dataclass
-class Workflow(sourdough.Component, sourdough.types.Hybrid):
-    """Iterable base class in a sourdough composite object.
-            
-    Args:
-        contents (Sequence[Component]): Component subclass instances. Defaults 
-            to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-                            
-    """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
-        default_factory = list)
-    name: str = None
-    parallel: ClassVar[bool] = False 
-    
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
-        """Subclasses must provide their own methods.       
-        
-        """
-        raise NotImplementedError(
-            'subclasses of Flow must provide their own apply methods')
-        
+   
         
 @dataclasses.dataclass
 class Builder(sourdough.Creator):
@@ -311,23 +286,23 @@ class Builder(sourdough.Creator):
         instructions = project['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = copy.deepcopy(project.resources.component.library[name])
+            component = project.resources.component.borrow(key = name)
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = project.resources.component.registry[name]
+                component = project.resources.component.acquire(key = name)
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.resources.component.registry[
-                        instructions.design]
+                    component = project.resources.component.acquire(
+                        key = instructions.design)
                     component = component(**kwargs)
                 except KeyError:
                     try:
-                        component = project.resources.component.registry[
-                            instructions.base]
+                        component = project.resources.component.acquire(
+                            key = instructions.base)
                         component = component(**kwargs)
                     except KeyError:
                         raise KeyError(f'{name} component does not exist')
@@ -359,7 +334,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _create_parallel(self, component: sourdough.Component,
-                         project: sourdough.Project) -> Workflow:
+                         project: sourdough.Project) -> sourdough.Workflow:
         """[summary]
 
         Args:
@@ -391,7 +366,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _create_serial(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> Workflow:
+                       project: sourdough.Project) -> sourdough.Workflow:
         """[summary]
 
         Args:
