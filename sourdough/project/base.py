@@ -1,23 +1,47 @@
 """
-creator: base class for workflow construction and application
+base: core base classes for sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Creator (Registrar):
-    Component ():
+    creators (Catalog): stored Creator subclasses. By default, snakecase names
+        of the subclasses are used as the keys.
+    components (Catalog): stored Component subclasses. By default, snakecase
+        names of the subclasses are used as the keys.
+    instances (Catalog): stored instances of Component subclasses. By default,
+        the 'name' attribute of the instances are used as the keys.
+    algorithms (Catalog): stored classes of algorithms embedded in Technique
+        instances. By default, the 'name' attribute of the Technique instances
+        are used as the keys.
+    Creator (Registrar): base class for creating outputs for a sourdough
+        project. All subclasses must have a 'create' method. All concrete
+        subclasses are automatically registered in the 'registry' class
+        attribute and in 'creators'.
+    Component (Librarian, Registrar, Container): base class for nodes in a
+        sourdough project workflow. All subclasses must have an 'apply' 
+        method. All concrete subclasses are automatically registered in the 
+        'registry' class attribute and in 'components'. All subclass instances
+        are automatically stored in the 'library' class attribute and in
+        'instances'.
+    Resources (Container): a collection of base classes and Catalogs used for a
+        sourdough project. Changing the base classes or Catalogs in an instance
+        or subclassing Resources with different options will change the base
+        classes and Catalogs used by Project.
     
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
+import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
 
+
+""" Catalogs of objects and classes created by sourdough projects """
 
 creators = sourdough.types.Catalog()
 
@@ -29,17 +53,21 @@ algorithms = sourdough.types.Catalog()
     
 
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar):
-    """Base class for creating objects for a Project.
+class Creator(sourdough.quirks.Registrar, abc.ABC):
+    """Base class for creating objects outputted by a Project's iteration.
+    
+    All subclasses must have a 'create' method that takes 'project' as a 
+    parameter.
     
     Args:
         action (str): name of action performed by the class. This is used in
-            messages in the terminal and logging. It is usually the verb form
-            of the class name (i.e., for Draft, the action is 'drafting').
+            messages in the terminal and logging.
         needs (ClassVar[Union[str, Tuple[str]]]): name(s) of item(s) needed
             by the class's 'create' method.
         produces (ClassVar[str]): name of item produced by the class's 'create'
             method.
+        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'creators'.
             
     """
     action: ClassVar[str]
@@ -50,13 +78,13 @@ class Creator(sourdough.quirks.Registrar):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, project: sourdough.Project, **kwargs) -> Any:
+    def create(self, project: object, **kwargs) -> Any:
         """Performs some action based on 'project' with kwargs (optional).
         
         Subclasses must provide their own methods.
 
         Args:
-            project (sourdough.Project): a Project instance.
+            project (object): a Project-compatible instance.
             kwargs: any additional parameters to pass to a 'create' method.
 
         Return:
@@ -65,28 +93,17 @@ class Creator(sourdough.quirks.Registrar):
         """
         pass
 
-    """ Class Methods """
-    
-    @classmethod
-    def parameterize(cls, project: sourdough.Project) -> Mapping[str, Any]:
-        """[summary]
+    """ Dunder Methods """
 
-        Args:
-            project (sourdough.Project): [description]
-
+    def __str__(self) -> str:
+        """Returns pretty string representation of a class instance.
+        
         Returns:
-            Mapping[str, Any]: [description]
-            
+            str: normal representation of a class instance.
+        
         """
-        parameters = {}
-        for item in sourdough.tools.tuplify(cls.needs):
-            try:
-                parameters.update({item: project[item]})
-            except KeyError:
-                parameters.update({item: getattr(project, item)})
-        parameters.update({'project': project})
-        return parameters
-                
+        return pprint.pformat(self, sort_dicts = False, compact = True)
+                    
     
 @dataclasses.dataclass
 class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
@@ -95,8 +112,8 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     
     A Component has a 'name' attribute for internal referencing and to allow 
     sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of composite data workflows such as trees, cycles, 
-    contests, studies, and graphs.
+    to create a variety of composite workflows such as trees, cycles, contests, 
+    studies, and graphs.
     
     Args:
         contents (Any): item(s) contained by a Component instance.
@@ -107,7 +124,10 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. 
-
+        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'components'.
+        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'instances'.
     """
     contents: Any = None
     name: str = None
@@ -165,7 +185,16 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             return item in self.contents
         except TypeError:
             return item == self.contents
-           
+
+    def __str__(self) -> str:
+        """Returns pretty string representation of a class instance.
+        
+        Returns:
+            str: normal representation of a class instance.
+        
+        """
+        return pprint.pformat(self, sort_dicts = False, compact = True)
+               
     # def __str__(self) -> str:
     #     """Returns pretty string representation of an instance.
         
@@ -194,12 +223,17 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
 
 
 @dataclasses.dataclass
-class Resources(object):
+class Resources(collections.abc.Container):
     """[summary]
-    
+
     Args:
+        collections ([type]): [description]
+
+    Returns:
+        [type]: [description]
         
-    """
+    """ 
+    
     settings: Type = sourdough.Settings
     manager: Type = sourdough.Manager
     creator: Type = Creator
@@ -208,4 +242,27 @@ class Resources(object):
     components: Mapping[str, Type] = components
     instances: Mapping[str, object] = instances
     algortihms: Mapping[str, Type] = algorithms
+    
+    """ Dunder Methods """
+    
+    def __contains__(self, item: str) -> bool:
+        """Returns whether an attribute exists mataching 'item'.
+        
+        Args:
+            item (Any): item to look for a matching attribute name.
+            
+        Returns:
+            bool: whether 'item' is the name of an attribute.
+                
+        """
+        return item in self.__dir__()
+
+    def __str__(self) -> str:
+        """Returns pretty string representation of a class instance.
+        
+        Returns:
+            str: normal representation of a class instance.
+        
+        """
+        return pprint.pformat(self, sort_dicts = False, compact = True)
     

@@ -5,18 +5,18 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Receptable (Iterable, ABC): abstract base class for sourdough iterables. 
-        All subclasses must have an 'add' method as well as store their contents 
-        in the 'contents' attribute.
-    Lexicon (MutableMapping, Receptable): sourdough's drop-in replacement for 
+    Vessel (Iterable, ABC): abstract base class for sourdough iterables. All 
+        subclasses must have an 'add' method as well as store their contents in 
+        the 'contents' attribute.
+    Lexicon (MutableMapping, Vessel): sourdough's drop-in replacement for 
         python dicts with some added functionality.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
-    Progression (MutableSequence, Receptable): sourdough drop-in replacement for list 
-        with additional functionality.
-    Hybrid (Progression): iterable with both dict and list interfaces and methods that 
-        stores items with a 'name' attribute.
+    Progression (MutableSequence, Vessel): sourdough drop-in replacement for 
+        list with additional functionality.
+    Hybrid (Progression): iterable with both dict and list interfaces and 
+        methods that stores items with a 'name' attribute.
         
 """
 from __future__ import annotations
@@ -34,17 +34,16 @@ import sourdough
 
     
 @dataclasses.dataclass
-class Receptable(collections.abc.Iterable, abc.ABC):
+class Vessel(collections.abc.Iterable, abc.ABC):
     """Interface for sourdough iterables.
   
-    A Receptable differs from a general python iterable in 3 ways:
+    A Vessel differs from a general python iterable in 3 ways:
         1) It must include an 'add' method which provides the default mechanism
             for adding new items to the iterable.
-        2) It allows the '+' operator to be used to join a Receptable subclass 
+        2) It allows the '+' operator to be used to join a Vessel subclass 
             instance of the same general type (Mapping, Sequence, Tuple, etc.). 
-            The '+' operator calls the Receptable subclass 'add' method to 
-            implement how the added item(s) is/are added to the Receptable 
-            subclass instance.
+            The '+' operator calls the Vessel subclass 'add' method to implement 
+            how the added item(s) is/are added to the Vessel subclass instance.
         3) The internally stored iterable must be located in the 'contents'
             attribute. This allows for consistent coordination among classes
             and mixins.
@@ -58,13 +57,19 @@ class Receptable(collections.abc.Iterable, abc.ABC):
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
-        """Initializes class instance."""
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
         # Calls parent initialization methods, if they exist.
         try:
             super().__post_init__()
         except AttributeError:
             pass  
-    
+          
     """ Required Subclass Methods """
     
     @abc.abstractmethod
@@ -73,32 +78,6 @@ class Receptable(collections.abc.Iterable, abc.ABC):
         
         Subclasses must provide their own methods."""
         pass
-
-    """ Public Methods """
-    
-    def convert(self, item: Any) -> Iterable:
-        """Placeholder method for type conversion.
-        
-        Args:
-            item (Any): item(s) to be type converted.
-            
-        Returns:
-            Iterable: converted item(s).
-        
-        """
-        return item
-    
-    def verify(self, item: Any) -> Iterable:
-        """Placeholder method for type validation.
-        
-        Args:
-            item (Any): item(s) to be type validated.
-            
-        Returns:
-            Iterable: validated item(s).
-        
-        """
-        return item
     
     """ Dunder Methods """
 
@@ -114,7 +93,7 @@ class Receptable(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, Receptable):
+class Lexicon(collections.abc.MutableMapping, Vessel):
     """Basic sourdough dict replacement.
     
     Args:
@@ -127,7 +106,13 @@ class Lexicon(collections.abc.MutableMapping, Receptable):
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
-        """Initializes class instance."""
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
         # Calls parent initialization methods, if they exist.
         try:
             super().__post_init__()
@@ -141,12 +126,10 @@ class Lexicon(collections.abc.MutableMapping, Receptable):
         
         Args:
             item (Mapping[Any, Any]): items to add to 'contents' attribute.
-            kwargs: allows subclasses to send additional parameters to this 
-                method.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
                 
         """
-        # item = self.verify(item = item)
-        # item = self.convert(item = item)
         self.contents.update(item)
         return self
                 
@@ -156,26 +139,24 @@ class Lexicon(collections.abc.MutableMapping, Receptable):
         Args:
             subset (Union[str, Sequence[str]]): key(s) for which key/value pairs 
                 from 'contents' should be returned.
-            kwargs: allows subclasses to send additional parameters to this 
-                method.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
 
         Returns:
             Lexicon: with only key/value pairs with keys in 'subset'.
 
         """
         subset = sourdough.tools.listify(subset)
-        return self.__class__(
-            contents = {k: self.contents[k] for k in subset},
-            name = self.name,
-            **kwargs)
+        return self.__class__(contents = {k: self.contents[k] for k in subset},
+                              name = self.name, **kwargs)
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: Any) -> Any:
         """Returns value for 'key' in 'contents'.
 
         Args:
-            key (str): name of key in 'contents' for which a value is sought.
+            key (Any): key in 'contents' for which a value is sought.
 
         Returns:
             Any: value stored in 'contents'.
@@ -183,24 +164,22 @@ class Lexicon(collections.abc.MutableMapping, Receptable):
         """
         return self.contents[key]
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: Any, value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (str): name of key to set in 'contents'.
+            key (Any): key to set in 'contents'.
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
-        # item = self.verify(item = value)
-        # item = self.convert(item = item)
         self.contents[key] = value
         return self
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self, key: Any) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (str): name of key in 'contents' to delete the key/value pair.
+            key (Any): key in 'contents' to delete the key/value pair.
 
         """
         del self.contents[key]
@@ -255,7 +234,7 @@ class Catalog(Lexicon):
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
-        defaults (Sequence[str]]): a list of keys in 'contents' which will be 
+        defaults (Sequence[Any]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
         always_return_list (bool): whether to return a list even when the key 
@@ -265,7 +244,7 @@ class Catalog(Lexicon):
                      
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
-    defaults: Sequence[str] = dataclasses.field(default_factory = list)
+    defaults: Sequence[Any] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     
     """ Initialization Methods """
@@ -282,18 +261,18 @@ class Catalog(Lexicon):
 
     """ Public Methods """
 
-    def instance(self, key: Union[str, Sequence[str]], **kwargs) -> Union[
-                 object, Sequence[object]]:
+    def instance(self, key: Union[Any, Sequence[Any]], **kwargs) -> Union[
+                 Any, Sequence[Any]]:
         """Returns instance(s) of (a) stored class(es).
         
         This method acts as a factory for instancing stored classes.
         
         Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+            key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
             kwargs: arguments to pass to the selected item(s) when instanced.
                     
         Returns:
-            Union[object, Sequence[object]]: instance(s) of stored classes.
+            Union[Any, Sequence[Any]]: stored value(s).
             
         """
         items = self[key]
@@ -305,11 +284,12 @@ class Catalog(Lexicon):
             instances = items(**kwargs)
         return instances
  
-    def select(self,key: Union[str, Sequence[str]]) -> Union[Any, Sequence[Any]]:
+    def select(self, key: Union[Any, Sequence[Any]]) -> Union[
+               Any, Sequence[Any]]:
         """Returns value(s) stored in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+            key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
 
         Returns:
             Union[Any, Sequence[Any]]: stored value(s).
@@ -317,32 +297,30 @@ class Catalog(Lexicon):
         """
         return self[key] 
             
-    def subsetify(self, subset: Union[str, Sequence[str]], **kwargs) -> Catalog:
+    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
         """Returns a subset of 'contents'.
 
         Args:
-            subset (Union[str, Sequence[str]]): key(s) to get key/value pairs 
+            subset (Union[Any, Sequence[Any]]): key(s) to get key/value pairs 
                 from 'contents'.
-            kwargs: allows subclasses to send additional parameters to this 
-                method.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
                 
         Returns:
             Catalog: with only keys in 'subset'.
 
         """
-        if isinstance(self.defaults, str):
+        if not isinstance(self.defaults, list):
             new_defaults = self.defaults
         else:
             new_defaults = [i for i in self.defaults if i in subset] 
-        return super().subsetify(
-            subset = subset,
-            defaults = new_defaults,
-            always_return_list = self.always_return_list,
-            **kwargs)
+        return super().subsetify(subset = subset, defaults = new_defaults,
+                                 always_return_list = self.always_return_list,
+                                 **kwargs)
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[str, Sequence[str]]) -> Union[
+    def __getitem__(self, key: Union[Any, Sequence[Any]]) -> Union[
                     Any, Sequence[Any]]:
         """Returns value(s) for 'key' in 'contents'.
 
@@ -350,7 +328,7 @@ class Catalog(Lexicon):
         options before searching for direct matches in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents'.
+            key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
 
         Returns:
             Union[Any, Sequence[Any]]: value(s) stored in 'contents'.
@@ -382,12 +360,12 @@ class Catalog(Lexicon):
             except KeyError:
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
-    def __setitem__(self,key: Union[str, Sequence[str]], 
+    def __setitem__(self,key: Union[Any, Sequence[Any]], 
                     value: Union[Any, Sequence[Any]]) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Union[str, Sequence[str]]): name of key(s) to set in 'contents'.
+            key (Union[Any, Sequence[Any]]): key(s) to set in 'contents'.
             value (Union[Any, Sequence[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
@@ -401,22 +379,22 @@ class Catalog(Lexicon):
                 self.contents.update(dict(zip(key, value)))
         return self
 
-    def __delitem__(self, key: Union[str, Sequence[str]]) -> None:
+    def __delitem__(self, key: Union[Any, Sequence[Any]]) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (Union[str, Sequence[str]]): name(s) of key(s) in 'contents' to
+            key (Union[Any, Sequence[Any]]): name(s) of key(s) in 'contents' to
                 delete the key/value pair.
 
         """
         self.contents = {
-            i: self.contents[i]
+            i: self.contents[i] 
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
 
   
 @dataclasses.dataclass
-class Progression(collections.abc.MutableSequence, Receptable):
+class Progression(collections.abc.MutableSequence, Vessel):
     """Basic sourdough list replacement.
 
     Args:
@@ -429,7 +407,13 @@ class Progression(collections.abc.MutableSequence, Receptable):
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
-        """Initializes class instance."""
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
         # Calls parent initialization methods, if they exist.
         try:
             super().__post_init__()
@@ -438,15 +422,14 @@ class Progression(collections.abc.MutableSequence, Receptable):
     
     """ Public Methods """
 
-    def add(self, item: Sequence[Any]) -> None:
+    def add(self, item: Sequence[Any], **kwargs) -> None:
         """Extends 'item' argument to 'contents' attribute.
         
         Args:
             item (Sequence[Any]): items to add to the 'contents' attribute.
-
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
         """
-        # item = self.verify(item = item)
-        # item = self.convert(item = item)
         try:
             self.contents.extend(item)
         except TypeError:
@@ -461,8 +444,6 @@ class Progression(collections.abc.MutableSequence, Receptable):
             item (Any): object to be inserted.
             
         """
-        # item = self.verify(item = item)
-        # item = self.convert(item = item)
         self.contents.insert(index, item)
         return self
                         
@@ -488,8 +469,6 @@ class Progression(collections.abc.MutableSequence, Receptable):
             value (Any): value to be set at 'key' in 'contents'.
 
         """
-        # item = self.verify(item = value)
-        # item = self.convert(item = item)
         self.contents[key] = value
 
     def __delitem__(self, key: Union[str, int]) -> None:
@@ -581,8 +560,6 @@ class Hybrid(Progression):
             items (List[Any]): items to append to 'contents'.
 
         """
-        # item = self.verify(item = item)
-        # item = self.convert(item = item)
         self.contents.append(item)
         return self    
     
@@ -601,10 +578,8 @@ class Hybrid(Progression):
         for item in iter(self.contents):
             if isinstance(item, sourdough.types.Hybrid):
                 if recursive:
-                    new_item = item.apply(
-                        tool = tool, 
-                        recursive = True, 
-                        **kwargs)
+                    new_item = item.apply(tool = tool, recursive = True, 
+                                          **kwargs)
                 else:
                     new_item = item
             else:
@@ -628,8 +603,6 @@ class Hybrid(Progression):
             TypeError: if 'item' does not have a name attribute.
             
         """
-        # item = self.verify(item = item)
-        # item = self.convert(item = item)
         self.contents.extend(item)
         return self  
 
@@ -642,14 +615,13 @@ class Hybrid(Progression):
                 its first argument and any other arguments in kwargs.
             recursive (bool): whether to apply 'tool' to nested items in
                 'contents'. Defaults to True.
-            matches (Sequence[Any]): items matching the criteria
-                in 'tool'. This should not be passed by an external call to
-                'find'. It is included to allow recursive searching.
+            matches (Sequence[Any]): items matching the criteria in 'tool'. This 
+                should not be passed by an external call to 'find'. It is 
+                included to allow recursive searching.
             kwargs: additional arguments to pass when 'tool' is used.
             
         Returns:
-            Sequence[Any]: stored items matching the criteria
-                in 'tool'. 
+            Sequence[Any]: stored items matching the criteria in 'tool'. 
         
         """
         if matches is None:
@@ -658,19 +630,15 @@ class Hybrid(Progression):
             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
             if isinstance(item, sourdough.types.Hybrid):
                 if recursive:
-                    matches.extend(item.find(
-                        tool = tool, 
-                        recursive = True,
-                        matches = matches, 
-                        **kwargs))
+                    matches.extend(item.find(tool = tool, recursive = True,
+                                             matches = matches, **kwargs))
         return matches
     
-    def get(self, key: Union[str, int]) -> Union[Any, Sequence[Any]]:
+    def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
         Args:
-            key (Union[str, int]): index or stored Any name to get from
-                'contents'.
+            key (Union[Any, int]): index or key for value in 'contents'.
                 
         Returns:
             Union[Any, Sequence[Any]]: items in 'contents' or value in 
@@ -690,7 +658,7 @@ class Hybrid(Progression):
         """
         return tuple(zip(self.keys(), self.values()))
 
-    def keys(self) -> Sequence[str]:
+    def keys(self) -> Sequence[Any]:
         """Emulates python dict 'keys' method.
         
         Returns:
@@ -699,11 +667,11 @@ class Hybrid(Progression):
         """
         return [c.name for c in self.contents]
 
-    def pop(self, key: Union[str, int]) -> Union[Any, Sequence[Any]]:
+    def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Pops item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored name to pop from 'contents'.
+            key (Union[str, int]): index or key for value in 'contents'.
                 
         Returns:
             Union[Any, Sequence[Any]]: item(s) popped from 'contents'.
@@ -713,12 +681,11 @@ class Hybrid(Progression):
         del self[key]
         return popped
         
-    def remove(self, key: Union[str, int]) -> None:
+    def remove(self, key: Union[Any, int]) -> None:
         """Removes item(s) from 'contents'.
 
         Args:
-            key (Union[str, int]): index or stored name to remove from
-                'contents'.
+            key (Union[Any, int]): index or key for value in 'contents'.
             
         """
         del self[key]
@@ -733,13 +700,16 @@ class Hybrid(Progression):
         """
         self._default = value 
      
-    def subsetify(self, subset: Union[str, Sequence[str]]) -> Hybrid[Any]:
+    def subsetify(self, subset: Union[Any, Sequence[Any]], 
+                  **kwargs) -> Hybrid[Any]:
         """Returns a subset of 'contents'.
 
         Args:
-            subset (Union[str, Sequence[str]]): key(s) to get items with 
+            subset (Union[Any, Sequence[Any]]): key(s) to get items with 
                 matching 'name' attributes from 'contents'.
-
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+                
         Returns:
             Hybrid[Any]: with only items with 'name' attributes in 'subset'.
 
@@ -757,11 +727,7 @@ class Hybrid(Progression):
                 Mapping is passed, the values are added to 'contents' and the 
                 keys become the 'name' attributes of those values. To mimic 
                 'update', the passed 'items' are added to 'contents' by the 
-                'extend' method.
- 
-        Raises:
-            TypeError: if any of 'items' do not have a name attribute or
-                if 'items is not a dict.               
+                'extend' method.           
         
         """
         if isinstance(items, Mapping):
@@ -777,17 +743,17 @@ class Hybrid(Progression):
         """Emulates python dict 'values' method.
         
         Returns:
-            Sequence[Any]: list of Anys stored in 'contents'
+            Sequence[Any]: list of items stored in 'contents'
             
         """
         return self.contents
           
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[str, int]) -> Any:
+    def __getitem__(self, key: Union[Any, int]) -> Any:
         """Returns value(s) for 'key' in 'contents'.
         
-        If 'key' is a str type, this method looks for a matching 'name'
+        If 'key' is not an int type, this method looks for a matching 'name'
         attribute in the stored instances.
         
         If 'key' is an int type, this method returns the stored item at the
@@ -798,7 +764,7 @@ class Hybrid(Progression):
         is returned.
 
         Args:
-            key (Union[str, int]): name or index to search for in 'contents'.
+            key (Union[Any, int]): key or index to search for in 'contents'.
 
         Returns:
             Any: value(s) stored in 'contents' that correspond to 'key'. If 
@@ -817,11 +783,11 @@ class Hybrid(Progression):
             else:
                 return self.__class__(name = self.name, contents = matches)
             
-    def __setitem__(self, key: Union[str, int], value: Any) -> None:
+    def __setitem__(self, key: Union[Any, int], value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Union[str, int]): if key is a string, it is ignored (since the
+            key (Union[Any, int]): if key isn't an int, it is ignored (since the
                 'name' attribute of the value will be acting as the key). In
                 such a case, the 'value' is added to the end of 'contents'. If
                 key is an int, 'value' is assigned at the that index number in
@@ -829,23 +795,21 @@ class Hybrid(Progression):
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
-        # item = self.verify(item = value)
-        # item = self.convert(item = item)
         if isinstance(key, int):
             self.contents[key] = value
         else:
             self.add(value)
         return self
 
-    def __delitem__(self, key: Union[str, int]) -> None:
+    def __delitem__(self, key: Union[Any, int]) -> None:
         """Deletes item matching 'key' in 'contents'.
 
-        If 'key' is a str type, this method looks for a matching 'name'
+        If 'key' is not an int type, this method looks for a matching 'name'
         attribute in the stored instances and deletes all such items. If 'key'
         is an int type, only the item at that index is deleted.
 
         Args:
-            key (Union[str, int]): name or index in 'contents' to delete.
+            key (Union[Any, int]): name or index in 'contents' to delete.
 
         """
         if isinstance(key, int):
@@ -855,7 +819,7 @@ class Hybrid(Progression):
         return self
 
     def __iter__(self) -> Iterable:
-        """Returns  iterable of collapsed 'contents'.
+        """Returns iterable of collapsed 'contents'.
 
         Returns:
             Iterable: collapsed 'contents'.

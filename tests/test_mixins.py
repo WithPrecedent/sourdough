@@ -12,7 +12,7 @@ import sourdough
 
 @dataclasses.dataclass
 class AComponent(
-    sourdough.Receptable,
+    sourdough.Vessel,
     sourdough.Registry,
     sourdough.Element):
     pass
@@ -41,7 +41,7 @@ class ProxiedComponent(sourdough.Proxy, OtherComponent):
 
 
 def test_mixins():
-    # Tests Component, Registry, and Receptable
+    # Tests Component, Registry, and Vessel
     a_component = AComponent()
     other_component = OtherComponent()
     assert 'other_component' in AComponent.library

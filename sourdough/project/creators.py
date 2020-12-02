@@ -1,11 +1,15 @@
 """
-Creators: interim classes for sourdough Directors
+creators: classes for building and storing different steps in sourdough project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
+    Instructions (Progression): information needed to create a single Component.
+    Architect (Creator):
+    Builder (Creator):
+    Worker (Creator):
+    
 """
 from __future__ import annotations
 import copy
@@ -221,6 +225,37 @@ class Architect(sourdough.Creator):
 
 
 @dataclasses.dataclass
+class Workflow(sourdough.Component, sourdough.types.Hybrid):
+    """Iterable base class in a sourdough composite object.
+            
+    Args:
+        contents (Sequence[Component]): Component subclass instances. Defaults 
+            to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+                            
+    """
+    contents: Sequence[sourdough.Component] = dataclasses.field(
+        default_factory = list)
+    name: str = None
+    parallel: ClassVar[bool] = False 
+    
+    """ Public Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> NotImplementedError:
+        """Subclasses must provide their own methods.       
+        
+        """
+        raise NotImplementedError(
+            'subclasses of Flow must provide their own apply methods')
+        
+        
+@dataclasses.dataclass
 class Builder(sourdough.Creator):
     """Constructs finalized workflow.
     
@@ -324,7 +359,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _create_parallel(self, component: sourdough.Component,
-                         project: sourdough.Project) -> sourdough.Workflow:
+                         project: sourdough.Project) -> Workflow:
         """[summary]
 
         Args:
@@ -356,7 +391,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _create_serial(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> sourdough.Workflow:
+                       project: sourdough.Project) -> Workflow:
         """[summary]
 
         Args:
@@ -365,7 +400,7 @@ class Builder(sourdough.Creator):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.Workflow: [description]
+            Workflow: [description]
             
         """
         new_contents = []
