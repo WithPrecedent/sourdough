@@ -78,6 +78,7 @@ class Project(sourdough.types.Lexicon):
     settings: Union[object, Type, str, pathlib.Path] = None
     manager: Union[object, Type, str, pathlib.Path] = None
     resources: object = dataclasses.field(default_factory = sourdough.Resources)
+    rules: sourdough.Rules = None
     creators: Sequence[Union[Type, str]] = dataclasses.field(
         default_factory = lambda: ['architect', 'builder', 'worker'])
     name: str = None
@@ -85,7 +86,7 @@ class Project(sourdough.types.Lexicon):
     automatic: bool = True
     data: object = None
     _validations: Sequence[str] = dataclasses.field(default_factory = lambda: 
-        ['settings', 'name', 'identification', 'manager', 'creators'], 
+        ['settings', 'name', 'identification', 'manager', 'creators', 'rules'], 
         repr = False)
     
     """ Initialization Methods """
@@ -193,6 +194,12 @@ class Project(sourdough.types.Lexicon):
         self.creators = new_creators
         return self
 
+    def _validate_rules(self) -> None:
+        """Validates 'rules' or uses the default Rules class."""
+        if not isinstance(self.rules, sourdough.Rules):
+            self.rules = sourdough.Rules(resources = self.resources)
+        return self
+    
     def _auto_create(self) -> None:
         """Advances through the stored Creator instances.
         

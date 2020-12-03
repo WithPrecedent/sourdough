@@ -272,7 +272,7 @@ class Workflow(Component, sourdough.types.Hybrid):
         for i in self.iterations:
             project = super().apply(project = project, **kwargs)
         return project   
-     
+
 
 @dataclasses.dataclass
 class Resources(collections.abc.Container):
@@ -317,4 +317,31 @@ class Resources(collections.abc.Container):
         
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
+
+
+@dataclasses.dataclass
+class Rules(object):
+    """[summary]
+
+    Args:
+        object ([type]): [description]
+
+    Returns:
+        [type]: [description]
+        
+    """
+    resources: Resources
+    skip_sections: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files'])
+    skip_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['parameters'])
+    special_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['design', 'iterations', 'criteria'])
+    default_design: str = 'pipeline'
+    
+    """ Properties """
+
+    @property
+    def component_suffixes(self) -> Tuple[str]:
+        return tuple(k + 's' for k in self.resources.components.keys()) 
     

@@ -20,12 +20,7 @@ import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
-import sourdough
-
-
-magic_words = ['design', 'iterations', 'criteria']
-
-suffixes = ['workflows', 'steps', 'techniques']
+import sourdough  
 
 
 @dataclasses.dataclass
@@ -56,7 +51,6 @@ class Instructions(sourdough.types.Progression):
     """
     contents: Sequence[str] = dataclasses.field(default_factory = list)
     name: str = None
-    base: str = None
     design: str = None
     parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
@@ -72,6 +66,37 @@ class Instructions(sourdough.types.Progression):
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
 
+
+@dataclasses.dataclass
+class Blueprint(sourdough.types.Lexicon):
+    """Class of essential information from Settings.
+    
+    Args:
+        contents (Mapping[str, Instructions]]): stored dictionary which contains
+            Instructions instances. Defaults to an empty dict.
+        identification (str): a unique identification name for the related 
+            Project instance.            
+    """
+    contents: Mapping[str, Instructions] = dataclasses.field(
+        default_factory = dict)
+    identification: str = None
+
+    """ Public Methods """
+
+    """ Dunder Methods """
+    
+    def __getitem__(self, key: str) -> Instructions:
+        """Autovivifies if there is no Instructions instance.
+        
+        Args:
+        
+        """
+        try:
+            return super().__getitem__(key = key)
+        except KeyError:
+            super().__setitem__(key = key, value = Instructions(name = key))
+            return self[key]
+                   
 
 @dataclasses.dataclass
 class Architect(sourdough.Creator):
@@ -101,29 +126,28 @@ class Architect(sourdough.Creator):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = sourdough.types.Lexicon()
-        suffixes = project.resources.component.registry.keys()
-        suffixes = tuple(item + 's' for item in suffixes)
+        blueprint = Blueprint(identification = project.identification)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'blueprint'.
-            if any([i.endswith(suffixes) for i in section.keys()]):
-                blueprint = self._process_section(
+            if (not name.endswith(tuple(project.rules.skip_suffixes))
+                    and name not in project.rules.skip_sections
+                    and any([i.endswith(project.rules.component_suffixes) 
+                        for i in section.keys()])):
+                blueprint = self._add_instructions(
                     name = name,
                     blueprint = blueprint,
-                    project = project,
-                    suffixes = suffixes,
-                    base = 'workflow')
+                    design = None,
+                    project = project)
         return blueprint
         
     """ Private Methods """
     
-    def _process_section(self, name: str, blueprint: sourdough.types.Lexicon,
-                         project: sourdough.Project, suffixes: Tuple[str],
-                         base: str) -> sourdough.types.Lexicon:
+    def _add_instructions(self, name: str, blueprint: Blueprint, design: str,
+                          project: sourdough.Project, **kwargs) -> Blueprint:
         """[summary]
 
         Args:
@@ -135,52 +159,91 @@ class Architect(sourdough.Creator):
             sourdough.types.Lexicon: [description]
             
         """
-        # Iterates through each key, value pair in section and stores or 
-        # extracts the information as appropriate.
-        for key, value in project.settings[name].items():
-            # keys ending with specific suffixes trigger further parsing and 
-            # searching throughout 'project.settings'.
-            if key.endswith(suffixes):
-                # Each key contains a prefix which is the parent Component name 
-                # and a suffix which is what that parent Component contains.
-                key_name, key_suffix = self._divide_key(key = key)
-                contains = key_suffix.rstrip('s')
-                contents = sourdough.tools.listify(value) 
-                blueprint = self._add_design(
-                    name = key_name, 
-                    blueprint = blueprint,
-                    contents = contents,
-                    base = base)
-                for item in contents:
-                    if item in project.settings:
-                        blueprint = self._process_section(
-                            name = item,
-                            blueprint = blueprint,
-                            project = project,
-                            suffixes = suffixes,
-                            base = contains)
-                    else:
-                        blueprint = self._add_design(
-                            name = item, 
-                            blueprint = blueprint,
-                            base = contains)
-            # keys ending with 'design' hold values of a Component's design.
-            elif key.endswith('design'):
-                blueprint = self._add_design(
-                    name = name, 
-                    blueprint = blueprint, 
-                    design = value)
-            # All other keys are presumed to be attributes to be added to a
-            # Component instance.
-            else:
-                blueprint = self._add_design(
-                    name = name,
-                    blueprint = blueprint,
-                    attributes = {key: value})
+        # Adds appropraite design type to 'blueprint' for 'name'.
+        blueprint[name].design = self._get_design(
+            name = name, 
+            design = design,
+            project = project)
+        # Adds any appropriate parameters to 'blueprint' for 'name'.
+        blueprint[name].parameters = self._get_parameters(
+            name = name, 
+            project = project)
+        print('test parameters', name, blueprint[name].parameters)
+        print('test suffixes', project.rules.component_suffixes)
+        # If 'name' is in 'settings', this method iterates through each key, 
+        # value pair in section and stores or extracts the information needed
+        # to fill out the appropriate Instructions instance in blueprint.
+        if name in project.settings:
+            instructions_attributes = {}
+            for key, value in project.settings[name].items():
+                # If a 'key' has an underscore, text after the last underscore 
+                # becomes the 'suffix' and text before becomes the 
+                # 'prefix'. If there is no underscore, 'prefix' and
+                # 'suffix' are both assigned to 'key'.
+                prefix, suffix = self._divide_key(key = key)
+                # A 'key' ending with one of the component-related suffixes 
+                # triggers recursive searching throughout 'project.settings'.
+                if suffix in project.rules.component_suffixes:
+                    contains = suffix.rstrip('s')
+                    blueprint[prefix].contents = sourdough.tools.listify(value) 
+                    blueprint = self._get_instructions(
+                        name = prefix,
+                        blueprint = blueprint,
+                        project = project,
+                        design = contains)
+                elif suffix in project.rules.special_suffixes:
+                    instruction_kwargs = {suffix: value}
+                    blueprint = self._add_instruction(
+                        name = prefix, 
+                        blueprint = blueprint,
+                        **instruction_kwargs)
+                # All other keys are presumed to be attributes to be added to a
+                # Component instance.
+                else:
+                    blueprint[name].attributes.update({key: value})
+        for key, value in kwargs.items():
+            setattr(blueprint[name], key, value)
         return blueprint
 
-    @staticmethod
-    def _divide_key(key: str) -> Sequence[str, str]:
+    def _get_design(self, name: str, design: str, 
+                  project: sourdough.Project) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            design (str): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        try:
+            return project.settings[name][f'{name}_design']
+        except KeyError:
+            if design is None:
+                return project.rules.default_design
+            else:
+                return design
+
+    def _get_parameters(self, name: str, 
+                        project: sourdough.Project) -> Dict[Any, Any]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.types.Lexicon: [description]
+            
+        """
+        try:
+            return project.settings[f'{name}_parameters']
+        except KeyError:
+            return {}
+        
+    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
         """[summary]
 
         Args:
@@ -188,16 +251,20 @@ class Architect(sourdough.Creator):
 
         Returns:
             
-            Sequence[str, str]: [description]
+            Tuple[str, str]: [description]
             
         """
-        suffix = key.split('_')[-1][:-1]
-        prefix = key[:-len(suffix) - 2]
+        if divider is None:
+            divider = '_'
+        if divider in key:
+            suffix = key.split('_')[-1][:-1]
+            prefix = key[:-len(suffix) - 2]
+        else:
+            prefix = suffix = key
         return prefix, suffix
-    
-    @staticmethod    
-    def _add_design(name: str, blueprint: sourdough.types.Lexicon, 
-                     **kwargs) -> sourdough.types.Lexicon:
+       
+    def _add_instruction(self, name: str, blueprint: Blueprint, 
+                         **kwargs) -> Blueprint:
         """[summary]
 
         Args:
@@ -208,16 +275,11 @@ class Architect(sourdough.Creator):
             sourdough.types.Lexicon: [description]
             
         """
-        # Stores a mostly empty Instructions instance in 'blueprint' if none 
-        # currently exists corresponding to 'name'. This check is performed to 
-        # prevent overwriting of existing information in 'blueprint' during 
-        # recursive calls.
-        if name not in blueprint:
-            blueprint[name] = Instructions(name = name)
         # Adds any kwargs to 'blueprint' as appropriate.
         for key, value in kwargs.items():
-            if isinstance(getattr(blueprint[name], key), str):
-                pass
+            if isinstance(getattr(blueprint[name], key), list):
+                getattr(blueprint[name].key).extend(
+                    sourdough.tools.listify(value))
             elif isinstance(getattr(blueprint[name], key), dict):
                 getattr(blueprint[name], key).update(value) 
             else:
@@ -299,12 +361,7 @@ class Builder(sourdough.Creator):
                         key = instructions.design)
                     component = component(**kwargs)
                 except KeyError:
-                    try:
-                        component = project.resources.component.acquire(
-                            key = instructions.base)
-                        component = component(**kwargs)
-                    except KeyError:
-                        raise KeyError(f'{name} component does not exist')
+                    raise KeyError(f'{name} component does not exist')
         return component
 
     def _finalize_component(self, component: sourdough.Component,

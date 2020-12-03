@@ -14,8 +14,7 @@ settings = {
         'file_encoding': 'windows-1252'},
     'cool_project': {
         'cool_project_workflows': ['parser', 'munger'],
-        'cool_project_design': 'pipeline',
-        'manager': 'editor'},
+        'cool_project_design': 'pipeline'},
     'parser': {
         'parser_design': 'contest',
         'parser_steps': ['divide', 'extract'],
