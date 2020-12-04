@@ -81,8 +81,6 @@ class Blueprint(sourdough.types.Lexicon):
         default_factory = dict)
     identification: str = None
 
-    """ Public Methods """
-
     """ Dunder Methods """
     
     def __getitem__(self, key: str) -> Instructions:
@@ -96,7 +94,10 @@ class Blueprint(sourdough.types.Lexicon):
         except KeyError:
             super().__setitem__(key = key, value = Instructions(name = key))
             return self[key]
-                   
+
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)
+                       
 
 @dataclasses.dataclass
 class Architect(sourdough.Creator):
@@ -200,8 +201,6 @@ class Architect(sourdough.Creator):
                 # Component instance.
                 else:
                     blueprint[name].attributes.update({key: value})
-        # for key, value in kwargs.items():
-        #     setattr(blueprint[name], key, value)
         return blueprint
 
     def _get_design(self, name: str, design: str, 
@@ -308,7 +307,9 @@ class Builder(sourdough.Creator):
         """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
-        return self._create_component(name = project.name, project = project)
+        workflow = self._create_component(name = project.name, project = project)
+        print('test workflow', workflow)
+        return workflow
     
     """ Private Methods """
 
@@ -385,11 +386,13 @@ class Builder(sourdough.Creator):
                     component = component, 
                     project = project)
         else:
-            pass
+            component = self._create_element(
+                component = component,
+                project = project)
         return component
 
     def _create_parallel(self, component: sourdough.Component,
-                         project: sourdough.Project) -> sourdough.Workflow:
+                         project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -398,7 +401,7 @@ class Builder(sourdough.Creator):
             project (sourdough.Project): [description]
 
         Returns:
-            sourdough.WorkFlow: [description]
+            sourdough.Component: [description]
             
         """
         possible = []
@@ -421,7 +424,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _create_serial(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> sourdough.Workflow:
+                       project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -430,7 +433,7 @@ class Builder(sourdough.Creator):
             project (sourdough.Project): [description]
 
         Returns:
-            Workflow: [description]
+            Component: [description]
             
         """
         new_contents = []
@@ -445,6 +448,31 @@ class Builder(sourdough.Creator):
         component.contents = new_contents
         return component
 
+    def _create_element(self, component: sourdough.Component, 
+                       project: sourdough.Project) -> sourdough.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.Component): [description]
+            components (Mapping[str, sourdough.Component]): [description]
+            project (sourdough.Project): [description]
+
+        Returns:
+            Component: [description]
+            
+        """
+        new_contents = []
+        for item in component.contents:
+            instance = self._get_component(
+                name = item, 
+                project = project)
+            instance = self._finalize_component(
+                component = instance, 
+                project = project)
+            new_contents.append(instance)
+        component.contents = new_contents
+        return component
+    
     def _add_attributes(self, component: sourdough.Component,
                         project: sourdough.Project) -> sourdough.Component:
         """[summary]
