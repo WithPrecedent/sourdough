@@ -168,8 +168,6 @@ class Architect(sourdough.Creator):
         blueprint[name].parameters = self._get_parameters(
             name = name, 
             project = project)
-        print('test parameters', name, blueprint[name].parameters)
-        print('test suffixes', project.rules.component_suffixes)
         # If 'name' is in 'settings', this method iterates through each key, 
         # value pair in section and stores or extracts the information needed
         # to fill out the appropriate Instructions instance in blueprint.
@@ -185,12 +183,13 @@ class Architect(sourdough.Creator):
                 # triggers recursive searching throughout 'project.settings'.
                 if suffix in project.rules.component_suffixes:
                     contains = suffix.rstrip('s')
-                    blueprint[prefix].contents = sourdough.tools.listify(value) 
-                    blueprint = self._get_instructions(
-                        name = prefix,
-                        blueprint = blueprint,
-                        project = project,
-                        design = contains)
+                    blueprint[prefix].contents = sourdough.tools.listify(value)
+                    for item in blueprint[prefix].contents:
+                        blueprint = self._add_instructions(
+                            name = item,
+                            blueprint = blueprint,
+                            project = project,
+                            design = contains)
                 elif suffix in project.rules.special_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
@@ -201,8 +200,8 @@ class Architect(sourdough.Creator):
                 # Component instance.
                 else:
                     blueprint[name].attributes.update({key: value})
-        for key, value in kwargs.items():
-            setattr(blueprint[name], key, value)
+        # for key, value in kwargs.items():
+        #     setattr(blueprint[name], key, value)
         return blueprint
 
     def _get_design(self, name: str, design: str, 
@@ -257,8 +256,8 @@ class Architect(sourdough.Creator):
         if divider is None:
             divider = '_'
         if divider in key:
-            suffix = key.split('_')[-1][:-1]
-            prefix = key[:-len(suffix) - 2]
+            suffix = key.split('_')[-1]
+            prefix = key[:-len(suffix) - 1]
         else:
             prefix = suffix = key
         return prefix, suffix
