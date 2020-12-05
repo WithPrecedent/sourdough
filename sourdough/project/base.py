@@ -293,7 +293,7 @@ class Resources(collections.abc.Container):
     component: Type = Component
     components: Mapping[str, Type] = components
     instances: Mapping[str, object] = instances
-    algortihms: Mapping[str, Type] = algorithms
+    algorithms: Mapping[str, Type] = algorithms
     
     """ Dunder Methods """
     
@@ -335,8 +335,8 @@ class Rules(object):
         default_factory = lambda: ['general', 'files'])
     skip_suffixes: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['parameters'])
-    special_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['design', 'iterations', 'criteria'])
+    special_section_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['design'])
     default_design: str = 'pipeline'
     
     """ Properties """

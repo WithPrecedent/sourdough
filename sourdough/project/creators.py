@@ -143,6 +143,7 @@ class Architect(sourdough.Creator):
                     blueprint = blueprint,
                     design = None,
                     project = project)
+        print('test blueprint', blueprint)
         return blueprint
         
     """ Private Methods """
@@ -191,7 +192,7 @@ class Architect(sourdough.Creator):
                             blueprint = blueprint,
                             project = project,
                             design = contains)
-                elif suffix in project.rules.special_suffixes:
+                elif suffix in project.rules.special_section_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
                         name = prefix, 
@@ -325,8 +326,8 @@ class Builder(sourdough.Creator):
             sourdough.Component: [description]
             
         """
-        workflow = self._get_component(name = name, project = project)
-        return self._finalize_component(component = workflow, 
+        component = self._get_component(name = name, project = project)
+        return self._finalize_component(component = component, 
                                         project = project)
 
     def _get_component(self, name: str,
@@ -378,44 +379,46 @@ class Builder(sourdough.Creator):
         """
         if isinstance(component, Iterable):
             if component.parallel:
-                component = self._create_parallel(
-                    component = component, 
-                    project = project)
+                finalizer = self._finalize_parallel
             else:
-                component = self._create_serial(
-                    component = component, 
-                    project = project)
+                finalizer = self._finalize_serial
         else:
-            component = self._create_element(
-                component = component,
-                project = project)
+            finalizer = self._finalize_element
+        component = finalizer(component = component, project = project)
+        component = self._add_attributes(
+            component = component, 
+            project = project)
         return component
 
-    def _create_parallel(self, component: sourdough.Component,
-                         project: sourdough.Project) -> sourdough.Component:
+    def _finalize_parallel(self, component: sourdough.Component,
+                           project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
             component (sourdough.Component): [description]
-            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
             sourdough.Component: [description]
             
         """
+        # Creates empy list of lists for all possible permutations to be stored.
         possible = []
+        # Populates list of lists with different options.
         for item in component.contents:
             possible.append(project['blueprint'][item].contents)
+        # Computes Cartesian product of possible permutations.
         combos = list(map(list, itertools.product(*possible)))
-        wrappers = [self._get_component(i, project) for i in component.contents]
+        wrappers = [
+            self._create_component(i, project) for i in component.contents]
         new_contents = []
         for combo in combos:
-            combo = [self._get_component(i, project) for i in combo]
+            new_combo = [self._create_component(i, project) for i in combo]
             steps = []
             for i, step in enumerate(wrappers):
-                step.contents = combo[i]
-                steps.append(step)
+                new_step = copy.deepcopy(step)
+                new_step.contents = new_combo[i]
+                steps.append(new_step)
             new_contents.append(steps)
         component.contents = new_contents
         component = self._add_attributes(
@@ -423,13 +426,12 @@ class Builder(sourdough.Creator):
             project = project)
         return component
 
-    def _create_serial(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> sourdough.Component:
+    def _finalize_serial(self, component: sourdough.Component, 
+                         project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
             component (sourdough.Component): [description]
-            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
@@ -438,39 +440,29 @@ class Builder(sourdough.Creator):
         """
         new_contents = []
         for item in component.contents:
-            instance = self._get_component(
+            instance = self._create_component(
                 name = item, 
-                project = project)
-            instance = self._finalize_component(
-                component = instance, 
                 project = project)
             new_contents.append(instance)
         component.contents = new_contents
         return component
 
-    def _create_element(self, component: sourdough.Component, 
-                       project: sourdough.Project) -> sourdough.Component:
+    def _finalize_element(self, component: sourdough.Component, 
+                          project: sourdough.Project) -> sourdough.Component:
         """[summary]
 
         Args:
             component (sourdough.Component): [description]
-            components (Mapping[str, sourdough.Component]): [description]
             project (sourdough.Project): [description]
 
         Returns:
             Component: [description]
             
         """
-        new_contents = []
-        for item in component.contents:
-            instance = self._get_component(
-                name = item, 
-                project = project)
-            instance = self._finalize_component(
-                component = instance, 
-                project = project)
-            new_contents.append(instance)
-        component.contents = new_contents
+        try:
+            component.contents = project.resources.algorithms[component.name]
+        except KeyError:
+            component.contents = None
         return component
     
     def _add_attributes(self, component: sourdough.Component,
@@ -485,6 +477,39 @@ class Builder(sourdough.Creator):
         for key, value in attributes.items():
             setattr(component, key, value)
         return component    
+
+
+@dataclasses.dataclass
+class Results(sourdough.types.Lexicon):
+    """Stores output of Worker.
+    
+    Args:
+        contents (Mapping[str, Instructions]]): stored dictionary which contains
+            Instructions instances. Defaults to an empty dict.
+        identification (str): a unique identification name for the related 
+            Project instance.            
+            
+    """
+    contents: Mapping[str, Instructions] = dataclasses.field(
+        default_factory = dict)
+    identification: str = None
+
+    """ Dunder Methods """
+    
+    def __getitem__(self, key: str) -> Instructions:
+        """Autovivifies if there is no Instructions instance.
+        
+        Args:
+        
+        """
+        try:
+            return super().__getitem__(key = key)
+        except KeyError:
+            super().__setitem__(key = key, value = Instructions(name = key))
+            return self[key]
+
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
@@ -505,7 +530,7 @@ class Worker(sourdough.Creator):
         """Computes results based on a workflow.
             
         """
-        results = sourdough.types.Lexicon()
+        results = Results(identification = project.identification)
         if project.data is not None:
             kwargs['data'] = project.data
         for component in project['workflow']:

@@ -22,6 +22,7 @@ settings = {
         'extract_techniques': ['harvest', 'process', 'something'],
         'random_thing': True},
     'munger': {
+        'munger_design': 'survey',
         'munger_steps': ['search', 'destroy'],
         'search_techniques': ['find', 'locate'],
         'destroy_techniques': ['explode', 'annihilate']},

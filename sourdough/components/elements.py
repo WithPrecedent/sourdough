@@ -42,7 +42,7 @@ class Technique(sourdough.Component):
             when the 'apply' method is called. Defaults to an empty dict.
                                     
     """
-    contents: Union[Callable, str]= None
+    contents: Union[Callable, str] = None
     name: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
 
