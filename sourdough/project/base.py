@@ -9,8 +9,8 @@ Contents:
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
         attribute and in 'creators'.
-    Creation (Lexicon): base class for outputs of a Creator's 'create' method.
-        Creations have auto-vivification making dynamic storage of creations
+    Product (Lexicon): base class for outputs of a Creator's 'create' method.
+        Products have auto-vivification making dynamic storage of products
         easier.
     Element (Container): base class for parts of a composite object in a 
         sourdough project. 
@@ -21,6 +21,7 @@ import abc
 import collections.abc
 import dataclasses
 import pprint
+import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -92,15 +93,43 @@ class Element(collections.abc.Container):
         except TypeError:
             return item == self.contents
 
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of a class instance.
+        
+    #     Returns:
+    #         str: text representation of a class instance.
+        
+    #     """
+    #     return pprint.pformat(self, sort_dicts = False, compact = True)
+
     def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
+        """Returns pretty string representation of an instance.
         
         Returns:
-            str: text representation of a class instance.
-        
+            str: pretty string representation of an instance.
+            
         """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
+        new_line = '\n'
+        representation = [f'{new_line}sourdough {self.__class__.__name__}']
+        representation.append(f'name: {self.name}')
+        attributes = [a for a in self.__dict__ if not a.startswith('_')]
+        attributes.remove('name')
+        for attribute in attributes:
+            value = getattr(self, attribute)
+            if (isinstance(value, Element) 
+                    and isinstance(value, (Sequence, Mapping))):
+                representation.append(
+                    f'''{attribute}:{new_line}{textwrap.indent(
+                        str(value.contents), '    ')}''')            
+            elif (isinstance(value, (Sequence, Mapping)) 
+                    and not isinstance(value, str)):
+                representation.append(
+                    f'''{attribute}:{new_line}{textwrap.indent(
+                        str(value), '    ')}''')
+            else:
+                representation.append(f'{attribute}: {str(value)}')
+        return new_line.join(representation) 
+    
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar, abc.ABC):
@@ -122,8 +151,8 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
     """
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
-    produces: ClassVar[Type]
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creators
+    produces: ClassVar[str]
+    registry: ClassVar[Mapping[str, Type]] = sourdough.options.creators
 
     """ Required Subclass Methods """
     
@@ -143,25 +172,13 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
         """
         pass
 
-    
-    """ Dunder Methods """
-
-    def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
-        
-        Returns:
-            str: text representation of a class instance.
-        
-        """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
 
 @dataclasses.dataclass
-class Creation(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
-               abc.ABC):
+class Product(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
+              abc.ABC):
     """Stores output of a Creator's 'create' method.
     
-    Creation autovivifies by automatically creating a correspond key if a
+    Product autovivifies by automatically creating a correspond key if a
     user attempts to access a key that does not exist. In doing so, it creates
     an instance of the class listed in the 'stores' class attribue.
     
@@ -185,23 +202,7 @@ class Creation(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon,
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     identification: str = None
-    stores: ClassVar[Type] = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creations
-    
-    """ Dunder Methods """
-    
-    # def __missing__(self, key: str) -> Any:
-    #     """Autovivifies if there is no matching key.
-        
-    #     Args:
-        
-    #     """
-    #     print('yes missing')
-    #     super().__setitem__(key = key, value = self.stores(name = key))
-    #     return self[key]
-
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)  
+    registry: ClassVar[Mapping[str, Type]] = sourdough.options.products
 
                        
 @dataclasses.dataclass
@@ -230,8 +231,8 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.components
-    library: ClassVar[Mapping[str, Component]] = sourdough.defaults.instances
+    registry: ClassVar[Mapping[str, Type]] = sourdough.options.components
+    library: ClassVar[Mapping[str, Component]] = sourdough.options.instances
     
     """ Initialization Methods """
 
@@ -249,31 +250,3 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     def apply(self, project: sourdough.Project) -> sourdough.Project:
         """Subclasses must provide their own methods."""
         return project
-
-    """ Private Methods """
-               
-    # def __str__(self) -> str:
-    #     """Returns pretty string representation of an instance.
-        
-    #     Returns:
-    #         str: pretty string representation of an instance.
-            
-    #     """
-    #     new_line = '\n'
-    #     representation = [f'sourdough {self.__class__.__name__}']
-    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
-    #     for attribute in attributes:
-    #         value = getattr(self, attribute)
-    #         if (isinstance(value, Component) 
-    #                 and isinstance(value, (Sequence, Mapping))):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value.contents), '    ')}''')            
-    #         elif (isinstance(value, (Sequence, Mapping)) 
-    #                 and not isinstance(value, str)):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value), '    ')}''')
-    #         else:
-    #             representation.append(f'{attribute}: {str(value)}')
-    #     return new_line.join(representation)  

@@ -18,7 +18,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Aggregation(sourdough.creations.Workflow):
+class Aggregation(sourdough.products.Workflow):
     """Aggregates unordered objects.
     
     Distinguishing characteristics of an Aggregation:
@@ -62,7 +62,7 @@ class Aggregation(sourdough.creations.Workflow):
     
 
 @dataclasses.dataclass
-class SerialFlow(sourdough.creations.Workflow, abc.ABC):
+class SerialFlow(sourdough.products.Workflow, abc.ABC):
     """Base class for serially workflows Flows in sourdough projects.
         
     Args:
@@ -199,7 +199,7 @@ class Pipeline(SerialFlow):
 
 
 @dataclasses.dataclass
-class ParallelFlow(sourdough.creations.Workflow, abc.ABC):
+class ParallelFlow(sourdough.products.Workflow, abc.ABC):
     """Base class for parallelly workflowd Flows in sourdough projects.
         
     Args:

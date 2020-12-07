@@ -43,14 +43,14 @@ class Architect(sourdough.Creator):
         """Creates a blueprint based on 'project.settings'.
 
         Args:
-            project (sourdough.Project): a Project instance with resources and
+            project (sourdough.Project): a Project instance with options and
                 other information needed for blueprint construction.
 
         Returns:
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = project.bases.creation.acquire(key = self.produces)(
+        blueprint = project.bases.product.acquire(key = self.produces)(
             identification = project.identification)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
@@ -58,10 +58,10 @@ class Architect(sourdough.Creator):
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'blueprint'.
-            if (not name.endswith(tuple(sourdough.defaults.rules.skip_suffixes))
-                    and name not in sourdough.defaults.rules.skip_sections
+            if (not name.endswith(tuple(sourdough.rules.skip_suffixes))
+                    and name not in sourdough.rules.skip_sections
                     and any(
-                        [i.endswith(sourdough.defaults.rules.component_suffixes) 
+                        [i.endswith(sourdough.rules.component_suffixes) 
                         for i in section.keys()])):
                 blueprint = self._add_instructions(
                     name = name,
@@ -74,9 +74,9 @@ class Architect(sourdough.Creator):
     """ Private Methods """
     
     def _add_instructions(self, name: str, design: str,
-                          blueprint: sourdough.creations.Blueprint,
+                          blueprint: sourdough.products.Blueprint,
                           project: sourdough.Project, **kwargs) -> (
-                              sourdough.creations.Blueprint):
+                              sourdough.products.Blueprint):
         """[summary]
 
         Args:
@@ -89,7 +89,7 @@ class Architect(sourdough.Creator):
             
         """
         if name not in blueprint:
-            blueprint[name] = sourdough.creations.Instructions(name = name)
+            blueprint[name] = sourdough.products.Instructions(name = name)
         # Adds appropraite design type to 'blueprint' for 'name'.
         blueprint[name].design = self._get_design(
             name = name, 
@@ -112,7 +112,7 @@ class Architect(sourdough.Creator):
                 prefix, suffix = self._divide_key(key = key)
                 # A 'key' ending with one of the component-related suffixes 
                 # triggers recursive searching throughout 'project.settings'.
-                if suffix in sourdough.defaults.rules.component_suffixes:
+                if suffix in sourdough.rules.component_suffixes:
                     contains = suffix.rstrip('s')
                     blueprint[prefix].contents = sourdough.tools.listify(value)
                     for item in blueprint[prefix].contents:
@@ -121,7 +121,7 @@ class Architect(sourdough.Creator):
                             design = contains,
                             blueprint = blueprint,
                             project = project)
-                elif suffix in sourdough.defaults.rules.special_section_suffixes:
+                elif suffix in sourdough.rules.special_section_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
                         name = prefix, 
@@ -150,7 +150,7 @@ class Architect(sourdough.Creator):
             return project.settings[name][f'{name}_design']
         except KeyError:
             if design is None:
-                return sourdough.defaults.rules.default_design
+                return sourdough.rules.default_design
             else:
                 return design
 
@@ -192,8 +192,8 @@ class Architect(sourdough.Creator):
         return prefix, suffix
        
     def _add_instruction(self, name: str, 
-                         blueprint: sourdough.creations.Blueprint, 
-                         **kwargs) -> sourdough.creations.Blueprint:
+                         blueprint: sourdough.products.Blueprint, 
+                         **kwargs) -> sourdough.products.Blueprint:
         """[summary]
 
         Args:
@@ -238,7 +238,7 @@ class Builder(sourdough.Creator):
         """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
-        plan = project.bases.creation.acquire(key = self.produces)(
+        plan = project.bases.product.acquire(key = self.produces)(
             identification = project.identification)
         plan.contents = self._create_component(
             name = project.name, 
@@ -279,7 +279,6 @@ class Builder(sourdough.Creator):
             Mapping[str, sourdough.Component]: [description]
             
         """
-        print('test project contents', project.contents)
         instructions = project['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
@@ -395,7 +394,7 @@ class Builder(sourdough.Creator):
             
         """
         try:
-            component.contents = sourdough.defaults.algorithms[component.name]
+            component.contents = sourdough.options.algorithms[component.name]
         except KeyError:
             component.contents = None
         return component
@@ -432,7 +431,7 @@ class Worker(sourdough.Creator):
         """Computes results based on a plan.
             
         """
-        results = project.bases.creation.acquire(key = self.produces)(
+        results = project.bases.product.acquire(key = self.produces)(
             identification = project.identification)
         if project.data is not None:
             kwargs['data'] = project.data

@@ -30,22 +30,22 @@ class Bases(object):
             Defaults to sourdough.Settings.
         manager (Type): the file manager class to use in a sourdough project.
             Defaults to sourdough.Manager.   
-        creator (Type): the creation/builder class to use in a sourdough 
+        creator (Type): the product/builder class to use in a sourdough 
             project. Defaults to sourdough.Creator.    
-        creation (Type): the creation output class to use in a sourdough 
-            project. Defaults to sourdough.Creation. 
+        product (Type): the product output class to use in a sourdough 
+            project. Defaults to sourdough.Product. 
         component (Type): the node class to use in a sourdough project. Defaults 
             to sourdough.Component. 
         workflow (Type): the workflow to use in a sourdough project. Defaults to 
-            sourdough.creations.Workflow.      
+            sourdough.products.Workflow.      
             
     """
     settings: Type = sourdough.Settings
     manager: Type = sourdough.Manager
     creator: Type = sourdough.Creator
-    creation: Type = sourdough.Creation
+    product: Type = sourdough.Product
     component: Type = sourdough.Component
-    workflow: Type = sourdough.creations.Workflow
+    workflow: Type = sourdough.products.Workflow
   
       
 @dataclasses.dataclass
@@ -95,8 +95,7 @@ class Project(sourdough.types.Lexicon):
         bases (ClassVar[object]): contains information about default base 
             classes used by a Project instance. Defaults to an instance of 
             Bases.
-        defaults (ClassVar[ModuleType]): module containing default options for
-            a Project instance. Defaults to sourdough.defaults.
+
                   
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = dict)
@@ -122,7 +121,7 @@ class Project(sourdough.types.Lexicon):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        for validation in sourdough.defaults.rules.validations:
+        for validation in sourdough.rules.validations:
             getattr(self, f'_validate_{validation}')()
         # Sets index for iteration.
         self.index = 0
@@ -159,7 +158,7 @@ class Project(sourdough.types.Lexicon):
         """
         if not self.name:
             for section in self.settings.keys():
-                if section not in sourdough.defaults.settings.keys():
+                if section not in sourdough.rules.skip_sections():
                     self.name = section
                     break
         if not self.name:
@@ -229,7 +228,7 @@ class Project(sourdough.types.Lexicon):
     """ Dunder Methods """
     
     def __next__(self) -> Any:
-        """Returns creations of the next Creator in 'creators'.
+        """Returns products of the next Creator in 'creators'.
 
         Returns:
             Any: item creator by the 'create' method of a Creator.
@@ -241,10 +240,10 @@ class Project(sourdough.types.Lexicon):
                 print(
                     f'{creator.action} {creator.produces} from {creator.needs}')
             self.index += 1
-            creation = creator.create(project = self)
+            product = creator.create(project = self)
         else:
             raise IndexError()
-        return creation
+        return product
     
     def __iter__(self) -> Iterable:
         """Returns iterable of 'creators'.

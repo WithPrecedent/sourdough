@@ -1,5 +1,5 @@
 """
-workshop: interface for runtime class and object creation
+workshop: interface for runtime class and object product
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)

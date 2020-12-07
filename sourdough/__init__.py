@@ -36,16 +36,17 @@ from . import components
 
 from .core import types
 from .core import quirks
-from .project import defaults
-
+from .project.resources import options
+from .project.resources import rules
+from .project import resources
 
 from .core.configuration import Settings
 from .core.files import Manager
 from .project.base import Creator
 from .project.base import Element
-from .project.base import Creation
+from .project.base import Product
 from .project.base import Component
-from .project import creations
+from .project import products
 from .project import creators
 
 from .components import workflows

@@ -62,7 +62,7 @@ class Settings(sourdough.types.Lexicon):
         Mapping[Any, Mapping[Any, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
-    defaults: ClassVar[Mapping[str, Any]] = sourdough.defaults.settings
+    defaults: ClassVar[Mapping[str, Any]] = sourdough.resources.settings
 
     """ Initialization Methods """
 

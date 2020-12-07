@@ -1,21 +1,15 @@
 """
-creators: classes for building and storing different steps in sourdough project
+products: creations of Creators and their stored classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Instructions (Progression): information needed to create a single Component.
-    Architect (Creator):
-    Builder (Creator):
-    Worker (Creator):
+
     
 """
 from __future__ import annotations
-import abc
-import copy
 import dataclasses
-import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
@@ -34,19 +28,16 @@ class Instructions(sourdough.types.Progression):
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        base (str): name of base class associated with the Component to be 
-            created.
+            should match the appropriate section name in the Settings instance.
+            Defaults to None. 
         design (str): name of design base class associated with the Component
-            to be created.
+            to be created. Defaults to None.
         parameters (Mapping[str, Any]): parameters to be used for the stored
-            object(s) in its/their creation.
+            object(s) in its/their product. Defaults to an empty dict.
         attributes (Mapping[str, Any]): attributes to add to the created
             Component object. The keys should be name of the attribute and the
-            values should be the value stored for that attribute.
+            values should be the value stored for that attribute. Defaults to
+            an empty dict.
             
     """
     contents: Sequence[str] = dataclasses.field(default_factory = list)
@@ -68,7 +59,7 @@ class Instructions(sourdough.types.Progression):
 
 
 @dataclasses.dataclass
-class Blueprint(sourdough.Creation):
+class Blueprint(sourdough.Product):
     """Class of essential information from Settings.
     
     Args:
@@ -80,7 +71,6 @@ class Blueprint(sourdough.Creation):
     contents: Mapping[str, Instructions] = dataclasses.field(
         default_factory = dict)
     identification: str = None
-    stores: ClassVar[Type] = Instructions
 
 
 @dataclasses.dataclass
@@ -140,7 +130,7 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
 
     
 @dataclasses.dataclass
-class Plan(sourdough.Creation, sourdough.types.Lexicon):
+class Plan(sourdough.Product, sourdough.types.Lexicon):
     """Iterable base class in a sourdough composite object.
             
     Args:
@@ -176,7 +166,7 @@ class Report(sourdough.types.Lexicon):
     
 
 @dataclasses.dataclass
-class Results(sourdough.Creation):
+class Results(sourdough.Product):
     """Stores output of Worker.
     
     Args:
