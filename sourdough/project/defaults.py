@@ -19,6 +19,7 @@ Contents:
     
 """
 from __future__ import annotations
+import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -42,14 +43,16 @@ settings: Mapping[str, Any] = {
 """ Catalogs of Created Classes and Objects """
 
 creators: Mapping[str, Type] = sourdough.types.Catalog()
-deliverables: Mapping[str, Type] = sourdough.types.Catalog()
+creations: Mapping[str, Type] = sourdough.types.Catalog()
 components: Mapping[str, Type] = sourdough.types.Catalog()
 instances: Mapping[str, object] = sourdough.types.Catalog()
 algorithms: Mapping[str, Type] = sourdough.types.Catalog()
+criteria: Mapping[str, Callable] = sourdough.types.Catalog(
+    always_return_list = True)
 
 resources: Mapping[str, sourdough.types.Catalog] = {
     'creators': creators,
-    'deliverables': deliverables,
+    'creations': creations,
     'components': components,
     'instances': instances,
     'algorithms': algorithms}
@@ -57,27 +60,22 @@ resources: Mapping[str, sourdough.types.Catalog] = {
 
 """ Default Rules """
 
-skip_sections: Sequence[str] = ['general', 'files']
-skip_suffixes: Sequence[str] = ['parameters']
-special_section_suffixes: Sequence[str] = ['design']
-default_design: str = 'pipeline'
-validations: Sequence[str] = ['settings', 'name', 'identification', 'manager', 
-                              'creators']
+@dataclasses.dataclass
+class Rules(object):
+    
+    skip_sections: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files'])
+    skip_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['parameters'])
+    special_section_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['design'])
+    default_design: str = 'pipeline'
+    validations: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['settings', 'name', 'identification', 
+                                   'manager', 'creators'])
+        
+    @property
+    def component_suffixes(self) -> Tuple[str]: 
+        return tuple(k + 's' for k in components.keys()) 
 
-def _get_component_suffixes() -> Tuple[str]:
-    """[summary]
-
-    Returns:
-        Tuple[str]: [description]
-    """
-    return tuple(k + 's' for k in components.keys()) 
-
-component_suffixes: Tuple[str] = _get_component_suffixes()
-
-rules: Mapping[str, Any] = {
-    'skip_sections': skip_sections,
-    'skip_suffixes': skip_suffixes,
-    'special_section_suffixes': special_section_suffixes,
-    'default_design': default_design,
-    'validations': validations,
-    'component_suffixes': _get_component_suffixes()}
+rules: Rules = Rules()

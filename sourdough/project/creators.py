@@ -24,18 +24,18 @@ import sourdough
 
 @dataclasses.dataclass
 class Architect(sourdough.Creator):
-    """Creates a blueprint of a sourdough workflow.
+    """Creates a blueprint of a sourdough Plan.
 
     Architect creates a dictionary representation, a blueprint, of the overall 
-    project workflow. In the blueprint produced, keys are the names of 
-    components and values are Instruction instances.
+    project Plan. In the blueprint produced, keys are the names of components 
+    and values are Instruction instances.
     
     Args:
                         
     """
     action: ClassVar[str] = 'Drafting'
     needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
-    produces: ClassVar[Type] = sourdough.deliverables.Blueprint
+    produces: ClassVar[Type] = 'blueprint'
 
     """ Public Methods """
     
@@ -50,29 +50,33 @@ class Architect(sourdough.Creator):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = self.produces(identification = project.identification)
+        blueprint = project.bases.creation.acquire(key = self.produces)(
+            identification = project.identification)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'blueprint'.
-            if (not name.endswith(tuple(sourdough.defaults.skip_suffixes))
-                    and name not in sourdough.defaults.skip_sections
-                    and any([i.endswith(sourdough.defaults.component_suffixes) 
+            if (not name.endswith(tuple(sourdough.defaults.rules.skip_suffixes))
+                    and name not in sourdough.defaults.rules.skip_sections
+                    and any(
+                        [i.endswith(sourdough.defaults.rules.component_suffixes) 
                         for i in section.keys()])):
                 blueprint = self._add_instructions(
                     name = name,
-                    blueprint = blueprint,
                     design = None,
+                    blueprint = blueprint,
                     project = project)
         print('test blueprint', blueprint)
         return blueprint
         
     """ Private Methods """
     
-    def _add_instructions(self, name: str, blueprint: Blueprint, design: str,
-                          project: sourdough.Project, **kwargs) -> Blueprint:
+    def _add_instructions(self, name: str, design: str,
+                          blueprint: sourdough.creations.Blueprint,
+                          project: sourdough.Project, **kwargs) -> (
+                              sourdough.creations.Blueprint):
         """[summary]
 
         Args:
@@ -84,6 +88,8 @@ class Architect(sourdough.Creator):
             sourdough.types.Lexicon: [description]
             
         """
+        if name not in blueprint:
+            blueprint[name] = sourdough.creations.Instructions(name = name)
         # Adds appropraite design type to 'blueprint' for 'name'.
         blueprint[name].design = self._get_design(
             name = name, 
@@ -106,16 +112,16 @@ class Architect(sourdough.Creator):
                 prefix, suffix = self._divide_key(key = key)
                 # A 'key' ending with one of the component-related suffixes 
                 # triggers recursive searching throughout 'project.settings'.
-                if suffix in sourdough.defaults.component_suffixes:
+                if suffix in sourdough.defaults.rules.component_suffixes:
                     contains = suffix.rstrip('s')
                     blueprint[prefix].contents = sourdough.tools.listify(value)
                     for item in blueprint[prefix].contents:
                         blueprint = self._add_instructions(
                             name = item,
+                            design = contains,
                             blueprint = blueprint,
-                            project = project,
-                            design = contains)
-                elif suffix in sourdough.defaults.special_section_suffixes:
+                            project = project)
+                elif suffix in sourdough.defaults.rules.special_section_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
                         name = prefix, 
@@ -128,7 +134,7 @@ class Architect(sourdough.Creator):
         return blueprint
 
     def _get_design(self, name: str, design: str, 
-                  project: sourdough.Project) -> str:
+                    project: sourdough.Project) -> str:
         """[summary]
 
         Args:
@@ -144,7 +150,7 @@ class Architect(sourdough.Creator):
             return project.settings[name][f'{name}_design']
         except KeyError:
             if design is None:
-                return sourdough.defaults.default_design
+                return sourdough.defaults.rules.default_design
             else:
                 return design
 
@@ -186,8 +192,8 @@ class Architect(sourdough.Creator):
         return prefix, suffix
        
     def _add_instruction(self, name: str, 
-                         blueprint: sourdough.deliverables.Blueprint, 
-                         **kwargs) -> sourdough.deliverables.Blueprint:
+                         blueprint: sourdough.creations.Blueprint, 
+                         **kwargs) -> sourdough.creations.Blueprint:
         """[summary]
 
         Args:
@@ -217,14 +223,14 @@ class Architect(sourdough.Creator):
       
 @dataclasses.dataclass
 class Builder(sourdough.Creator):
-    """Constructs finalized workflow.
+    """Constructs finalized plan.
     
     Args:
                         
     """
     action: ClassVar[str] = 'Creating'
     needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
-    produces: ClassVar[Type] = sourdough.Workflow
+    produces: ClassVar[Type] = 'plan'
 
     """ Public Methods """
 
@@ -232,12 +238,13 @@ class Builder(sourdough.Creator):
         """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
-        workflow = self.produces(identification = project.identification)
-        workflow.contents = self._create_component(
+        plan = project.bases.creation.acquire(key = self.produces)(
+            identification = project.identification)
+        plan.contents = self._create_component(
             name = project.name, 
             project = project)
-        print('test workflow', workflow)
-        return workflow
+        print('test plan', plan)
+        return plan
     
     """ Private Methods """
 
@@ -272,6 +279,7 @@ class Builder(sourdough.Creator):
             Mapping[str, sourdough.Component]: [description]
             
         """
+        print('test project contents', project.contents)
         instructions = project['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
@@ -387,7 +395,7 @@ class Builder(sourdough.Creator):
             
         """
         try:
-            component.contents = project.bases.algorithms[component.name]
+            component.contents = sourdough.defaults.algorithms[component.name]
         except KeyError:
             component.contents = None
         return component
@@ -414,19 +422,20 @@ class Worker(sourdough.Creator):
 
     """
     action: ClassVar[str] = 'Computing'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'workflow'
-    produces: ClassVar[str] = sourdough.deliverables.Results
+    needs: ClassVar[Union[str, Tuple[str]]] = 'plan'
+    produces: ClassVar[str] = 'results'
     
     """ Public Methods """
  
     def create(self, project: sourdough.Project, 
                **kwargs) -> sourdough.types.Lexicon:        
-        """Computes results based on a workflow.
+        """Computes results based on a plan.
             
         """
-        results = self.produces(identification = project.identification)
+        results = project.bases.creation.acquire(key = self.produces)(
+            identification = project.identification)
         if project.data is not None:
             kwargs['data'] = project.data
-        for component in project['workflow']:
+        for component in project['plan']:
             results.update({component.name: component.apply(**kwargs)})
         return results

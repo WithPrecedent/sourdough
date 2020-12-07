@@ -32,20 +32,20 @@ class Bases(object):
             Defaults to sourdough.Manager.   
         creator (Type): the creation/builder class to use in a sourdough 
             project. Defaults to sourdough.Creator.    
-        deliverable (Type): the deliverable output class to use in a sourdough 
-            project. Defaults to sourdough.Deliverable. 
+        creation (Type): the creation output class to use in a sourdough 
+            project. Defaults to sourdough.Creation. 
         component (Type): the node class to use in a sourdough project. Defaults 
             to sourdough.Component. 
         workflow (Type): the workflow to use in a sourdough project. Defaults to 
-            sourdough.Workflow.      
+            sourdough.creations.Workflow.      
             
     """
     settings: Type = sourdough.Settings
     manager: Type = sourdough.Manager
     creator: Type = sourdough.Creator
-    deliverable: Type = sourdough.Deliverable
+    creation: Type = sourdough.Creation
     component: Type = sourdough.Component
-    workflow: Type = sourdough.Workflow
+    workflow: Type = sourdough.creations.Workflow
   
       
 @dataclasses.dataclass
@@ -122,7 +122,7 @@ class Project(sourdough.types.Lexicon):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        for validation in sourdough.defaults.validations:
+        for validation in sourdough.defaults.rules.validations:
             getattr(self, f'_validate_{validation}')()
         # Sets index for iteration.
         self.index = 0
@@ -239,8 +239,7 @@ class Project(sourdough.types.Lexicon):
             creator = self.creators[self.index]()
             if hasattr(self, 'verbose') and self.verbose:
                 print(
-                    f'{creator.action} {creator.produces.__name__} '
-                    f'from {creator.needs}')
+                    f'{creator.action} {creator.produces} from {creator.needs}')
             self.index += 1
             creation = creator.create(project = self)
         else:

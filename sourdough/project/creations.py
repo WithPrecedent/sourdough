@@ -68,7 +68,7 @@ class Instructions(sourdough.types.Progression):
 
 
 @dataclasses.dataclass
-class Blueprint(sourdough.Deliverable):
+class Blueprint(sourdough.Creation):
     """Class of essential information from Settings.
     
     Args:
@@ -80,85 +80,11 @@ class Blueprint(sourdough.Deliverable):
     contents: Mapping[str, Instructions] = dataclasses.field(
         default_factory = dict)
     identification: str = None
-                       
-    
-@dataclasses.dataclass
-class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
-                sourdough.Element, abc.ABC):
-    """Base container class for sourdough composite objects.
-    
-    A Component has a 'name' attribute for internal referencing and to allow 
-    sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of composite workflows such as trees, cycles, contests, 
-    studies, and graphs.
-    
-    Args:
-        contents (Any): item(s) contained by a Component instance.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'components'.
-        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'instances'.
-    """
-    contents: Any = None
-    name: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.components
-    library: ClassVar[Mapping[str, Component]] = sourdough.defaults.instances
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def apply(self, project: sourdough.Project) -> sourdough.Project:
-        """Subclasses must provide their own methods."""
-        return project
-
-    """ Private Methods """
-               
-    # def __str__(self) -> str:
-    #     """Returns pretty string representation of an instance.
-        
-    #     Returns:
-    #         str: pretty string representation of an instance.
-            
-    #     """
-    #     new_line = '\n'
-    #     representation = [f'sourdough {self.__class__.__name__}']
-    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
-    #     for attribute in attributes:
-    #         value = getattr(self, attribute)
-    #         if (isinstance(value, Component) 
-    #                 and isinstance(value, (Sequence, Mapping))):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value.contents), '    ')}''')            
-    #         elif (isinstance(value, (Sequence, Mapping)) 
-    #                 and not isinstance(value, str)):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value), '    ')}''')
-    #         else:
-    #             representation.append(f'{attribute}: {str(value)}')
-    #     return new_line.join(representation)  
+    stores: ClassVar[Type] = Instructions
 
 
 @dataclasses.dataclass
-class Workflow(Component, sourdough.types.Hybrid):
+class Workflow(sourdough.Component, sourdough.types.Hybrid):
     """Iterable base class in a sourdough composite object.
             
     Args:
@@ -188,11 +114,11 @@ class Workflow(Component, sourdough.types.Hybrid):
     """
     contents: Sequence[sourdough.Component] = dataclasses.field(
         default_factory = list)
-    identification: str = None
     name: str = None
     iterations: Union[int, str] = 1
-    criteria: str = None
-    parallel: ClassVar[bool] = False 
+    criteria: Union[str, Callable] = None
+    meta_criterion: Union[str, Callable] = None
+    parallel: ClassVar[bool] = False
     
     """ Public Methods """
     
@@ -212,6 +138,27 @@ class Workflow(Component, sourdough.types.Hybrid):
             project = super().apply(project = project, **kwargs)
         return project   
 
+    
+@dataclasses.dataclass
+class Plan(sourdough.Creation, sourdough.types.Lexicon):
+    """Iterable base class in a sourdough composite object.
+            
+    Args:
+        contents (Mapping[str, sourdough.Component]): keys are str names and
+            values are Component subclass instances. Defaults to an empty dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+        identification (str): a unique identification name for the related 
+            Project instance.   
+                            
+    """
+    contents: Mapping[str, sourdough.Component] = dataclasses.field(
+        default_factory = dict)
+    name: str = None
+    identification: str = None
+
   
 @dataclasses.dataclass
 class Report(sourdough.types.Lexicon):
@@ -229,7 +176,7 @@ class Report(sourdough.types.Lexicon):
     
 
 @dataclasses.dataclass
-class Results(sourdough.Deliverable):
+class Results(sourdough.Creation):
     """Stores output of Worker.
     
     Args:
@@ -242,4 +189,3 @@ class Results(sourdough.Deliverable):
     contents: Mapping[str, Report] = dataclasses.field(
         default_factory = dict)
     identification: str = None
-

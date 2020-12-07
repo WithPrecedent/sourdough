@@ -9,20 +9,11 @@ Contents:
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
         attribute and in 'creators'.
-    Deliverable (Lexicon): base class for outputs of a Creator's 'create' method.
-        Deliverables have auto-vivification making dynamic storage of creations
+    Creation (Lexicon): base class for outputs of a Creator's 'create' method.
+        Creations have auto-vivification making dynamic storage of creations
         easier.
-    Component (Librarian, Registrar, Container): base class for nodes in a
-        sourdough project workflow. All subclasses must have an 'apply' 
-        method. All concrete subclasses are automatically registered in the 
-        'registry' class attribute and in 'components'. All subclass instances
-        are automatically stored in the 'library' class attribute and in
-        'instances'.
-    Resources (Container): a collection of base classes and Catalogs used for a
-        sourdough project. Changing the base classes or Catalogs in an instance
-        or subclassing Resources with different options will change the base
-        classes and Catalogs used by Project.
-    Rules
+    Element (Container): base class for parts of a composite object in a 
+        sourdough project. 
     
 """
 from __future__ import annotations
@@ -37,80 +28,21 @@ import sourdough
    
 
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, abc.ABC):
-    """Base class for creating objects outputted by a Project's iteration.
-    
-    All subclasses must have a 'create' method that takes 'project' as a 
-    parameter.
-    
-    Args:
-        action (str): name of action performed by the class. This is used in
-            messages in the terminal and logging.
-        needs (ClassVar[Union[str, Tuple[str]]]): name(s) of item(s) needed
-            by the class's 'create' method.
-        produces (ClassVar[str]): name of item produced by the class's 'create'
-            method.
-        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'creators'.
-            
-    """
-    action: ClassVar[str]
-    needs: ClassVar[Union[str, Tuple[str]]]
-    produces: ClassVar[Type]
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creators
-
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, project: sourdough.Project, **kwargs) -> Any:
-        """Performs some action based on 'project' with kwargs (optional).
-        
-        Subclasses must provide their own methods.
-
-        Args:
-            project (object): a Project-compatible instance.
-            kwargs: any additional parameters to pass to a 'create' method.
-
-        Return:
-            Any: object created by a 'create' method.
-        
-        """
-        pass
-
-    """ Dunder Methods """
-
-    def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
-        
-        Returns:
-            str: normal representation of a class instance.
-        
-        """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
-    
-@dataclasses.dataclass
 class Element(collections.abc.Container):
     """Base container class for sourdough composite objects.
     
-    A Component has a 'name' attribute for internal referencing and to allow 
-    sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of composite workflows such as trees, cycles, contests, 
-    studies, and graphs.
+    An Element has a 'name' attribute for internal referencing and to allow 
+    sourdough Hybrids storing them to function propertly. Element instances can 
+    be used to create a variety of composite structures such as trees, cycles, 
+    contests, studies, and graphs.
     
     Args:
-        contents (Any): item(s) contained by a Component instance.
+        contents (Any): item(s) contained by an instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Settings instance, 'name' 
             should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'components'.
-        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'instances'.
+
     """
     contents: Any = None
     name: str = None
@@ -164,18 +96,72 @@ class Element(collections.abc.Container):
         """Returns pretty string representation of a class instance.
         
         Returns:
-            str: normal representation of a class instance.
+            str: text representation of a class instance.
         
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
 
 
 @dataclasses.dataclass
-class Deliverable(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
-                  abc.ABC):
+class Creator(sourdough.quirks.Registrar, abc.ABC):
+    """Base class for creating objects outputted by a Project's iteration.
+    
+    All subclasses must have a 'create' method that takes 'project' as a 
+    parameter.
+    
+    Args:
+        action (str): name of action performed by the class. This is used in
+            messages in the terminal and logging.
+        needs (ClassVar[Union[str, Tuple[str]]]): name(s) of item(s) needed
+            by the class's 'create' method.
+        produces (ClassVar[str]): name of item produced by the class's 'create'
+            method.
+        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'creators'.
+            
+    """
+    action: ClassVar[str]
+    needs: ClassVar[Union[str, Tuple[str]]]
+    produces: ClassVar[Type]
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creators
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, project: sourdough.Project, **kwargs) -> Any:
+        """Performs some action based on 'project' with kwargs (optional).
+        
+        Subclasses must provide their own methods.
+
+        Args:
+            project (object): a Project-compatible instance.
+            kwargs: any additional parameters to pass to a 'create' method.
+
+        Return:
+            Any: object created by a 'create' method.
+        
+        """
+        pass
+
+    
+    """ Dunder Methods """
+
+    def __str__(self) -> str:
+        """Returns pretty string representation of a class instance.
+        
+        Returns:
+            str: text representation of a class instance.
+        
+        """
+        return pprint.pformat(self, sort_dicts = False, compact = True)
+
+
+@dataclasses.dataclass
+class Creation(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
+               abc.ABC):
     """Stores output of a Creator's 'create' method.
     
-    Deliverable autovivifies by automatically creating a correspond key if a
+    Creation autovivifies by automatically creating a correspond key if a
     user attempts to access a key that does not exist. In doing so, it creates
     an instance of the class listed in the 'stores' class attribue.
     
@@ -200,18 +186,94 @@ class Deliverable(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon,
     name: str = None
     identification: str = None
     stores: ClassVar[Type] = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.deliverables
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creations
     
     """ Dunder Methods """
     
-    def __missing__(self, key: str) -> Any:
-        """Autovivifies if there is no matching key.
+    # def __missing__(self, key: str) -> Any:
+    #     """Autovivifies if there is no matching key.
         
-        Args:
+    #     Args:
         
-        """
-        super().__setitem__(key = key, value = self.stores(name = key))
-        return self[key]
+    #     """
+    #     print('yes missing')
+    #     super().__setitem__(key = key, value = self.stores(name = key))
+    #     return self[key]
 
     def __str__(self) -> str:
         return pprint.pformat(self, sort_dicts = False, compact = True)  
+
+                       
+@dataclasses.dataclass
+class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
+                Element, abc.ABC):
+    """Base container class for sourdough composite objects.
+    
+    A Component has a 'name' attribute for internal referencing and to allow 
+    sourdough iterables to function propertly. Component instances can be used 
+    to create a variety of composite workflows such as trees, cycles, contests, 
+    studies, and graphs.
+    
+    Args:
+        contents (Any): item(s) contained by a Component instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'components'.
+        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'instances'.
+    """
+    contents: Any = None
+    name: str = None
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.components
+    library: ClassVar[Mapping[str, Component]] = sourdough.defaults.instances
+    
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def apply(self, project: sourdough.Project) -> sourdough.Project:
+        """Subclasses must provide their own methods."""
+        return project
+
+    """ Private Methods """
+               
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of an instance.
+        
+    #     Returns:
+    #         str: pretty string representation of an instance.
+            
+    #     """
+    #     new_line = '\n'
+    #     representation = [f'sourdough {self.__class__.__name__}']
+    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
+    #     for attribute in attributes:
+    #         value = getattr(self, attribute)
+    #         if (isinstance(value, Component) 
+    #                 and isinstance(value, (Sequence, Mapping))):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value.contents), '    ')}''')            
+    #         elif (isinstance(value, (Sequence, Mapping)) 
+    #                 and not isinstance(value, str)):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value), '    ')}''')
+    #         else:
+    #             representation.append(f'{attribute}: {str(value)}')
+    #     return new_line.join(representation)  

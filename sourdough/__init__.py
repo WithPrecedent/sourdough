@@ -43,10 +43,9 @@ from .core.configuration import Settings
 from .core.files import Manager
 from .project.base import Creator
 from .project.base import Element
-from .project.base import Deliverable
-from .project.deliverables import Component
-from .project.deliverables import Workflow
-from .project import deliverables
+from .project.base import Creation
+from .project.base import Component
+from .project import creations
 from .project import creators
 
 from .components import workflows
