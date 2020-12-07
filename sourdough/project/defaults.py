@@ -1,22 +1,33 @@
 """
-defaults: default base classes, rules, resources, and settings
+defaults: default resources, rules, and settings
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
+    settings (dict): default settings for a Settings instance.
+    creators (Catalog): stored Creator subclasses. By default, snakecase names
+        of the subclasses are used as the keys.
+    
+    components (Catalog): stored Component subclasses. By default, snakecase
+        names of the subclasses are used as the keys.
+    instances (Catalog): stored instances of Component subclasses. By default,
+        the 'name' attribute of the instances are used as the keys.
+    algorithms (Catalog): stored classes of algorithms, usually from other
+        packages. The keys are assigned by the user or a package utilizing the
+        sourdough framework.
+    
 """
 from __future__ import annotations
-import dataclasses
-import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough 
 
 
-settings = {
+""" Default Options for Settings """
+
+settings: Mapping[str, Any] = {
     'general': {
         'verbose': False,
         'parallelize': True,
@@ -28,72 +39,45 @@ settings = {
         'file_encoding': 'windows-1252'}}
 
 
-@dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """
-    """
-    modules: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['sourdough'])
-    settings: Type = 'Settings'
-    manager: Type = 'Manager'
-    creator: Type = 'Creator'
-    deliverable: Type = 'Deliverable'
-    component: Type = 'Component'
-    
-    """ Public Methods """
-    
-    def load(self, key: str) -> Type:
-        value = getattr(self, key)
-        if isinstance(value, str):
-            return super().load(key = key)
-        else:
-            return value
-    
-    
-@dataclasses.dataclass
-class Resources(object):
-    """
-    """   
-    creators: Mapping[str, Type] = dataclasses.fields(
-        default_factory = sourdough.types.Catalog)
-    deliverables: Mapping[str, Type] = dataclasses.fields(
-        default_factory = sourdough.types.Catalog)
-    components: Mapping[str, Type] = dataclasses.fields(
-        default_factory = sourdough.types.Catalog)
-    instances: Mapping[str, object] = dataclasses.fields(
-        default_factory = sourdough.types.Catalog)
-    algorithms: Mapping[str, Type] = dataclasses.fields(
-        default_factory = sourdough.types.Catalog)
-    
-    """ Dunder Methods """
+""" Catalogs of Created Classes and Objects """
 
-    def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
-        
-        Returns:
-            str: normal representation of a class instance.
-        
-        """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
+creators: Mapping[str, Type] = sourdough.types.Catalog()
+deliverables: Mapping[str, Type] = sourdough.types.Catalog()
+components: Mapping[str, Type] = sourdough.types.Catalog()
+instances: Mapping[str, object] = sourdough.types.Catalog()
+algorithms: Mapping[str, Type] = sourdough.types.Catalog()
+
+resources: Mapping[str, sourdough.types.Catalog] = {
+    'creators': creators,
+    'deliverables': deliverables,
+    'components': components,
+    'instances': instances,
+    'algorithms': algorithms}
 
 
-@dataclasses.dataclass
-class Rules(object):
-    """
-        
-    """
-    resources: Resources
-    skip_sections: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files'])
-    skip_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['parameters'])
-    special_section_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['design'])
-    default_design: str = 'pipeline'
-    
-    """ Properties """
+""" Default Rules """
 
-    @property
-    def component_suffixes(self) -> Tuple[str]:
-        return tuple(k + 's' for k in self.resources.components.keys()) 
-  
+skip_sections: Sequence[str] = ['general', 'files']
+skip_suffixes: Sequence[str] = ['parameters']
+special_section_suffixes: Sequence[str] = ['design']
+default_design: str = 'pipeline'
+validations: Sequence[str] = ['settings', 'name', 'identification', 'manager', 
+                              'creators']
+
+def _get_component_suffixes() -> Tuple[str]:
+    """[summary]
+
+    Returns:
+        Tuple[str]: [description]
+    """
+    return tuple(k + 's' for k in components.keys()) 
+
+component_suffixes: Tuple[str] = _get_component_suffixes()
+
+rules: Mapping[str, Any] = {
+    'skip_sections': skip_sections,
+    'skip_suffixes': skip_suffixes,
+    'special_section_suffixes': special_section_suffixes,
+    'default_design': default_design,
+    'validations': validations,
+    'component_suffixes': _get_component_suffixes()}

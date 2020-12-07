@@ -12,6 +12,7 @@ Contents:
     
 """
 from __future__ import annotations
+import abc
 import copy
 import dataclasses
 import itertools
@@ -80,9 +81,84 @@ class Blueprint(sourdough.Deliverable):
         default_factory = dict)
     identification: str = None
                        
+    
+@dataclasses.dataclass
+class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
+                sourdough.Element, abc.ABC):
+    """Base container class for sourdough composite objects.
+    
+    A Component has a 'name' attribute for internal referencing and to allow 
+    sourdough iterables to function propertly. Component instances can be used 
+    to create a variety of composite workflows such as trees, cycles, contests, 
+    studies, and graphs.
+    
+    Args:
+        contents (Any): item(s) contained by a Component instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'components'.
+        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
+            subclasses. Defaults to the Catalog instance 'instances'.
+    """
+    contents: Any = None
+    name: str = None
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.components
+    library: ClassVar[Mapping[str, Component]] = sourdough.defaults.instances
+    
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def apply(self, project: sourdough.Project) -> sourdough.Project:
+        """Subclasses must provide their own methods."""
+        return project
+
+    """ Private Methods """
+               
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of an instance.
+        
+    #     Returns:
+    #         str: pretty string representation of an instance.
+            
+    #     """
+    #     new_line = '\n'
+    #     representation = [f'sourdough {self.__class__.__name__}']
+    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
+    #     for attribute in attributes:
+    #         value = getattr(self, attribute)
+    #         if (isinstance(value, Component) 
+    #                 and isinstance(value, (Sequence, Mapping))):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value.contents), '    ')}''')            
+    #         elif (isinstance(value, (Sequence, Mapping)) 
+    #                 and not isinstance(value, str)):
+    #             representation.append(
+    #                 f'''{attribute}:{new_line}{textwrap.indent(
+    #                     str(value), '    ')}''')
+    #         else:
+    #             representation.append(f'{attribute}: {str(value)}')
+    #     return new_line.join(representation)  
+
 
 @dataclasses.dataclass
-class Workflow(sourdough.Component, sourdough.types.Hybrid):
+class Workflow(Component, sourdough.types.Hybrid):
     """Iterable base class in a sourdough composite object.
             
     Args:

@@ -31,7 +31,7 @@ def add_slots(cls) -> object:
         raise TypeError(f'{cls.__name__} already contains __slots__')
     else:
         cls_dict = dict(cls.__dict__)
-        field_names = tuple(f.name for f in dataclasses.fields(cls))
+        field_names = tuple(f.name for f in dataclasses.field(cls))
         cls_dict['__slots__'] = field_names
         for field_name in field_names:
             cls_dict.pop(field_name, None)

@@ -13,13 +13,41 @@ import dataclasses
 import inspect
 import pathlib
 import pprint
+from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 import warnings
 
 import sourdough 
   
+
+@dataclasses.dataclass
+class Bases(object):
+    """Base classes for a sourdough project.
     
+    Args:
+        settings (Type): the configuration class to use in a sourdough project.
+            Defaults to sourdough.Settings.
+        manager (Type): the file manager class to use in a sourdough project.
+            Defaults to sourdough.Manager.   
+        creator (Type): the creation/builder class to use in a sourdough 
+            project. Defaults to sourdough.Creator.    
+        deliverable (Type): the deliverable output class to use in a sourdough 
+            project. Defaults to sourdough.Deliverable. 
+        component (Type): the node class to use in a sourdough project. Defaults 
+            to sourdough.Component. 
+        workflow (Type): the workflow to use in a sourdough project. Defaults to 
+            sourdough.Workflow.      
+            
+    """
+    settings: Type = sourdough.Settings
+    manager: Type = sourdough.Manager
+    creator: Type = sourdough.Creator
+    deliverable: Type = sourdough.Deliverable
+    component: Type = sourdough.Component
+    workflow: Type = sourdough.Workflow
+  
+      
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
@@ -40,12 +68,9 @@ class Project(sourdough.types.Lexicon):
             folder should be located for file input and output. A 'manager'
             must contain all file path and import/export methods for use 
             throughout sourdough. Defaults to the default Manager instance. 
-        resources (object): contains information about default classes and 
-            mappings of stored classes and instances used by a Project instance.
-            Defaults to an instance of sourdough.Resources.
         creators (Sequence[Union[Type, str]]): a Creator-compatible classes or
             strings corresponding to the keys in registry of the default
-            'creator' in 'resources'. Defaults to a list of 'architect', 
+            'creator' in 'bases'. Defaults to a list of 'architect', 
             'builder', and 'worker'. 
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -67,28 +92,23 @@ class Project(sourdough.types.Lexicon):
         data (object): any data object for the project to be applied. If it is
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
-        _validations (Sequence[str]): names of suffixes of the validation
-            methods to be called when instanced. The names should correspond to
-            methods with the following format: f'_validate_{name}'. This
-            attribute is included to allow for easier subclassing with alternate
-            validation methods. Defaults to a list of 'settings', 'name', 
-            'identification', 'manager', and 'creators'.
-            
+        bases (ClassVar[object]): contains information about default base 
+            classes used by a Project instance. Defaults to an instance of 
+            Bases.
+        defaults (ClassVar[ModuleType]): module containing default options for
+            a Project instance. Defaults to sourdough.defaults.
+                  
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = dict)
     settings: Union[object, Type, str, pathlib.Path] = None
     manager: Union[object, Type, str, pathlib.Path] = None
-    resources: object = dataclasses.field(default_factory = sourdough.Resources)
-    rules: sourdough.Rules = None
     creators: Sequence[Union[Type, str]] = dataclasses.field(
         default_factory = lambda: ['architect', 'builder', 'worker'])
     name: str = None
     identification: str = None
     automatic: bool = True
     data: object = None
-    _validations: Sequence[str] = dataclasses.field(default_factory = lambda: 
-        ['settings', 'name', 'identification', 'manager', 'creators', 'rules'], 
-        repr = False)
+    bases: ClassVar[object] = Bases()
     
     """ Initialization Methods """
 
@@ -102,7 +122,7 @@ class Project(sourdough.types.Lexicon):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        for validation in self._validations:
+        for validation in sourdough.defaults.validations:
             getattr(self, f'_validate_{validation}')()
         # Sets index for iteration.
         self.index = 0
@@ -124,7 +144,7 @@ class Project(sourdough.types.Lexicon):
             self.settings = self.settings()
         elif (self.settings is None 
               or isinstance(self.settings, (str, pathlib.Path))):
-            self.settings = self.resources.settings(contents = self.settings)
+            self.settings = self.bases.settings(contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
@@ -139,7 +159,7 @@ class Project(sourdough.types.Lexicon):
         """
         if not self.name:
             for section in self.settings.keys():
-                if section not in ['general', 'files']:
+                if section not in sourdough.defaults.settings.keys():
                     self.name = section
                     break
         if not self.name:
@@ -172,7 +192,7 @@ class Project(sourdough.types.Lexicon):
             self.manager = self.manager(settings = self.settings)
         elif (self.manager is None 
               or isinstance(self.manager, (str, pathlib.Path))):
-            self.manager = self.resources.manager(
+            self.manager = self.bases.manager(
                 root_folder = self.manager, 
                 settings = self.settings)
         else:
@@ -183,22 +203,16 @@ class Project(sourdough.types.Lexicon):
         """Validates 'creators' or converts it to a list of Creator instances.
         
         If strings are passed, those are converted to classes from the registry
-        of the designated 'creator' in resources'.
+        of the designated 'creator' in bases'.
         
         """
         new_creators = []
         for creator in self.creators:
             if isinstance(creator, str):
-                new_creators.append(self.resources.creator.acquire(creator))
+                new_creators.append(self.bases.creator.acquire(creator))
             else:
                 new_creators.append(creator)
         self.creators = new_creators
-        return self
-
-    def _validate_rules(self) -> None:
-        """Validates 'rules' or uses the default Rules class."""
-        if not isinstance(self.rules, sourdough.Rules):
-            self.rules = sourdough.Rules(resources = self.resources)
         return self
     
     def _auto_create(self) -> None:
@@ -225,7 +239,8 @@ class Project(sourdough.types.Lexicon):
             creator = self.creators[self.index]()
             if hasattr(self, 'verbose') and self.verbose:
                 print(
-                    f'{creator.action} {creator.produces} from {creator.needs}')
+                    f'{creator.action} {creator.produces.__name__} '
+                    f'from {creator.needs}')
             self.index += 1
             creation = creator.create(project = self)
         else:

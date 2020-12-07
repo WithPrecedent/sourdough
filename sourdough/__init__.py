@@ -30,30 +30,30 @@ For example:
 
 from .utilities import tools
 
+from . import core
+from . import project
+from . import components
+
 from .core import types
 from .core import quirks
+from .project import defaults
+
+
 from .core.configuration import Settings
 from .core.files import Manager
-from . import core
-
-from .project.base import defaults
 from .project.base import Creator
+from .project.base import Element
 from .project.base import Deliverable
-from .project.base import Resources
-from .project.base import Rules
-from .project.deliverables import Instructions
-from .project.deliverables import Blueprint
 from .project.deliverables import Component
 from .project.deliverables import Workflow
-from .project.deliverables import Report
-from .project.deliverables import Results
-from .project.interface import Project
-from . import project
+from .project import deliverables
+from .project import creators
 
 from .components import workflows
 from .components import elements
 from .components import graphs
-from . import components
+
+from .project.interface import Project
 
 
 __version__ = '0.1.1'

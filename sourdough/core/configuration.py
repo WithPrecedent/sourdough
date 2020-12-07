@@ -21,19 +21,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-DEFAULTS = {
-    'general': {
-        'verbose': False,
-        'settings_priority': True,
-        'early_validation': False,
-        'conserve_memery': False},
-    'files': {
-        'source_format': 'csv',
-        'interim_format': 'csv',
-        'final_format': 'csv',
-        'file_encoding': 'windows-1252'}}
-
-
 @dataclasses.dataclass
 class Settings(sourdough.types.Lexicon):
     """Loads and Stores configuration settings.
@@ -75,8 +62,7 @@ class Settings(sourdough.types.Lexicon):
         Mapping[Any, Mapping[Any, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
-    defaults: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: DEFAULTS)
+    defaults: ClassVar[Mapping[str, Any]] = sourdough.defaults.settings
 
     """ Initialization Methods """
 

@@ -5,15 +5,6 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    creators (Catalog): stored Creator subclasses. By default, snakecase names
-        of the subclasses are used as the keys.
-    components (Catalog): stored Component subclasses. By default, snakecase
-        names of the subclasses are used as the keys.
-    instances (Catalog): stored instances of Component subclasses. By default,
-        the 'name' attribute of the instances are used as the keys.
-    algorithms (Catalog): stored classes of algorithms, usually from other
-        packages. The keys are assigned by the user or a package utilizing the
-        sourdough framework.
     Creator (Registrar): base class for creating outputs for a sourdough
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
@@ -43,20 +34,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-
-
-""" Catalogs of objects and classes for sourdough projects """
-
-creators = sourdough.types.Catalog()
-
-deliverables = sourdough.types.Catalog()
-
-components = sourdough.types.Catalog()
-
-instances = sourdough.types.Catalog()
-
-algorithms = sourdough.types.Catalog()
-    
+   
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar, abc.ABC):
@@ -76,11 +54,10 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
             subclasses. Defaults to the Catalog instance 'creators'.
             
     """
-    project: ClassVar[object]
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
-    produces: ClassVar[str]
-    registry: ClassVar[Mapping[str, Type]] = creators
+    produces: ClassVar[Type]
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.creators
 
     """ Required Subclass Methods """
     
@@ -111,51 +88,9 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
 
-
-@dataclasses.dataclass
-class Deliverable(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
-    """Stores output of a Creator's 'create' method.
-    
-    Deliverable autovivifies by automatically creating a correspond key if a
-    user attempts to access a key that does not exist. In doing so, it creates
-    an instance of the class listed in the 'stores' class attribue.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary which contains created
-            items. Defaults to an empty dict.
-        identification (str): a unique identification name for the related 
-            Project instance.  
-        stores (ClassVar[Type]): type of instances stored in 'contents'. The
-            designated class allows autovivification by creating an instance of 
-            the stored type.
-                      
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    identification: str = None
-    stores: ClassVar[Type] = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
-    
-    """ Dunder Methods """
-    
-    def __getitem__(self, key: str) -> Any:
-        """Autovivifies if there is no matching key.
-        
-        Args:
-        
-        """
-        try:
-            return super().__getitem__(key = key)
-        except KeyError:
-            super().__setitem__(key = key, value = self.stores(name = key))
-            return self[key]
-
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)  
-
     
 @dataclasses.dataclass
-class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
-                collections.abc.Container):
+class Element(collections.abc.Container):
     """Base container class for sourdough composite objects.
     
     A Component has a 'name' attribute for internal referencing and to allow 
@@ -179,8 +114,6 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Type[Component]]] = components
-    library: ClassVar[Mapping[str, Component]] = instances
     
     """ Initialization Methods """
 
@@ -194,13 +127,6 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             super().__post_init__()
         except AttributeError:
             pass
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def apply(self, project: sourdough.Project) -> sourdough.Project:
-        """Subclasses must provide their own methods."""
-        return project
 
     """ Private Methods """
     
@@ -242,30 +168,50 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
         
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
-               
-    # def __str__(self) -> str:
-    #     """Returns pretty string representation of an instance.
-        
-    #     Returns:
-    #         str: pretty string representation of an instance.
-            
-    #     """
-    #     new_line = '\n'
-    #     representation = [f'sourdough {self.__class__.__name__}']
-    #     attributes = [a for a in self.__dict__ if not a.startswith('_')]
-    #     for attribute in attributes:
-    #         value = getattr(self, attribute)
-    #         if (isinstance(value, Component) 
-    #                 and isinstance(value, (Sequence, Mapping))):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value.contents), '    ')}''')            
-    #         elif (isinstance(value, (Sequence, Mapping)) 
-    #                 and not isinstance(value, str)):
-    #             representation.append(
-    #                 f'''{attribute}:{new_line}{textwrap.indent(
-    #                     str(value), '    ')}''')
-    #         else:
-    #             representation.append(f'{attribute}: {str(value)}')
-    #     return new_line.join(representation)  
 
+
+@dataclasses.dataclass
+class Deliverable(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
+                  abc.ABC):
+    """Stores output of a Creator's 'create' method.
+    
+    Deliverable autovivifies by automatically creating a correspond key if a
+    user attempts to access a key that does not exist. In doing so, it creates
+    an instance of the class listed in the 'stores' class attribue.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary which contains created
+            items. Defaults to an empty dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+        identification (str): a unique identification name for the related 
+            Project instance.  
+        stores (ClassVar[Type]): type of instances stored in 'contents'. The
+            designated class allows autovivification by creating an instance of 
+            the stored type.
+                      
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    identification: str = None
+    stores: ClassVar[Type] = None
+    registry: ClassVar[Mapping[str, Type]] = sourdough.defaults.deliverables
+    
+    """ Dunder Methods """
+    
+    def __missing__(self, key: str) -> Any:
+        """Autovivifies if there is no matching key.
+        
+        Args:
+        
+        """
+        super().__setitem__(key = key, value = self.stores(name = key))
+        return self[key]
+
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)  
