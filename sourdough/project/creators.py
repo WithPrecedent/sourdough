@@ -12,7 +12,6 @@ Contents:
     
 """
 from __future__ import annotations
-import abc
 import copy
 import dataclasses
 import itertools
@@ -21,82 +20,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough  
-
-
-@dataclasses.dataclass
-class Instructions(sourdough.types.Progression):
-    """Information to construct a sourdough Component.
-    
-    Args:
-        contents (Sequence[str]): stored list of str. Included items should 
-            correspond to keys in an Outline and/or Component subclasses. 
-            Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        base (str): name of base class associated with the Component to be 
-            created.
-        design (str): name of design base class associated with the Component
-            to be created.
-        parameters (Mapping[str, Any]): parameters to be used for the stored
-            object(s) in its/their creation.
-        attributes (Mapping[str, Any]): attributes to add to the created
-            Component object. The keys should be name of the attribute and the
-            values should be the value stored for that attribute.
-            
-    """
-    contents: Sequence[str] = dataclasses.field(default_factory = list)
-    name: str = None
-    design: str = None
-    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-
-    """ Dunder Methods """
-
-    def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
-        
-        Returns:
-            str: normal representation of a class instance.
-        
-        """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
-
-@dataclasses.dataclass
-class Blueprint(sourdough.types.Lexicon):
-    """Class of essential information from Settings.
-    
-    Args:
-        contents (Mapping[str, Instructions]]): stored dictionary which contains
-            Instructions instances. Defaults to an empty dict.
-        identification (str): a unique identification name for the related 
-            Project instance.            
-    """
-    contents: Mapping[str, Instructions] = dataclasses.field(
-        default_factory = dict)
-    identification: str = None
-
-    """ Dunder Methods """
-    
-    def __getitem__(self, key: str) -> Instructions:
-        """Autovivifies if there is no Instructions instance.
-        
-        Args:
-        
-        """
-        try:
-            return super().__getitem__(key = key)
-        except KeyError:
-            super().__setitem__(key = key, value = Instructions(name = key))
-            return self[key]
-
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)
                        
 
 @dataclasses.dataclass
@@ -110,6 +33,7 @@ class Architect(sourdough.Creator):
     Args:
                         
     """
+    project: ClassVar[object] = None
     action: ClassVar[str] = 'Drafting'
     needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
     produces: ClassVar[str] = 'blueprint'
@@ -127,7 +51,8 @@ class Architect(sourdough.Creator):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = Blueprint(identification = project.identification)
+        deliverable = project.resources.deliverables.select(key = self.produces)
+        blueprint = deliverable(identification = project.identification)
         for name, section in project.settings.items():
             # Tests whether the section in 'project.settings' is related to the 
             # construction of a project object by examining the key names to see
@@ -289,8 +214,8 @@ class Architect(sourdough.Creator):
     
     def __str__(self) -> str:
         return pprint.pformat(self, sort_dicts = False, compact = True)
-   
-        
+           
+      
 @dataclasses.dataclass
 class Builder(sourdough.Creator):
     """Constructs finalized workflow.
@@ -298,6 +223,7 @@ class Builder(sourdough.Creator):
     Args:
                         
     """
+    project: ClassVar[object] = None
     action: ClassVar[str] = 'Creating'
     needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
     produces: ClassVar[str] = 'workflow'
@@ -308,6 +234,7 @@ class Builder(sourdough.Creator):
         """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
+        deliverable = project.resources.deliverables.select(key = self.produces)
         workflow = self._create_component(name = project.name, project = project)
         print('test workflow', workflow)
         return workflow
@@ -480,45 +407,13 @@ class Builder(sourdough.Creator):
 
 
 @dataclasses.dataclass
-class Results(sourdough.types.Lexicon):
-    """Stores output of Worker.
-    
-    Args:
-        contents (Mapping[str, Instructions]]): stored dictionary which contains
-            Instructions instances. Defaults to an empty dict.
-        identification (str): a unique identification name for the related 
-            Project instance.            
-            
-    """
-    contents: Mapping[str, Instructions] = dataclasses.field(
-        default_factory = dict)
-    identification: str = None
-
-    """ Dunder Methods """
-    
-    def __getitem__(self, key: str) -> Instructions:
-        """Autovivifies if there is no Instructions instance.
-        
-        Args:
-        
-        """
-        try:
-            return super().__getitem__(key = key)
-        except KeyError:
-            super().__setitem__(key = key, value = Instructions(name = key))
-            return self[key]
-
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
-
-@dataclasses.dataclass
 class Worker(sourdough.Creator):
     """Applies a project Workflow and produces results.
 
     Args:
 
     """
+    project: ClassVar[object] = None
     action: ClassVar[str] = 'Computing'
     needs: ClassVar[Union[str, Tuple[str]]] = 'workflow'
     produces: ClassVar[str] = 'results'
@@ -530,7 +425,8 @@ class Worker(sourdough.Creator):
         """Computes results based on a workflow.
             
         """
-        results = Results(identification = project.identification)
+        deliverable = project.resources.deliverables.select(key = self.produces)
+        results = deliverable(identification = project.identification)
         if project.data is not None:
             kwargs['data'] = project.data
         for component in project['workflow']:

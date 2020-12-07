@@ -16,8 +16,6 @@ area of the documentation that could be made clearer, please don't hesitate
 to email me - I want to ensure the package is as accessible as possible.
 
 """
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
 
 """ 
 sourdough imports are designed to allow key classes and functions to have first 
@@ -38,12 +36,17 @@ from .core.configuration import Settings
 from .core.files import Manager
 from . import core
 
+from .project.base import defaults
 from .project.base import Creator
-from .project.base import Component
-from .project.base import Workflow
+from .project.base import Deliverable
 from .project.base import Resources
 from .project.base import Rules
-from .project import creators
+from .project.deliverables import Instructions
+from .project.deliverables import Blueprint
+from .project.deliverables import Component
+from .project.deliverables import Workflow
+from .project.deliverables import Report
+from .project.deliverables import Results
 from .project.interface import Project
 from . import project
 

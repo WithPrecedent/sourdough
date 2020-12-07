@@ -12,13 +12,14 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import pathlib
+import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 import warnings
 
 import sourdough 
-
-
+  
+    
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.

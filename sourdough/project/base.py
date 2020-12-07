@@ -18,6 +18,9 @@ Contents:
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
         attribute and in 'creators'.
+    Deliverable (Lexicon): base class for outputs of a Creator's 'create' method.
+        Deliverables have auto-vivification making dynamic storage of creations
+        easier.
     Component (Librarian, Registrar, Container): base class for nodes in a
         sourdough project workflow. All subclasses must have an 'apply' 
         method. All concrete subclasses are automatically registered in the 
@@ -28,6 +31,7 @@ Contents:
         sourdough project. Changing the base classes or Catalogs in an instance
         or subclassing Resources with different options will change the base
         classes and Catalogs used by Project.
+    Rules
     
 """
 from __future__ import annotations
@@ -44,6 +48,8 @@ import sourdough
 """ Catalogs of objects and classes for sourdough projects """
 
 creators = sourdough.types.Catalog()
+
+deliverables = sourdough.types.Catalog()
 
 components = sourdough.types.Catalog()
 
@@ -70,6 +76,7 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
             subclasses. Defaults to the Catalog instance 'creators'.
             
     """
+    project: ClassVar[object]
     action: ClassVar[str]
     needs: ClassVar[Union[str, Tuple[str]]]
     produces: ClassVar[str]
@@ -103,7 +110,48 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
         
         """
         return pprint.pformat(self, sort_dicts = False, compact = True)
-                    
+
+
+@dataclasses.dataclass
+class Deliverable(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
+    """Stores output of a Creator's 'create' method.
+    
+    Deliverable autovivifies by automatically creating a correspond key if a
+    user attempts to access a key that does not exist. In doing so, it creates
+    an instance of the class listed in the 'stores' class attribue.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary which contains created
+            items. Defaults to an empty dict.
+        identification (str): a unique identification name for the related 
+            Project instance.  
+        stores (ClassVar[Type]): type of instances stored in 'contents'. The
+            designated class allows autovivification by creating an instance of 
+            the stored type.
+                      
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    identification: str = None
+    stores: ClassVar[Type] = None
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
+    
+    """ Dunder Methods """
+    
+    def __getitem__(self, key: str) -> Any:
+        """Autovivifies if there is no matching key.
+        
+        Args:
+        
+        """
+        try:
+            return super().__getitem__(key = key)
+        except KeyError:
+            super().__setitem__(key = key, value = self.stores(name = key))
+            return self[key]
+
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)  
+
     
 @dataclasses.dataclass
 class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
@@ -131,8 +179,8 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Type]] = components
-    library: ClassVar[Mapping[str, object]] = instances
+    registry: ClassVar[Mapping[str, Type[Component]]] = components
+    library: ClassVar[Mapping[str, Component]] = instances
     
     """ Initialization Methods """
 
@@ -221,127 +269,3 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     #             representation.append(f'{attribute}: {str(value)}')
     #     return new_line.join(representation)  
 
-
-@dataclasses.dataclass
-class Workflow(Component, sourdough.types.Hybrid):
-    """Iterable base class in a sourdough composite object.
-            
-    Args:
-        contents (Sequence[Component]): Component subclass instances. Defaults 
-            to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes.
-        iterations (Union[int, str]): number of times the 'apply' method should 
-            be called. If 'iterations' is 'infinite', the 'apply' method will
-            continue indefinitely unless the method stops further iteration.
-            Defaults to 1.
-        criteria (str): after iteration is complete, a 'criteria' determines
-            what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
-        parallel (ClassVar[bool]): whether the 'contents' contain other 
-            iterables (True) or static objects (False). If True, a subclass
-            should include a custom iterable for navigating the stored 
-            iterables. Defaults to False.
-                            
-    """
-    contents: Sequence[Component] = dataclasses.field(default_factory = list)
-    name: str = None
-    iterations: Union[int, str] = 1
-    criteria: str = None
-    parallel: ClassVar[bool] = False 
-    
-    """ Public Methods """
-    
-    def apply(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
-        """[summary]
-
-        Args:
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Project: [description]
-            
-        """
-        if 'data' not in kwargs and project.data:
-            kwargs['data'] = project.data
-        for i in self.iterations:
-            project = super().apply(project = project, **kwargs)
-        return project   
-
-
-@dataclasses.dataclass
-class Resources(collections.abc.Container):
-    """[summary]
-
-    Args:
-        collections ([type]): [description]
-
-    Returns:
-        [type]: [description]
-        
-    """ 
-    
-    settings: Type = sourdough.Settings
-    manager: Type = sourdough.Manager
-    creator: Type = Creator
-    creators: Mapping[str, Type] = creators
-    component: Type = Component
-    components: Mapping[str, Type] = components
-    instances: Mapping[str, object] = instances
-    algorithms: Mapping[str, Type] = algorithms
-    
-    """ Dunder Methods """
-    
-    def __contains__(self, item: str) -> bool:
-        """Returns whether an attribute exists mataching 'item'.
-        
-        Args:
-            item (Any): item to look for a matching attribute name.
-            
-        Returns:
-            bool: whether 'item' is the name of an attribute.
-                
-        """
-        return item in self.__dir__()
-
-    def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
-        
-        Returns:
-            str: normal representation of a class instance.
-        
-        """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-
-
-@dataclasses.dataclass
-class Rules(object):
-    """[summary]
-
-    Args:
-        object ([type]): [description]
-
-    Returns:
-        [type]: [description]
-        
-    """
-    resources: Resources
-    skip_sections: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files'])
-    skip_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['parameters'])
-    special_section_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['design'])
-    default_design: str = 'pipeline'
-    
-    """ Properties """
-
-    @property
-    def component_suffixes(self) -> Tuple[str]:
-        return tuple(k + 's' for k in self.resources.components.keys()) 
-    
