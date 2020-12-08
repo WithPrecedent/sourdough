@@ -12,6 +12,7 @@ import importlib
 import inspect
 import pathlib
 import re
+import textwrap
 import typing
 from typing import (
     Any, Callable, ClassVar, Iterable, Mapping, Sequence, Tuple, Type, Union)
@@ -28,6 +29,10 @@ try:
     import pandas as pd
 except ImportError:
     pass
+
+
+NEW_LINE = '\n'
+INDENT = '    '
 
 """ Conversion/Validation tools """
 
@@ -199,6 +204,39 @@ def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
         return path
     else:
         raise TypeError('path must be str or pathlib.Path type')
+
+def representify(item: Any, package: str = 'sourdough') -> str:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        str: [description]
+    """
+    representation = [f'{NEW_LINE}{package} {item.__class__.__name__}']
+    representation.append(f'name: {item.name}')
+    attributes = [a for a in item.__dict__ if not a.startswith('_')]
+    attributes.remove('name')
+    if hasattr(item, 'identification'):
+        representation.append(f'identification: {item.identification}')
+        attributes.remove('identification')
+    for attribute in attributes:
+        stored = getattr(item, attribute)
+        if isinstance(stored, dict):
+            for key, value in stored.items():
+                representation.append(
+                    textwrap.indent(f'{key}: {value}', INDENT))
+        elif isinstance(stored, (list, tuple, set)):
+            line = [f'{attribute}:']
+            for key in stored:
+                line.append(f'{str(key)}')
+            representation.append(' '.join(line))
+        # elif isinstance(stored, str):
+        #     representation.append(item)
+        else:
+            representation.append(str(stored))
+    return NEW_LINE.join(representation)     
 
 def snakify(variable: str) -> str:
     """Converts a capitalized word name to snake case.

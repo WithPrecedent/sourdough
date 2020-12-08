@@ -10,7 +10,6 @@ Contents:
 """
 from __future__ import annotations
 import dataclasses
-import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -49,13 +48,13 @@ class Instructions(sourdough.types.Progression):
     """ Dunder Methods """
 
     def __str__(self) -> str:
-        """Returns pretty string representation of a class instance.
+        """Returns pretty string representation of an instance.
         
         Returns:
-            str: normal representation of a class instance.
-        
+            str: pretty string representation of an instance.
+            
         """
-        return pprint.pformat(self, sort_dicts = False, compact = True)
+        return sourdough.tools.representify(item = self)
 
 
 @dataclasses.dataclass

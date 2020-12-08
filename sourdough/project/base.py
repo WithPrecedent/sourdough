@@ -20,7 +20,6 @@ from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-import pprint
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
@@ -93,15 +92,6 @@ class Element(collections.abc.Container):
         except TypeError:
             return item == self.contents
 
-    # def __str__(self) -> str:
-    #     """Returns pretty string representation of a class instance.
-        
-    #     Returns:
-    #         str: text representation of a class instance.
-        
-    #     """
-    #     return pprint.pformat(self, sort_dicts = False, compact = True)
-
     def __str__(self) -> str:
         """Returns pretty string representation of an instance.
         
@@ -109,26 +99,7 @@ class Element(collections.abc.Container):
             str: pretty string representation of an instance.
             
         """
-        new_line = '\n'
-        representation = [f'{new_line}sourdough {self.__class__.__name__}']
-        representation.append(f'name: {self.name}')
-        attributes = [a for a in self.__dict__ if not a.startswith('_')]
-        attributes.remove('name')
-        for attribute in attributes:
-            value = getattr(self, attribute)
-            if (isinstance(value, Element) 
-                    and isinstance(value, (Sequence, Mapping))):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value.contents), '    ')}''')            
-            elif (isinstance(value, (Sequence, Mapping)) 
-                    and not isinstance(value, str)):
-                representation.append(
-                    f'''{attribute}:{new_line}{textwrap.indent(
-                        str(value), '    ')}''')
-            else:
-                representation.append(f'{attribute}: {str(value)}')
-        return new_line.join(representation) 
+        return sourdough.tools.representify(item = self)
     
 
 @dataclasses.dataclass
