@@ -43,7 +43,6 @@ from .project import resources
 from .core.configuration import Settings
 from .core.files import Manager
 from .project.base import Creator
-from .project.base import Element
 from .project.base import Product
 from .project.base import Component
 from .project import products
@@ -56,7 +55,7 @@ from .components import graphs
 from .project.interface import Project
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 __author__ = 'Corey Rayburn Yung'
 

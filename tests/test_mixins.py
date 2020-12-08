@@ -14,7 +14,7 @@ import sourdough
 class AComponent(
     sourdough.Vessel,
     sourdough.Registry,
-    sourdough.Element):
+    sourdough.quirks.Element):
     pass
 
 

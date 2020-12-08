@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sourdough"
-version = "0.1.1"
+version = "0.1.2"
 description = "start python projects right"
 authors = ["Corey Rayburn Yung <coreyrayburnyung@gmail.com>"]
 

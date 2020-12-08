@@ -1,5 +1,5 @@
 """
-creators: classes for building and storing different steps in sourdough project
+creators: classes for building products of a sourdough project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -68,7 +68,6 @@ class Architect(sourdough.Creator):
                     design = None,
                     blueprint = blueprint,
                     project = project)
-        print('test blueprint', blueprint)
         return blueprint
         
     """ Private Methods """
@@ -243,7 +242,6 @@ class Builder(sourdough.Creator):
         plan.contents = self._create_component(
             name = project.name, 
             project = project)
-        print('test plan', plan)
         return plan
     
     """ Private Methods """

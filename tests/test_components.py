@@ -14,7 +14,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class NewAction(sourdough.Element):
+class NewAction(sourdough.quirks.Element):
     
     def perform(self, data: object) -> object:
         data.new_value = 7

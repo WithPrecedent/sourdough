@@ -12,8 +12,7 @@ Contents:
     Product (Lexicon): base class for outputs of a Creator's 'create' method.
         Products have auto-vivification making dynamic storage of products
         easier.
-    Element (Container): base class for parts of a composite object in a 
-        sourdough project. 
+
     
 """
 from __future__ import annotations
@@ -25,95 +24,24 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-   
-
-@dataclasses.dataclass
-class Element(collections.abc.Container):
-    """Base container class for sourdough composite objects.
-    
-    An Element has a 'name' attribute for internal referencing and to allow 
-    sourdough Hybrids storing them to function propertly. Element instances can 
-    be used to create a variety of composite structures such as trees, cycles, 
-    contests, studies, and graphs.
-    
-    Args:
-        contents (Any): item(s) contained by an instance.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-
-    """
-    contents: Any = None
-    name: str = None
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets 'name' attribute.
-        if not hasattr(self, 'name') or self.name is None:  
-            self.name = self._get_name()
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-
-    """ Private Methods """
-    
-    def _get_name(self) -> str:
-        """Returns snakecase of the class name.
-
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        return sourdough.tools.snakify(self.__class__.__name__)
-
-    """ Dunder Methods """
-    
-    def __contains__(self, item: Any) -> bool:
-        """Returns whether 'item' is in the 'contents' attribute.
-        
-        Args:
-            item (Any): item to look for in 'contents'.
-            
-        Returns:
-            bool: whether 'item' is in 'contents' if it is a Collection.
-                Otherwise, it evaluates if 'item' is equivalent to 'contents'.
-                
-        """
-        try:
-            return item in self.contents
-        except TypeError:
-            return item == self.contents
-
-    def __str__(self) -> str:
-        """Returns pretty string representation of an instance.
-        
-        Returns:
-            str: pretty string representation of an instance.
-            
-        """
-        return sourdough.tools.representify(item = self)
-    
+     
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Registrar, abc.ABC):
     """Base class for creating objects outputted by a Project's iteration.
     
     All subclasses must have a 'create' method that takes 'project' as a 
-    parameter.
+    parameter and returns an object or class to be stored in a Project
+    instance's contents. The Craetor subclasses included in sourdough all create
+    Product subclasses.
     
     Args:
         action (str): name of action performed by the class. This is used in
             messages in the terminal and logging.
-        needs (ClassVar[Union[str, Tuple[str]]]): name(s) of item(s) needed
-            by the class's 'create' method.
+        needs (ClassVar[str]): name of item needed by the class's 'create' 
+            method. This can correspond to the name of an attribute in a
+            Project instance or a key to an item in the 'contents' attribute
+            of a Project instance.
         produces (ClassVar[str]): name of item produced by the class's 'create'
             method.
         registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
@@ -121,7 +49,7 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
             
     """
     action: ClassVar[str]
-    needs: ClassVar[Union[str, Tuple[str]]]
+    needs: ClassVar[str]
     produces: ClassVar[str]
     registry: ClassVar[Mapping[str, Type]] = sourdough.options.creators
 
@@ -138,15 +66,15 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
             kwargs: any additional parameters to pass to a 'create' method.
 
         Return:
-            Any: object created by a 'create' method.
+            Any: object or class created by a 'create' method.
         
         """
         pass
 
 
 @dataclasses.dataclass
-class Product(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon, 
-              abc.ABC):
+class Product(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+              sourdough.types.Lexicon, abc.ABC):
     """Stores output of a Creator's 'create' method.
     
     Product autovivifies by automatically creating a correspond key if a
@@ -178,7 +106,7 @@ class Product(sourdough.quirks.Registrar, Element, sourdough.types.Lexicon,
                        
 @dataclasses.dataclass
 class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
-                Element, abc.ABC):
+                sourdough.quirks.Element, abc.ABC):
     """Base container class for sourdough composite objects.
     
     A Component has a 'name' attribute for internal referencing and to allow 

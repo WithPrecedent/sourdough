@@ -47,14 +47,14 @@ class Instructions(sourdough.types.Progression):
 
     """ Dunder Methods """
 
-    def __str__(self) -> str:
-        """Returns pretty string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns pretty string representation of an instance.
         
-        Returns:
-            str: pretty string representation of an instance.
+    #     Returns:
+    #         str: pretty string representation of an instance.
             
-        """
-        return sourdough.tools.representify(item = self)
+    #     """
+    #     return sourdough.tools.representify(item = self)
 
 
 @dataclasses.dataclass

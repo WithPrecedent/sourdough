@@ -17,13 +17,14 @@ Contents:
         list with additional functionality.
     Hybrid (Progression): iterable with both dict and list interfaces and 
         methods that stores items with a 'name' attribute.
+    Element (Container): base class for parts of a composite object in a 
+        sourdough project. 
         
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-import pprint
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
