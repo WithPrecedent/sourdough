@@ -77,10 +77,6 @@ class Product(sourdough.quirks.Registrar, sourdough.quirks.Element,
               sourdough.types.Lexicon, abc.ABC):
     """Stores output of a Creator's 'create' method.
     
-    Product autovivifies by automatically creating a correspond key if a
-    user attempts to access a key that does not exist. In doing so, it creates
-    an instance of the class listed in the 'stores' class attribue.
-    
     Args:
         contents (Mapping[str, Any]]): stored dictionary which contains created
             items. Defaults to an empty dict.
@@ -132,16 +128,6 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     name: str = None
     registry: ClassVar[Mapping[str, Type]] = sourdough.options.components
     library: ClassVar[Mapping[str, Component]] = sourdough.options.instances
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
 
     """ Required Subclass Methods """
 

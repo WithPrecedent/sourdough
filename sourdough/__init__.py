@@ -52,6 +52,7 @@ from .components import workflows
 from .components import elements
 from .components import graphs
 
+from .project.interface import Bases
 from .project.interface import Project
 
 

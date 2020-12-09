@@ -5,14 +5,15 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Project (Lexicon): interface for sourdough projects.
+    Bases (object): base classes for a Project.
+    Project (Lexicon): main access point and interface for creating and 
+        implementing sourdough projects.
 
 """
 from __future__ import annotations
 import dataclasses
 import inspect
 import pathlib
-import pprint
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
@@ -61,8 +62,8 @@ class Project(sourdough.types.Lexicon):
             'create' methods of 'creators'. Defaults to an empty dict.
         settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
-            supported file type with settings for a Settings instance is located. 
-            Defaults to the default Settings instance.
+            supported file type with settings for a Settings instance is 
+            located. Defaults to the default Settings instance.
         manager (Union[Type, str, pathlib.Path]]): a Manager-compatible class,
             or a str or pathlib.Path containing the full path of where the root 
             folder should be located for file input and output. A 'manager'
@@ -98,7 +99,7 @@ class Project(sourdough.types.Lexicon):
 
                   
     """
-    contents: Sequence[Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     settings: Union[object, Type, str, pathlib.Path] = None
     manager: Union[object, Type, str, pathlib.Path] = None
     creators: Sequence[Union[Type, str]] = dataclasses.field(
@@ -129,6 +130,12 @@ class Project(sourdough.types.Lexicon):
         if self.automatic:
             self._auto_create()
 
+    """ Public Methods """
+    
+    def advance(self) -> Any:
+        """Returns next product created in iterating a Project instance."""
+        return self.__next__()
+    
     """ Private Methods """
     
     def _validate_settings(self) -> None:
