@@ -40,6 +40,7 @@ class Options(object):
     Args:
         
     """
+    projects: Mapping[str, Type]
     creators: Mapping[str, Type]
     products: Mapping[str, Type]
     components: Mapping[str, Type]
@@ -83,4 +84,4 @@ rules: Rules = Rules(
     skip_suffixes = ['parameters'],
     special_section_suffixes = ['design'],
     default_design = 'pipeline',
-    validations = ['settings', 'name', 'identification', 'manager', 'creators'])
+    validations = ['settings', 'name', 'identification', 'clerk', 'creators'])

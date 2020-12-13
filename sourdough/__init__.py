@@ -41,7 +41,7 @@ from .project.resources import rules
 from .project import resources
 
 from .core.configuration import Settings
-from .core.files import Manager
+from .core.files import Clerk
 from .project.base import Creator
 from .project.base import Product
 from .project.base import Component
