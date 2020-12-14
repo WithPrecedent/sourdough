@@ -105,6 +105,7 @@ class Project(sourdough.types.Lexicon):
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     settings: Union[object, Type, str, pathlib.Path] = None
     clerk: Union[object, Type, str, pathlib.Path] = None
+    manager: Union[object, Type] = None
     creators: Sequence[Union[Type, str]] = dataclasses.field(
         default_factory = lambda: ['architect', 'builder', 'worker'])
     name: str = None
@@ -124,11 +125,10 @@ class Project(sourdough.types.Lexicon):
             super().__post_init__()
         except AttributeError:
             pass
-        # Removes various python warnings from console output.
-        warnings.filterwarnings('ignore')
-        # Calls validation methods based on items listed in 'validations'.
-        for validation in sourdough.rules.validations:
-            getattr(self, f'_validate_{validation}')()
+        # Sets 'manager' if none was passed.
+        self._validate_manager()
+        # Converts 'creators' to classes, if necessary.
+        self._validate_creators() 
         # Sets index for iteration.
         self.index = 0
         # Advances through 'creators' if 'automatic' is True.
@@ -140,7 +140,162 @@ class Project(sourdough.types.Lexicon):
     def advance(self) -> Any:
         """Returns next product created in iterating a Project instance."""
         return self.__next__()
+
+    """ Private Methods """
+        
+    def _validate_manager(self) -> None:
+        """Validates 'manager' or converts it to a Manager instance.
+        
+        This method is needed when Project or its subclass is used as the 
+        primary access point.
+        
+        """
+        if self.manager is None:
+            Manager.bases = self.bases
+            Manager.rules = self.rules
+            Manager.options = self.options
+            self.manager = Manager(
+                contents = self,
+                settings = self.settings,
+                clerk = self.clerk,
+                name = self.name,
+                identification = self.identification,
+                automatic = self.automatic,
+                data = self.data)
+        return self
+
+    def _validate_creators(self) -> None:
+        """Validates 'creators' or converts it to a list of Creator instances.
+        
+        If strings are passed, those are converted to classes from the registry
+        of the designated 'creator' in bases'.
+        
+        """
+        new_creators = []
+        for creator in self.creators:
+            if isinstance(creator, str):
+                new_creators.append(self.bases.creator.acquire(creator))
+            else:
+                new_creators.append(creator)
+        self.creators = new_creators
+        return self
+       
+    def _auto_create(self) -> None:
+        """Advances through the stored Creator instances.
+        
+        The results of the iteration is that each item produced is stored in 
+        'content's with a key of the 'produces' attribute of each creator.
+        
+        """
+        for creator in iter(self):
+            self.contents.update({creator.produces: self.__next__()})
+        return self
     
+    """ Dunder Methods """
+    
+    def __next__(self) -> Any:
+        """Returns products of the next Creator in 'creators'.
+
+        Returns:
+            Any: item creator by the 'create' method of a Creator.
+            
+        """
+        if self.index < len(self.creators):
+            creator = self.creators[self.index]()
+            if hasattr(self, 'verbose') and self.manager.verbose:
+                print(
+                    f'{creator.action} {creator.produces} from {creator.needs}')
+            self.index += 1
+            product = creator.create(project = self)
+        else:
+            raise IndexError()
+        return product
+    
+    def __iter__(self) -> Iterable:
+        """Returns iterable of 'creators'.
+        
+        Returns:
+            Iterable: iterable sequence of 'creators'.
+            
+        """
+        return iter(self.creators)
+
+
+@dataclasses.dataclass
+class Manager(sourdough.types.Lexicon):
+    """Constructs, organizes, and implements a a collection of projects.
+
+    Args:
+        contents (Mapping[str, Union[str, Project]]]): stored Project instances
+            or the names of previously created Project instances stored in 
+            'sourdough.projects'. Defaults to an empty dict.
+        settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
+            a str or pathlib.Path containing the file path where a file of a 
+            supported file type with settings for a Settings instance is 
+            located. Defaults to the default Settings instance.
+        clerk (Union[Type, str, pathlib.Path]]): a Clerk-compatible class or a 
+            str or pathlib.Path containing the full path of where the root 
+            folder should be located for file input and output. A 'clerk' must 
+            contain all file path and import/export methods for use throughout 
+            sourdough. Defaults to the default Clerk instance. 
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            If it is None, the 'name' will be attempted to be inferred from the 
+            first section name in 'settings' after 'general' and 'files'. If 
+            that fails, 'name' will be the snakecase name of the class. Defaults 
+            to None. 
+        identification (str): a unique identification name for a Project 
+            instance. The name is used for creating file folders related to the 
+            project. If it is None, a str will be created from 'name' and the 
+            date and time. Defaults to None.   
+        automatic (bool): whether to automatically advance 'director' (True) or 
+            whether the director must be advanced manually (False). Defaults to 
+            True.
+        data (object): any data object for the project to be applied. If it is
+            None, an instance will still execute its workflow, but it won't
+            apply it to any external data. Defaults to None.  
+        bases (ClassVar[object]): contains information about default base 
+            classes used by a Project instance. Defaults to an instance of 
+            SimpleBases.
+
+    """
+    contents: Mapping[str, Project] = dataclasses.field(default_factory = dict)
+    settings: Union[object, Type, str, pathlib.Path] = None
+    clerk: Union[object, Type, str, pathlib.Path] = None
+    name: str = None
+    identification: str = None
+    automatic: bool = True
+    data: Any = None
+    _validated: bool = False
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Sets flag so that stored projects to do not unnecessarily validate
+        # assorted attributes.
+        self._validated = True
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Removes various python warnings from console output.
+        warnings.filterwarnings('ignore')
+        # Calls validation methods based on items listed in 'validations'.
+        for validation in sourdough.rules.validations:
+            getattr(self, f'_validate_{validation}')()
+        # Sets index for iteration.
+        self.index = 0
+
+    """ Public Methods """
+    
+    def advance(self) -> Any:
+        """Returns next product created in iterating a Project instance."""
+        return self.__next__()
+            
     """ Private Methods """
     
     def _validate_settings(self) -> None:
@@ -210,127 +365,6 @@ class Project(sourdough.types.Lexicon):
             self.clerk.settings = self.settings
         return self
 
-    def _validate_creators(self) -> None:
-        """Validates 'creators' or converts it to a list of Creator instances.
-        
-        If strings are passed, those are converted to classes from the registry
-        of the designated 'creator' in bases'.
-        
-        """
-        new_creators = []
-        for creator in self.creators:
-            if isinstance(creator, str):
-                new_creators.append(self.bases.creator.acquire(creator))
-            else:
-                new_creators.append(creator)
-        self.creators = new_creators
-        return self
-    
-    def _auto_create(self) -> None:
-        """Advances through the stored Creator instances.
-        
-        The results of the iteration is that each item produced is stored in 
-        'content's with a key of the 'produces' attribute of each creator.
-        
-        """
-        for creator in iter(self):
-            self.contents.update({creator.produces: self.__next__()})
-        return self
-    
-    """ Dunder Methods """
-    
-    def __next__(self) -> Any:
-        """Returns products of the next Creator in 'creators'.
-
-        Returns:
-            Any: item creator by the 'create' method of a Creator.
-            
-        """
-        if self.index < len(self.creators):
-            creator = self.creators[self.index]()
-            if hasattr(self, 'verbose') and self.verbose:
-                print(
-                    f'{creator.action} {creator.produces} from {creator.needs}')
-            self.index += 1
-            product = creator.create(project = self)
-        else:
-            raise IndexError()
-        return product
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'creators'.
-        
-        Returns:
-            Iterable: iterable sequence of 'creators'.
-            
-        """
-        return iter(self.creators)
-
-
-@dataclasses.dataclass
-class Manager(sourdough.types.Lexicon):
-    """Constructs, organizes, and implements a data science project.
-
-    Args:
-        contents (Mapping[str, Union[str, Project]]]): stored Project instances
-            or the names of previously created Project instances stored in 
-            'sourdough.projects'. Defaults to an empty dict.
-        settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
-            a str or pathlib.Path containing the file path where a file of a 
-            supported file type with settings for a Settings instance is 
-            located. Defaults to the default Settings instance.
-        clerk (Union[Type, str, pathlib.Path]]): a Clerk-compatible class or a 
-            str or pathlib.Path containing the full path of where the root 
-            folder should be located for file input and output. A 'clerk' must 
-            contain all file path and import/export methods for use throughout 
-            sourdough. Defaults to the default Clerk instance. 
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            If it is None, the 'name' will be attempted to be inferred from the 
-            first section name in 'settings' after 'general' and 'files'. If 
-            that fails, 'name' will be the snakecase name of the class. Defaults 
-            to None. 
-        identification (str): a unique identification name for a Project 
-            instance. The name is used for creating file folders related to the 
-            project. If it is None, a str will be created from 'name' and the 
-            date and time. Defaults to None.   
-        automatic (bool): whether to automatically advance 'director' (True) or 
-            whether the director must be advanced manually (False). Defaults to 
-            True.
-        data (object): any data object for the project to be applied. If it is
-            None, an instance will still execute its workflow, but it won't
-            apply it to any external data. Defaults to None.  
-        bases (ClassVar[object]): contains information about default base 
-            classes used by a Project instance. Defaults to an instance of 
-            SimpleBases.
-
-    """
-    contents: Mapping[str, Project] = dataclasses.field(default_factory = dict)
-    settings: Union[object, Type, str, pathlib.Path] = None
-    clerk: Union[object, Type, str, pathlib.Path] = None
-    name: str = None
-    identification: str = None
-    automatic: bool = True
-    data: Any = None
-    _validated: bool = False
-
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets flag so that stored projects to do not unnecessarily validate
-        # assorted attributes.
-        self._validated = True
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        
-    """ Private Methods """
-
     def _create_project(self, project: str) -> Project:
         """[summary]
 
@@ -338,7 +372,8 @@ class Manager(sourdough.types.Lexicon):
             project (str): [description]
 
         Returns:
-            SimpleProject: [description]
+            Project: [description]
+            
         """
         project = sourdough.tools.importify(
             module = self.contents[project],

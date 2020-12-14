@@ -50,6 +50,7 @@ class Options(object):
 
 
 options: Options = Options(
+    projects = sourdough.types.Catalog(),
     creators = sourdough.types.Catalog(),
     products = sourdough.types.Catalog(),
     components = sourdough.types.Catalog(),
@@ -84,4 +85,4 @@ rules: Rules = Rules(
     skip_suffixes = ['parameters'],
     special_section_suffixes = ['design'],
     default_design = 'pipeline',
-    validations = ['settings', 'name', 'identification', 'clerk', 'creators'])
+    validations = ['settings', 'name', 'identification', 'clerk'])
