@@ -4,7 +4,14 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+sourdough quirks are not technically mixins beecause they have required 
+attributes. But they are designed for multiple inheritance and easy addition
+to other classes. Despite not meeting the traditional definition of "mixin,"
+they are internally referred to as "mixins" because of their functionality.
+
 Contents:
+    Element (object): mixin adding a 'name' attribute to allow storage by Hybrid
+        subclasses.
     Registrar (object): mixin for storing subclasses automatically.
     Librarian (object): mixin for storing subclass instances automatically.
     Loader (object): lazy loader which uses a 'load' method to import python
@@ -43,6 +50,8 @@ class Element(object):
     sourdough Hybrids storing them to function propertly. Element instances can 
     be used to create a variety of sourdough objects and composite structures 
     such as trees, cycles, contests, studies, and graphs.
+
+    Namespaces: '_get_name'
     
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -89,6 +98,11 @@ class Registrar(object):
     This mixin automatically registers all concrete (non-abstract) subclasses
     using the 'registry' classmethod which must be provided by the class using
     this quirk.
+
+    Namespaces: 'registry', 'register', 'acquire'
+
+    Args:
+        registry (ClassVar[Mapping[str, Type]]):
     
     """
     registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
@@ -170,16 +184,25 @@ class Librarian(object):
 
 @dataclasses.dataclass
 class Loader(object):
-    """Allows loading of python modules and objects.
+    """Faciliates lazy loading from modules.
 
-    Args:
+    Subclasses with attributes storing strings containing import paths 
+    (indicated by having a '.' in their text) will automatically have those
+    attribute values turned into the corresponding stored classes.
 
+    The 'load' method also allows this process to be performed manually.
+
+    Subclasses should not have custom '__getattribute__' methods or properties
+    to avoid errors.
+
+    Namespaces: 'load', '__getattribute__'
+    
     """
-    import_path: str = None
  
     """ Public Methods """
 
-    def importify(self, instance: bool = False, **kwargs) -> Union[object, Type]:
+    def load(self, path: str, instance: bool = False, 
+             **kwargs) -> Union[object, Type]:
         """Returns object named by 'key'.
 
         Args:
@@ -190,20 +213,37 @@ class Loader(object):
             object: imported from a python module.
 
         """
-        module, item = self._parse_import(name = self.import_path)
+        item = path.split('.')[-1]
+        module = path[:-len(item) - 1]
         imported = sourdough.tools.importify(module = module, key = item)
         if kwargs or instance:
             return imported(**kwargs)
         else:
             return imported
 
-    """ Private Methods """
-    
-    def _parse_import(self, path: str) -> Tuple[str]:
-        suffix = path.split('.')[-1]
-        prefix = path[:-len(suffix) - 1]
-        return prefix, suffix
-    
+    """ Dunder Methods """
+
+    def __getattribute__(self, name: str) -> Any:
+        """Converts stored import paths into the corresponding objects.
+
+        If an import path is stored, that attribute is permanently converted
+        from a str to the imported object or class.
+        
+        Args:
+            name (str): name of attribute sought.
+
+        Returns:
+            Any: the stored value or, if the value is an import path, the
+                class or object stored at the designated import path.
+            
+        """
+        value = super().__getattribute__(name)
+        if (isinstance(value, str) and '.' in value):
+            value = self.load(path = value)
+            super().__setattr__(name, value)
+        return value
+
+  
 # @dataclasses.dataclass
 # class Validator(object):
 #     """Base class for type validation and/or conversion Quirks.

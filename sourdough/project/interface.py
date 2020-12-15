@@ -25,7 +25,7 @@ import sourdough
   
 
 @dataclasses.dataclass
-class Bases(object):
+class Bases(sourdough.quirks.Loader):
     """Base classes for a sourdough project.
     
     Args:
@@ -43,13 +43,13 @@ class Bases(object):
             sourdough.products.Workflow.      
             
     """
-    settings: Type = sourdough.Settings
-    clerk: Type = sourdough.Clerk
-    creator: Type = sourdough.Creator
-    product: Type = sourdough.Product
-    component: Type = sourdough.Component
-    workflow: Type = sourdough.products.Workflow
-  
+    settings: Type = 'sourdough.Settings'
+    clerk: Type = 'sourdough.Clerk'
+    creator: Type = 'sourdough.Creator'
+    product: Type = 'sourdough.Product'
+    component: Type = 'sourdough.Component'
+    workflow: Type = 'sourdough.products.Workflow'
+
       
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
@@ -113,7 +113,7 @@ class Project(sourdough.types.Lexicon):
     automatic: bool = True
     data: object = None
     bases: ClassVar[object] = Bases()
-    rules: ClassVar[object] = sourdough.resources.Rules()
+    rules: ClassVar[object] = sourdough.rules
     options: ClassVar[object] = None
     
     """ Initialization Methods """
@@ -162,6 +162,11 @@ class Project(sourdough.types.Lexicon):
                 identification = self.identification,
                 automatic = self.automatic,
                 data = self.data)
+            self.settings = self.manager.settings
+            self.clerk = self.manager.clerk
+            self.name = self.manager.name,
+            self.identification = self.manager.identification
+            self.data = self.manager.data
         return self
 
     def _validate_creators(self) -> None:
@@ -310,6 +315,7 @@ class Manager(sourdough.types.Lexicon):
             self.settings = self.settings()
         elif (self.settings is None 
               or isinstance(self.settings, (str, pathlib.Path))):
+            # print('test settings', self.bases.settings)
             self.settings = self.bases.settings(contents = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
