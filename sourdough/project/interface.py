@@ -16,7 +16,6 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import pathlib
-from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 import warnings
@@ -29,26 +28,26 @@ class Bases(sourdough.quirks.Loader):
     """Base classes for a sourdough project.
     
     Args:
-        settings (Type): the configuration class to use in a sourdough project.
-            Defaults to sourdough.Settings.
-        clerk (Type): the file clerk class to use in a sourdough project.
-            Defaults to sourdough.Clerk.   
-        creator (Type): the product/builder class to use in a sourdough 
-            project. Defaults to sourdough.Creator.    
-        product (Type): the product output class to use in a sourdough 
-            project. Defaults to sourdough.Product. 
-        component (Type): the node class to use in a sourdough project. Defaults 
-            to sourdough.Component. 
-        workflow (Type): the workflow to use in a sourdough project. Defaults to 
-            sourdough.products.Workflow.      
+        settings (Union[str, Type]): the configuration class to use in a 
+            sourdough project. Defaults to 'sourdough.Settings'.
+        clerk (Union[str, Type]): the file clerk class to use in a sourdough 
+            project. Defaults to 'sourdough.Clerk'.   
+        creator (Union[str, Type]): the product/builder class to use in a 
+            sourdough project. Defaults to 'sourdough.Creator'.    
+        product (Union[str, Type]): the product output class to use in a 
+            sourdough project. Defaults to 'sourdough.Product'. 
+        component (Union[str, Type]): the node class to use in a sourdough 
+            project. Defaults to 'sourdough.Component'. 
+        workflow (Union[str, Type]): the workflow to use in a sourdough 
+            project. Defaults to 'sourdough.products.Workflow'.      
             
     """
-    settings: Type = 'sourdough.Settings'
-    clerk: Type = 'sourdough.Clerk'
-    creator: Type = 'sourdough.Creator'
-    product: Type = 'sourdough.Product'
-    component: Type = 'sourdough.Component'
-    workflow: Type = 'sourdough.products.Workflow'
+    settings: Union[str, Type] = 'sourdough.Settings'
+    clerk: Union[str, Type] = 'sourdough.Clerk'
+    creator: Union[str, Type] = 'sourdough.Creator'
+    product: Union[str, Type] = 'sourdough.Product'
+    component: Union[str, Type] = 'sourdough.Component'
+    workflow: Union[str, Type] = 'sourdough.products.Workflow'
 
       
 @dataclasses.dataclass

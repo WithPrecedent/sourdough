@@ -40,23 +40,17 @@ class Options(object):
     Args:
         
     """
-    projects: Mapping[str, Type]
-    creators: Mapping[str, Type]
-    products: Mapping[str, Type]
-    components: Mapping[str, Type]
-    instances: Mapping[str, object]
-    algorithms: Mapping[str, Type]
-    criteria: Mapping[str, Callable]
+    projects: Mapping[str, Type] = sourdough.types.Catalog()
+    creators: Mapping[str, Type] = sourdough.types.Catalog()
+    products: Mapping[str, Type] = sourdough.types.Catalog()
+    components: Mapping[str, Type] = sourdough.types.Catalog()
+    instances: Mapping[str, object] = sourdough.types.Catalog()
+    algorithms: Mapping[str, Type] = sourdough.types.Catalog()
+    criteria: Mapping[str, Callable] = sourdough.types.Catalog(
+        always_return_list= True)
 
 
-options: Options = Options(
-    projects = sourdough.types.Catalog(),
-    creators = sourdough.types.Catalog(),
-    products = sourdough.types.Catalog(),
-    components = sourdough.types.Catalog(),
-    instances = sourdough.types.Catalog(),
-    algorithms = sourdough.types.Catalog(),
-    criteria = sourdough.types.Catalog(always_return_list= True))
+options: Options = Options()
 
 
 """ Default Rules """
