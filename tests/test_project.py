@@ -71,7 +71,7 @@ class Explode(sourdough.elements.Technique):
 class Dynamite(sourdough.elements.Technique):
     
     name: str = 'annihilate'
-
+# 
     pass 
     
 

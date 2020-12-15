@@ -35,7 +35,6 @@ import copy
 import dataclasses
 import inspect
 from sourdough.utilities.tools import deannotate
-import typing
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 

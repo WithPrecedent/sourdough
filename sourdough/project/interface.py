@@ -22,34 +22,7 @@ import warnings
 
 import sourdough 
   
-
-@dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough project.
-    
-    Args:
-        settings (Union[str, Type]): the configuration class to use in a 
-            sourdough project. Defaults to 'sourdough.Settings'.
-        clerk (Union[str, Type]): the file clerk class to use in a sourdough 
-            project. Defaults to 'sourdough.Clerk'.   
-        creator (Union[str, Type]): the product/builder class to use in a 
-            sourdough project. Defaults to 'sourdough.Creator'.    
-        product (Union[str, Type]): the product output class to use in a 
-            sourdough project. Defaults to 'sourdough.Product'. 
-        component (Union[str, Type]): the node class to use in a sourdough 
-            project. Defaults to 'sourdough.Component'. 
-        workflow (Union[str, Type]): the workflow to use in a sourdough 
-            project. Defaults to 'sourdough.products.Workflow'.      
-            
-    """
-    settings: Union[str, Type] = 'sourdough.Settings'
-    clerk: Union[str, Type] = 'sourdough.Clerk'
-    creator: Union[str, Type] = 'sourdough.Creator'
-    product: Union[str, Type] = 'sourdough.Product'
-    component: Union[str, Type] = 'sourdough.Component'
-    workflow: Union[str, Type] = 'sourdough.products.Workflow'
-
-      
+  
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
@@ -111,9 +84,9 @@ class Project(sourdough.types.Lexicon):
     identification: str = None
     automatic: bool = True
     data: object = None
-    bases: ClassVar[object] = Bases()
+    bases: ClassVar[object] = sourdough.bases
     rules: ClassVar[object] = sourdough.rules
-    options: ClassVar[object] = None
+    options: ClassVar[object] = sourdough.options
     
     """ Initialization Methods """
 
@@ -163,7 +136,7 @@ class Project(sourdough.types.Lexicon):
                 data = self.data)
             self.settings = self.manager.settings
             self.clerk = self.manager.clerk
-            self.name = self.manager.name,
+            self.name = self.manager.name
             self.identification = self.manager.identification
             self.data = self.manager.data
         return self
@@ -273,7 +246,10 @@ class Manager(sourdough.types.Lexicon):
     automatic: bool = True
     data: Any = None
     _validated: bool = False
-
+    bases: ClassVar[object] = sourdough.bases
+    rules: ClassVar[object] = sourdough.rules
+    options: ClassVar[object] = sourdough.options
+    
     """ Initialization Methods """
 
     def __post_init__(self) -> None:

@@ -22,6 +22,90 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Options(object):
+    """[summary]
+
+    Args:
+        
+    """
+    projects: Mapping[str, Type] = sourdough.types.Catalog()
+    creators: Mapping[str, Type] = sourdough.types.Catalog()
+    products: Mapping[str, Type] = sourdough.types.Catalog()
+    components: Mapping[str, Type] = sourdough.types.Catalog()
+    instances: Mapping[str, object] = sourdough.types.Catalog()
+    algorithms: Mapping[str, Type] = sourdough.types.Catalog()
+    criteria: Mapping[str, Callable] = sourdough.types.Catalog(
+        always_return_list= True)
+
+options = Options()
+
+
+@dataclasses.dataclass
+class Rules(object):
+    """
+    """
+    options: Options = Options()
+    skip_sections: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files'])
+    skip_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['parameters'])
+    special_section_suffixes: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['design'])
+    default_design: str = 'pipeline'
+    validations: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['settings', 'name', 'identification', 'clerk'])
+
+    """ Properties """
+    
+    @property
+    def component_suffixes(self) -> Tuple[str]: 
+        return tuple(k + 's' for k in self.options.components.keys()) 
+
+rules = Rules(options = options)
+
+
+@dataclasses.dataclass
+class Bases(sourdough.quirks.Loader):
+    """Base classes for a sourdough project.
+    
+    Args:
+        settings (Union[str, Type]): the configuration class to use in a 
+            sourdough project. Defaults to 'sourdough.Settings'.
+        clerk (Union[str, Type]): the file clerk class to use in a sourdough 
+            project. Defaults to 'sourdough.Clerk'.   
+        creator (Union[str, Type]): the product/builder class to use in a 
+            sourdough project. Defaults to 'sourdough.Creator'.    
+        product (Union[str, Type]): the product output class to use in a 
+            sourdough project. Defaults to 'sourdough.Product'. 
+        component (Union[str, Type]): the node class to use in a sourdough 
+            project. Defaults to 'sourdough.Component'. 
+        workflow (Union[str, Type]): the workflow to use in a sourdough 
+            project. Defaults to 'sourdough.products.Workflow'.      
+            
+    """
+    settings: Union[str, Type] = 'sourdough.Settings'
+    clerk: Union[str, Type] = 'sourdough.Clerk'
+    creator: Union[str, Type] = 'sourdough.Creator'
+    product: Union[str, Type] = 'sourdough.Product'
+    component: Union[str, Type] = 'sourdough.Component'
+    workflow: Union[str, Type] = 'sourdough.products.Workflow'
+
+bases = Bases()  
+
+
+default_settings: Mapping[str, Any] = {
+    'general': {
+        'verbose': False,
+        'parallelize': True,
+        'conserve_memery': False},
+    'files': {
+        'source_format': 'csv',
+        'interim_format': 'csv',
+        'final_format': 'csv',
+        'file_encoding': 'windows-1252'}}
+
+
+@dataclasses.dataclass
 class Settings(sourdough.types.Lexicon):
     """Loads and Stores configuration settings.
 
@@ -62,7 +146,7 @@ class Settings(sourdough.types.Lexicon):
         Mapping[Any, Mapping[Any, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
-    defaults: ClassVar[Mapping[str, Any]] = sourdough.resources.settings
+    defaults: ClassVar[Mapping[str, Any]] = default_settings
 
     """ Initialization Methods """
 
