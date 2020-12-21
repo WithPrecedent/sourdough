@@ -61,6 +61,7 @@ from .project.configuration import Settings
 from .project.files import Clerk
 from .project import configuration
 
+from .project.base import Manager
 from .project.base import Creator
 from .project.base import Product
 from .project.base import Component

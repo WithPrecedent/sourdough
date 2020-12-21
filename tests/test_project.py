@@ -14,7 +14,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Parser(sourdough.workflows.Contest):
+class Parser(sourdough.Manager):
 
     pass
 
@@ -76,10 +76,10 @@ class Dynamite(sourdough.elements.Technique):
     
 
 def test_project():
-    assert 'parser' in sourdough.Component.registry
-    parser = Parser()
+    assert 'parser' in sourdough.Manager.registry
+    find = Find()
     dynamite = Dynamite()
-    assert 'parser' in sourdough.Component.library
+    assert 'find' in sourdough.Component.library
     assert 'annihilate' in sourdough.Component.library
     assert 'annihilate' not in sourdough.Component.registry
     project = sourdough.Project(

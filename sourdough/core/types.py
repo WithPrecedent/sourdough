@@ -18,7 +18,7 @@ Contents:
     Hybrid (Progression): iterable with both dict and list interfaces and 
         methods that stores items with a 'name' attribute.
     Element (Container): base class for parts of a composite object in a 
-        sourdough project. 
+        sourdough manager.project. 
         
 """
 from __future__ import annotations
@@ -28,8 +28,6 @@ import dataclasses
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
-
-import more_itertools
 
 import sourdough
 
@@ -820,13 +818,13 @@ class Hybrid(Progression):
         return self
 
     def __iter__(self) -> Iterable:
-        """Returns iterable of collapsed 'contents'.
+        """Returns iterable of 'contents'.
 
         Returns:
-            Iterable: collapsed 'contents'.
+            Iterable: 'contents'.
 
         """
-        return more_itertools.collapse(self.contents)
+        return iter(self.contents)
 
     def __len__(self) -> int:
         """Returns length of iterable of 'contents'

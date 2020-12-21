@@ -51,7 +51,7 @@ import sourdough
 #             [type]: [description]
 #         """
 #         quirks = self._get_settings_quirks()
-#         for key, value in self.project.bases.items():
+#         for key, value in self.manager.project.bases.items():
 #             self.contents[key] = self.create_class(
 #                 name = key, 
 #                 base = value, 
@@ -103,7 +103,7 @@ import sourdough
 #         quirks = []
 #         for key, value in settings_keys.items():
 #             try:
-#                 if self.project.settings['general'][key]:
+#                 if self.manager.project.settings['general'][key]:
 #                     quirks.append(sourdough.Quirk.options[value])
 #             except KeyError:
 #                 pass

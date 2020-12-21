@@ -94,7 +94,7 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -111,7 +111,7 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
     
     """ Public Methods """
     
-    def apply(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+    def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Project:
         """[summary]
 
         Args:
@@ -121,8 +121,8 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
             sourdough.Project: [description]
             
         """
-        if 'data' not in kwargs and project.data:
-            kwargs['data'] = project.data
+        if 'data' not in kwargs and manager.project.data:
+            kwargs['data'] = manager.project.data
         for i in self.iterations:
             project = super().apply(project = project, **kwargs)
         return project   

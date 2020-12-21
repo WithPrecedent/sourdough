@@ -28,7 +28,7 @@ class Options(object):
     Args:
         
     """
-    projects: Mapping[str, Type] = sourdough.types.Catalog()
+    managers: Mapping[str, Type] = sourdough.types.Catalog()
     creators: Mapping[str, Type] = sourdough.types.Catalog()
     products: Mapping[str, Type] = sourdough.types.Catalog()
     components: Mapping[str, Type] = sourdough.types.Catalog()
@@ -37,6 +37,12 @@ class Options(object):
     criteria: Mapping[str, Callable] = sourdough.types.Catalog(
         always_return_list= True)
 
+    """ Properties """
+    
+    @property
+    def component_suffixes(self) -> Tuple[str]: 
+        return tuple(k + 's' for k in self.components.keys()) 
+    
 options = Options()
 
 
@@ -44,7 +50,6 @@ options = Options()
 class Rules(object):
     """
     """
-    options: Options = Options()
     skip_sections: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['general', 'files'])
     skip_suffixes: Sequence[str] = dataclasses.field(
@@ -53,37 +58,31 @@ class Rules(object):
         default_factory = lambda: ['design'])
     default_design: str = 'pipeline'
 
-
-    """ Properties """
-    
-    @property
-    def component_suffixes(self) -> Tuple[str]: 
-        return tuple(k + 's' for k in self.options.components.keys()) 
-
-rules = Rules(options = options)
+rules = Rules()
 
 
 @dataclasses.dataclass
 class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough project.
+    """Base classes for a sourdough manager.project.
     
     Args:
         settings (Union[str, Type]): the configuration class to use in a 
-            sourdough project. Defaults to 'sourdough.Settings'.
+            sourdough manager.project. Defaults to 'sourdough.Settings'.
         clerk (Union[str, Type]): the file clerk class to use in a sourdough 
-            project. Defaults to 'sourdough.Clerk'.   
+            manager.project. Defaults to 'sourdough.Clerk'.   
         creator (Union[str, Type]): the product/builder class to use in a 
-            sourdough project. Defaults to 'sourdough.Creator'.    
+            sourdough manager.project. Defaults to 'sourdough.Creator'.    
         product (Union[str, Type]): the product output class to use in a 
-            sourdough project. Defaults to 'sourdough.Product'. 
+            sourdough manager.project. Defaults to 'sourdough.Product'. 
         component (Union[str, Type]): the node class to use in a sourdough 
-            project. Defaults to 'sourdough.Component'. 
+            manager.project. Defaults to 'sourdough.Component'. 
         workflow (Union[str, Type]): the workflow to use in a sourdough 
-            project. Defaults to 'sourdough.products.Workflow'.      
+            manager.project. Defaults to 'sourdough.products.Workflow'.      
             
     """
     settings: Union[str, Type] = 'sourdough.Settings'
     clerk: Union[str, Type] = 'sourdough.Clerk'
+    manager: Union[str, Type] = 'sourdough.Manager'
     creator: Union[str, Type] = 'sourdough.Creator'
     product: Union[str, Type] = 'sourdough.Product'
     component: Union[str, Type] = 'sourdough.Component'

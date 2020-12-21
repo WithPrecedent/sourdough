@@ -46,7 +46,7 @@ class Aggregation(sourdough.products.Workflow):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -81,7 +81,7 @@ class SerialFlow(sourdough.products.Workflow, abc.ABC):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -124,7 +124,7 @@ class Cycle(SerialFlow):
             Defaults to 10.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -140,7 +140,7 @@ class Cycle(SerialFlow):
 
     """ Public Methods """
     
-    def apply(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+    def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Project:
         """[summary]
 
         Args:
@@ -150,8 +150,8 @@ class Cycle(SerialFlow):
             sourdough.Project: [description]
             
         """
-        if 'data' not in kwargs and project.data:
-            kwargs['data'] = project.data
+        if 'data' not in kwargs and manager.project.data:
+            kwargs['data'] = manager.project.data
         for i in self.iterations:
             project = super().apply(project = project, **kwargs)
         return project   
@@ -183,7 +183,7 @@ class Pipeline(SerialFlow):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -218,7 +218,7 @@ class ParallelFlow(sourdough.products.Workflow, abc.ABC):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -234,7 +234,7 @@ class ParallelFlow(sourdough.products.Workflow, abc.ABC):
           
     """ Public Methods """
 
-    def apply(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+    def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Project:
         """[summary]
 
         Args:
@@ -244,7 +244,7 @@ class ParallelFlow(sourdough.products.Workflow, abc.ABC):
             sourdough.Project: [description]
             
         """
-        if hasattr(project, 'parallelize') and project.parallelize:
+        if hasattr(project, 'parallelize') and manager.project.parallelize:
             multiprocessing.set_start_method('spawn')
             with multiprocessing.Pool() as pool:
                 components = zip(self.contents)
@@ -285,7 +285,7 @@ class Contest(ParallelFlow):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -329,7 +329,7 @@ class Study(ParallelFlow):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 
@@ -372,7 +372,7 @@ class Survey(ParallelFlow):
             Defaults to 1.
         criteria (str): after iteration is complete, a 'criteria' determines
             what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the sourdough project. Defaults to None.
+            'algorithms' Catalog for the sourdough manager.project. Defaults to None.
         parallel (ClassVar[bool]): whether the 'contents' contain other 
             iterables (True) or static objects (False). If True, a subclass
             should include a custom iterable for navigating the stored 

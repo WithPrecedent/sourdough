@@ -39,8 +39,8 @@ class Architect(sourdough.Creator):
 
     """ Public Methods """
     
-    def create(self, project: sourdough.Project) -> sourdough.types.Lexicon:
-        """Creates a blueprint based on 'project.settings'.
+    def create(self, manager: sourdough.Manager) -> sourdough.types.Lexicon:
+        """Creates a blueprint based on 'manager.project.settings'.
 
         Args:
             project (sourdough.Project): a Project instance with options and
@@ -50,10 +50,10 @@ class Architect(sourdough.Creator):
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = project.bases.product.acquire(key = self.produces)(
-            identification = project.identification)
-        for name, section in project.settings.items():
-            # Tests whether the section in 'project.settings' is related to the 
+        blueprint = manager.project.bases.product.acquire(key = self.produces)(
+            identification = manager.project.identification)
+        for name, section in manager.project.settings.items():
+            # Tests whether the section in 'manager.project.settings' is related to the 
             # construction of a project object by examining the key names to see
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
@@ -74,7 +74,7 @@ class Architect(sourdough.Creator):
     
     def _add_instructions(self, name: str, design: str,
                           blueprint: sourdough.products.Blueprint,
-                          project: sourdough.Project, **kwargs) -> (
+                          manager: sourdough.Manager, **kwargs) -> (
                               sourdough.products.Blueprint):
         """[summary]
 
@@ -101,16 +101,16 @@ class Architect(sourdough.Creator):
         # If 'name' is in 'settings', this method iterates through each key, 
         # value pair in section and stores or extracts the information needed
         # to fill out the appropriate Instructions instance in blueprint.
-        if name in project.settings:
+        if name in manager.project.settings:
             instructions_attributes = {}
-            for key, value in project.settings[name].items():
+            for key, value in manager.project.settings[name].items():
                 # If a 'key' has an underscore, text after the last underscore 
                 # becomes the 'suffix' and text before becomes the 
                 # 'prefix'. If there is no underscore, 'prefix' and
                 # 'suffix' are both assigned to 'key'.
                 prefix, suffix = self._divide_key(key = key)
                 # A 'key' ending with one of the component-related suffixes 
-                # triggers recursive searching throughout 'project.settings'.
+                # triggers recursive searching throughout 'manager.project.settings'.
                 if suffix in sourdough.rules.component_suffixes:
                     contains = suffix.rstrip('s')
                     blueprint[prefix].contents = sourdough.tools.listify(value)
@@ -133,7 +133,7 @@ class Architect(sourdough.Creator):
         return blueprint
 
     def _get_design(self, name: str, design: str, 
-                    project: sourdough.Project) -> str:
+                    manager: sourdough.Manager) -> str:
         """[summary]
 
         Args:
@@ -146,7 +146,7 @@ class Architect(sourdough.Creator):
             
         """
         try:
-            return project.settings[name][f'{name}_design']
+            return manager.project.settings[name][f'{name}_design']
         except KeyError:
             if design is None:
                 return sourdough.rules.default_design
@@ -154,7 +154,7 @@ class Architect(sourdough.Creator):
                 return design
 
     def _get_parameters(self, name: str, 
-                        project: sourdough.Project) -> Dict[Any, Any]:
+                        manager: sourdough.Manager) -> Dict[Any, Any]:
         """[summary]
 
         Args:
@@ -166,7 +166,7 @@ class Architect(sourdough.Creator):
             
         """
         try:
-            return project.settings[f'{name}_parameters']
+            return manager.project.settings[f'{name}_parameters']
         except KeyError:
             return {}
         
@@ -233,21 +233,21 @@ class Builder(sourdough.Creator):
 
     """ Public Methods """
 
-    def create(self, project: sourdough.Project) -> sourdough.Component:
+    def create(self, manager: sourdough.Manager) -> sourdough.Component:
         """Drafts a Workflow instance based on 'blueprint' in 'project'.
             
         """ 
-        plan = project.bases.product.acquire(key = self.produces)(
-            identification = project.identification)
+        plan = manager.project.bases.product.acquire(key = self.produces)(
+            identification = manager.project.identification)
         plan.contents = self._create_component(
-            name = project.name, 
+            name = manager.project.name, 
             project = project)
         return plan
     
     """ Private Methods """
 
     def _create_component(self, name: str, 
-                          project: sourdough.Project) -> sourdough.Component:
+                          manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -263,7 +263,7 @@ class Builder(sourdough.Creator):
                                         project = project)
 
     def _get_component(self, name: str,
-                       project: sourdough.Project) -> sourdough.Component:
+                       manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -280,17 +280,17 @@ class Builder(sourdough.Creator):
         instructions = project['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = project.bases.component.borrow(key = name)
+            component = manager.project.bases.component.borrow(key = name)
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = project.bases.component.acquire(key = name)
+                component = manager.project.bases.component.acquire(key = name)
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = project.bases.component.acquire(
+                    component = manager.project.bases.component.acquire(
                         key = instructions.design)
                     component = component(**kwargs)
                 except KeyError:
@@ -298,7 +298,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _finalize_component(self, component: sourdough.Component,
-                            project: sourdough.Project) -> sourdough.Component:
+                            manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -323,7 +323,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _finalize_parallel(self, component: sourdough.Component,
-                           project: sourdough.Project) -> sourdough.Component:
+                           manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -359,7 +359,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _finalize_serial(self, component: sourdough.Component, 
-                         project: sourdough.Project) -> sourdough.Component:
+                         manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -380,7 +380,7 @@ class Builder(sourdough.Creator):
         return component
 
     def _finalize_element(self, component: sourdough.Component, 
-                          project: sourdough.Project) -> sourdough.Component:
+                          manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Args:
@@ -398,7 +398,7 @@ class Builder(sourdough.Creator):
         return component
     
     def _add_attributes(self, component: sourdough.Component,
-                        project: sourdough.Project) -> sourdough.Component:
+                        manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 
         Returns:
@@ -424,15 +424,15 @@ class Worker(sourdough.Creator):
     
     """ Public Methods """
  
-    def create(self, project: sourdough.Project, 
+    def create(self, manager: sourdough.Manager, 
                **kwargs) -> sourdough.types.Lexicon:        
         """Computes results based on a plan.
             
         """
-        results = project.bases.product.acquire(key = self.produces)(
-            identification = project.identification)
-        if project.data is not None:
-            kwargs['data'] = project.data
+        results = manager.project.bases.product.acquire(key = self.produces)(
+            identification = manager.project.identification)
+        if manager.project.data is not None:
+            kwargs['data'] = manager.project.data
         for component in project['plan']:
             results.update({component.name: component.apply(**kwargs)})
         return results
