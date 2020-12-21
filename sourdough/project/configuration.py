@@ -52,8 +52,7 @@ class Rules(object):
     special_section_suffixes: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['design'])
     default_design: str = 'pipeline'
-    validations: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['settings', 'name', 'identification', 'clerk'])
+
 
     """ Properties """
     

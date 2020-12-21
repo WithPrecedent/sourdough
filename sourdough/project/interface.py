@@ -21,7 +21,15 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import warnings
 
 import sourdough 
-  
+
+
+@dataclasses.dataclass
+class Resources(object):
+    
+    bases: sourdough.configuration.Bases
+    rules: sourdough.configuration.Rules
+    options: sourdough.configuration.Options
+    
   
 @dataclasses.dataclass
 class Project(sourdough.types.Lexicon):
@@ -199,7 +207,7 @@ class Project(sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Manager(sourdough.types.Lexicon):
+class Manager(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a a collection of projects.
 
     Args:
@@ -238,14 +246,16 @@ class Manager(sourdough.types.Lexicon):
             SimpleBases.
 
     """
-    contents: Mapping[str, Project] = dataclasses.field(default_factory = dict)
+    contents: Sequence[Project] = dataclasses.field(default_factory = list)
     settings: Union[object, Type, str, pathlib.Path] = None
     clerk: Union[object, Type, str, pathlib.Path] = None
     name: str = None
     identification: str = None
     automatic: bool = True
     data: Any = None
-    _validated: bool = False
+    validations: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['settings', 'name', 'identification', 'clerk'])
+    
     bases: ClassVar[object] = sourdough.bases
     rules: ClassVar[object] = sourdough.rules
     options: ClassVar[object] = sourdough.options
@@ -256,7 +266,7 @@ class Manager(sourdough.types.Lexicon):
         """Initializes class instance attributes."""
         # Sets flag so that stored projects to do not unnecessarily validate
         # assorted attributes.
-        self._validated = True
+        # self._validated = True
         # Calls parent and/or mixin initialization method(s).
         try:
             super().__post_init__()
@@ -265,7 +275,7 @@ class Manager(sourdough.types.Lexicon):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        for validation in sourdough.rules.validations:
+        for validation in self.validations:
             getattr(self, f'_validate_{validation}')()
         # Sets index for iteration.
         self.index = 0
@@ -286,12 +296,15 @@ class Manager(sourdough.types.Lexicon):
         access of settings like 'verbose'.
         
         """
-        if inspect.isclass(self.settings):
+        if isinstance(self.settings, self.bases.settings):
+            pass
+        elif inspect.isclass(self.settings):
             self.settings = self.settings()
         elif (self.settings is None 
               or isinstance(self.settings, (str, pathlib.Path))):
-            # print('test settings', self.bases.settings)
             self.settings = self.bases.settings(contents = self.settings)
+        else:
+            raise TypeError('settings must be a Settings, Path, str, or None type.')
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self
@@ -335,7 +348,9 @@ class Manager(sourdough.types.Lexicon):
         Project instance's 'settings'.
         
         """
-        if inspect.isclass(self.clerk):
+        if isinstance(self.clerk, self.bases.clerk):
+            self.clerk.settings = self.settings
+        elif inspect.isclass(self.clerk):
             self.clerk = self.clerk(settings = self.settings)
         elif (self.clerk is None 
               or isinstance(self.clerk, (str, pathlib.Path))):
@@ -343,7 +358,7 @@ class Manager(sourdough.types.Lexicon):
                 root_folder = self.clerk, 
                 settings = self.settings)
         else:
-            self.clerk.settings = self.settings
+            raise TypeError('clerk must be a Clerk, Path, str, or None type.')
         return self
 
     def _create_project(self, project: str) -> Project:
