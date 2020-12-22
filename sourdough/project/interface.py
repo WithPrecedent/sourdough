@@ -5,11 +5,8 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Bases (object): base classes for a Manager.
-    Manager (Lexicon): access point and interface for creating and implementing 
-        a sourdough manager.project.
-    Manager (Lexicon): access point and interface for creating and implementing
-        multiple sourdough projects.
+    Project (Hybrid): access point and interface for creating and implementing
+        sourdough projects.
 
 """
 from __future__ import annotations
@@ -28,9 +25,9 @@ class Project(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a a collection of projects.
 
     Args:
-        contents (Mapping[str, Union[str, Manager]]]): stored Manager instances
-            or the names of previously created Manager instances stored in 
-            'sourdough.projects'. Defaults to an empty dict.
+        contents (Sequence[Union[str, sourdough.Manager]]): stored Manager
+            classes, Manager instances, or the names of Manager subclasses 
+            stored in 'sourdough.options.projects'. Defaults to an empty list.
         settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
             supported file type with settings for a Settings instance is 
@@ -58,12 +55,13 @@ class Project(sourdough.types.Hybrid):
         data (object): any data object for the project to be applied. If it is
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
+        validations (Sequence[str]): 
         bases (ClassVar[object]): contains information about default base 
             classes used by a Manager instance. Defaults to an instance of 
             SimpleBases.
 
     """
-    contents: Union[str, sourdough.Manager] = dataclasses.field(
+    contents: Sequence[Union[str, sourdough.Manager]] = dataclasses.field(
         default_factory = list)
     settings: Union[object, Type, str, pathlib.Path] = None
     clerk: Union[object, Type, str, pathlib.Path] = None
@@ -73,8 +71,7 @@ class Project(sourdough.types.Hybrid):
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
         'settings', 'name', 'identification', 'clerk', 'projects'])
-    bases: ClassVar[object] = sourdough.bases
-    rules: ClassVar[object] = sourdough.rules
+    bases: ClassVar[object] = sourdough.resources.bases
     
     """ Initialization Methods """
 

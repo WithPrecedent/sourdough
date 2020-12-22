@@ -5,13 +5,14 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Creator (Registrar): base class for creating outputs for a sourdough
-        manager.project. All subclasses must have a 'create' method. All concrete
+    Manager (Registrar, Hybrid):
+    Creator (Registrar, ABC): base class for creating outputs for a sourdough
+        project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
         attribute and in 'creators'.
-    Product (Lexicon): base class for outputs of a Creator's 'create' method.
-        Products have auto-vivification making dynamic storage of products
-        easier.
+    Product (Registrar, Element, Lexicon, ABC): base class for outputs of a 
+        Creator's 'create' method.
+    Component (Librarian, Registrar, Element, ABC):
 
     
 """
@@ -267,6 +268,6 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def apply(self, manager: sourdough.Manager) -> sourdough.Project:
+    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
         """Subclasses must provide their own methods."""
-        return project
+        return manager

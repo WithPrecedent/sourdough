@@ -57,8 +57,8 @@ class Architect(sourdough.Creator):
             # if any end in a suffix corresponding to a known base type. If so, 
             # that section is harvested for information which is added to 
             # 'blueprint'.
-            if (not name.endswith(tuple(sourdough.rules.skip_suffixes))
-                    and name not in sourdough.rules.skip_sections
+            if (not name.endswith(tuple(manager.project.settings.rules.skip_suffixes))
+                    and name not in manager.project.settings.rules.skip_sections
                     and any(
                         [i.endswith(sourdough.options.component_suffixes) 
                         for i in section.keys()])):
@@ -119,7 +119,7 @@ class Architect(sourdough.Creator):
                             design = contains,
                             blueprint = blueprint,
                             manager = manager)
-                elif suffix in sourdough.rules.special_section_suffixes:
+                elif suffix in manager.project.settings.rules.special_section_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
                         name = prefix, 
@@ -148,7 +148,7 @@ class Architect(sourdough.Creator):
             return manager.project.settings[name][f'{name}_design']
         except KeyError:
             if design is None:
-                return sourdough.rules.default_design
+                return manager.project.settings.rules.default_design
             else:
                 return design
 
