@@ -5,7 +5,6 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Instructions (Progression): information needed to create a single Component.
     Architect (Creator):
     Builder (Creator):
     Worker (Creator):
@@ -27,7 +26,7 @@ class Architect(sourdough.Creator):
     """Creates a blueprint of a sourdough Plan.
 
     Architect creates a dictionary representation, a blueprint, of the overall 
-    project Plan. In the blueprint produced, keys are the names of components 
+    manager Plan. In the blueprint produced, keys are the names of components 
     and values are Instruction instances.
     
     Args:
@@ -43,14 +42,14 @@ class Architect(sourdough.Creator):
         """Creates a blueprint based on 'manager.project.settings'.
 
         Args:
-            project (sourdough.Project): a Project instance with options and
+            manager (sourdough.Manager): a Project instance with options and
                 other information needed for blueprint construction.
 
         Returns:
             Project: with modifications made to its 'design' attribute.
             
         """ 
-        blueprint = manager.project.bases.product.acquire(key = self.produces)(
+        blueprint = manager.bases.product.acquire(key = self.produces)(
             identification = manager.project.identification)
         for name, section in manager.project.settings.items():
             # Tests whether the section in 'manager.project.settings' is related to the 
@@ -61,13 +60,13 @@ class Architect(sourdough.Creator):
             if (not name.endswith(tuple(sourdough.rules.skip_suffixes))
                     and name not in sourdough.rules.skip_sections
                     and any(
-                        [i.endswith(sourdough.rules.component_suffixes) 
+                        [i.endswith(sourdough.options.component_suffixes) 
                         for i in section.keys()])):
                 blueprint = self._add_instructions(
                     name = name,
                     design = None,
                     blueprint = blueprint,
-                    project = project)
+                    manager = manager)
         return blueprint
         
     """ Private Methods """
@@ -81,7 +80,7 @@ class Architect(sourdough.Creator):
         Args:
             name (str): [description]
             blueprint (sourdough.types.Lexicon): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             sourdough.types.Lexicon: [description]
@@ -93,11 +92,11 @@ class Architect(sourdough.Creator):
         blueprint[name].design = self._get_design(
             name = name, 
             design = design,
-            project = project)
+            manager = manager)
         # Adds any appropriate parameters to 'blueprint' for 'name'.
         blueprint[name].parameters = self._get_parameters(
             name = name, 
-            project = project)
+            manager = manager)
         # If 'name' is in 'settings', this method iterates through each key, 
         # value pair in section and stores or extracts the information needed
         # to fill out the appropriate Instructions instance in blueprint.
@@ -111,7 +110,7 @@ class Architect(sourdough.Creator):
                 prefix, suffix = self._divide_key(key = key)
                 # A 'key' ending with one of the component-related suffixes 
                 # triggers recursive searching throughout 'manager.project.settings'.
-                if suffix in sourdough.rules.component_suffixes:
+                if suffix in sourdough.options.component_suffixes:
                     contains = suffix.rstrip('s')
                     blueprint[prefix].contents = sourdough.tools.listify(value)
                     for item in blueprint[prefix].contents:
@@ -119,7 +118,7 @@ class Architect(sourdough.Creator):
                             name = item,
                             design = contains,
                             blueprint = blueprint,
-                            project = project)
+                            manager = manager)
                 elif suffix in sourdough.rules.special_section_suffixes:
                     instruction_kwargs = {suffix: value}
                     blueprint = self._add_instruction(
@@ -139,7 +138,7 @@ class Architect(sourdough.Creator):
         Args:
             name (str): [description]
             design (str): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             str: [description]
@@ -159,7 +158,7 @@ class Architect(sourdough.Creator):
 
         Args:
             name (str): [description]
-            project (sourdough.Project): [description]
+            project (sourdough.Manager): [description]
 
         Returns:
             sourdough.types.Lexicon: [description]
@@ -234,14 +233,14 @@ class Builder(sourdough.Creator):
     """ Public Methods """
 
     def create(self, manager: sourdough.Manager) -> sourdough.Component:
-        """Drafts a Workflow instance based on 'blueprint' in 'project'.
+        """Drafts a Workflow instance based on 'blueprint' in 'manager'.
             
         """ 
-        plan = manager.project.bases.product.acquire(key = self.produces)(
+        plan = manager.bases.product.acquire(key = self.produces)(
             identification = manager.project.identification)
         plan.contents = self._create_component(
             name = manager.project.name, 
-            project = project)
+            manager = manager)
         return plan
     
     """ Private Methods """
@@ -252,15 +251,15 @@ class Builder(sourdough.Creator):
 
         Args:
             name (str): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             sourdough.Component: [description]
             
         """
-        component = self._get_component(name = name, project = project)
+        component = self._get_component(name = name, manager = manager)
         return self._finalize_component(component = component, 
-                                        project = project)
+                                        manager = manager)
 
     def _get_component(self, name: str,
                        manager: sourdough.Manager) -> sourdough.Component:
@@ -268,7 +267,7 @@ class Builder(sourdough.Creator):
 
         Args:
             name (str): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Raises:
             KeyError: [description]
@@ -277,20 +276,20 @@ class Builder(sourdough.Creator):
             Mapping[str, sourdough.Component]: [description]
             
         """
-        instructions = project['blueprint'][name]
+        instructions = manager['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = manager.project.bases.component.borrow(key = name)
+            component = manager.basescomponent.borrow(key = name)
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = manager.project.bases.component.acquire(key = name)
+                component = manager.basescomponent.acquire(key = name)
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = manager.project.bases.component.acquire(
+                    component = manager.basescomponent.acquire(
                         key = instructions.design)
                     component = component(**kwargs)
                 except KeyError:
@@ -303,7 +302,7 @@ class Builder(sourdough.Creator):
 
         Args:
             component (sourdough.Component): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             sourdough.Component: [description]
@@ -316,10 +315,10 @@ class Builder(sourdough.Creator):
                 finalizer = self._finalize_serial
         else:
             finalizer = self._finalize_element
-        component = finalizer(component = component, project = project)
+        component = finalizer(component = component, manager = manager)
         component = self._add_attributes(
             component = component, 
-            project = project)
+            manager = manager)
         return component
 
     def _finalize_parallel(self, component: sourdough.Component,
@@ -328,7 +327,7 @@ class Builder(sourdough.Creator):
 
         Args:
             component (sourdough.Component): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             sourdough.Component: [description]
@@ -338,14 +337,14 @@ class Builder(sourdough.Creator):
         possible = []
         # Populates list of lists with different options.
         for item in component.contents:
-            possible.append(project['blueprint'][item].contents)
+            possible.append(manager['blueprint'][item].contents)
         # Computes Cartesian product of possible permutations.
         combos = list(map(list, itertools.product(*possible)))
         wrappers = [
-            self._create_component(i, project) for i in component.contents]
+            self._create_component(i, manager) for i in component.contents]
         new_contents = []
         for combo in combos:
-            new_combo = [self._create_component(i, project) for i in combo]
+            new_combo = [self._create_component(i, manager) for i in combo]
             steps = []
             for i, step in enumerate(wrappers):
                 new_step = copy.deepcopy(step)
@@ -355,7 +354,7 @@ class Builder(sourdough.Creator):
         component.contents = new_contents
         component = self._add_attributes(
             component = component, 
-            project = project)
+            manager = manager)
         return component
 
     def _finalize_serial(self, component: sourdough.Component, 
@@ -364,7 +363,7 @@ class Builder(sourdough.Creator):
 
         Args:
             component (sourdough.Component): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             Component: [description]
@@ -374,7 +373,7 @@ class Builder(sourdough.Creator):
         for item in component.contents:
             instance = self._create_component(
                 name = item, 
-                project = project)
+                manager = manager)
             new_contents.append(instance)
         component.contents = new_contents
         return component
@@ -385,7 +384,7 @@ class Builder(sourdough.Creator):
 
         Args:
             component (sourdough.Component): [description]
-            project (sourdough.Project): [description]
+            manager (sourdough.Manager): [description]
 
         Returns:
             Component: [description]
@@ -405,7 +404,7 @@ class Builder(sourdough.Creator):
             [type]: [description]
             
         """
-        attributes = project['blueprint'][component.name].attributes
+        attributes = manager['blueprint'][component.name].attributes
         for key, value in attributes.items():
             setattr(component, key, value)
         return component    
@@ -429,10 +428,10 @@ class Worker(sourdough.Creator):
         """Computes results based on a plan.
             
         """
-        results = manager.project.bases.product.acquire(key = self.produces)(
+        results = manager.basesproduct.acquire(key = self.produces)(
             identification = manager.project.identification)
         if manager.project.data is not None:
             kwargs['data'] = manager.project.data
-        for component in project['plan']:
+        for component in manager['plan']:
             results.update({component.name: component.apply(**kwargs)})
         return results

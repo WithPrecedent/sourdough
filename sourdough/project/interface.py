@@ -221,7 +221,9 @@ class Project(sourdough.types.Hybrid):
             
         """
         if self.index < len(self.contents):
-            manager = self.contents[self.index]()
+            manager = self.contents[self.index](
+                project = self,
+                data = self.data)
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Starting {manager.__name__}')
             new_manager = manager.complete()

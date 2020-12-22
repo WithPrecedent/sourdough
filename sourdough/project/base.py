@@ -17,7 +17,6 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import dataclasses
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -74,7 +73,6 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
         default_factory = lambda: ['architect', 'builder', 'worker'])
     project: Union[object, Type] = None
     name: str = None
-    identification: str = None
     automatic: bool = True
     data: object = None
     bases: ClassVar[object] = sourdough.bases
@@ -144,7 +142,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
         """
         if self.index < len(self.creators):
             creator = self.creators[self.index]()
-            if hasattr(self, 'verbose') and self.manager.verbose:
+            if hasattr(self, 'verbose') and self.project.verbose:
                 print(
                     f'{creator.action} {creator.produces} from {creator.needs}')
             self.index += 1
