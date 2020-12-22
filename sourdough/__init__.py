@@ -54,11 +54,10 @@ from .core import types
 from .core import quirks
 from .core import workshop
 
-from .project.configuration import rules
-from .project.configuration import Settings
-from .project.files import Clerk
-
 from .project import resources
+from .project.configuration import Settings
+from .project import configuration
+from .project.files import Clerk
 from .project.base import Manager
 from .project.base import Creator
 from .project.base import Product

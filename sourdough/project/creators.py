@@ -60,7 +60,7 @@ class Architect(sourdough.Creator):
             if (not name.endswith(tuple(manager.project.settings.rules.skip_suffixes))
                     and name not in manager.project.settings.rules.skip_sections
                     and any(
-                        [i.endswith(sourdough.options.component_suffixes) 
+                        [i.endswith(sourdough.resources.options.component_suffixes) 
                         for i in section.keys()])):
                 blueprint = self._add_instructions(
                     name = name,
@@ -110,7 +110,7 @@ class Architect(sourdough.Creator):
                 prefix, suffix = self._divide_key(key = key)
                 # A 'key' ending with one of the component-related suffixes 
                 # triggers recursive searching throughout 'manager.project.settings'.
-                if suffix in sourdough.options.component_suffixes:
+                if suffix in sourdough.resources.options.component_suffixes:
                     contains = suffix.rstrip('s')
                     blueprint[prefix].contents = sourdough.tools.listify(value)
                     for item in blueprint[prefix].contents:
@@ -391,7 +391,7 @@ class Builder(sourdough.Creator):
             
         """
         try:
-            component.contents = sourdough.options.algorithms[component.name]
+            component.contents = sourdough.resources.options.algorithms[component.name]
         except KeyError:
             component.contents = None
         return component

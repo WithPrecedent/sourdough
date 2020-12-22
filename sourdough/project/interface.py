@@ -27,7 +27,7 @@ class Project(sourdough.types.Hybrid):
     Args:
         contents (Sequence[Union[str, sourdough.Manager]]): stored Manager
             classes, Manager instances, or the names of Manager subclasses 
-            stored in 'sourdough.options.projects'. Defaults to an empty list.
+            stored in 'options'. Defaults to an empty list.
         settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
             supported file type with settings for a Settings instance is 
@@ -71,7 +71,8 @@ class Project(sourdough.types.Hybrid):
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
         'settings', 'name', 'identification', 'clerk', 'projects'])
-    bases: ClassVar[object] = sourdough.resources.bases
+    bases: ClassVar[object] = sourdough.configuration.bases
+    options: ClassVar[object] = sourdough.configuration.options
     
     """ Initialization Methods """
 
@@ -200,7 +201,7 @@ class Project(sourdough.types.Hybrid):
             print('test manager', item)
             if isinstance(item, str):
                 try:
-                    new_contents.append(sourdough.options.managers.select(item))
+                    new_contents.append(sourdough.resources.options.managers.select(item))
                 except KeyError:
                     new_contents.append(self.bases.manager)
             else:

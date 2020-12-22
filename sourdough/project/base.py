@@ -76,9 +76,10 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
     name: str = None
     automatic: bool = True
     data: object = None
-    bases: ClassVar[object] = sourdough.bases
-    options: ClassVar[object] = sourdough.options
-    registry: ClassVar[Mapping[str, Manager]] = sourdough.options.managers
+    bases: ClassVar[object] = sourdough.configuration.bases
+    options: ClassVar[object] = sourdough.configuration.options
+    registry: ClassVar[Mapping[str, Manager]] = (
+        sourdough.configuration.options.managers)
     
     """ Initialization Methods """
 
@@ -187,7 +188,7 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
     action: ClassVar[str]
     needs: ClassVar[str]
     produces: ClassVar[str]
-    registry: ClassVar[Mapping[str, Type]] = sourdough.options.creators
+    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.creators
 
     """ Required Subclass Methods """
     
@@ -233,7 +234,7 @@ class Product(sourdough.quirks.Registrar, sourdough.quirks.Element,
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     identification: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.options.products
+    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.products
 
                        
 @dataclasses.dataclass
@@ -262,8 +263,8 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.options.components
-    library: ClassVar[Mapping[str, Component]] = sourdough.options.instances
+    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.components
+    library: ClassVar[Mapping[str, Component]] = sourdough.resources.options.instances
 
     """ Required Subclass Methods """
 
