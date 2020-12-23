@@ -58,10 +58,12 @@ from .project import resources
 from .project.configuration import Settings
 from .project import configuration
 from .project.files import Clerk
+from .project import files
 from .project.base import Manager
 from .project.base import Creator
 from .project.base import Product
 from .project.base import Component
+from .project import base
 from .project import products
 from .project import creators
 
@@ -70,6 +72,7 @@ from .components import elements
 from .components import graphs
 
 from .project.interface import Project
+from .project import interface
 
 
 
