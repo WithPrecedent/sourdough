@@ -71,8 +71,8 @@ class Project(sourdough.types.Hybrid):
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
         'settings', 'name', 'identification', 'clerk', 'projects'])
-    bases: ClassVar[object] = sourdough.configuration.bases
-    options: ClassVar[object] = sourdough.configuration.options
+    bases: ClassVar[object] = sourdough.resources.bases
+    options: ClassVar[object] = sourdough.resources.options
     
     """ Initialization Methods """
 

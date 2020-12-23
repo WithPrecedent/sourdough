@@ -236,13 +236,7 @@ class Loader(object):
                 class or object stored at the designated import path.
             
         """
-        try:
-            value = super().__getattribute__(name)
-        except AttributeError:
-            try:
-                value = super().__getattribute__('contents')[name]
-            except (AttributeError, KeyError):
-                raise AttributeError(f'{name} is not found in {self.__name__}')
+        value = super().__getattribute__(name)
         if (isinstance(value, str) and '.' in value):
             value = self.load(path = value)
             super().__setattr__(name, value)

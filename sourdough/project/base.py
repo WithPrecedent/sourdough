@@ -76,10 +76,10 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
     name: str = None
     automatic: bool = True
     data: object = None
-    bases: ClassVar[object] = sourdough.configuration.bases
-    options: ClassVar[object] = sourdough.configuration.options
+    bases: ClassVar[object] = sourdough.resources.bases
+    options: ClassVar[object] = sourdough.resources.options
     registry: ClassVar[Mapping[str, Manager]] = (
-        sourdough.configuration.options.managers)
+        sourdough.resources.options.managers)
     
     """ Initialization Methods """
 
