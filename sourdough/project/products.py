@@ -105,8 +105,7 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
-    criteria: Union[str, Callable] = None
-    meta_criterion: Union[str, Callable] = None
+    criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
     parallel: ClassVar[bool] = False
     
     """ Public Methods """
