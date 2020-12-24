@@ -140,7 +140,7 @@ class Cycle(SerialFlow):
 
     """ Public Methods """
     
-    def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Project:
+    def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Manager:
         """[summary]
 
         Args:
@@ -244,7 +244,7 @@ class ParallelFlow(sourdough.products.Workflow, abc.ABC):
             sourdough.Project: [description]
             
         """
-        if hasattr(project, 'parallelize') and manager.project.parallelize:
+        if hasattr(manager.project, 'parallelize') and manager.project.parallelize:
             multiprocessing.set_start_method('spawn')
             with multiprocessing.Pool() as pool:
                 components = zip(self.contents)

@@ -1,5 +1,5 @@
 """
-graph: flexible graph workflow (not yet implemented)
+graphs: classes for flexible workflows
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -10,9 +10,10 @@ Contents:
 
 """
 from __future__ import annotations
-import abc
+import collections.abc
 import dataclasses
 import itertools
+import multiprocessing
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -21,6 +22,312 @@ import more_itertools
 import sourdough
 
 
+@dataclasses.dataclass
+class Node(sourdough.quirks.Registar, sourdough.quirks.Element, 
+           collections.abc.MutableSequence):
+    """Base container class for sourdough composite objects.
+    
+    A Node has a 'name' attribute for internal referencing and to allow 
+    sourdough iterables to function propertly. Node instances can be used 
+    to create a variety of composite workflows such as trees, cycles, contests, 
+    studies, and graphs.
+    
+    Args:
+        children (Any): item(s) contained by a Node instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'children' 
+            when the 'apply' method is called. Defaults to an empty dict.
+        iterations (Union[int, str]): number of times the 'apply' method should 
+            be called. If 'iterations' is 'infinite', the 'apply' method will
+            continue indefinitely unless the method stops further iteration.
+            Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            'algorithms' Catalog for the corresponding sourdough Manager. 
+            Defaults to None.
+        parallel (ClassVar[bool]): whether the 'children' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+            
+    """
+    name: str = None
+    parent: Node = None
+    children: Sequence[Node] = dataclasses.field(default_factory = list)
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False
+    registry: ClassVar[Mapping[str, Node]] = sourdough.types.Catalog()
+    
+    """ Public Methods """
+    
+    def add(self, node: Union[Node, str]) -> None:
+        """Appends 'node' to 'children'.
+        
+        Args:
+            node (Union[str, Node]): a Node instance, a Node subclass, or a str
+                matching a stored Node in the Node registry.
+
+        """
+        self.children.append(node)
+        return self
+    
+    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
+        """Maps 'tool' to items stored in 'children'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'children' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'children'. Defaults to True.
+            kwargs: additional arguments to pass when 'tool' is used.
+        
+        """
+        new_children = []
+        for item in iter(self.children):
+            if isinstance(item, sourdough.types.Hybrid):
+                if recursive:
+                    new_item = item.apply(tool = tool, recursive = True, 
+                                          **kwargs)
+                else:
+                    new_item = item
+            else:
+                new_item = tool(item, **kwargs)
+            new_children.append(new_item)
+        self.children = new_children
+        return self
+
+    def find(self, tool: Callable, recursive: bool = True, 
+             matches: Sequence[Any] = None, **kwargs) -> Sequence[Any]:
+        """Finds items in 'children' that match criteria in 'tool'.
+        
+        Args:
+            tool (Callable): callable which accepts an object in 'children' as
+                its first argument and any other arguments in kwargs.
+            recursive (bool): whether to apply 'tool' to nested items in
+                'children'. Defaults to True.
+            matches (Sequence[Any]): items matching the criteria in 'tool'. This 
+                should not be passed by an external call to 'find'. It is 
+                included to allow recursive searching.
+            kwargs: additional arguments to pass when 'tool' is used.
+            
+        Returns:
+            Sequence[Any]: stored items matching the criteria in 'tool'. 
+        
+        """
+        if matches is None:
+            matches = []
+        for item in iter(self.children):
+            matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
+            if isinstance(item, sourdough.types.Hybrid):
+                if recursive:
+                    matches.extend(item.find(tool = tool, recursive = True,
+                                             matches = matches, **kwargs))
+        return matches
+    
+    def from_matrix(self, adjacency: Mapping[Any, Sequence[str]]) -> None:
+        """[summary]
+
+        Args:
+            adjacency (MutableMapping[Any, Sequence[str]]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        for key, value in adjacency.items():
+            self.add_node(name = key)
+            self.add_edge(start = value[0], stop = value[1])
+        return self
+
+    def from_list(self, adjacency: Sequence[Union[str]]) -> None:
+        """[summary]
+
+        Args:
+            adjacency (MutableSequence[Union[str]]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        for item in adjacency:
+            if item not in self.contents:
+                self.add_node(name = item)
+            self.add_edge(start = item[0], stop = item[1])
+        return self
+        
+    def insert(self, index: int, item: Any) -> None:
+        """Inserts 'item' at 'index' in 'children'.
+
+        Args:
+            index (int): index to insert 'item' at.
+            item (Any): object to be inserted.
+            
+        """
+        self.children.insert(index, item)
+        return self
+                
+    def iterate(self, data: Any) -> Any:
+        """[summary]
+
+        Args:
+            data (Any): [description]
+
+        Returns:
+            Any: [description]
+        """
+        datasets = []
+        for i in self.iterations:
+            if self.parallel:
+                if sourdough.settings.parallelize:
+                datasets.append(self.implementation(data = data))
+            else:
+            data = self.implementation(data = data)
+        return data 
+
+    
+    def implementation(self, data: Any) -> Any:
+        """Subclasses must provide their own methods."""
+        return data
+
+    """ Private Methods """
+
+    def _instancify(self, node: Union[str, Node], **kwargs) -> Node:
+        """Returns a Node instance based on 'node' and kwargs.
+
+        Args:
+            node (Union[str, Node]): a Node instance, a Node subclass, or a str
+                matching a stored Node in the Node registry.
+
+        Raises:
+            KeyError: if 'node' is a str, but doesn't match a stored Node in the
+                Node registry.
+            TypeError: if 'node' is neither a str, a Node subclass, or a Node
+                instance.
+
+        Returns:
+            Node: an instance with all kwargs added as attributes.
+            
+        """
+        if isinstance(node, Node):
+            for key, value in kwargs.items():
+                setattr(node, key, value)
+        else:
+            if isinstance(node, str):
+                try:
+                    node = Node.registry.acquire(key = node)
+                except KeyError:
+                    raise KeyError('node not found in the Node registry ')
+            elif issubclass(node, Node):
+                pass
+            else:
+                raise TypeError('node must be a Node or str')
+            node = node(**kwargs)
+        return node 
+        
+    def _apply_parallel(self, data: Any) -> Any:
+        """Applies 'implementation' to data.
+        
+        Args:
+            data (Any): any item needed for the class 'implementation' to be
+                applied.
+                
+        Returns:
+            Any: item after 'implementation has been applied.
+
+        """  
+        return data 
+
+    def _apply_parallel_in_parallel(self, data: Any) -> Any:
+        """Applies 'implementation' to data.
+        
+        Args:
+            data (Any): any item needed for the class 'implementation' to be
+                applied.
+                
+        Returns:
+            Any: item after 'implementation has been applied.
+
+        """
+        all_data = []  
+        multiprocessing.set_start_method('spawn')
+        with multiprocessing.Pool() as pool:
+            all_data = pool.starmap(self.implementation, data)
+        return all_data  
+    
+    def _apply_parallel_in_serial(self, data: Any) -> Any:
+        """Applies 'implementation' to data.
+        
+        Args:
+            data (Any): any item needed for the class 'implementation' to be
+                applied.
+                
+        Returns:
+            Any: item after 'implementation has been applied.
+
+        """  
+        all_data = []
+        datasets.append(self.implementation(data = data))
+        return data   
+                        
+    """ Dunder Methods """
+
+    def __getitem__(self, key: int) -> Any:
+        """Returns value(s) for 'key' in 'children'.
+
+        Args:
+            key (int): index to search for in 'children'.
+
+        Returns:
+            Any: item stored in 'children' at key.
+
+        """
+        return self.children[key]
+            
+    def __setitem__(self, key: int, value: Any) -> None:
+        """Sets 'key' in 'children' to 'value'.
+
+        Args:
+            key (int): index to set 'value' to in 'children'.
+            value (Any): value to be set at 'key' in 'children'.
+
+        """
+        self.children[key] = value
+
+    def __delitem__(self, key: Union[Any, int]) -> None:
+        """Deletes item at 'key' index in 'children'.
+
+        Args:
+            key (int): index in 'children' to delete.
+
+        """
+        del self.children[key]
+
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'children'.
+
+        Returns:
+            Iterable: of 'children'.
+
+        """
+        return iter(self.children)
+
+    def __len__(self) -> int:
+        """Returns length of iterable of 'children'.
+
+        Returns:
+            int: length of iterable of 'children'.
+
+        """
+        return len(self.children)
+    
+       
+       
 # @dataclasses.dataclass
 # class Graph(sourdough.products.Workflow):
 #     """Base class for composite objects in sourdough projects.
