@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 import multiprocessing
 import textwrap
+from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -24,13 +25,6 @@ class Bases(sourdough.quirks.Loader):
     """Base classes for a sourdough projects.
     
     Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
         manager (Union[str, Type]): class for organizing, implementing, and
             iterating the package's classes and functions. Defaults to 
             'sourdough.Manager'.
@@ -39,15 +33,16 @@ class Bases(sourdough.quirks.Loader):
             
     """ 
     manager: Union[str, Type] = 'sourdough.Manager'
+    component: Union[str, Type] = 'sourdough.Component'
     workflow: Union[str, Type] = 'sourdough.Workflow'
     step: Union[str, Type] = 'sourdough.Step' 
     technique: Union[str, Type] = 'sourdough.Technique'
-    algorithm: Union[str, Type] = 'sourdough.Algorithm'
-    criteria: Union[str, Type] = 'sourdough.Criteria'
+    deliverables: Union[str, Type] = 'sourdough.types.Catalog'
 
 
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Registrar, sourdough.types.Lexicon):
+class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
+              sourdough.types.Lexicon):
     """Constructs, organizes, and implements a part of a sourdough project.
     
     Unlike an ordinary Hybrid, a Manager instance will iterate 'stages' 
@@ -89,20 +84,18 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Lexicon):
         options (ClassVar[object]):
          
     """
-    contents: Sequence[Any] = dataclasses.field(default_factory = dict)
-    stages: Sequence[str] = dataclasses.field(
+    contents: Mapping[str, str] = dataclasses.field(
         default_factory = lambda: {
-            'draft': 'outline', 
-            'build': 'workflow', 
-            'apply': 'results'})
+            'settings': 'outline', 
+            'outline': 'workflow', 
+            'workflow': 'results'})
     project: Union[object, Type] = None
     name: str = None
     automatic: bool = True
     data: object = None
-    bases: ClassVar[object] = Bases()
-    options: ClassVar[object] = sourdough.resources.options
-    registry: ClassVar[Mapping[str, Manager]] = (
-        sourdough.resources.options.managers)
+    bases: ClassVar[Bases] = Bases()
+    converters: ClassVar[Union[ModuleType, str]] = 'sourdough.converters'
+    registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -115,6 +108,8 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Lexicon):
             pass
         # Converts 'stages' to classes, if necessary.
         self._validate_stages() 
+        # Creates an empty 'deliverables' attribute for project deliverables.
+        self.deliverables = self.bases.deliverables()
         # Sets index for iteration.
         self.index = 0
         # Advances through 'stages' if 'automatic' is True.
@@ -134,57 +129,25 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Lexicon):
         'content's with a key of the 'produces' attribute of each stage.
         
         """
-        for stage in iter(self):
-            self.add(self.__next__())
-        return self
-    
-    """ Private Methods """
-
-    def _validate_stages(self) -> None:
-        """Validates 'stages' or converts it to a list of Creator instances.
-        
-        If strings are passed, those are converted to classes from the registry
-        of the designated 'stage' in bases'.
-        
-        """
-        new_stages = []
-        for stage in self.stages:
-            if isinstance(stage, str):
-                new_stages.append(self.project.bases.stage.acquire(stage))
-            else:
-                new_stages.append(stage)
-        self.stages = new_stages
+        for start, stop in self.contents.items():
+            self.__next__()
         return self
     
     """ Dunder Methods """
     
-    def __next__(self) -> Any:
-        """Returns products of the next Creator in 'stages'.
-
-        Returns:
-            Any: item stage by the 'create' method of a Creator.
-            
-        """
-        stage = self.stages.keys()[self.index]
-        if self.index < len(self.stages):
-            stage = self.stages[self.index]()
-            if hasattr(self, 'verbose') and self.project.verbose:
-                print(
-                    f'{stage.action} {stage.produces} from {stage.needs}')
+    def __next__(self) -> None:
+        """Creates and stores project deliverable in 'deliverables'."""
+        if self.index < len(self.contents):
+            start = self.contents.keys()[self.index]
+            finish = self.contents[start]
+            if hasattr(self.project, 'verbose') and self.project.verbose:
+                print(f'Converting {start} to {finish}')
             self.index += 1
-            product = stage.create(manager = self)
+            converter = getattr(self.converters, f'{start}_to_{finish}')
+            self.deliverables[finish] = converter(manager = self)
         else:
             raise IndexError()
-        return product
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'stages'.
-        
-        Returns:
-            Iterable: iterable sequence of 'stages'.
-            
-        """
-        return iter(self.stages)
+        return self
 
 
 
@@ -202,8 +165,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.quirks.Registar, sourdough.quirks.Element, 
-               sourdough.Hybrid):
+class Workflow(sourdough.Component, sourdough.Hybrid):
     """Base iterable class for portions of a sourdough project.
     
     Args:

@@ -131,7 +131,24 @@ class Lexicon(collections.abc.MutableMapping, Vessel):
         """
         self.contents.update(item)
         return self
-                
+       
+    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
+        """Returns a new instance without a subset of 'contents'.
+
+        Args:
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
+                from 'contents' should not be returned.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+
+        Returns:
+            Lexicon: with only key/value pairs with keys not in 'subset'.
+
+        """
+        subset = sourdough.tools.listify(subset)
+        contents = {k: v for k, v in self.contents.items() if k not in subset}
+        return self.__class__(contents = contents, **kwargs)
+            
     def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
@@ -146,8 +163,8 @@ class Lexicon(collections.abc.MutableMapping, Vessel):
 
         """
         subset = sourdough.tools.listify(subset)
-        return self.__class__(contents = {k: self.contents[k] for k in subset},
-                              name = self.name, **kwargs)
+        contents = {k: self.contents[k] for k in subset}
+        return self.__class__(contents = contents, **kwargs)
 
     """ Dunder Methods """
 
