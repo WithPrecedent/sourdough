@@ -34,10 +34,8 @@ class Bases(sourdough.quirks.Loader):
     """ 
     manager: Union[str, Type] = 'sourdough.Manager'
     component: Union[str, Type] = 'sourdough.Component'
-    workflow: Union[str, Type] = 'sourdough.Workflow'
-    step: Union[str, Type] = 'sourdough.Step' 
-    technique: Union[str, Type] = 'sourdough.Technique'
-    deliverables: Union[str, Type] = 'sourdough.types.Catalog'
+    factory: Union[str, Type] = 'sourdough.Factory'
+    default_design: Union[str, Type] = 'sourdough.workflows.Pipeline'
 
 
 @dataclasses.dataclass
@@ -106,8 +104,6 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             super().__post_init__()
         except AttributeError:
             pass
-        # Converts 'stages' to classes, if necessary.
-        self._validate_stages() 
         # Creates an empty 'deliverables' attribute for project deliverables.
         self.deliverables = self.bases.deliverables()
         # Sets index for iteration.
@@ -150,9 +146,53 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
         return self
 
 
+@dataclasses.dataclass
+class Factory(object):
 
+    manager: Manager = None
+    
+    """ Public Methods """
+    
+    def create(self, name: str) -> Workflow: 
+        base = self._get_design(name = name)
+        section = self.manager.settings[name]
 
+    """ Private Methods """
+    
+    def _get_design(self, name: str) -> Workflow:
+        """[summary]
 
+        Args:
+            name (str): [description]
+            design (str): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        try:
+            design = self.manager.settings[name][f'{name}_design']
+        except KeyError:
+            design = self.manager.bases.default_design
+        return self.manager.bases.component.registry.select(key = design)
+
+    def _get_parameters(self, name: str, 
+                        manager: sourdough.Manager) -> Dict[Any, Any]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            project (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.types.Lexicon: [description]
+            
+        """
+        try:
+            return manager.project.settings[f'{name}_parameters']
+        except KeyError:
+            return {}
 
 
 
@@ -201,13 +241,7 @@ class Workflow(sourdough.Component, sourdough.Hybrid):
     iterations: Union[int, str] = 1
     criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
     parallel: ClassVar[bool] = False
-
-    """ Class Methods """
-    
-    @classmethod
-    def from_settings(cls, name: str, settings: Mapping[str, Any]) -> Workflow: 
-              
-    
+        
     """ Public Methods """ 
         
     def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:

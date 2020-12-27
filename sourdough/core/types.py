@@ -17,15 +17,12 @@ Contents:
         list with additional functionality.
     Hybrid (Progression): iterable with both dict and list interfaces and 
         methods that stores items with a 'name' attribute.
-    Element (Container): base class for parts of a composite object in a 
-        sourdough manager.project. 
         
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -90,10 +87,28 @@ class Vessel(collections.abc.Iterable, abc.ABC):
         self.add(other)
         return self
 
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+    
 
 @dataclasses.dataclass
 class Lexicon(collections.abc.MutableMapping, Vessel):
     """Basic sourdough dict replacement.
+    
+    A Lexicon differs from an ordinary python dict in 1 additional way than
+    a Vessel:
+        1) It includes "excludify" and "subsetify" methods which return new
+            instances with a subset of 'contents' based upon the 'subset'
+            argument passed to the method. 'excludify' returns all 'contents'
+            that do not have keys matching items in the 'subset' argument.
+            'subsetify' returns all 'contents' that have keys matching items
+            in the 'subset' argument.
     
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
@@ -312,18 +327,39 @@ class Catalog(Lexicon):
             
         """
         return self[key] 
-            
-    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
-        """Returns a subset of 'contents'.
+
+    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
+        """Returns a new instance without a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) to get key/value pairs 
-                from 'contents'.
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
+                from 'contents' should not be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
-                
+
         Returns:
-            Catalog: with only keys in 'subset'.
+            Catalog: with only key/value pairs without keys in 'subset'.
+
+        """
+        if not isinstance(self.defaults, list):
+            new_defaults = self.defaults
+        else:
+            new_defaults = [i for i in self.defaults if i not in subset] 
+        return super().excludify(subset = subset, defaults = new_defaults,
+                                 always_return_list = self.always_return_list,
+                                 **kwargs)
+                   
+    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
+        """Returns a new instance with a subset of 'contents'.
+
+        Args:
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
+                from 'contents' should be returned.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+
+        Returns:
+            Catalog: with only key/value pairs with keys in 'subset'.
 
         """
         if not isinstance(self.defaults, list):
@@ -412,7 +448,11 @@ class Catalog(Lexicon):
 @dataclasses.dataclass
 class Progression(collections.abc.MutableSequence, Vessel):
     """Basic sourdough list replacement.
-
+    
+    A Progression differs from an ordinary python list only in ways inherited
+    from Vessel ('add' method, storage of data in 'contents', and allowing the
+    '+' operator to join Progressions with other lists and Progressions).
+            
     Args:
         contents (Sequence[Any]): items to store in a list. Defaults to an empty 
             list.
@@ -530,7 +570,7 @@ class Hybrid(Progression):
     A Hybrid inherits the differences between a Progression and an ordinary 
     python list.
     
-    A Hybrid differs from a Progression in 3 significant ways:
+    A Hybrid differs from a Progression in 4 significant ways:
         1) It only store items with 'name' attributes or properties.
         2) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
@@ -545,6 +585,12 @@ class Hybrid(Progression):
             'contents' (recursively, if the 'recursive' argument is True), to
             either 'apply' a Callable or 'find' items matching criteria defined
             in a Callable. 
+        4) It includes "excludify" and "subsetify" methods which return new
+            instances with a subset of 'contents' based upon the 'subset'
+            argument passed to the method. 'excludify' returns all 'contents'
+            that do not have names matching items in the 'subset' argument.
+            'subsetify' returns all 'contents' that have names matching items
+            in the 'subset' argument.
 
     Args:
         contents (Sequence[Any]): items with 'name' attributes to store. If a 
@@ -608,7 +654,25 @@ class Hybrid(Progression):
         """Removes all items from 'contents'."""
         self.contents = []
         return self
-    
+
+    def excludify(self, subset: Union[Any, Sequence[Any]], 
+                  **kwargs) -> Hybrid[Any]:
+        """Returns a new instance without a subset of 'contents'.
+
+        Args:
+            subset (Union[Any, Sequence[Any]]): name(s) for which items from 
+                'contents' should not be returned.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+
+        Returns:
+            Hybrid: with items without names in 'subset'.
+
+        """
+        subset = sourdough.tools.listify(subset)
+        return self.__class__(
+            contents = [c for c in self.contents if not c.name in subset])  
+           
     def extend(self, item: Any) -> None:
         """Extends 'items' to 'contents'.
         
@@ -715,24 +779,23 @@ class Hybrid(Progression):
             
         """
         self._default = value 
-     
+            
     def subsetify(self, subset: Union[Any, Sequence[Any]], 
                   **kwargs) -> Hybrid[Any]:
-        """Returns a subset of 'contents'.
+        """Returns a new instance with a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) to get items with 
-                matching 'name' attributes from 'contents'.
+            subset (Union[Any, Sequence[Any]]): name(s) for which items from 
+                'contents' should be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
-                
+
         Returns:
-            Hybrid[Any]: with only items with 'name' attributes in 'subset'.
+            Hybrid: with items with names in 'subset'.
 
         """
         subset = sourdough.tools.listify(subset)
         return self.__class__(
-            name = self.name,
             contents = [c for c in self.contents if c.name in subset])     
      
     def update(self, items: Any) -> None:
@@ -797,7 +860,7 @@ class Hybrid(Progression):
             elif len(matches) == 1:
                 return matches[0]
             else:
-                return self.__class__(name = self.name, contents = matches)
+                return self.__class__(contents = matches)
             
     def __setitem__(self, key: Union[Any, int], value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
