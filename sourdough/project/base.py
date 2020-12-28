@@ -260,6 +260,7 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             subclasses. Defaults to the Catalog instance 'components'.
         library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
             subclasses. Defaults to the Catalog instance 'instances'.
+            
     """
     contents: Any = None
     name: str = None

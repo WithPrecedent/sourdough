@@ -61,28 +61,25 @@ def settings_to_outline(manager: object) -> sourdough.types.Lexicon:
         sourdough.types.Lexicon: stored instructions for creating sourdough
             workflows.
         
-    """ 
+    """
+    # Creates Lexicon to store a project outline.
     outline = sourdough.types.Lexicon()
-    settings = manager.project.settings
     # Determines sections of 'project.settings' to exclude in creating sourdough
     # workflow.
-    subset = settings.rules.skip_sections
-    excludable_suffix_sections = [
-        i for i in settings.keys() 
-        if not i.endswith(tuple(settings.rules.skip_suffixes))]
-    subset.extend(excludable_suffix_sections)
+    subset = [i for i in manager.project.settings.keys() 
+              if not i.endswith(tuple(manager.project.settings.rules.skip))]
     # Creates subset of 'project.settings' with only sections related to
     # sourdough workflows.
-    workflow_settings = settings.excludify(subset)
-    for name, section in workflow_settings.items():
-        outline = _add_instructions(
+    node_settings = manager.project.settings.excludify(subset)
+    for name, section in node_settings.items():
+        outline = _process_section(
             name = name,
             design = None,
             outline = outline,
             manager = manager)
     return outline
 
-def _add_instructions(name: str, design: str, outline: sourdough.types.Lexicon,
+def _process_section(name: str, design: str, outline: sourdough.types.Lexicon,
                       manager: sourdough.Manager, **kwargs) -> (
                           sourdough.types.Lexicon):
     """[summary]

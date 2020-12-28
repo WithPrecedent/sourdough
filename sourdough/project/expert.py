@@ -195,6 +195,35 @@ class Factory(object):
             return {}
 
 
+@dataclasses.dataclass
+class Node(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+           sourdough.types.Progression):
+    """Information to construct a sourdough Component.
+    
+    Args:
+        contents (Sequence[str]): stored list of str. Included items should 
+            correspond to keys in an Outline and/or Component subclasses. 
+            Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance.
+            Defaults to None. 
+        design (str): name of design base class associated with the Component
+            to be created. Defaults to None.
+        parameters (Mapping[str, Any]): parameters to be used for the stored
+            object(s) in its/their product. Defaults to an empty dict.
+        attributes (Mapping[str, Any]): attributes to add to the created
+            Component object. The keys should be name of the attribute and the
+            values should be the value stored for that attribute. Defaults to
+            an empty dict.
+            
+    """
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
+    name: str = None
+    design: str = None
+    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
 
 
 

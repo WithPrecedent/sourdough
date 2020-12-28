@@ -25,12 +25,12 @@ import sourdough
 class Rules(object):
     """
     """
-    skip_sections: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files'])
-    skip_suffixes: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['parameters'])
-    special_section_suffixes: Sequence[str] = dataclasses.field(
+    skip: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files', 'parameters'])
+    special: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['design'])
+    components: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['managers', 'steps', 'techniques'])
 
 
 default_settings: Mapping[str, Any] = {
