@@ -40,7 +40,7 @@ class Rules(object):
     skip: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['general', 'files', 'parameters'])
     special: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['design'])
+        default_factory = lambda: ['design', 'parameters'])
  
 
 default_settings: Mapping[str, Any] = {

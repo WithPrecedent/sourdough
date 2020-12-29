@@ -20,6 +20,29 @@ import warnings
 import sourdough 
 
 
+@dataclasses.dataclass
+class Bases(sourdough.quirks.Loader):
+    """Base classes for a sourdough projects.
+    
+    Args:
+        manager (Union[str, Type]): class for organizing, implementing, and
+            iterating the package's classes and functions. Defaults to 
+            'sourdough.Manager'.
+        workflow (Union[str, Type]): the workflow to use in a sourdough 
+            project. Defaults to 'sourdough.products.Workflow'.
+            
+    """
+    settings: Union[str, Type] = 'sourdough.Settings'
+    clerk: Union[str, Type] = 'sourdough.Clerk' 
+    manager: Union[str, Type] = 'sourdough.Manager'
+    creator: Union[str, Type] = 'sourdough.Factory'
+    component: Union[str, Type] = 'sourdough.Component'
+
+    """ Properties """
+    
+    def component_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.component.registry.keys()) 
+    
 
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid):
@@ -67,6 +90,7 @@ class Project(sourdough.types.Hybrid):
         default_factory = list)
     settings: Union[sourdough.Settings, str, pathlib.Path] = None
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
+    bases: object = Bases()
     name: str = None
     identification: str = None
     automatic: bool = True
@@ -94,17 +118,24 @@ class Project(sourdough.types.Hybrid):
         if self.automatic:
             print('test yes auto')
             self.complete()
-
+            
     """ Public Methods """
+    
+    def add_manager(self, manager: Union[str, Type, object]) -> None:
+        """
+
+        Args:
+            mananger (Union[str, Type, object]): [description]
+        """
+        self.managers.append(self._validate_manager(manager = manager))
+        return self  
     
     def advance(self) -> Any:
         """Returns next product created in iterating a Manager instance."""
         return self.__next__()
 
     def complete(self) -> None:
-        """Executes and stores each Manager instance.
-        
-        """
+        """Executes each step in an instance's iterable."""
         for manager in iter(self):
             self.__next__()
         return self
@@ -119,13 +150,13 @@ class Project(sourdough.types.Hybrid):
         access of settings like 'verbose'.
         
         """
-        if isinstance(self.settings, sourdough.settings):
+        if isinstance(self.settings, self.bases.settings):
             pass
         elif inspect.isclass(self.settings):
             self.settings = self.settings()
         elif (self.settings is None 
               or isinstance(self.settings, (str, pathlib.Path))):
-            self.settings = sourdough.Settings(contents = self.settings)
+            self.settings = self.bases.settings(contents = self.settings)
         else:
             raise TypeError(
                 'settings must be a Settings, Path, str, or None type.')
@@ -171,13 +202,13 @@ class Project(sourdough.types.Hybrid):
         instance's 'settings'.
         
         """
-        if isinstance(self.clerk, sourdough.Clerk):
+        if isinstance(self.clerk, self.bases.clerk):
             self.clerk.settings = self.settings
         elif inspect.isclass(self.clerk):
             self.clerk = self.clerk(settings = self.settings)
         elif (self.clerk is None 
               or isinstance(self.clerk, (str, pathlib.Path))):
-            self.clerk = sourdough.Clerk(
+            self.clerk = self.bases.clerk(
                 root_folder = self.clerk, 
                 settings = self.settings)
         else:
@@ -195,24 +226,28 @@ class Project(sourdough.types.Hybrid):
                 pass
         new_contents = []
         for item in self.contents:
-            if isinstance(item, str):
-                try:
-                    manager = sourdough.Manager.registry.select(key = item)
-                except KeyError:
-                    manager = sourdough.Manager
-                manager = manager(name = item, project = self)
-            elif inspect.isclass(item):
-                manager = item(project = self)
-            elif isinstance(item, sourdough.Manager):
-                manager = item
-                manager.project = self
-            else:
-                raise TypeError(
-                    'contents must be a list of str or Manager types')
-            new_contents.append(manager)
+            new_contents.append(self._validate_manager(manager = item))
         self.contents = new_contents
         return self
 
+    def _validate_manager(self, manager: Union[str, sourdough.Manager]) -> None:
+        """
+        """
+        if isinstance(manager, str):
+            try:
+                manager = self.bases.manager.registry.select(key = manager)
+            except KeyError:
+                manager = self.bases.manager
+            manager = manager(name = manager, project = self)
+        elif inspect.isclass(manager):
+            manager = manager(project = self)
+        elif isinstance(manager, self.bases.settings.manager):
+            manager.project = self
+        else:
+            raise TypeError(
+                'contents must be a list of str or Manager types')
+        return manager
+    
     """ Dunder Methods """     
 
     def __iter__(self) -> Iterable:

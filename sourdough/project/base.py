@@ -24,22 +24,23 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-     
-  
+    
+    
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
+class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
+              sourdough.types.Lexicon):
     """Constructs, organizes, and implements a part of a sourdough project.
     
-    Unlike an ordinary Hybrid, a Manager instance will iterate 'creators' 
+    Unlike an ordinary Hybrid, a Manager instance will iterate 'stages' 
     instead of 'contents'. However, all access methods still point to 
     'contents', which is where the results of iterating the class are stored.
         
     Args:
         contents (Mapping[str, object]]): stored objects created by the 
-            'create' methods of 'creators'. Defaults to an empty dict.
-        creators (Sequence[Union[Type, str]]): a Creator-compatible classes or
+            'create' methods of 'stages'. Defaults to an empty dict.
+        stages (Sequence[Union[Type, str]]): a Creator-compatible classes or
             strings corresponding to the keys in registry of the default
-            'creator' in 'bases'. Defaults to a list of 'architect', 
+            'stage' in 'bases'. Defaults to a list of 'architect', 
             'builder', and 'worker'. 
         project (sourdough.Project)
         name (str): designates the name of a class instance that is used for 
@@ -69,15 +70,14 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
         options (ClassVar[object]):
          
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = list)
-    creators: Sequence[Union[Type, str]] = dataclasses.field(
-        default_factory = lambda: ['architect', 'builder', 'worker'])
+    contents: Mapping[str, object] = dataclasses.field()
     project: Union[object, Type] = None
+    creator: Union[object, Type] = None
     name: str = None
     automatic: bool = True
     data: object = None
-    bases: ClassVar[object] = sourdough.resources.bases
-    options: ClassVar[object] = sourdough.resources.options
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'name', 'creator'])
     registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
@@ -89,11 +89,10 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
             super().__post_init__()
         except AttributeError:
             pass
-        # Converts 'creators' to classes, if necessary.
-        self._validate_creators() 
-        # Sets index for iteration.
-        self.index = 0
-        # Advances through 'creators' if 'automatic' is True.
+        # Calls validation methods based on items listed in 'validations'.
+        for validation in self.validations:
+            getattr(self, f'_validate_{validation}')()
+        # Advances through 'creator' stages if 'automatic' is True.
         if self.automatic:
             self.complete()
 
@@ -107,110 +106,53 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
         """Advances through the stored Creator instances.
         
         The results of the iteration is that each item produced is stored in 
-        'content's with a key of the 'produces' attribute of each creator.
+        'content's with a key of the 'produces' attribute of each stage.
         
         """
-        for creator in iter(self):
-            self.add(self.__next__())
+        self.creator.complete()
         return self
     
     """ Private Methods """
-
-    def _validate_creators(self) -> None:
-        """Validates 'creators' or converts it to a list of Creator instances.
+    
+    def _validate_name(self) -> None:
+        """Creates 'name' if one doesn't exist."""
+        if not self.name:
+            self.name = sourdough.tools.snakify(self.__class__)
+        return self
+    
+    def _validate_creator(self) -> None:
+        """Creates 'name' if one doesn't exist.
         
-        If strings are passed, those are converted to classes from the registry
-        of the designated 'creator' in bases'.
+        If 'name' was not passed, this method first tries to infer 'name' as the 
+        first appropriate section name in 'settings'. If that doesn't work, it 
+        uses the snakecase name of the class.
         
         """
-        new_creators = []
-        for creator in self.creators:
-            if isinstance(creator, str):
-                new_creators.append(self.project.bases.creator.acquire(creator))
-            else:
-                new_creators.append(creator)
-        self.creators = new_creators
+        if not self.name:
+            node_sections = self.settings.excludify(subset = self.rules.skip)
+            try:
+                self.name = node_sections.keys()[0]
+            except IndexError:
+                self.name = sourdough.tools.snakify(self.__class__)
         return self
     
     """ Dunder Methods """
-    
-    def __next__(self) -> Any:
-        """Returns products of the next Creator in 'creators'.
 
-        Returns:
-            Any: item creator by the 'create' method of a Creator.
-            
+    def __iter__(self) -> None:
         """
-        if self.index < len(self.creators):
-            creator = self.creators[self.index]()
-            if hasattr(self, 'verbose') and self.project.verbose:
-                print(
-                    f'{creator.action} {creator.produces} from {creator.needs}')
-            self.index += 1
-            product = creator.create(manager = self)
-        else:
-            raise IndexError()
-        return product
-    
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'creators'.
-        
-        Returns:
-            Iterable: iterable sequence of 'creators'.
-            
         """
-        return iter(self.creators)
-
-
-@dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, abc.ABC):
-    """Base class for creating objects outputted by a Project's iteration.
-    
-    All subclasses must have a 'create' method that takes 'project' as a 
-    parameter and returns an object or class to be stored in a Project
-    instance's contents. The Craetor subclasses included in sourdough all create
-    Product subclasses.
-    
-    Args:
-        action (str): name of action performed by the class. This is used in
-            messages in the terminal and logging.
-        needs (ClassVar[str]): name of item needed by the class's 'create' 
-            method. This can correspond to the name of an attribute in a
-            Project instance or a key to an item in the 'contents' attribute
-            of a Project instance.
-        produces (ClassVar[str]): name of item produced by the class's 'create'
-            method.
-        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'creators'.
-            
-    """
-    action: ClassVar[str]
-    needs: ClassVar[str]
-    produces: ClassVar[str]
-    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.creators
-
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, manager: sourdough.Manager, **kwargs) -> Any:
-        """Performs some action based on 'project' with kwargs (optional).
-        
-        Subclasses must provide their own methods.
-
-        Args:
-            project (object): a Project-compatible instance.
-            kwargs: any additional parameters to pass to a 'create' method.
-
-        Return:
-            Any: object or class created by a 'create' method.
-        
+        self.creator.__next__()
+        return self
+ 
+    def __next__(self) -> None:
         """
-        pass
+        """
+        self.creator.__next__()
+        return self
 
                        
 @dataclasses.dataclass
-class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,  
-                sourdough.quirks.Element, abc.ABC):
+class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
     """Base container class for sourdough composite objects.
     
     A Component has a 'name' attribute for internal referencing and to allow 
@@ -229,14 +171,13 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
             sourdough classes. 
         registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
             subclasses. Defaults to the Catalog instance 'components'.
-        library (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'instances'.
             
     """
     contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.components
-    library: ClassVar[Mapping[str, Component]] = sourdough.resources.options.instances
+    needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
+    produces: str = None
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
 
     """ Required Subclass Methods """
 
@@ -244,3 +185,129 @@ class Component(sourdough.quirks.Librarian, sourdough.quirks.Registrar,
     def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
         """Subclasses must provide their own methods."""
         return manager
+    
+    
+@dataclasses.dataclass
+class Workflow(Component, sourdough.types.Hybrid, abc.ABC):
+    """Base iterable class for portions of a sourdough project.
+    
+    Args:
+        contents (Any): stored item(s) which must have 'name' attributes. 
+            Defaults to an empty list.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+            
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'apply' method is called. Defaults to an empty dict.
+        iterations (Union[int, str]): number of times the 'apply' method should 
+            be called. If 'iterations' is 'infinite', the 'apply' method will
+            continue indefinitely unless the method stops further iteration.
+            Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            'algorithms' Catalog for the corresponding sourdough Manager. 
+            Defaults to None.
+        parallel (ClassVar[bool]): whether the 'contents' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+            
+    """
+    contents: Any = None
+    name: str = None
+    needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
+    produces: str = None
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    iterations: Union[int, str] = 1
+    criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
+    parallel: ClassVar[bool] = False
+
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
+        """Subclasses must provide their own methods."""
+        return manager
+          
+    """ Public Methods """ 
+    
+    def finalize(self, recursive: bool = True) -> None:
+        """[summary]
+
+        Args:
+            recursive (bool, optional): [description]. Defaults to True.
+
+        Returns:
+            [type]: [description]
+            
+        """
+        new_contents = []
+        for child in self.contents:
+            new_child = self._instancify(component = child)
+            if hasattr(new_child, 'finalize') and recursive:
+                new_child = new_child.finalize(recursive = recursive)
+            new_contents.append(new_child)
+        self.contents = new_contents
+        return self 
+         
+    # def implement(self, data: Any = None, **kwargs) -> Any:
+    #     """[summary]
+
+    #     Args:
+    #         data (Any): [description]
+
+    #     Returns:
+    #         Any: [description]
+    #     """
+    #     if data is not None:
+    #         kwargs['data'] = data
+    #     try:
+    #         self.contents.implement(**kwargs)
+    #     except AttributeError:
+    #         raise AttributeError(
+    #             'stored object in Workflow lacks implement method')              
+
+    """ Private Methods """
+
+    def _instancify(self, component: Union[str, Component], 
+                    **kwargs) -> Component:
+        """
+            
+        """
+        if isinstance(component, Component):
+            for key, value in kwargs.items():
+                setattr(component, key, value)
+        else:
+            if isinstance(component, str):
+                try:
+                    component = self.registry.select(key = component)
+                except KeyError:
+                    raise KeyError(
+                        'component not found in the Component registry')
+            elif issubclass(component, Component):
+                pass
+            else:
+                raise TypeError('component must be a Component or str')
+            component = component(**kwargs)
+        return component 
+
+    """ Dunder Methods """
+
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return '\n'.join([textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            components:'''),
+            f'''{textwrap.indent(str(self.contents), '    ')}'''])   
+        

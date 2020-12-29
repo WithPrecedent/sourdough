@@ -637,16 +637,14 @@ class Hybrid(Progression):
         
         """
         new_contents = []
-        for item in iter(self.contents):
-            if isinstance(item, sourdough.types.Hybrid):
-                if recursive:
-                    new_item = item.apply(tool = tool, recursive = True, 
-                                          **kwargs)
-                else:
-                    new_item = item
+        for child in iter(self.contents):
+            if hasattr(child, 'apply') and recursive:
+                new_child = child.apply(tool = tool, recursive = True, **kwargs)
+            elif recursive:
+                new_child = tool(child, **kwargs)
             else:
-                new_item = tool(item, **kwargs)
-            new_contents.append(new_item)
+                new_child = child
+            new_contents.append(new_child)
         self.contents = new_contents
         return self
 
@@ -708,10 +706,9 @@ class Hybrid(Progression):
             matches = []
         for item in iter(self.contents):
             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, sourdough.types.Hybrid):
-                if recursive:
-                    matches.extend(item.find(tool = tool, recursive = True,
-                                             matches = matches, **kwargs))
+            if isinstance(item, Iterable) and recursive:
+                matches.extend(item.find(tool = tool, recursive = True,
+                                         matches = matches, **kwargs))
         return matches
     
     def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
