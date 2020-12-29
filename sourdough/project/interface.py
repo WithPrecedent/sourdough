@@ -18,7 +18,8 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import warnings
 
 import sourdough 
-    
+
+
 
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid):
@@ -61,18 +62,17 @@ class Project(sourdough.types.Hybrid):
             SimpleBases.
 
     """
-    contents: Sequence[Union[str, sourdough.Manager]] = dataclasses.field(
+    contents: Sequence[Any] = dataclasses.field(default_factory = list)
+    managers: Union[sourdough.Manager, str] = dataclasses.field(
         default_factory = list)
-    settings: Union[object, Type, str, pathlib.Path] = None
-    clerk: Union[object, Type, str, pathlib.Path] = None
+    settings: Union[sourdough.Settings, str, pathlib.Path] = None
+    clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
     name: str = None
     identification: str = None
     automatic: bool = True
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'clerk', 'projects'])
-    bases: ClassVar[object] = sourdough.resources.bases
-    options: ClassVar[object] = sourdough.resources.options
+        'settings', 'name', 'identification', 'clerk', 'managers'])
     
     """ Initialization Methods """
 
@@ -105,10 +105,8 @@ class Project(sourdough.types.Hybrid):
         """Executes and stores each Manager instance.
         
         """
-        new_managers = []
         for manager in iter(self):
-            new_managers.append[self.__next__()]
-        self.contents = new_managers
+            self.__next__()
         return self
                               
     """ Private Methods """
@@ -121,13 +119,13 @@ class Project(sourdough.types.Hybrid):
         access of settings like 'verbose'.
         
         """
-        if isinstance(self.settings, self.bases.settings):
+        if isinstance(self.settings, sourdough.settings):
             pass
         elif inspect.isclass(self.settings):
             self.settings = self.settings()
         elif (self.settings is None 
               or isinstance(self.settings, (str, pathlib.Path))):
-            self.settings = self.bases.settings(contents = self.settings)
+            self.settings = sourdough.Settings(contents = self.settings)
         else:
             raise TypeError(
                 'settings must be a Settings, Path, str, or None type.')
@@ -144,12 +142,11 @@ class Project(sourdough.types.Hybrid):
         
         """
         if not self.name:
-            for section in self.settings.keys():
-                if section not in self.rules.skip_sections():
-                    self.name = section
-                    break
-        if not self.name:
-            self.name = sourdough.tools.snakify(self.__class__)
+            node_sections = self.settings.excludify(subset = self.rules.skip)
+            try:
+                self.name = node_sections.keys()[0]
+            except IndexError:
+                self.name = sourdough.tools.snakify(self.__class__)
         return self
 
     def _validate_identification(self) -> None:
@@ -170,25 +167,25 @@ class Project(sourdough.types.Hybrid):
         If a file path is passed, that becomes the root folder with the default
         file structure in the default Clerk instance.
         
-        If an object is passed, its 'settings' attribute is replaced with the 
-        Manager instance's 'settings'.
+        If an object is passed, its 'settings' attribute is replaced with this 
+        instance's 'settings'.
         
         """
-        if isinstance(self.clerk, self.bases.clerk):
+        if isinstance(self.clerk, sourdough.Clerk):
             self.clerk.settings = self.settings
         elif inspect.isclass(self.clerk):
             self.clerk = self.clerk(settings = self.settings)
         elif (self.clerk is None 
               or isinstance(self.clerk, (str, pathlib.Path))):
-            self.clerk = self.bases.clerk(
+            self.clerk = sourdough.Clerk(
                 root_folder = self.clerk, 
                 settings = self.settings)
         else:
             raise TypeError('clerk must be a Clerk, Path, str, or None type.')
         return self
 
-    def _validate_projects(self) -> None:
-        """Validates 'contents' or converts it to Project instances.
+    def _validate_managers(self) -> None:
+        """Validates 'contents' or converts it to Manager instances.
         
         """
         if not self.contents:
@@ -198,19 +195,35 @@ class Project(sourdough.types.Hybrid):
                 pass
         new_contents = []
         for item in self.contents:
-            print('test manager', item)
             if isinstance(item, str):
                 try:
-                    new_contents.append(sourdough.resources.options.managers.select(item))
+                    manager = sourdough.Manager.registry.select(key = item)
                 except KeyError:
-                    new_contents.append(self.bases.manager)
+                    manager = sourdough.Manager
+                manager = manager(name = item, project = self)
+            elif inspect.isclass(item):
+                manager = item(project = self)
+            elif isinstance(item, sourdough.Manager):
+                manager = item
+                manager.project = self
             else:
-                new_contents.append(item)
+                raise TypeError(
+                    'contents must be a list of str or Manager types')
+            new_contents.append(manager)
         self.contents = new_contents
         return self
 
     """ Dunder Methods """     
-    
+
+    def __iter__(self) -> Iterable:
+        """Returns iterable of a Project instance.
+
+        Returns:
+            Iterable: of the Project instance.
+
+        """
+        return iter(self)
+ 
     def __next__(self) -> object:
         """Returns completed Manager instance.
 
@@ -218,17 +231,15 @@ class Project(sourdough.types.Hybrid):
             Any: item project by the 'create' method of a Creator.
             
         """
-        if self.index < len(self.contents):
-            manager = self.contents[self.index](
-                project = self,
-                data = self.data)
+        if self.index < len(self.managers):
+            manager = self.managers[self.index]
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Starting {manager.__name__}')
-            new_manager = manager.complete()
+            manager.complete()
             self.index += 1
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Completed {manager.__name__}')
         else:
             raise IndexError()
-        return new_manager
+        return self
            

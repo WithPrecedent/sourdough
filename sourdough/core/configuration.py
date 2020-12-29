@@ -23,15 +23,25 @@ import sourdough
 
 @dataclasses.dataclass
 class Rules(object):
-    """
+    """Designates rules for parsing a Settings instance.
+    
+    Args:
+        skip (Sequence[str]): designates suffixes of Settings sections to ignore 
+            when creating project components. Defaults to a list of 'general', 
+            'files', and 'parameters'.
+        special (Sequence[str]): designates suffixes for which a special method
+            should be called. For any str listed in 'special', there must be a
+            corresponding method in the subpackage factory called 
+            f'_get_{string}' which accepts a Mananger instance and a keyword
+            argument with the same name as a stored str in 'special.' Defaults
+            to a list with 'design' in it.
+            
     """
     skip: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['general', 'files', 'parameters'])
     special: Sequence[str] = dataclasses.field(
         default_factory = lambda: ['design'])
-    components: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['managers', 'steps', 'techniques'])
-
+ 
 
 default_settings: Mapping[str, Any] = {
     'general': {
@@ -83,11 +93,12 @@ class Settings(sourdough.types.Lexicon):
     contents: Union[
         str,
         pathlib.Path,
-        Mapping[Any, Mapping[Any, Any]]] = dataclasses.field(
+        Mapping[str, Mapping[str, Any]]] = dataclasses.field(
             default_factory = dict)
     infer_types: bool = True
-    defaults: ClassVar[Mapping[str, Any]] = default_settings
-    rules: ClassVar[object] = Rules()
+    defaults: Mapping[str, Mapping[str]] = dataclasses.field(
+        default_factory = lambda: default_settings)
+    rules: object = dataclasses.field(default_factory = Rules)
 
     """ Initialization Methods """
 

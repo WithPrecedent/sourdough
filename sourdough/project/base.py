@@ -78,8 +78,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.types.Hybrid):
     data: object = None
     bases: ClassVar[object] = sourdough.resources.bases
     options: ClassVar[object] = sourdough.resources.options
-    registry: ClassVar[Mapping[str, Manager]] = (
-        sourdough.resources.options.managers)
+    registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -207,34 +206,6 @@ class Creator(sourdough.quirks.Registrar, abc.ABC):
         
         """
         pass
-
-
-@dataclasses.dataclass
-class Product(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-              sourdough.types.Lexicon, abc.ABC):
-    """Stores output of a Creator's 'create' method.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary which contains created
-            items. Defaults to an empty dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        identification (str): a unique identification name for the related 
-            Project instance.  
-        stores (ClassVar[Type]): type of instances stored in 'contents'. The
-            designated class allows autovivification by creating an instance of 
-            the stored type.
-                      
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    identification: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.resources.options.products
 
                        
 @dataclasses.dataclass

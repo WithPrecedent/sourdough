@@ -53,12 +53,9 @@ from .utilities import tools
 from .core import types
 from .core import quirks
 from .core import workshop
+from .core.configuration import Settings
+from .core.files import Clerk
 
-from .project import resources
-from .project.configuration import Settings
-from .project import configuration
-from .project.files import Clerk
-from .project import files
 from .project.base import Manager
 from .project.base import Creator
 from .project.base import Product
