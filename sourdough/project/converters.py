@@ -5,16 +5,13 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Architect (Creator):
-    Builder (Creator):
-    Worker (Creator):
     
 """
 from __future__ import annotations
 import copy
 import dataclasses
+import inspect
 import itertools
-import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -24,23 +21,27 @@ import sourdough
 """ Proxy Types for Annotation """
 
 Outline = sourdough.types.Lexicon
+Plan = sourdough.Component
+Results = sourdough.types.Lexicon
 
 
 @dataclasses.dataclass
-class Factory(sourdough.types.Progression):
+class Creator(sourdough.Factory):
     """
             
     Args:
         
     """
-    contents: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'outline', 'workflow', 'results'])
+    contents: Mapping[str, str] = dataclasses.field(default_factory = lambda: {
+        'Drafting': 'outline', 
+        'Building': 'plan', 
+        'Applying': 'results'})
     manager: object = None
 
-    """ Initialization Methods """
+    """ Public Methods """
 
-    def settings_to_outline(self) -> Outline:
-        """Creates a outline based on 'manager.project.settings'.
+    def create_outline(self) -> Outline:
+        """Creates an Outline based on 'manager.project.settings'.
 
         Returns:
             Outline: stored instructions for creating sourdough
@@ -51,18 +52,42 @@ class Factory(sourdough.types.Progression):
         outline = Outline()
         # Determines sections of 'project.settings' to exclude in creating 
         # sourdough project components.
-        skipables = self.manager.project.settings.rules.skip
-        subset = [i for i in self.manager.project.settings.keys() 
-                  if not i.endswith(tuple(skipables))]
+        skip_suffixes = self.manager.project.settings.rules.skip
+        skipables = [i for i in self.manager.project.settings.keys() 
+                  if not i.endswith(tuple(skip_suffixes))]
         # Creates subset of 'project.settings' with only sections related to
         # sourdough project components.
-        component_settings = self.manager.project.settings.excludify(subset)
+        component_settings = self.manager.project.settings.excludify(skipables)
         for section in component_settings.keys():
-            outline = self._process_section(name = section, outline = outline)
+            outline[section] = self._process_section(
+                name = section, 
+                outline = outline)
         return outline
 
-    def _process_section(self, name: str, design: str, outline: Outline,
-                         **kwargs) -> Outline:
+    def create_plan(self) -> Union[Plan, Sequence[Plan]]:
+        """Drafts a Plan based on an Outline in 'mananger'.
+            
+        """ 
+        outline = copy.deepcopy(self.manager['outline'])
+        nodes = outline.keys()
+        shell = []
+        for name in nodes:
+            try:
+                node = outline.pop(name)
+                plan, outline = self._process_node(
+                    node = node,
+                    outline = outline)
+                shell.append(plan)
+            except KeyError:
+                pass
+        if len(shell) == 1:
+            return shell[0]
+        else:
+            return shell
+    
+    """ Private Methods """
+    
+    def _process_section(self, name: str, outline: Outline, **kwargs) -> Outline:
         """[summary]
 
         Args:
@@ -73,352 +98,33 @@ class Factory(sourdough.types.Progression):
             sourdough.types.Lexicon: [description]
             
         """
-        # Edits kwargs for Workflow in an Outline based upon a Rules instance
-        # in a Settings instance specifying 'special' suffixes.
-        for suffix in self.mananger.project.settings.rules.special:
-            kwargs = getattr(self, f'_get_{suffix}')(name = name, **kwargs)
-        # If 'name' is in 'settings', this method iterates through each key, 
-        # value pair in section and stores or extracts the information needed
-        # to fill out the appropriate Instructions instance in outline.
-        
+        node = sourdough.base.Node(name = name, **kwargs)
+        # Iterates through each key, value pair in a Settings section and stores 
+        # or extracts the information needed to create a Component subclass
+        # instance.
         for key, value in self.manager.project.settings[name].items():
             # If a 'key' has an underscore, text after the last underscore 
-            # becomes the 'suffix' and text before becomes the 
-            # 'prefix'. If there is no underscore, 'prefix' and
-            # 'suffix' are both assigned to 'key'.
+            # becomes the 'suffix' and text before becomes the 'prefix'. If 
+            # there is no underscore, 'prefix' and 'suffix' are both assigned to 
+            # 'key'.
             prefix, suffix = self._divide_key(key = key)
-            # A 'key' ending with one of the component-related suffixes 
-            # triggers recursive searching throughout 'manager.project.settings'.
-            if suffix in sourdough.resources.options.component_suffixes:
+            # Depending upon 'suffix', different actions are taken.
+            if suffix in self.manager.project.settings.rules.special:
+                node.builders[suffix] = value
+            elif suffix in self.mananger.project.bases.component_suffixes:
                 contains = suffix.rstrip('s')
-                outline[prefix].contents = sourdough.tools.listify(value)
-                for item in outline[prefix].contents:
-                    outline = _add_instructions(
-                        name = item,
-                        design = contains,
-                        outline = outline,
-                        manager = manager)
-            elif suffix in manager.project.settings.rules.special_section_suffixes:
-                instruction_kwargs = {suffix: value}
-                outline = _add_instruction(
-                    name = prefix, 
-                    outline = outline,
-                    **instruction_kwargs)
+                items = [
+                    tuple(i, contains) for i in sourdough.tools.listify(value)]
+                node.contents.append({prefix: items})
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                outline[name].attributes.update({key: value})
-        outline[name] = self._get_component(name = name, **kwargs)
-        return outline
-
-    def _get_design(name: str, design: str, 
-                    manager: sourdough.Manager) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            design (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            str: [description]
-            
-        """
+                node.builders['attributes'].update({key: value})
         try:
-            return manager.project.settings[name][f'{name}_design']
+            node.executors = self.manager.project.settings[f'{name}_parameters']
         except KeyError:
-            if design is None:
-                return manager.project.settings.rules.default_design
-            else:
-                return design
-
-    def _get_parameters(name: str, 
-                        manager: sourdough.Manager) -> Dict[Any, Any]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            project (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        try:
-            return manager.project.settings[f'{name}_parameters']
-        except KeyError:
-            return {}
-        
-    def _divide_key(key: str, divider: str = None) -> Tuple[str, str]:
-        """[summary]
-
-        Args:
-            key (str): [description]
-
-        Returns:
-            
-            Tuple[str, str]: [description]
-            
-        """
-        if divider is None:
-            divider = '_'
-        if divider in key:
-            suffix = key.split('_')[-1]
-            prefix = key[:-len(suffix) - 1]
-        else:
-            prefix = suffix = key
-        return prefix, suffix
-
-
-    def _get_component(self, name: str) -> Component:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            Mapping[str, sourdough.Component]: [description]
-            
-        """
-        instructions = manager['outline'][name]
-        kwargs = {'name': name, 'contents': instructions.contents}
-        try:
-            component = manager.basescomponent.borrow(key = name)
-            for key, value in kwargs.items():
-                if value:
-                    setattr(component, key, value)
-        except KeyError:
-            try:
-                component = manager.basescomponent.acquire(key = name)
-                component = component(**kwargs)
-            except KeyError:
-                try:
-                    component = manager.basescomponent.acquire(
-                        key = instructions.design)
-                    component = component(**kwargs)
-                except KeyError:
-                    raise KeyError(f'{name} component does not exist')
-        return component
-            
-    def _add_instruction(name: str, 
-                            outline: sourdough.types.Lexicon, 
-                            **kwargs) -> sourdough.types.Lexicon:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            outline (sourdough.types.Lexicon): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        # Adds any kwargs to 'outline' as appropriate.
-        for key, value in kwargs.items():
-            if isinstance(getattr(outline[name], key), list):
-                getattr(outline[name].key).extend(
-                    sourdough.tools.listify(value))
-            elif isinstance(getattr(outline[name], key), dict):
-                getattr(outline[name], key).update(value) 
-            else:
-                setattr(outline[name], key, value)           
-        return outline
-
-
-
-
-@dataclasses.dataclass
-class Instructions(sourdough.types.Progression):
-    """Information to construct a sourdough Component.
-    
-    Args:
-        contents (Sequence[str]): stored list of str. Included items should 
-            correspond to keys in an Outline and/or Component subclasses. 
-            Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance.
-            Defaults to None. 
-        design (str): name of design base class associated with the Component
-            to be created. Defaults to None.
-        parameters (Mapping[str, Any]): parameters to be used for the stored
-            object(s) in its/their product. Defaults to an empty dict.
-        attributes (Mapping[str, Any]): attributes to add to the created
-            Component object. The keys should be name of the attribute and the
-            values should be the value stored for that attribute. Defaults to
-            an empty dict.
-            
-    """
-    contents: Sequence[str] = dataclasses.field(default_factory = list)
-    name: str = None
-    design: str = None
-    parameters: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    attributes: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-                         
-
-
-def outline_to_workflow(manager: object) -> object:
-    
-    return manager
-
-
-def workflow_to_results(manager: object) -> object:
-    
-    return manager
-
-
-@dataclasses.dataclass
-class Architect(sourdough.Creator):
-    """Creates a outline of a sourdough Plan.
-
-    Architect creates a dictionary representation, a outline, of the overall 
-    manager Plan. In the outline produced, keys are the names of components 
-    and values are Instruction instances.
-    
-    Args:
-                        
-    """
-    action: ClassVar[str] = 'Drafting'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
-    produces: ClassVar[Type] = 'outline'
-
-    """ Public Methods """
-    
-    def create(self, manager: sourdough.Manager) -> sourdough.types.Lexicon:
-        """Creates a outline based on 'manager.project.settings'.
-
-        Args:
-            manager (sourdough.Manager): a Project instance with options and
-                other information needed for outline construction.
-
-        Returns:
-            Project: with modifications made to its 'design' attribute.
-            
-        """ 
-        outline = manager.bases.product.acquire(key = produces)(
-            identification = manager.project.identification)
-        for name, section in manager.project.settings.items():
-            # Tests whether the section in 'manager.project.settings' is related to the 
-            # construction of a project object by examining the key names to see
-            # if any end in a suffix corresponding to a known base type. If so, 
-            # that section is harvested for information which is added to 
-            # 'outline'.
-            if (not name.endswith(tuple(manager.project.settings.rules.skip_suffixes))
-                    and name not in manager.project.settings.rules.skip_sections
-                    and any(
-                        [i.endswith(sourdough.resources.options.component_suffixes) 
-                        for i in section.keys()])):
-                outline = _add_instructions(
-                    name = name,
-                    design = None,
-                    outline = outline,
-                    manager = manager)
-        return outline
-        
-    """ Private Methods """
-    
-    def _add_instructions(self, name: str, design: str,
-                          outline: sourdough.types.Lexicon,
-                          manager: sourdough.Manager, **kwargs) -> (
-                              sourdough.types.Lexicon):
-        """[summary]
-
-        Args:
-            name (str): [description]
-            outline (sourdough.types.Lexicon): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        if name not in outline:
-            outline[name] = sourdough.products.Instructions(name = name)
-        # Adds appropraite design type to 'outline' for 'name'.
-        outline[name].design = _get_design(
-            name = name, 
-            design = design,
-            manager = manager)
-        # Adds any appropriate parameters to 'outline' for 'name'.
-        outline[name].parameters = _get_parameters(
-            name = name, 
-            manager = manager)
-        # If 'name' is in 'settings', this method iterates through each key, 
-        # value pair in section and stores or extracts the information needed
-        # to fill out the appropriate Instructions instance in outline.
-        if name in manager.project.settings:
-            instructions_attributes = {}
-            for key, value in manager.project.settings[name].items():
-                # If a 'key' has an underscore, text after the last underscore 
-                # becomes the 'suffix' and text before becomes the 
-                # 'prefix'. If there is no underscore, 'prefix' and
-                # 'suffix' are both assigned to 'key'.
-                prefix, suffix = _divide_key(key = key)
-                # A 'key' ending with one of the component-related suffixes 
-                # triggers recursive searching throughout 'manager.project.settings'.
-                if suffix in sourdough.resources.options.component_suffixes:
-                    contains = suffix.rstrip('s')
-                    outline[prefix].contents = sourdough.tools.listify(value)
-                    for item in outline[prefix].contents:
-                        outline = _add_instructions(
-                            name = item,
-                            design = contains,
-                            outline = outline,
-                            manager = manager)
-                elif suffix in manager.project.settings.rules.special_section_suffixes:
-                    instruction_kwargs = {suffix: value}
-                    outline = _add_instruction(
-                        name = prefix, 
-                        outline = outline,
-                        **instruction_kwargs)
-                # All other keys are presumed to be attributes to be added to a
-                # Component instance.
-                else:
-                    outline[name].attributes.update({key: value})
-        return outline
-
-    def _get_design(self, name: str, design: str, 
-                    manager: sourdough.Manager) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            design (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            str: [description]
-            
-        """
-        try:
-            return manager.project.settings[name][f'{name}_design']
-        except KeyError:
-            if design is None:
-                return manager.project.settings.rules.default_design
-            else:
-                return design
-
-    def _get_parameters(self, name: str, 
-                        manager: sourdough.Manager) -> Dict[Any, Any]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            project (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        try:
-            return manager.project.settings[f'{name}_parameters']
-        except KeyError:
-            return {}
+            pass
+        return node
         
     def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
         """[summary]
@@ -439,116 +145,81 @@ class Architect(sourdough.Creator):
         else:
             prefix = suffix = key
         return prefix, suffix
-       
-    def _add_instruction(self, name: str, 
-                         outline: sourdough.types.Lexicon, 
-                         **kwargs) -> sourdough.types.Lexicon:
-        """[summary]
 
-        Args:
-            name (str): [description]
-            outline (sourdough.types.Lexicon): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        # Adds any kwargs to 'outline' as appropriate.
-        for key, value in kwargs.items():
-            if isinstance(getattr(outline[name], key), list):
-                getattr(outline[name].key).extend(
-                    sourdough.tools.listify(value))
-            elif isinstance(getattr(outline[name], key), dict):
-                getattr(outline[name], key).update(value) 
-            else:
-                setattr(outline[name], key, value)           
-        return outline
-
-    """ Dunder Methods """
-    
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-           
-      
-@dataclasses.dataclass
-class Builder(sourdough.Creator):
-    """Constructs finalized plan.
-    
-    Args:
-                        
-    """
-    action: ClassVar[str] = 'Creating'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'outline'
-    produces: ClassVar[Type] = 'plan'
-
-    """ Public Methods """
-
-    def create(self, manager: sourdough.Manager) -> sourdough.Component:
-        """Drafts a Workflow instance based on 'outline' in 'manager'.
-            
+    def _process_node(self, node: sourdough.base.Node, 
+                      outline: Outline) -> sourdough.Component:
         """ 
-        plan = manager.bases.product.acquire(key = produces)(
-            identification = manager.project.identification)
-        plan.contents = _create_component(
-            name = manager.project.name, 
-            manager = manager)
-        return plan
-    
-    """ Private Methods """
-
-    def _create_component(self, name: str, 
-                          manager: sourdough.Manager) -> sourdough.Component:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.Component: [description]
-            
         """
-        component = _get_component(name = name, manager = manager)
-        return _finalize_component(component = component, 
-                                        manager = manager)
-
-
-    def _finalize_component(self, component: sourdough.Component,
-                            manager: sourdough.Manager) -> sourdough.Component:
-        """[summary]
-
-        Args:
-            component (sourdough.Component): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.Component: [description]
-            
-        """
+        component, outline = self._create_component(
+            node = node, 
+            outline = outline)
         if isinstance(component, Iterable):
-            if component.parallel:
-                finalizer = _finalize_parallel
-            else:
-                finalizer = _finalize_serial
-        else:
-            finalizer = _finalize_element
-        component = finalizer(component = component, manager = manager)
-        component = _add_attributes(
-            component = component, 
-            manager = manager)
-        return component
+            new_contents = []
+            for item in component:
+                if isinstance(item, str):
+                    node = outline.pop(item)
+                    component, outline = self._process_node(
+                        node = node, 
+                        outline = outline)
+                    new_contents.append(component)
+                elif isinstance(item, inspect.isclass):
+                    new_contents.append(item)()
+                else:
+                    new_contents.append(item)
+            component.contents = new_contents
+        return component, outline
 
-    def _finalize_parallel(self, component: sourdough.Component,
-                           manager: sourdough.Manager) -> sourdough.Component:
+    def _create_component(self, node: sourdough.base.Node,
+                          outline: Outline) -> sourdough.Component:
+        """[summary]
+        """
+        try: 
+            component = self.mananger.project.bases.component.acquire(
+                name = node.name)
+        except KeyError:
+            try:
+                component = self.mananger.project.bases.component.acquire(
+                    name = node.builders['design'])
+            except (KeyError, TypeError):
+                component = self.mananger.project.bases.component.acquire(
+                    name = node.builders['base'])
+        attributes = node.builders.pop('attributes')
+        kwargs = node.builders
+        kwargs['parameters'] = node.executors
+        kwargs['name'] = node.name
+        kwargs['contents'] = node.contents
+        component = component(**kwargs)
+        for key, value in attributes.items():
+            setattr(component, key, value)
+        component.contents, outline = self._process_contents(
+            component = component, 
+            outline = outline)
+        return component, outline
+
+    def _process_contents(self, component: sourdough.Component,
+                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
         """[summary]
 
         Args:
             component (sourdough.Component): [description]
-            manager (sourdough.Manager): [description]
+            outline (Outline): [description]
 
         Returns:
-            sourdough.Component: [description]
-            
+            Tuple[sourdough.Component, Outline]: [description]
+        """
+        if component.parallel:
+            component, outline = self._process_parallel(
+                component = component, 
+                outline = outline)
+        else:
+            component, outline = self._process_serial(
+                component = component, 
+                outline = outline)
+        return component, outline
+
+    def _process_parallel(self, component: sourdough.Component,
+                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
+        """
         """
         # Creates empy list of lists for all possible permutations to be stored.
         possible = []
@@ -574,7 +245,7 @@ class Builder(sourdough.Creator):
             manager = manager)
         return component
 
-    def _finalize_serial(self, component: sourdough.Component, 
+    def _process_serial(self, component: sourdough.Component, 
                          manager: sourdough.Manager) -> sourdough.Component:
         """[summary]
 

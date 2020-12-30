@@ -24,16 +24,107 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
+
+                       
+@dataclasses.dataclass
+class Node(abc.ABC):
+    """
     
+    Args:
+        contents (Any): item(s) contained by a Component instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Settings instance, 'name' 
+            should match the appropriate section name in the Settings instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. 
+            
+    """
+    __slots__ = ['name', 'contents', 'builders', 'executors']
+    name: str
+    contents: Sequence[Mapping[str, Tuple[str, str]]]
+    builders: Mapping[str, Any]
+    executors: Mapping[str, Any]
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Creates empty lists/dicts for 'contains', 'builders', and 'executors'
+        # because default values are not permitted with __slots__.
+        self.contents = []
+        self.builders = self.executors = {}
+        self.builders['attributes'] = {}
+            
+
+@dataclasses.dataclass
+class Factory(sourdough.types.Lexicon, abc.ABC):
+    """
+            
+    Args:
+        
+    """
+    contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
+    manager: object = None
+   
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Sets index for iteration.
+        self.index = 0
+            
+    """ Public Methods """
     
+    def advance(self) -> Any:
+        """Returns next product created in iterating a Factory instance."""
+        product = self.contents[self.contents.keys()[self.index]]
+        self.mananger.contents[product] = self.__next__()
+        return self
+
+    def complete(self) -> None:
+        """Executes each step in an instance's iterable."""
+        for action, product in iter(self):
+            self.advance()
+        return self
+
+    """ Dunder Methods """
+ 
+    def __next__(self) -> object:
+        """Returns product from next stage in an instance iterable.
+
+        Returns:
+            Any: item project by the 'create' method of a Creator.
+            
+        """
+        if self.index < len(self.contents):
+            action = self.contents.keys()[self.index]
+            product = self.contents[action]
+            method = f'create_{product}'
+            if self.index < 1:
+                previous_product = 'settings'
+            else:
+                previous_product = self.contents(
+                    self.contents.keys()[self.index - 1])
+            if (hasattr(self.manager.project, 'verbose') 
+                    and self.manager.project.verbose):
+                print(f'{action} {product} from {previous_product}')
+            self.index += 1
+            return getattr(self, method)()
+        else:
+            StopIteration
+        
+          
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
               sourdough.types.Lexicon):
-    """Constructs, organizes, and implements a part of a sourdough project.
-    
-    Unlike an ordinary Hybrid, a Manager instance will iterate 'stages' 
-    instead of 'contents'. However, all access methods still point to 
-    'contents', which is where the results of iterating the class are stored.
+    """Constructs, organizes, and implements part of a sourdough project.
         
     Args:
         contents (Mapping[str, object]]): stored objects created by the 
@@ -78,6 +169,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
     data: object = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
         'name', 'creator'])
+    default_design: str = 'pipeline'
     registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
@@ -150,7 +242,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
         self.creator.__next__()
         return self
 
-                       
+    
 @dataclasses.dataclass
 class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
     """Base container class for sourdough composite objects.
@@ -177,55 +269,13 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
     name: str = None
     needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
     produces: str = None
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
-        """Subclasses must provide their own methods."""
-        return manager
-    
-    
-@dataclasses.dataclass
-class Workflow(Component, sourdough.types.Hybrid, abc.ABC):
-    """Base iterable class for portions of a sourdough project.
-    
-    Args:
-        contents (Any): stored item(s) which must have 'name' attributes. 
-            Defaults to an empty list.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-            
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'apply' method is called. Defaults to an empty dict.
-        iterations (Union[int, str]): number of times the 'apply' method should 
-            be called. If 'iterations' is 'infinite', the 'apply' method will
-            continue indefinitely unless the method stops further iteration.
-            Defaults to 1.
-        criteria (str): after iteration is complete, a 'criteria' determines
-            what should be outputted. This should correspond to a key in the
-            'algorithms' Catalog for the corresponding sourdough Manager. 
-            Defaults to None.
-        parallel (ClassVar[bool]): whether the 'contents' contain other 
-            iterables (True) or static objects (False). If True, a subclass
-            should include a custom iterable for navigating the stored 
-            iterables. Defaults to False.
-            
-    """
-    contents: Any = None
-    name: str = None
-    needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
-    produces: str = None
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    base: str = None
+    design: str = None
     iterations: Union[int, str] = 1
     criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
     parallel: ClassVar[bool] = False
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
 
     """ Required Subclass Methods """
 
