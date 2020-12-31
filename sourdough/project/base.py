@@ -237,7 +237,6 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
     name: str = None
     needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
     produces: str = None
-    base: str = None
     design: str = None
     iterations: Union[int, str] = 1
     criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None

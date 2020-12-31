@@ -27,12 +27,20 @@ Results = sourdough.types.Lexicon
 
 @dataclasses.dataclass
 class Outline(sourdough.types.Lexicon):
+    """Initialized sourdough Component instances without structure.
     
+    Args:
+        contents (Mapping[str, sourdough.Component]): stored dictionary with 
+            keys as names of Components and values as Component instances.
+              
+    """
+    contents: Mapping[str, sourdough.Component] = dataclasses.field(
+        default_factory = dict)
     
     """ Class Methods """
     
     @classmethod
-    def create(cls, settings: sourdough.types.Configuration) -> None:
+    def create(cls, manager: sourdough.base.Manager) -> None:
         
         return cls
     
@@ -47,9 +55,26 @@ class Outline(sourdough.types.Lexicon):
         self.contents[parent].add(component)
         return self
         
+
+@dataclasses.dataclass
+class Plan(sourdough.Component):
+    """Initialized sourdough Component instances without structure.
     
+    Args:
+        contents (Sequence[sourdough.Component]): stored list with Component 
+            instances in its final, iterable structure.
+              
+    """
+    contents: Sequence[sourdough.Component] = dataclasses.field(
+        default_factory = list)
+    
+    """ Class Methods """
+    
+    @classmethod
+    def create(cls, manager: sourdough.base.Manager) -> None:
         
-        
+        return cls   
+              
 
 @dataclasses.dataclass
 class Creator(sourdough.Factory):
