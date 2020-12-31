@@ -35,7 +35,7 @@ class Bases(sourdough.quirks.Loader):
             project. Defaults to 'sourdough.products.Workflow'.
             
     """
-    settings: Union[str, Type] = 'sourdough.Settings'
+    settings: Union[str, Type] = 'sourdough.types.Configuration'
     clerk: Union[str, Type] = 'sourdough.Clerk' 
     manager: Union[str, Type] = 'sourdough.Manager'
     creator: Union[str, Type] = 'sourdough.Factory'
@@ -55,10 +55,10 @@ class Project(sourdough.types.Hybrid):
         contents (Sequence[Union[str, sourdough.Manager]]): stored Manager
             classes, Manager instances, or the names of Manager subclasses 
             stored in 'options'. Defaults to an empty list.
-        settings (Union[Type, str, pathlib.Path]]): a Settings-compatible class,
+        settings (Union[Type, str, pathlib.Path]]): a Configuration-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
-            supported file type with settings for a Settings instance is 
-            located. Defaults to the default Settings instance.
+            supported file type with settings for a Configuration instance is 
+            located. Defaults to the default Configuration instance.
         clerk (Union[Type, str, pathlib.Path]]): a Clerk-compatible class or a 
             str or pathlib.Path containing the full path of where the root 
             folder should be located for file input and output. A 'clerk' must 
@@ -66,8 +66,8 @@ class Project(sourdough.types.Hybrid):
             sourdough. Defaults to the default Clerk instance. 
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             If it is None, the 'name' will be attempted to be inferred from the 
             first section name in 'settings' after 'general' and 'files'. If 
             that fails, 'name' will be the snakecase name of the class. Defaults 
@@ -91,7 +91,7 @@ class Project(sourdough.types.Hybrid):
     contents: Sequence[Any] = dataclasses.field(default_factory = list)
     managers: Union[sourdough.Manager, str] = dataclasses.field(
         default_factory = list)
-    settings: Union[sourdough.Settings, str, pathlib.Path] = None
+    settings: Union[sourdough.types.Configuration, str, pathlib.Path] = None
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
     bases: object = Bases()
     name: str = None
@@ -146,9 +146,9 @@ class Project(sourdough.types.Hybrid):
     """ Private Methods """
     
     def _validate_settings(self) -> None:
-        """Validates 'settings' or converts it to a Settings instance.
+        """Validates 'settings' or converts it to a Configuration instance.
         
-        The method also injects the 'general' section of a Settings instance
+        The method also injects the 'general' section of a Configuration instance
         into this Manager instance as attributes. This allows easy, direct 
         access of settings like 'verbose'.
         
@@ -162,7 +162,7 @@ class Project(sourdough.types.Hybrid):
             self.settings = self.bases.settings(contents = self.settings)
         else:
             raise TypeError(
-                'settings must be a Settings, Path, str, or None type.')
+                'settings must be a Configuration, Path, str, or None type.')
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         return self

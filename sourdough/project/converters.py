@@ -26,6 +26,32 @@ Results = sourdough.types.Lexicon
 
 
 @dataclasses.dataclass
+class Outline(sourdough.types.Lexicon):
+    
+    
+    """ Class Methods """
+    
+    @classmethod
+    def create(cls, settings: sourdough.types.Configuration) -> None:
+        
+        return cls
+    
+    """ Public Methods """
+    
+    def add_component(self, component: sourdough.Component) -> None:
+        self.contents[component.name] = component
+        return self
+    
+    def add_subcomponent(self, parent: str, 
+                         component: sourdough.Component) -> None:
+        self.contents[parent].add(component)
+        return self
+        
+    
+        
+        
+
+@dataclasses.dataclass
 class Creator(sourdough.Factory):
     """
             
@@ -48,20 +74,20 @@ class Creator(sourdough.Factory):
                 components.
             
         """
-        # Creates Lexicon to store a project outline.
+        # Creates an object to store the project outline.
         outline = Outline()
         # Determines sections of 'project.settings' to exclude in creating 
         # sourdough project components.
         skip_suffixes = self.manager.project.settings.rules.skip
         skipables = [i for i in self.manager.project.settings.keys() 
-                  if not i.endswith(tuple(skip_suffixes))]
+                     if not i.endswith(tuple(skip_suffixes))]
         # Creates subset of 'project.settings' with only sections related to
         # sourdough project components.
         component_settings = self.manager.project.settings.excludify(skipables)
         for section in component_settings.keys():
             outline[section] = self._process_section(
                 name = section, 
-                outline = outline)
+                base = self.manager.default_design)
         return outline
 
     def create_plan(self) -> Union[Plan, Sequence[Plan]]:
@@ -87,7 +113,7 @@ class Creator(sourdough.Factory):
     
     """ Private Methods """
     
-    def _process_section(self, name: str, outline: Outline, **kwargs) -> Outline:
+    def _process_section(self, name: str, base: str, **kwargs) -> Outline:
         """[summary]
 
         Args:
@@ -98,8 +124,10 @@ class Creator(sourdough.Factory):
             sourdough.types.Lexicon: [description]
             
         """
-        node = sourdough.base.Node(name = name, **kwargs)
-        # Iterates through each key, value pair in a Settings section and stores 
+        kwargs = self._initialize_kwargs(name = name, kwargs = kwargs)
+        kwargs['base'] = base
+        attributes = {}
+        # Iterates through each key, value pair in a Configuration section and stores 
         # or extracts the information needed to create a Component subclass
         # instance.
         for key, value in self.manager.project.settings[name].items():
@@ -110,22 +138,46 @@ class Creator(sourdough.Factory):
             prefix, suffix = self._divide_key(key = key)
             # Depending upon 'suffix', different actions are taken.
             if suffix in self.manager.project.settings.rules.special:
-                node.builders[suffix] = value
+                kwargs[suffix] = value
             elif suffix in self.mananger.project.bases.component_suffixes:
+                value_sequence = sourdough.tools.listify(value)
                 contains = suffix.rstrip('s')
-                items = [
-                    tuple(i, contains) for i in sourdough.tools.listify(value)]
-                node.contents.append({prefix: items})
+                items = [tuple(i, contains) for i in value_sequence]
+                if prefix == name:
+                    kwargs['contents'].extend(items)
+                else:
+                    kwargs['subcontents'][prefix] = items
             # All other keys are presumed to be attributes to be added to a
             # Component instance.
             else:
-                node.builders['attributes'].update({key: value})
+                attributes[key] = value
+        component = self._create_component(**kwargs)
         try:
-            node.executors = self.manager.project.settings[f'{name}_parameters']
+            component.parameters = self.manager.project.settings[
+                f'{name}_parameters']
         except KeyError:
             pass
-        return node
-        
+        for key, value in attributes.items():
+            setattr(component, key, value)
+        return component
+
+    def _initialize_kwargs(self, name: str, 
+                           kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            kwargs (Dict[str, Any]): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+        """
+        new_kwargs = self.mananger.project.settings.rules.special
+        new_kwargs.update(kwargs)
+        new_kwargs['name'] = name
+        new_kwargs['subcontents'] = {}
+        return new_kwargs
+     
     def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
         """[summary]
 
@@ -140,11 +192,40 @@ class Creator(sourdough.Factory):
         if divider is None:
             divider = '_'
         if divider in key:
-            suffix = key.split('_')[-1]
+            suffix = key.split(divider)[-1]
             prefix = key[:-len(suffix) - 1]
         else:
             prefix = suffix = key
         return prefix, suffix
+
+    def _create_component(self, name: str, **kwargs) -> sourdough.Component:
+        """[summary]
+        """
+        try: 
+            component = self.mananger.project.bases.component.acquire(
+                name = name)
+        except KeyError:
+            try:
+                component = self.mananger.project.bases.component.acquire(
+                    name = kwargs['design'])
+            except (KeyError, TypeError):
+                component = self.mananger.project.bases.component.acquire(
+                    name = node.builders['base'])
+        attributes = node.builders.pop('attributes')
+        kwargs = node.builders
+        kwargs['parameters'] = node.executors
+        kwargs['name'] = node.name
+        kwargs['contents'] = node.contents
+        component = component(**kwargs)
+        for key, value in attributes.items():
+            setattr(component, key, value)
+        component.contents, outline = self._process_contents(
+            component = component, 
+            outline = outline)
+        return component, outline
+
+
+
 
     def _process_node(self, node: sourdough.base.Node, 
                       outline: Outline) -> Tuple[sourdough.Component, Outline]:

@@ -26,8 +26,8 @@ class Instructions(sourdough.types.Progression):
             Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance.
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance.
             Defaults to None. 
         design (str): name of design base class associated with the Component
             to be created. Defaults to None.
@@ -59,7 +59,7 @@ class Instructions(sourdough.types.Progression):
 
 @dataclasses.dataclass
 class Blueprint(sourdough.Product):
-    """Class of essential information from Settings.
+    """Class of essential information from Configuration.
     
     Args:
         contents (Mapping[str, Instructions]]): stored dictionary which contains
@@ -83,8 +83,8 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
             Project instance.   
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -136,8 +136,8 @@ class Plan(sourdough.Product, sourdough.types.Lexicon):
             values are Component subclass instances. Defaults to an empty dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
         identification (str): a unique identification name for the related 
             Project instance.   
                             

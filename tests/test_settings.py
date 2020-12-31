@@ -1,5 +1,5 @@
 """
-test_settings: unit tests for Settings
+test_settings: unit tests for Configuration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -29,13 +29,13 @@ def test_settings():
             'parser_tasks': 'divide',
             'divide_techniques': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
-    ini_settings = sourdough.Settings(
+    ini_settings = sourdough.types.Configuration(
         contents = pathlib.Path('tests') / 'ini_settings.ini')
     assert ini_settings.contents == actual_settings
-    py_settings = sourdough.Settings(
+    py_settings = sourdough.types.Configuration(
         contents = pathlib.Path('tests') / 'py_settings.py')
     assert py_settings.contents == actual_settings
-    json_settings = sourdough.Settings(
+    json_settings = sourdough.types.Configuration(
         contents = pathlib.Path('tests') / 'json_settings.json')
     assert json_settings.contents == actual_settings
     assert ini_settings['general']['seed'] == 43

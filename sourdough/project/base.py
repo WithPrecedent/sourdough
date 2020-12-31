@@ -13,7 +13,6 @@ Contents:
     Product (Registrar, Element, Lexicon, ABC): base class for outputs of a 
         Creator's 'create' method.
     Component (Librarian, Registrar, Element, ABC):
-
     
 """
 from __future__ import annotations
@@ -24,38 +23,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-
-                       
-@dataclasses.dataclass
-class Node(abc.ABC):
-    """
-    
-    Args:
-        contents (Any): item(s) contained by a Component instance.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-            
-    """
-    __slots__ = ['name', 'contents', 'builders', 'executors']
-    name: str
-    contents: Sequence[Mapping[str, Tuple[str, str]]]
-    builders: Mapping[str, Any]
-    executors: Mapping[str, Any]
-
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Creates empty lists/dicts for 'contains', 'builders', and 'executors'
-        # because default values are not permitted with __slots__.
-        self.contents = []
-        self.builders = self.executors = {}
-        self.builders['attributes'] = {}
             
 
 @dataclasses.dataclass
@@ -136,8 +103,8 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
         project (sourdough.Project)
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. If it is None, the 'name' will be attempted to be 
@@ -256,8 +223,8 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
         contents (Any): item(s) contained by a Component instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. 
@@ -266,6 +233,7 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
             
     """
     contents: Any = None
+    subcontents: Any = None
     name: str = None
     needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
     produces: str = None

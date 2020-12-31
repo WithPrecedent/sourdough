@@ -53,7 +53,6 @@ from .utilities import tools
 from .core import types
 from .core import quirks
 from .core import workshop
-from .core.configuration import Settings
 from .core.files import Clerk
 
 from .project.base import Manager
@@ -79,7 +78,7 @@ from .project import interface
 #     'quirks': 'core.quirks',
 #     'options': 'project.interface.options',
 #     'rules': 'project.interface.rules',
-#     'Settings': 'core.configuration.Settings',
+#     'Configuration': 'core.configuration.Configuration',
 #     'Clerk': 'core.files.Clerk',
 #     'Creator': 'project.base.Creator',
 #     'Product': 'project.base.Product',
@@ -115,7 +114,7 @@ from .project import interface
 # from .project.resources import rules
 # from .project import resources
 
-# # from .core.configuration import Settings
+# # from .core.configuration import Configuration
 # from .core.files import Clerk
 # from .project.base import Creator
 # from .project.base import Product

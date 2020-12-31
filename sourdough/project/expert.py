@@ -87,8 +87,8 @@ class Node(sourdough.quirks.Registrar, sourdough.quirks.Element,
             Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance.
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance.
             Defaults to None. 
         design (str): name of design base class associated with the Component
             to be created. Defaults to None.
@@ -123,8 +123,8 @@ class Workflow(sourdough.Component, sourdough.Hybrid):
             Defaults to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. 
@@ -168,8 +168,8 @@ class Worker(sourdough.quirks.Registar, sourdough.quirks.Element,
         contents (Any): item(s) contained by a Workflow instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes. 
@@ -279,8 +279,8 @@ class Contest(Worker):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -323,8 +323,8 @@ class Study(Worker):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -366,8 +366,8 @@ class Survey(Worker):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.

@@ -35,8 +35,8 @@ class Aggregation(sourdough.products.Workflow):
             to an empty set.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -70,8 +70,8 @@ class SerialFlow(sourdough.products.Workflow, abc.ABC):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -113,8 +113,8 @@ class Cycle(SerialFlow):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -172,8 +172,8 @@ class Pipeline(SerialFlow):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -207,8 +207,8 @@ class ParallelFlow(sourdough.products.Workflow, abc.ABC):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -274,8 +274,8 @@ class Contest(ParallelFlow):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -318,8 +318,8 @@ class Study(ParallelFlow):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.
@@ -361,8 +361,8 @@ class Survey(ParallelFlow):
             to an empty list.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance. 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
             When subclassing, it is sometimes a good idea to use the same 'name' 
             attribute as the base class for effective coordination between 
             sourdough classes.

@@ -1,6 +1,6 @@
 """
 .. module:: filer test
-:synopsis: tests Settings class
+:synopsis: tests Configuration class
 :author: Corey Rayburn Yung
 :copyright: 2020
 :license: Apache-2.0
@@ -12,7 +12,7 @@ import sourdough
 
 
 def test_filer():
-    settings = sourdough.Settings(
+    settings = sourdough.types.Configuration(
         contents = pathlib.Path('tests') / 'ini_settings.ini')
     filer = sourdough.Clerk(settings = settings)
     # Tests injection from settings.

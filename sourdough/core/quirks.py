@@ -50,14 +50,14 @@ class Element(object):
     be used to create a variety of sourdough objects and composite structures 
     such as trees, cycles, contests, studies, and graphs.
 
-    Namespaces: '_get_name'
-    
+    Namespaces: 'name', '_get_name'
+      
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Settings instance, 'name' 
-            should match the appropriate section name in the Settings instance.
-            Defaults to None. 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in the 
+            Configuration instance. Defaults to None. 
 
     """
     name: str = None
@@ -94,9 +94,9 @@ class Element(object):
 class Registrar(object):
     """Registry interface for core sourdough classes.
     
-    This mixin automatically registers all concrete (non-abstract) subclasses
-    using the 'registry' classmethod which must be provided by the class using
-    this quirk.
+    A Registrar automatically registers all concrete (non-abstract) subclasses
+    using the 'registry' class attribute which must be provided by the class 
+    using this quirk.
 
     Namespaces: 'registry', 'register', 'acquire'
 
@@ -118,31 +118,39 @@ class Registrar(object):
 
     @classmethod
     def register(cls) -> None:
-        """Registers a subclass in a Catalog."""
+        """Registers a subclass in a Catalog.
+        
+        The default 'register' method uses the snake-case name of the class as
+        the key for the stored subclass.
+        
+        """
         key = sourdough.tools.snakify(cls.__name__)
         cls.registry[key] = cls
         return cls
 
     @classmethod
     def acquire(cls, key: str) -> Any:
-        """[summary]
+        """Returns the stored class matching 'key'.
 
         Args:
-            key (str): [description]
+            key (str): name of stored class to returned, as defined by the
+                'register' method.
 
         Returns:
-            Any: [description]
+            Any: stored subclass.
             
         """
-        return cls.registry.select(key)
+        return cls.registry.select(key = key)
     
     
 @dataclasses.dataclass
 class Librarian(object):
     """Library interface for core sourdough classes.
     
-    This mixin automatically registers all subclass instances using the 
-    'deposit' method which must be provided by the class using this quirk.
+    Librarian automatically registers all subclass instances using the 'deposit' 
+    method which stores the subclass instances in 'library'.
+    
+    To use this quirk, the '__post_init__' method must be called.
     
     """
     library: ClassVar[Mapping[str, object]] = sourdough.types.Catalog()
@@ -162,21 +170,36 @@ class Librarian(object):
     """ Public Methods """
 
     def deposit(self) -> None:
-        """Stores a subclass instance in a Catalog."""
+        """Stores a subclass instance in a Catalog.
+        
+        The 'deposit' method with use the 'name' attribute of an instance, if
+        it exists. Otherwise, it will use the snake-case '__name__' or 
+        '__class_name__' of the instance.
+        
+        """
         try:
             self.library[self.name] = self
         except (AttributeError, TypeError):
             try:
-                self.library[self.__name__] = self
+                self.library[sourdough.tools.snakify(self.__name__)] = self
             except (AttributeError, TypeError):
-                self.library[self.__class__.__name__] = self 
+                self.library[sourdough.tools.snakify(
+                    self.__class__.__name__)] = self 
         return self
     
     """ Class Methods """
 
     @classmethod
-    def borrow(cls, key: str) -> Any:
-        """
+    def borrow(cls, key: str) -> object:
+        """Returns the stored class matching 'key'.
+
+        Args:
+            key (str): name of stored subclass instance to be returned, as 
+                defined by the 'deposit' method.
+
+        Returns:
+            object: stored subclass isntance.
+            
         """
         return copy.deepcopy(cls.library.select(key))
 

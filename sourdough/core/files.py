@@ -74,7 +74,7 @@ class Clerk(object):
     sourdough, pandas, and numpy objects.
 
     Args:
-        settings (sourdough.Settings): a Settings instance, preferably with a 
+        settings (sourdough.types.Configuration): a Configuration instance, preferably with a 
             section named 'filer' or 'files' with file-management related 
             settings. If 'settings' does not have file configuration options or
             if 'settings' is None, internal defaults will be used. Defaults to
@@ -92,7 +92,7 @@ class Clerk(object):
             'root_folder'. Defaults to 'output'.
 
     """
-    settings: sourdough.Settings = None
+    settings: sourdough.types.Configuration = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -373,11 +373,11 @@ class Clerk(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.Settings) -> Mapping[Any, Any]:
+            settings: sourdough.types.Configuration) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
-            settings (Settings): an instance with a section named 'files' which
+            settings (Configuration): an instance with a section named 'files' which
                 contains default parameters for file transfers.
 
         Returns:
@@ -695,8 +695,8 @@ class FileFormat(sourdough.quirks.Loader):
     Args:
         name (str): designates the name of the class instance used
             for internal referencing throughout sourdough. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
+            needs settings from the shared Configuration instance, 'name' should
+            match the appropriate section name in that Configuration instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between sourdough
             classes. Defaults to None or __class__.__name__.lower().
