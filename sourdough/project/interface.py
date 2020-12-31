@@ -5,6 +5,9 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Bases (Loader): stores base classes for a Project. Bases allows the base
+        classes to be listed as import strings that will be lazily loaded when
+        first accessed. 
     Project (Hybrid): access point and interface for creating and implementing
         sourdough projects.
 

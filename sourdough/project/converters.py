@@ -147,7 +147,7 @@ class Creator(sourdough.Factory):
         return prefix, suffix
 
     def _process_node(self, node: sourdough.base.Node, 
-                      outline: Outline) -> sourdough.Component:
+                      outline: Outline) -> Tuple[sourdough.Component, Outline]:
         """ 
         """
         component, outline = self._create_component(
@@ -157,9 +157,9 @@ class Creator(sourdough.Factory):
             new_contents = []
             for item in component:
                 if isinstance(item, str):
-                    node = outline.pop(item)
+                    inner_node = outline.pop(item)
                     component, outline = self._process_node(
-                        node = node, 
+                        node = inner_node, 
                         outline = outline)
                     new_contents.append(component)
                 elif isinstance(item, inspect.isclass):
@@ -170,7 +170,7 @@ class Creator(sourdough.Factory):
         return component, outline
 
     def _create_component(self, node: sourdough.base.Node,
-                          outline: Outline) -> sourdough.Component:
+                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
         """[summary]
         """
         try: 
@@ -206,6 +206,7 @@ class Creator(sourdough.Factory):
 
         Returns:
             Tuple[sourdough.Component, Outline]: [description]
+            
         """
         if component.parallel:
             component, outline = self._process_parallel(
@@ -245,8 +246,8 @@ class Creator(sourdough.Factory):
             manager = manager)
         return component
 
-    def _process_serial(self, component: sourdough.Component, 
-                         manager: sourdough.Manager) -> sourdough.Component:
+    def _process_serial(self, component: sourdough.Component,
+                        outline: Outline) -> Tuple[sourdough.Component, Outline]:
         """[summary]
 
         Args:
