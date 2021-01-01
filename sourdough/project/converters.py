@@ -6,6 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     
+    
 """
 from __future__ import annotations
 import copy
@@ -16,13 +17,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough  
-
-
-""" Proxy Types for Annotation """
-
-Outline = sourdough.types.Lexicon
-Plan = sourdough.Component
-Results = sourdough.types.Lexicon
 
 
 @dataclasses.dataclass
