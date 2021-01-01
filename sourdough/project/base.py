@@ -5,7 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Manager (Registrar, Hybrid):
+    Director (Registrar, Hybrid):
     Creator (Registrar, ABC): base class for creating outputs for a sourdough
         project. All subclasses must have a 'create' method. All concrete
         subclasses are automatically registered in the 'registry' class
@@ -26,71 +26,73 @@ import sourdough
             
 
 @dataclasses.dataclass
-class Factory(sourdough.types.Lexicon, abc.ABC):
+class Factory(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
     """
             
     Args:
         
     """
     contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
-    manager: object = None
-   
-    """ Initialization Methods """
+    base: Type = None
 
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        # Sets index for iteration.
-        self.index = 0
-            
     """ Public Methods """
     
-    def advance(self) -> Any:
-        """Returns next product created in iterating a Factory instance."""
-        product = self.contents[self.contents.keys()[self.index]]
-        self.mananger.contents[product] = self.__next__()
-        return self
+    def create(self, name: str, director: sourdough.Director, 
+               **kwargs) -> object:
+        """[summary]
 
-    def complete(self) -> None:
-        """Executes each step in an instance's iterable."""
-        for action, product in iter(self):
-            self.advance()
-        return self
-
-    """ Dunder Methods """
- 
-    def __next__(self) -> object:
-        """Returns product from next stage in an instance iterable.
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
 
         Returns:
-            Any: item project by the 'create' method of a Creator.
+            object: [description]
             
         """
-        if self.index < len(self.contents):
-            action = self.contents.keys()[self.index]
-            product = self.contents[action]
-            method = f'create_{product}'
-            if self.index < 1:
-                previous_product = 'settings'
-            else:
-                previous_product = self.contents(
-                    self.contents.keys()[self.index - 1])
-            if (hasattr(self.manager.project, 'verbose') 
-                    and self.manager.project.verbose):
-                print(f'{action} {product} from {previous_product}')
-            self.index += 1
-            return getattr(self, method)()
+        for parameter in self.contents.keys():
+            if parameter not in kwargs:
+                try:
+                    kwargs[parameter] = getattr(self, f'get_{parameter}')(
+                        name = name, 
+                        director = director)
+                except KeyError:
+                    try:
+                        kwargs[parameter] = director.project.settings[name][
+                            f'{name}_{parameter}']
+                    except KeyError:
+                        try: 
+                            kwargs[parameter] = director.project.settings[name][
+                                parameter]
+                        except KeyError:
+                            pass
+        product = self.get_product(name = name, **kwargs)
+        return product(**kwargs)
+
+    def get_product(self, name: str, **kwargs: Dict[str, Any]) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        if hasattr(self.base, 'registry'):
+            try:
+                product = self.base.registry.acquire(key = name)
+            except KeyError:
+                try:
+                    product = self.base.registry.acquire(key = kwargs['design'])
+                except (KeyError, TypeError):
+                    product = self.base
         else:
-            StopIteration
-        
+            product = self.base
+        return product        
+    
           
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
-              sourdough.types.Lexicon):
+class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
+               sourdough.types.Lexicon):
     """Constructs, organizes, and implements part of a sourdough project.
         
     Args:
@@ -111,7 +113,7 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             inferred from the first section name in 'settings' after 'general' 
             and 'files'. If that fails, 'name' will be the snakecase name of the
             class. Defaults to None. 
-        identification (str): a unique identification name for a Manager 
+        identification (str): a unique identification name for a Director 
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
@@ -122,22 +124,22 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
         bases (ClassVar[object]): contains information about default base 
-            classes used by a Manager instance. Defaults to an instance of 
+            classes used by a Director instance. Defaults to an instance of 
             Bases.
         rules (ClassVar[object]):
         options (ClassVar[object]):
          
     """
-    contents: Mapping[str, object] = dataclasses.field()
+    contents: Mapping[str, Type] = dataclasses.field(default_factory = dict)
     project: Union[object, Type] = None
-    creator: Union[object, Type] = None
+    factory: Union[object, Type] = None
     name: str = None
     automatic: bool = True
     data: object = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'name', 'creator'])
+        'name', 'factory'])
     default_design: str = 'pipeline'
-    registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
+    registry: ClassVar[Mapping[str, Director]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -157,8 +159,15 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Loader,
 
     """ Public Methods """
     
+    def draft(self) -> None:
+        
+    
+    
+    
+    
+    
     def advance(self) -> Any:
-        """Returns next product created in iterating a Manager instance."""
+        """Returns next product created in iterating a Director instance."""
         return self.__next__()
 
     def complete(self) -> None:
@@ -247,9 +256,9 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
     """ Required Subclass Methods """
 
     @abc.abstractmethod
-    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
+    def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
-        return manager
+        return director
           
     """ Public Methods """ 
     

@@ -17,37 +17,8 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-
-
-@dataclasses.dataclass
-class Rules(object):
-    """Designates rules for parsing a Settings instance.
     
-    Args:
-        skip (Sequence[str]): designates suffixes of Settings sections to ignore 
-            when creating project components. Defaults to a list of 'general', 
-            'files', and 'parameters'.
-        special (Mapping[str: Any]): designates suffixes which must be included
-            to properly create a Component. For any str listed in 'special'. 
-            Defaults to a dict with the contents designated in the class 
-            annotations.
-            
-    To Do:
-        Move 'special' to inferences from Component base class annotation.
-        
-    """
-    skip: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files', 'parameters'])
-    special: Mapping[str, Any] = dataclasses.field(
-        default_factory = lambda: {
-            'design': None, 
-            'needs': [], 
-            'produces': str, 
-            'iterations': 1, 
-            'criteria': [], 
-            'parallel': False})
-
-
+    
 @dataclasses.dataclass
 class Settings(sourdough.types.Configuration):
     """Loads and Stores configuration settings for a Project.
@@ -80,7 +51,279 @@ class Settings(sourdough.types.Configuration):
                 'interim_format': 'csv',
                 'final_format': 'csv',
                 'file_encoding': 'windows-1252'}})
-    rules: object = Rules()
+    skip: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files', 'parameters'])
+
+
+@dataclasses.dataclass
+class Outline(sourdough.types.Lexicon):
+    """Initialized sourdough Component instances without structure.
+    
+    Args:
+        contents (Mapping[str, sourdough.Component]): stored dictionary with 
+            keys as names of Components and values as Component instances.
+              
+    """
+    contents: Mapping[str, sourdough.Component] = dataclasses.field(
+        default_factory = dict)
+    
+    """ Class Methods """
+    
+    @classmethod
+    def create(cls, manager: sourdough.base.Manager) -> None:
+        
+        return cls
+    
+    """ Public Methods """
+    
+    def add_component(self, component: sourdough.Component) -> None:
+        self.contents[component.name] = component
+        return self
+    
+    def add_subcomponent(self, parent: str, 
+                         component: sourdough.Component) -> None:
+        self.contents[parent].add(component)
+        return self
+ 
+
+@dataclasses.dataclass
+class Creator(sourdough.base.Factory):
+    """
+    """
+    contents: Mapping[str, str] = dataclasses.field(default_factory = lambda: {
+        'name': None,
+        'contents': [],
+        'subcontents': {},
+        'design': 'pipeline', 
+        'needs': [], 
+        'produces': str, 
+        'iterations': 1, 
+        'criteria': [], 
+        'parallel': False,
+        'parameters': {}})
+    base: Type = sourdough.base.Component
+    
+    """ Public Methods """
+
+    def draft(self, )
+
+    def get_name(self, name: str, director: sourdough.Director) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            str: [description]
+        """
+        return name
+
+    def get_contents(self, name: str, director: sourdough.Director) -> List[str]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            List[str]: [description]
+        """
+        section = director.project.settings[name]
+        component_suffixes = director.project.bases.component_suffixes
+        contents = self.contents['contents']
+        for key, value in section.items():
+            prefix, suffix = self._divide_key(key = key)
+            if prefix == name and suffix in component_suffixes:
+                value_sequence = sourdough.tools.listify(value)
+                contains = suffix.rstrip('s')
+                items = [tuple(item, contains) for item in value_sequence]
+                contents.append(items)
+        return contents
+    
+    def get_subcontents(self, name: str, 
+                        director: sourdough.Director) -> Dict[str, str]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            Dict[str, str]: [description]
+        """
+        section = director.project.settings[name]
+        component_suffixes = director.project.bases.component_suffixes
+        subcontents = self.contents['subcontents']
+        for key, value in section.items():
+            prefix, suffix = self._divide_key(key = key)
+            if prefix != name and suffix in component_suffixes:
+                value_sequence = sourdough.tools.listify(value)
+                contains = suffix.rstrip('s')
+                items = [tuple(item, contains) for item in value_sequence]
+                if prefix not in subcontents:
+                    subcontents[prefix] = []
+                subcontents[prefix].append(items)
+        return subcontents
+    
+    def get_parameters(self, name: str, 
+                       director: sourdough.Director) -> Dict[str, str]:
+        try:
+            return director.project.settings[f'{name}_parameters']
+        except KeyError:
+            return self.contents['parameters']
+
+    """ Private Methods """
+         
+    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            
+            Tuple[str, str]: [description]
+            
+        """
+        if divider is None:
+            divider = '_'
+        if divider in key:
+            suffix = key.split(divider)[-1]
+            prefix = key[:-len(suffix) - 1]
+        else:
+            prefix = suffix = key
+        return prefix, suffix
+
+
+          
+@dataclasses.dataclass
+class Manager(sourdough.base.Director):
+    """Constructs, organizes, and implements part of a sourdough project.
+        
+    Args:
+        contents (Mapping[str, object]]): stored objects created by the 
+            'create' methods of 'stages'. Defaults to an empty dict.
+        stages (Sequence[Union[Type, str]]): a Creator-compatible classes or
+            strings corresponding to the keys in registry of the default
+            'stage' in 'bases'. Defaults to a list of 'architect', 
+            'builder', and 'worker'. 
+        project (sourdough.Project)
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example if a 
+            sourdough instance needs settings from a Configuration instance, 'name' 
+            should match the appropriate section name in the Configuration instance. 
+            When subclassing, it is sometimes a good idea to use the same 'name' 
+            attribute as the base class for effective coordination between 
+            sourdough classes. If it is None, the 'name' will be attempted to be 
+            inferred from the first section name in 'settings' after 'general' 
+            and 'files'. If that fails, 'name' will be the snakecase name of the
+            class. Defaults to None. 
+        identification (str): a unique identification name for a Director 
+            instance. The name is used for creating file folders related to the 
+            project. If it is None, a str will be created from 'name' and the 
+            date and time. Defaults to None.   
+        automatic (bool): whether to automatically advance 'director' (True) or 
+            whether the director must be advanced manually (False). Defaults to 
+            True.
+        data (object): any data object for the project to be applied. If it is
+            None, an instance will still execute its workflow, but it won't
+            apply it to any external data. Defaults to None.  
+        bases (ClassVar[object]): contains information about default base 
+            classes used by a Director instance. Defaults to an instance of 
+            Bases.
+        rules (ClassVar[object]):
+        options (ClassVar[object]):
+         
+    """
+    contents: Mapping[str, object] = dataclasses.field()
+    project: Union[object, Type] = None
+    creator: Union[object, Type] = None
+    name: str = None
+    automatic: bool = True
+    data: object = None
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'name', 'creator'])
+    default_design: str = 'pipeline'
+    registry: ClassVar[Mapping[str, Director]] = sourdough.types.Catalog()
+    
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Calls validation methods based on items listed in 'validations'.
+        for validation in self.validations:
+            getattr(self, f'_validate_{validation}')()
+        # Advances through 'creator' stages if 'automatic' is True.
+        if self.automatic:
+            self.complete()
+
+    """ Public Methods """
+    
+    def draft(self) -> None:
+        
+    
+    
+    
+    
+    
+    def advance(self) -> Any:
+        """Returns next product created in iterating a Director instance."""
+        return self.__next__()
+
+    def complete(self) -> None:
+        """Advances through the stored Creator instances.
+        
+        The results of the iteration is that each item produced is stored in 
+        'content's with a key of the 'produces' attribute of each stage.
+        
+        """
+        self.creator.complete()
+        return self
+    
+    """ Private Methods """
+    
+    def _validate_name(self) -> None:
+        """Creates 'name' if one doesn't exist."""
+        if not self.name:
+            self.name = sourdough.tools.snakify(self.__class__)
+        return self
+    
+    def _validate_creator(self) -> None:
+        """Creates 'name' if one doesn't exist.
+        
+        If 'name' was not passed, this method first tries to infer 'name' as the 
+        first appropriate section name in 'settings'. If that doesn't work, it 
+        uses the snakecase name of the class.
+        
+        """
+        if not self.name:
+            node_sections = self.settings.excludify(subset = self.rules.skip)
+            try:
+                self.name = node_sections.keys()[0]
+            except IndexError:
+                self.name = sourdough.tools.snakify(self.__class__)
+        return self
+    
+    """ Dunder Methods """
+
+    def __iter__(self) -> None:
+        """
+        """
+        self.creator.__next__()
+        return self
+ 
+    def __next__(self) -> None:
+        """
+        """
+        self.creator.__next__()
+        return self
+
 
 
 
@@ -92,25 +335,25 @@ class Settings(sourdough.types.Configuration):
 @dataclasses.dataclass
 class Workflow(sourdough.base.Component):
     
-    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
+    def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
-        return manager
+        return director
 
 
 @dataclasses.dataclass
 class Step(sourdough.base.Component):
     
-    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
+    def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
-        return manager
+        return director
 
 
 @dataclasses.dataclass
 class Technique(sourdough.base.Component):
     
-    def apply(self, manager: sourdough.Manager) -> sourdough.Manager:
+    def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
-        return manager
+        return director
 
 
         

@@ -28,32 +28,54 @@ class Bases(sourdough.quirks.Loader):
     """Base classes for a sourdough projects.
     
     Args:
-        manager (Union[str, Type]): class for organizing, implementing, and
+        director (Union[str, Type]): class for organizing, implementing, and
             iterating the package's classes and functions. Defaults to 
-            'sourdough.Manager'.
-        workflow (Union[str, Type]): the workflow to use in a sourdough 
-            project. Defaults to 'sourdough.products.Workflow'.
+            'sourdough.Director'.
             
     """
-    settings: Union[str, Type] = 'sourdough.types.Configuration'
+    settings: Union[str, Type] = 'sourdough.Settings'
     clerk: Union[str, Type] = 'sourdough.Clerk' 
-    manager: Union[str, Type] = 'sourdough.Manager'
-    creator: Union[str, Type] = 'sourdough.Factory'
-    component: Union[str, Type] = 'sourdough.Component'
+    director: Union[str, Type] = 'sourdough.Director'
+    factory: Union[str, Type] = 'sourdough.Creator'
+    component: Union[str, Type] = 'sourdough.base.Component'
 
     """ Properties """
     
     def component_suffixes(self) -> Tuple[str]:
         return tuple(key + 's' for key in self.component.registry.keys()) 
     
+    def director_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.director.registry.keys()) 
+   
+    """ Public Methods """
+   
+    def get_class(self, name: str, kind: str) -> Type:
+        """[summary]
 
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        base = getattr(self, kind)
+        if hasattr(base, 'registry'):
+            try:
+                product = base.registry.acquire(key = name)
+            except KeyError:
+                product = base
+        else:
+            product = base
+        return product  
+   
+   
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid):
     """Constructs, organizes, and implements a a collection of projects.
 
     Args:
-        contents (Sequence[Union[str, sourdough.Manager]]): stored Manager
-            classes, Manager instances, or the names of Manager subclasses 
+        contents (Sequence[Union[str, sourdough.Director]]): stored Director
+            classes, Director instances, or the names of Director subclasses 
             stored in 'options'. Defaults to an empty list.
         settings (Union[Type, str, pathlib.Path]]): a Configuration-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
@@ -72,7 +94,7 @@ class Project(sourdough.types.Hybrid):
             first section name in 'settings' after 'general' and 'files'. If 
             that fails, 'name' will be the snakecase name of the class. Defaults 
             to None. 
-        identification (str): a unique identification name for a Manager 
+        identification (str): a unique identification name for a Director 
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
@@ -84,22 +106,23 @@ class Project(sourdough.types.Hybrid):
             apply it to any external data. Defaults to None.  
         validations (Sequence[str]): 
         bases (ClassVar[object]): contains information about default base 
-            classes used by a Manager instance. Defaults to an instance of 
+            classes used by a Director instance. Defaults to an instance of 
             SimpleBases.
 
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)
-    managers: Union[sourdough.Manager, str] = dataclasses.field(
+    directors: Union[sourdough.base.Director, str] = dataclasses.field(
         default_factory = list)
     settings: Union[sourdough.types.Configuration, str, pathlib.Path] = None
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
     bases: object = Bases()
+    factory: Union[sourdough.base.Factory, str] = None
     name: str = None
     identification: str = None
     automatic: bool = True
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'clerk', 'managers'])
+        'settings', 'name', 'identification', 'clerk', 'directors', 'factory'])
     
     """ Initialization Methods """
 
@@ -124,22 +147,22 @@ class Project(sourdough.types.Hybrid):
             
     """ Public Methods """
     
-    def add_manager(self, manager: Union[str, Type, object]) -> None:
+    def add_director(self, director: Union[str, Type, object]) -> None:
         """
 
         Args:
             mananger (Union[str, Type, object]): [description]
         """
-        self.managers.append(self._validate_manager(manager = manager))
+        self.directors.append(self._validate_director(director = director))
         return self  
     
     def advance(self) -> Any:
-        """Returns next product created in iterating a Manager instance."""
+        """Returns next product created in iterating a Director instance."""
         return self.__next__()
 
     def complete(self) -> None:
         """Executes each step in an instance's iterable."""
-        for manager in iter(self):
+        for director in iter(self):
             self.__next__()
         return self
                               
@@ -149,7 +172,7 @@ class Project(sourdough.types.Hybrid):
         """Validates 'settings' or converts it to a Configuration instance.
         
         The method also injects the 'general' section of a Configuration instance
-        into this Manager instance as attributes. This allows easy, direct 
+        into this Director instance as attributes. This allows easy, direct 
         access of settings like 'verbose'.
         
         """
@@ -218,39 +241,53 @@ class Project(sourdough.types.Hybrid):
             raise TypeError('clerk must be a Clerk, Path, str, or None type.')
         return self
 
-    def _validate_managers(self) -> None:
-        """Validates 'contents' or converts it to Manager instances.
+    def _validate_directors(self) -> None:
+        """Validates 'contents' or converts it to Director instances.
         
         """
         if not self.contents:
             try:
-                self.contents = self.settings[self.name][f'{self.name}_managers']
+                self.contents = self.settings[self.name][
+                    f'{self.name}_directors']
             except KeyError:
                 pass
         new_contents = []
         for item in self.contents:
-            new_contents.append(self._validate_manager(manager = item))
+            new_contents.append(self._validate_director(director = item))
         self.contents = new_contents
         return self
 
-    def _validate_manager(self, manager: Union[str, sourdough.Manager]) -> None:
+    def _validate_director(self, director: Union[str, sourdough.Director]) -> None:
         """
         """
-        if isinstance(manager, str):
-            try:
-                manager = self.bases.manager.registry.select(key = manager)
-            except KeyError:
-                manager = self.bases.manager
-            manager = manager(name = manager, project = self)
-        elif inspect.isclass(manager):
-            manager = manager(project = self)
-        elif isinstance(manager, self.bases.settings.manager):
-            manager.project = self
+        if isinstance(director, str):
+            director = self.bases.get_class(name = director, kind = 'director')
+            director = director(name = director, project = self)
+        elif inspect.isclass(director):
+            director = director(project = self)
+        elif isinstance(director, self.bases.settings.director):
+            director.project = self
         else:
             raise TypeError(
-                'contents must be a list of str or Manager types')
-        return manager
-    
+                'contents must be a list of str or Director types')
+        return director
+
+    def _validate_factory(self) -> None:
+        """Validates 'factory' or converts it to a Factory instance.'"""
+        if isinstance(self.factory, self.bases.factory):
+            pass
+        elif isinstance(self.factory, str):
+            self.factory = self.bases.get_class(
+                name = self.factory, 
+                kind = 'factory')()
+        elif inspect.isclass(self.factory):
+            self.factory = self.factory()
+        elif self.factory is None:
+            self.factory = self.bases.factory()
+        else:
+            raise TypeError('factory must be a Factory, str, or None type.')
+        return self
+       
     """ Dunder Methods """     
 
     def __iter__(self) -> Iterable:
@@ -263,20 +300,20 @@ class Project(sourdough.types.Hybrid):
         return iter(self)
  
     def __next__(self) -> object:
-        """Returns completed Manager instance.
+        """Returns completed Director instance.
 
         Returns:
             Any: item project by the 'create' method of a Creator.
             
         """
-        if self.index < len(self.managers):
-            manager = self.managers[self.index]
+        if self.index < len(self.directors):
+            director = self.directors[self.index]
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Starting {manager.__name__}')
-            manager.complete()
+                print(f'Starting {director.__name__}')
+            director.complete()
             self.index += 1
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Completed {manager.__name__}')
+                print(f'Completed {director.__name__}')
         else:
             raise IndexError()
         return self

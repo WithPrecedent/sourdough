@@ -18,37 +18,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough  
 
-
-@dataclasses.dataclass
-class Outline(sourdough.types.Lexicon):
-    """Initialized sourdough Component instances without structure.
-    
-    Args:
-        contents (Mapping[str, sourdough.Component]): stored dictionary with 
-            keys as names of Components and values as Component instances.
-              
-    """
-    contents: Mapping[str, sourdough.Component] = dataclasses.field(
-        default_factory = dict)
-    
-    """ Class Methods """
-    
-    @classmethod
-    def create(cls, manager: sourdough.base.Manager) -> None:
-        
-        return cls
-    
-    """ Public Methods """
-    
-    def add_component(self, component: sourdough.Component) -> None:
-        self.contents[component.name] = component
-        return self
-    
-    def add_subcomponent(self, parent: str, 
-                         component: sourdough.Component) -> None:
-        self.contents[parent].add(component)
-        return self
-        
+       
 
 @dataclasses.dataclass
 class Plan(sourdough.Component):
