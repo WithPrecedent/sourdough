@@ -18,6 +18,52 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
     
+
+@dataclasses.dataclass
+class Bases(sourdough.quirks.Loader):
+    """Base classes for a sourdough projects.
+    
+    Args:
+        director (Union[str, Type]): class for organizing, implementing, and
+            iterating the package's classes and functions. Defaults to 
+            'sourdough.Director'.
+            
+    """
+    settings: Union[str, Type] = 'sourdough.Settings'
+    clerk: Union[str, Type] = 'sourdough.Clerk' 
+    director: Union[str, Type] = 'sourdough.Director'
+    creator: Union[str, Type] = 'sourdough.Creator'
+    component: Union[str, Type] = 'sourdough.base.Component'
+
+    """ Properties """
+    
+    def component_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.component.registry.keys()) 
+    
+    def director_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.director.registry.keys()) 
+   
+    """ Public Methods """
+   
+    def get_class(self, name: str, kind: str) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        base = getattr(self, kind)
+        if hasattr(base, 'registry'):
+            try:
+                product = base.registry.acquire(key = name)
+            except KeyError:
+                product = base
+        else:
+            product = base
+        return product   
+    
     
 @dataclasses.dataclass
 class Settings(sourdough.types.Configuration):
@@ -56,7 +102,100 @@ class Settings(sourdough.types.Configuration):
 
 
 @dataclasses.dataclass
-class Outline(sourdough.types.Lexicon):
+class Builder(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
+    
+    contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
+
+    """ Public Methods """
+    
+    def create(self, outline: Outline, director: sourdough.Director, 
+               **kwargs) -> object:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            object: [description]
+            
+        """
+        for parameter in self.contents.keys():
+            if parameter not in kwargs:
+                try:
+                    kwargs[parameter] = getattr(self, f'get_{parameter}')(
+                        name = name, 
+                        director = director)
+                except KeyError:
+                    try:
+                        kwargs[parameter] = director.project.settings[name][
+                            f'{name}_{parameter}']
+                    except KeyError:
+                        try: 
+                            kwargs[parameter] = director.project.settings[name][
+                                parameter]
+                        except KeyError:
+                            pass
+        product = self.get_product(name = name, **kwargs)
+        return product(**kwargs)    
+        
+    def create_contained(self, name: str, director: sourdough.Director, 
+                         **kwargs) -> object:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            object: [description]
+            
+        """
+        for parameter in self.contents.keys():
+            if parameter not in kwargs:
+                try:
+                    kwargs[parameter] = getattr(self, f'get_{parameter}')(
+                        name = name, 
+                        director = director)
+                except KeyError:
+                    try:
+                        kwargs[parameter] = director.project.settings[name][
+                            f'{name}_{parameter}']
+                    except KeyError:
+                        try: 
+                            kwargs[parameter] = director.project.settings[name][
+                                parameter]
+                        except KeyError:
+                            pass
+        contained = self._get_contained(name = name, **kwargs)
+        return contained(**kwargs)
+
+    """ Private Methods """
+
+    def _get_contained(self, name: str, **kwargs: Dict[str, Any]) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        if hasattr(self.base, 'registry'):
+            try:
+                product = self.base.registry.acquire(key = name)
+            except KeyError:
+                try:
+                    product = self.base.registry.acquire(key = kwargs['design'])
+                except (KeyError, TypeError):
+                    product = self.base
+        else:
+            product = self.base
+        return product        
+
+
+@dataclasses.dataclass
+class Author(sourdough.base.Creator):
     """Initialized sourdough Component instances without structure.
     
     Args:
@@ -87,6 +226,70 @@ class Outline(sourdough.types.Lexicon):
  
 
 @dataclasses.dataclass
+class Factory(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
+    """
+            
+    Args:
+        
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    base: Type = None
+
+    """ Public Methods """
+    
+    def create(self, name: str, director: sourdough.Director, 
+               **kwargs) -> object:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            director (sourdough.Director): [description]
+
+        Returns:
+            object: [description]
+            
+        """
+        for parameter in self.contents.keys():
+            if parameter not in kwargs:
+                try:
+                    kwargs[parameter] = getattr(self, f'get_{parameter}')(
+                        name = name, 
+                        director = director)
+                except KeyError:
+                    try:
+                        kwargs[parameter] = director.project.settings[name][
+                            f'{name}_{parameter}']
+                    except KeyError:
+                        try: 
+                            kwargs[parameter] = director.project.settings[name][
+                                parameter]
+                        except KeyError:
+                            pass
+        product = self.get_product(name = name, **kwargs)
+        return product(**kwargs)
+
+    def get_product(self, name: str, **kwargs: Dict[str, Any]) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        if hasattr(self.base, 'registry'):
+            try:
+                product = self.base.registry.acquire(key = name)
+            except KeyError:
+                try:
+                    product = self.base.registry.acquire(key = kwargs['design'])
+                except (KeyError, TypeError):
+                    product = self.base
+        else:
+            product = self.base
+        return product        
+
+@dataclasses.dataclass
 class Creator(sourdough.base.Factory):
     """
     """
@@ -105,7 +308,10 @@ class Creator(sourdough.base.Factory):
     
     """ Public Methods """
 
-    def draft(self, )
+    def build(self, name: str, 
+              director: sourdough.Director) -> sourdough.base.Component:
+        
+        return component
 
     def get_name(self, name: str, director: sourdough.Director) -> str:
         """[summary]

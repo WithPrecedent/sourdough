@@ -22,51 +22,6 @@ import warnings
 
 import sourdough 
 
-
-@dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough projects.
-    
-    Args:
-        director (Union[str, Type]): class for organizing, implementing, and
-            iterating the package's classes and functions. Defaults to 
-            'sourdough.Director'.
-            
-    """
-    settings: Union[str, Type] = 'sourdough.Settings'
-    clerk: Union[str, Type] = 'sourdough.Clerk' 
-    director: Union[str, Type] = 'sourdough.Director'
-    factory: Union[str, Type] = 'sourdough.Creator'
-    component: Union[str, Type] = 'sourdough.base.Component'
-
-    """ Properties """
-    
-    def component_suffixes(self) -> Tuple[str]:
-        return tuple(key + 's' for key in self.component.registry.keys()) 
-    
-    def director_suffixes(self) -> Tuple[str]:
-        return tuple(key + 's' for key in self.director.registry.keys()) 
-   
-    """ Public Methods """
-   
-    def get_class(self, name: str, kind: str) -> Type:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-        """
-        base = getattr(self, kind)
-        if hasattr(base, 'registry'):
-            try:
-                product = base.registry.acquire(key = name)
-            except KeyError:
-                product = base
-        else:
-            product = base
-        return product  
    
    
 @dataclasses.dataclass
@@ -117,6 +72,7 @@ class Project(sourdough.types.Hybrid):
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
     bases: object = Bases()
     factory: Union[sourdough.base.Factory, str] = None
+    builder: Union[sourdough.base.Builder, str] = None
     name: str = None
     identification: str = None
     automatic: bool = True

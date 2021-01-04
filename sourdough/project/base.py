@@ -26,17 +26,20 @@ import sourdough
             
 
 @dataclasses.dataclass
-class Factory(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
+class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+              sourdough.types.Lexicon, abc.ABC):
     """
             
     Args:
         
     """
-    contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
-    base: Type = None
-
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    product: Type = None
+    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
+    
     """ Public Methods """
     
+    @abc.abstractmethod
     def create(self, name: str, director: sourdough.Director, 
                **kwargs) -> object:
         """[summary]
@@ -49,59 +52,18 @@ class Factory(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
             object: [description]
             
         """
-        for parameter in self.contents.keys():
-            if parameter not in kwargs:
-                try:
-                    kwargs[parameter] = getattr(self, f'get_{parameter}')(
-                        name = name, 
-                        director = director)
-                except KeyError:
-                    try:
-                        kwargs[parameter] = director.project.settings[name][
-                            f'{name}_{parameter}']
-                    except KeyError:
-                        try: 
-                            kwargs[parameter] = director.project.settings[name][
-                                parameter]
-                        except KeyError:
-                            pass
-        product = self.get_product(name = name, **kwargs)
-        return product(**kwargs)
+        pass      
 
-    def get_product(self, name: str, **kwargs: Dict[str, Any]) -> Type:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-        """
-        if hasattr(self.base, 'registry'):
-            try:
-                product = self.base.registry.acquire(key = name)
-            except KeyError:
-                try:
-                    product = self.base.registry.acquire(key = kwargs['design'])
-                except (KeyError, TypeError):
-                    product = self.base
-        else:
-            product = self.base
-        return product        
-    
           
 @dataclasses.dataclass
-class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader, 
-               sourdough.types.Lexicon):
+class Director(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+               sourdough.types.Lexicon, abc.ABC):
     """Constructs, organizes, and implements part of a sourdough project.
         
     Args:
         contents (Mapping[str, object]]): stored objects created by the 
             'create' methods of 'stages'. Defaults to an empty dict.
-        stages (Sequence[Union[Type, str]]): a Creator-compatible classes or
-            strings corresponding to the keys in registry of the default
-            'stage' in 'bases'. Defaults to a list of 'architect', 
-            'builder', and 'worker'. 
+
         project (sourdough.Project)
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example if a 
@@ -113,32 +75,14 @@ class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             inferred from the first section name in 'settings' after 'general' 
             and 'files'. If that fails, 'name' will be the snakecase name of the
             class. Defaults to None. 
-        identification (str): a unique identification name for a Director 
-            instance. The name is used for creating file folders related to the 
-            project. If it is None, a str will be created from 'name' and the 
-            date and time. Defaults to None.   
-        automatic (bool): whether to automatically advance 'director' (True) or 
-            whether the director must be advanced manually (False). Defaults to 
-            True.
-        data (object): any data object for the project to be applied. If it is
-            None, an instance will still execute its workflow, but it won't
-            apply it to any external data. Defaults to None.  
-        bases (ClassVar[object]): contains information about default base 
-            classes used by a Director instance. Defaults to an instance of 
-            Bases.
-        rules (ClassVar[object]):
-        options (ClassVar[object]):
          
     """
     contents: Mapping[str, Type] = dataclasses.field(default_factory = dict)
+    creators: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
     project: Union[object, Type] = None
-    factory: Union[object, Type] = None
     name: str = None
-    automatic: bool = True
-    data: object = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'name', 'factory'])
-    default_design: str = 'pipeline'
+        'creators'])
     registry: ClassVar[Mapping[str, Director]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
@@ -158,14 +102,7 @@ class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             self.complete()
 
     """ Public Methods """
-    
-    def draft(self) -> None:
-        
-    
-    
-    
-    
-    
+
     def advance(self) -> Any:
         """Returns next product created in iterating a Director instance."""
         return self.__next__()
@@ -188,7 +125,7 @@ class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader,
             self.name = sourdough.tools.snakify(self.__class__)
         return self
     
-    def _validate_creator(self) -> None:
+    def _validate_creators(self) -> None:
         """Creates 'name' if one doesn't exist.
         
         If 'name' was not passed, this method first tries to infer 'name' as the 
@@ -196,26 +133,7 @@ class Director(sourdough.quirks.Registrar, sourdough.quirks.Loader,
         uses the snakecase name of the class.
         
         """
-        if not self.name:
-            node_sections = self.settings.excludify(subset = self.rules.skip)
-            try:
-                self.name = node_sections.keys()[0]
-            except IndexError:
-                self.name = sourdough.tools.snakify(self.__class__)
-        return self
-    
-    """ Dunder Methods """
 
-    def __iter__(self) -> None:
-        """
-        """
-        self.creator.__next__()
-        return self
- 
-    def __next__(self) -> None:
-        """
-        """
-        self.creator.__next__()
         return self
 
     
