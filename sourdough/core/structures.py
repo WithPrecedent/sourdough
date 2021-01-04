@@ -207,7 +207,9 @@ class Leaf(Node, collections.abc.Container):
 class Graph(sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG).
     
-    Internally, the DAG is stored as an adjacency list in 'contents'.
+    Internally, the graph nodes are stored in 'contents'. And the edges are
+    stored as an adjacency list in 'edges' with the 'name' attributes of the
+    nodes in 'contents' acting as the starting and stopping nodes in 'edges'.
     
 
     
@@ -251,7 +253,7 @@ class Graph(sourdough.types.Lexicon):
         """
         ends = [k for k in self.edges.keys() if not self.edges[k]]
         if len(ends) > 1:
-            raise ValueError('Graph has more than 1 endpoint')
+            return ends
         elif len(ends) == 0:
             raise ValueError('Graph is not acyclic - it has no endpoint')
         else:
@@ -500,72 +502,4 @@ class Graph(sourdough.types.Lexicon):
                     node = graph[descendent],
                     searched = searched))
         return sorted_queue    
-        """ Properties """
     
-    @property
-    def root(self) -> sourdough.Component:
-        """[summary]
-
-        Raises:
-            ValueError: [description]
-            ValueError: [description]
-
-        Returns:
-            [type]: [description]
-        """
-        rootless = [v for v in self.nodees if not self.predecessors]
-        if len(rootless) > 1:
-            raise ValueError('graph is not acyclic - it has more than 1 root')
-        elif len(rootless) == 0:
-            raise ValueError('graph is not acyclic - it has no root')
-        else:
-            return rootless[0]
- 
-    @property
-    def endpoints(self) -> Sequence[sourdough.Component]:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        return [v for v in self.children if not v.descendents]
-
-    """ Public Methods """
-        
-    def get_sorted(self, 
-            graph: sourdough.products.Workflow = None,
-            return_elements: bool = False) -> Sequence[sourdough.Component]:
-        """Performs a topological sort on 'graph'.
-        
-        If 'graph' is not passed, the 'children' attribute is used instead.
-        
-        Args:
-            graph:
-        """
-        if graph is None:
-            graph = self.children
-        sorted_queue = self._topological_sort(graph = graph)
-        if return_elements:
-            return [v.element for v in sorted_queue]
-        else:
-            return sorted_queue
-
-    def validate(self, graph: sourdough.products.Workflow) -> None:
-        """
-        
-
-        Args:
-            graph ([type]): [description]
-
-        Raises:
-            ValueError: if topological sort fails.
-            ValueError: if the root check fails.
-            
-        """
-        try:
-            self.get_sorted(graph = graph)
-        except ValueError:
-            raise ValueError(f'graph failed the topological sort test')
-        test_root = self.root()
-        return self
