@@ -26,8 +26,8 @@ True to its namesake, sourdough offers a starter base to complete a Python proje
 
 sourdough is orientated toward offline, desktop manager design. Because I am an academic, that is the focus of my work and sourdough reflects that bias. That doesn't mean that sourdough classes can't be used in other situations - it just isn't designed specificially for those purposes. However, if you want to expand sourdough in another direction, [I welcome those contributions.](https://github.com/WithPrecedent/sourdough/contributors_guide.md)
 
-sourdough takes advantage of some newer python features (dataclasses, __init_subclass__, ordered dictionaries, postponed evaluation of annotation, 
-etc.) and is not compatible with versions of python before 3.7.
+sourdough takes advantage of some newer python features (dataclasses, __init_subclass__, ordered dictionaries, postponed evaluation of annotation, singledispatchmethod,
+etc.) and is not compatible with versions of python before 3.8.
 
 ## What's in sourdough?
 

@@ -21,23 +21,9 @@ import sourdough
 
 """ Builder Structure """
 
-
+   
 @dataclasses.dataclass
-class Constructor(abc.ABC):
-    """Abstract base class for sourdough builders.
-    
-    Subclasses must have a 'create' method.
-    
-    """
-
-    @abc.abstractmethod
-    def create(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
-    
-
-@dataclasses.dataclass
-class Builder(sourdough.types.Lexicon, Constructor):
+class Builder(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
     """Builds complex class instances.
 
     For any parameters which require further construction code, a subclass
@@ -104,7 +90,7 @@ class Builder(sourdough.types.Lexicon, Constructor):
     
 
 @dataclasses.dataclass  
-class Director(sourdough.types.Lexicon, Constructor):
+class Director(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
     """Directs and stores objects created by a builder.
     
     A Director is not necessary, but provides a convenient way to store objects
@@ -118,7 +104,7 @@ class Director(sourdough.types.Lexicon, Constructor):
     
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builder: Constructor = None
+    builder: sourdough.interfaces.Constructor = None
     
     """ Public Methods """
     
@@ -139,60 +125,10 @@ class Director(sourdough.types.Lexicon, Constructor):
 
 
 """ Composite Structures """
-
-
-@dataclasses.dataclass
-class Element(collections.abc.Container, abc.ABC):
-    """Provides a 'name' attribute to a part of a composite structure.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-
-    """
-    contents: collections.abc.Container = None
-    name: str = None
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets 'name' attribute.
-        if not hasattr(self, 'name') or self.name is None:  
-            self.name = self._get_name()
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-
-    """ Private Methods """
-    
-    def _get_name(self) -> str:
-        """Returns snakecase of the class name.
-
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        return sourdough.tools.snakify(self.__class__.__name__)
-
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, data: Any = None, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass 
-    
+  
 
 @dataclasses.dataclass
-class Node(Element, sourdough.types.Lexicon):
+class Node(sourdough.interfaces.Element, sourdough.types.Lexicon):
 
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
@@ -206,9 +142,9 @@ class Node(Element, sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(Element, sourdough.types.Hybrid):
+class Component(sourdough.interfaces.Element, sourdough.types.Hybrid):
     
-    contents: Sequence[Element] = dataclasses.field(default_factory = list) 
+    contents: Sequence[sourdough.interfaces.Element] = dataclasses.field(default_factory = list) 
     name: str = None
     
     """ Public Methods """
@@ -234,7 +170,7 @@ class Component(Element, sourdough.types.Hybrid):
         
     
 @dataclasses.dataclass
-class Leaf(Element, collections.abc.Container):
+class Leaf(sourdough.interfaces.Element, collections.abc.Container):
 
     contents: Callable = None 
     name: str = None
@@ -254,7 +190,7 @@ class Leaf(Element, collections.abc.Container):
 
 
 @dataclasses.dataclass
-class Graph(Element, sourdough.types.Lexicon):
+class Graph(sourdough.interfaces.Element, sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are

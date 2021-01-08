@@ -4,16 +4,15 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-Contents:
-    Bases (Loader): stores base classes for a Project. Bases allows the base
-        classes to be listed as import strings that will be lazily loaded when
-        first accessed. 
+Contents: 
     Project (Hybrid): access point and interface for creating and implementing
         sourdough projects.
 
 """
 from __future__ import annotations
+from _typeshed import NoneType
 import dataclasses
+import functools
 import inspect
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -21,11 +20,10 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import warnings
 
 import sourdough 
-
    
    
 @dataclasses.dataclass
-class Project(sourdough.types.Hybrid):
+class Project(sourdough.types.Hybrid, sourdough.interfaces.Coordinator):
     """Constructs, organizes, and implements a a collection of projects.
 
     Args:
@@ -70,7 +68,7 @@ class Project(sourdough.types.Hybrid):
         default_factory = list)
     settings: Union[sourdough.types.Configuration, str, pathlib.Path] = None
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
-    bases: object = Bases()
+    bases: object = sourdough.project.bases
     factory: Union[sourdough.base.Factory, str] = None
     builder: Union[sourdough.base.Builder, str] = None
     name: str = None
@@ -92,8 +90,9 @@ class Project(sourdough.types.Hybrid):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods based on items listed in 'validations'.
-        for validation in self.validations:
-            getattr(self, f'_validate_{validation}')()
+        self.validate()
+        # Adds 'general' section attributes from 'settings'.
+        self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
         # Advances through 'contents' if 'automatic' is True.
@@ -107,46 +106,59 @@ class Project(sourdough.types.Hybrid):
         """
 
         Args:
-            mananger (Union[str, Type, object]): [description]
+            director (Union[str, Type, object]): [description]
         """
         self.directors.append(self._validate_director(director = director))
         return self  
     
-    def advance(self) -> Any:
-        """Returns next product created in iterating a Director instance."""
-        return self.__next__()
-
-    def complete(self) -> None:
-        """Executes each step in an instance's iterable."""
-        for director in iter(self):
-            self.__next__()
-        return self
-                              
-    """ Private Methods """
-    
-    def _validate_settings(self) -> None:
-        """Validates 'settings' or converts it to a Configuration instance.
+    def validate(self, validations: List[str] = None) -> None:
+        """Validates or converts stored attributes.
         
-        The method also injects the 'general' section of a Configuration instance
-        into this Director instance as attributes. This allows easy, direct 
-        access of settings like 'verbose'.
+        Args:
+            validations (List[str]): a list of attributes that need validating.
+                Each item in 'validations' should also have a corresponding
+                method named f'_validate_{item}'. If not passed, the
+                'validations' attribute will be used instead. Defaults to None. 
         
         """
-        if isinstance(self.settings, self.bases.settings):
-            pass
-        elif inspect.isclass(self.settings):
-            self.settings = self.settings()
-        elif (self.settings is None 
-              or isinstance(self.settings, (str, pathlib.Path))):
-            self.settings = self.bases.settings(contents = self.settings)
-        else:
-            raise TypeError(
+        if validations is None:
+            validations = self.validations
+        # Calls validation methods based on items listed in 'validations'.
+        for item in validations:
+            kwargs = {item: getattr(self, item)}
+            setattr(self, item, getattr(self, f'_validate_{item}')(**kwargs))
+        return self      
+                                    
+    """ Private Methods """
+    
+    @functools.singledispatchmethod
+    def _validate_settings(self, settings) -> sourdough.Settings:
+        """Validates 'settings' or converts it to a Configuration instance."""
+        raise TypeError(
                 'settings must be a Configuration, Path, str, or None type.')
-        # Adds 'general' section attributes from 'settings'.
-        self.settings.inject(instance = self)
-        return self
+    
+    @_validate_settings.register
+    def _(self, settings: sourdough.Settings) -> sourdough.Settings:
+        return settings
 
-    def _validate_name(self) -> None:
+    @_validate_settings.register
+    def _(self, settings: Type[sourdough.Settings]) -> sourdough.Settings:
+        return settings()
+        
+    @_validate_settings.register
+    def _(self, settings: str) -> sourdough.Settings:
+        return self.bases.settings(contents = settings)
+
+    @_validate_settings.register
+    def _(self, settings: pathlib.Path) -> sourdough.Settings:
+        return self.bases.settings(contents = settings)
+    
+    @_validate_settings.register
+    def _(self, settings: None) -> sourdough.Settings:
+        return self.bases.settings(contents = settings)
+       
+    @functools.singledispatchmethod
+    def _validate_name(self, name) -> str:
         """Creates 'name' if one doesn't exist.
         
         If 'name' was not passed, this method first tries to infer 'name' as the 
@@ -154,27 +166,40 @@ class Project(sourdough.types.Hybrid):
         uses the snakecase name of the class.
         
         """
-        if not self.name:
-            node_sections = self.settings.excludify(subset = self.rules.skip)
-            try:
-                self.name = node_sections.keys()[0]
-            except IndexError:
-                self.name = sourdough.tools.snakify(self.__class__)
-        return self
+        raise TypeError('name must be a str or None type.')
 
-    def _validate_identification(self) -> None:
+    @_validate_name.register
+    def _(self, name: str) -> str:
+        return name
+    
+    @_validate_name.register
+    def _validate_name(self, name: None) -> str:
+        try:
+            node_sections = self.settings.excludify(subset = self.rules.skip)
+            return node_sections.keys()[0]
+        except IndexError:
+            return sourdough.tools.snakify(self.__class__)
+    
+    @functools.singledispatchmethod
+    def _validate_identification(self, identification) -> str:
         """Creates unique 'identification' if one doesn't exist.
         
         By default, 'identification' is set to the 'name' attribute followed by
         an underscore and the date and time.
         
         """
-        if not self.identification:
-            self.identification = sourdough.tools.datetime_string(
-                prefix = self.name)
-        return self
+        raise TypeError('identification must be a str or None type.')
 
-    def _validate_clerk(self) -> None:
+    @_validate_identification.register
+    def _(self, identification: str) -> str:
+        return identification
+        
+    @_validate_identification.register
+    def _(self, identification: None) -> str:
+        return sourdough.tools.datetime_string(prefix = self.name)
+    
+    @functools.singledispathmethod
+    def _validate_clerk(self, clerk) -> sourdough.files.Clerk:
         """Validates 'clerk' or converts it to a Clerk instance.
         
         If a file path is passed, that becomes the root folder with the default
@@ -184,19 +209,28 @@ class Project(sourdough.types.Hybrid):
         instance's 'settings'.
         
         """
-        if isinstance(self.clerk, self.bases.clerk):
-            self.clerk.settings = self.settings
-        elif inspect.isclass(self.clerk):
-            self.clerk = self.clerk(settings = self.settings)
-        elif (self.clerk is None 
-              or isinstance(self.clerk, (str, pathlib.Path))):
-            self.clerk = self.bases.clerk(
-                root_folder = self.clerk, 
-                settings = self.settings)
-        else:
-            raise TypeError('clerk must be a Clerk, Path, str, or None type.')
-        return self
+        raise TypeError('clerk must be a Clerk, Path, str, or None type.')
+    
+    @_validate_clerk.register
+    def _(self, clerk: sourdough.files.clerk) -> sourdough.files.Clerk:  
+        return clerk  
+    
+    @_validate_clerk.register
+    def _(self, clerk: Type[sourdough.files.clerk]) -> sourdough.files.Clerk:  
+        return clerk(settings = self.settings)
 
+    @_validate_clerk.register
+    def _(self, clerk: str) -> sourdough.files.Clerk:  
+        return self.bases.clerk(root_folder = clerk, settings = self.settings) 
+    
+    @_validate_clerk.register
+    def _(self, clerk: pathlib.Path) -> sourdough.files.Clerk:  
+        return self.bases.clerk(root_folder = clerk, settings = self.settings)
+    
+    @_validate_clerk.register
+    def _(self, clerk: NoneType) -> sourdough.files.Clerk:  
+        return self.bases.clerk(root_folder = clerk, settings = self.settings)
+    
     def _validate_directors(self) -> None:
         """Validates 'contents' or converts it to Director instances.
         
@@ -213,22 +247,28 @@ class Project(sourdough.types.Hybrid):
         self.contents = new_contents
         return self
 
-    def _validate_director(self, director: Union[str, sourdough.Director]) -> None:
+    @functools.singledispathmethod
+    def _validate_director(self, director) -> sourdough.Director:
         """
         """
-        if isinstance(director, str):
-            director = self.bases.get_class(name = director, kind = 'director')
-            director = director(name = director, project = self)
-        elif inspect.isclass(director):
-            director = director(project = self)
-        elif isinstance(director, self.bases.settings.director):
-            director.project = self
-        else:
-            raise TypeError(
-                'contents must be a list of str or Director types')
-        return director
+        raise TypeError('director must be a str or Director type')
 
-    def _validate_factory(self) -> None:
+    @_validate_director.register
+    def _(self, director: str) -> sourdough.Director:
+        director = self.bases.get_class(name = director, kind = 'director')
+        return director(name = director, project = self)'
+    
+    @_validate_director.register
+    def _(self, director: sourdough.Director) -> sourdough.Director:
+        director.project = self
+        return director
+    
+    @_validate_director.register
+    def _(self, director: Type[sourdough.Director]) -> sourdough.Director:
+        return director(project = self)
+    
+    @functools.singledispathmethod
+    def _validate_factory(self, factory) -> sourdough.project.bases.factory:
         """Validates 'factory' or converts it to a Factory instance.'"""
         if isinstance(self.factory, self.bases.factory):
             pass
