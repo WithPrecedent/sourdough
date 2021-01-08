@@ -51,6 +51,7 @@ from . import components
 from .utilities import tools
 
 from .core import types
+from .core import structures
 from .core import quirks
 from .core import workshop
 from .core.files import Clerk

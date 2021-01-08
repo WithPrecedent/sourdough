@@ -23,7 +23,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AbstractBuilder(abc.ABC):
+class Constructor(abc.ABC):
     """Abstract base class for sourdough builders.
     
     Subclasses must have a 'create' method.
@@ -37,7 +37,7 @@ class AbstractBuilder(abc.ABC):
     
 
 @dataclasses.dataclass
-class Builder(sourdough.types.Lexicon, AbstractBuilder):
+class Builder(sourdough.types.Lexicon, Constructor):
     """Builds complex class instances.
 
     For any parameters which require further construction code, a subclass
@@ -80,7 +80,7 @@ class Builder(sourdough.types.Lexicon, AbstractBuilder):
                     method = getattr(self, f'_get_{parameter}')
                     kwargs[parameter] = method(name = name, **kwargs)
                 except KeyError:
-                    kwargs[parameter] = value
+                    kwargs[parameter] = self.contents[parameter]
         product = self.get_product(name = name, **kwargs)
         return product(**kwargs) 
     
@@ -104,7 +104,7 @@ class Builder(sourdough.types.Lexicon, AbstractBuilder):
     
 
 @dataclasses.dataclass  
-class Director(sourdough.types.Lexicon, AbstractBuilder):
+class Director(sourdough.types.Lexicon, Constructor):
     """Directs and stores objects created by a builder.
     
     A Director is not necessary, but provides a convenient way to store objects
@@ -118,7 +118,7 @@ class Director(sourdough.types.Lexicon, AbstractBuilder):
     
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builder: AbstractBuilder = None
+    builder: Constructor = None
     
     """ Public Methods """
     
@@ -142,9 +142,59 @@ class Director(sourdough.types.Lexicon, AbstractBuilder):
 
 
 @dataclasses.dataclass
-class Node(sourdough.quirks.Element):
+class Element(collections.abc.Container, abc.ABC):
+    """Provides a 'name' attribute to a part of a composite structure.
 
-    contents: Any = None 
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+
+    """
+    contents: collections.abc.Container = None
+    name: str = None
+    
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Sets 'name' attribute.
+        if not hasattr(self, 'name') or self.name is None:  
+            self.name = self._get_name()
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+
+    """ Private Methods """
+    
+    def _get_name(self) -> str:
+        """Returns snakecase of the class name.
+
+        If a user wishes to use an alternate naming system, a subclass should
+        simply override this method. 
+        
+        Returns:
+            str: name of class for internal referencing and some access methods.
+        
+        """
+        return sourdough.tools.snakify(self.__class__.__name__)
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: Any = None, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass 
+    
+
+@dataclasses.dataclass
+class Node(Element, sourdough.types.Lexicon):
+
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
 
     """ Required Subclass Methods """
@@ -156,9 +206,9 @@ class Node(sourdough.quirks.Element):
 
 
 @dataclasses.dataclass
-class Composite(Node, sourdough.types.Hybrid):
+class Component(Element, sourdough.types.Hybrid):
     
-    contents: Sequence[Node] = dataclasses.field(default_factory = list) 
+    contents: Sequence[Element] = dataclasses.field(default_factory = list) 
     name: str = None
     
     """ Public Methods """
@@ -184,7 +234,7 @@ class Composite(Node, sourdough.types.Hybrid):
         
     
 @dataclasses.dataclass
-class Leaf(Node, collections.abc.Container):
+class Leaf(Element, collections.abc.Container):
 
     contents: Callable = None 
     name: str = None
@@ -204,17 +254,17 @@ class Leaf(Node, collections.abc.Container):
 
 
 @dataclasses.dataclass
-class Graph(sourdough.types.Lexicon):
+class Graph(Element, sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are
     stored as an adjacency list in 'edges' with the 'name' attributes of the
     nodes in 'contents' acting as the starting and stopping nodes in 'edges'.
     
-
     
     """  
     contents: Mapping[str, Node] = dataclasses.field(default_factory = dict)
+    name: str = None
     edges: Mapping[str, Sequence[str]] = dataclasses.field(
         default_factory = dict)
 
@@ -260,12 +310,57 @@ class Graph(sourdough.types.Lexicon):
             return ends[0]
             
     @property
-    def permutations(self) -> List[str]:
+    def permutations(self) -> List[List[str]]:
+        """
+        """
         return self._find_all_paths(start = self.root, end = self.end)
         
     """ Public Methods """
+          
+    def add_node(self, node: Node) -> None:
+        """Adds a node to the graph.
+            
+        """
+        self.contents[node.name] = node
+        return self
+
+    def add_edge(self, start: str, stop: str) -> None:
+        """[summary]
+
+        Args:
+            start (str): [description]
+            stop (str): [description]
+            
+        """
+        self.edges[start] = stop
+        return self
+
+    def delete_node(self, name: str) -> None:
+        """Deletes node from graph.
+        
+        """
+        del self.contents[name]
+        del self.edges[name]
+        for key in self.contents.keys():
+            if name in self.edges[key]:
+                self.edges[key].remove(name)
+        return self
+
+    def delete_edge(self, start: str, stop: str) -> None:
+        """[summary]
+
+        Args:
+            start (str): [description]
+            stop (str): [description]
+            
+        """
+        self.edges[start].remove(stop)
+        return self
+   
     
-    def find_all_paths(self, start: str, end: str, path: List[str] = []):
+    """ Private Methods """
+    
+    def _find_all_paths(self, start: str, end: str, path: List[str] = []):
         """[summary]
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
@@ -294,110 +389,6 @@ class Graph(sourdough.types.Lexicon):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
-          
-    def add_node(self,
-            name: str = None,
-            element: sourdough.Component = None) -> None:
-        """Adds a node to the graph."""
-        if element and not name:
-            name = element.name
-        elif not name:
-            raise ValueError('element or name must be passed to add_node')
-        node = sourdough.Component(name = name, element = element)
-        self.children.append(node)
-        return self
-
-    def add_edge(self, start: str, stop: str) -> None:
-        """[summary]
-
-        Args:
-            start (str): [description]
-            stop (str): [description]
-
-        Raises:
-            KeyError: [description]
-            KeyError: [description]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        if start not in self.children:
-            raise KeyError(f'{start} is not in the graph')
-        if stop not in self.children:
-            raise KeyError(f'{stop} is not in the graph')
-        test_graph = copy.deepcopy(self.children)
-        test_graph[start].descendents.append(stop)
-        test_graph[stop].predecessors.append(start)
-        self._validate_graph(graph = test_graph)     
-        self.children[start].descendents.append(stop)
-        self.children[stop].predecessors.append(start)
-        return self
-
-    def delete_node(self, name: str) -> None:
-        """Deletes node from graph.
-        
-        """
-        del self.children[name]
-        for node in self.children:
-            node.predecessors = [p for p in node.predecessors if p != name]
-            node.descendents = [d for d in node.descendents if d != name]
-        return self
-
-    def delete_edge(self, 
-            start: str, stop: str) -> None:
-        """[summary]
-
-        Args:
-            start (str): [description]
-            stop (str): [description]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            [type]: [description]
-        """
-        try:
-            self.children[start].descendants.remove(stop)
-            self.children[stop].predecessors.remove(start)
-        except KeyError:
-            raise KeyError(f'edge not found in the graph')
-        return self
-
-    def predecessors(self, 
-            name: str,
-            recursive: bool = False) -> Sequence[str]:
-        """[summary]
-
-        Args:
-            name ([type]): [description]
-
-        Returns:
-            [type]: [description]
-            
-        ToDo:
-            Add recursive functionality.
-            
-        """
-        return self.children[name].predecessors
-                 
-    def descendants(self, 
-            name: str,
-            recursive: bool = False) -> Sequence[str]:
-        """[summary]
-
-        Args:
-            node ([type]): [description]
-
-        Returns:
-            [type]: [description]
-            
-        ToDo:
-            Add recursive functionality.
-            
-        """
-        return self.children[name].descendents
 
     """ Dunder Methods """
     
@@ -408,98 +399,5 @@ class Graph(sourdough.types.Lexicon):
             Iterable: based upon the 'get_sorted' method of a subclass.
         
         """
-        return iter(self.get_sorted(return_elements = True))
-    
-    def __repr__(self) -> str:
-        """Returns '__str__' representation.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return self.__str__()
-    
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return '\n'.join([textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            nodes:'''),
-            f'''{textwrap.indent(str(self.children), '    ')}
-            edges:
-            {textwrap.indent(str(self.edges), '    ')}'''])   
-         
-    """ Private Methods """
-    
-    def _topological_sort(self, 
-            graph: sourdough.products.Workflow) -> Sequence[sourdough.Component]:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        searched = []
-        return self._topological_descend(
-            graph = graph, 
-            node = graph.root,
-            searched = searched)
-        
-    def _topological_descend(self, 
-            graph: sourdough.products.Workflow, 
-            node: sourdough.Component,
-            searched: list[str]) -> Sequence[sourdough.Component]: 
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        sorted_queue = []      
-        for descendent in node.descendents:
-            if graph[descendent] not in searched:
-                searched.insert(descendent, 0)
-                sorted_queue.extend(self._dfs_descend(
-                    graph = graph,
-                    node = graph[descendent],
-                    searched = searched))
-        return sorted_queue    
-    
-    def _dfs_sort(self, 
-            graph: sourdough.products.Workflow) -> Sequence[sourdough.Component]:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        searched = []
-        return self._dfs_descend(
-            graph = graph, 
-            node = graph.root,
-            searched = searched)
-        
-    def _dfs_descend(self, 
-            graph: sourdough.products.Workflow, 
-            node: sourdough.Component,
-            searched: list[str]) -> Sequence[sourdough.Component]: 
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        sorted_queue = []      
-        for descendent in node.descendents:
-            if graph[descendent] not in searched:
-                searched.append(descendent)
-                sorted_queue.extend(self._dfs_descend(
-                    graph = graph,
-                    node = graph[descendent],
-                    searched = searched))
-        return sorted_queue    
-    
+        return iter(self.permutations)
+          

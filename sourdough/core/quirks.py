@@ -40,55 +40,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-
-@dataclasses.dataclass
-class Element(object):
-    """Allows a subclass to be stored by a Hybrid.
-    
-    An Element has a 'name' attribute for internal referencing and to allow 
-    sourdough Hybrids storing them to function propertly. Element instances can 
-    be used to create a variety of sourdough objects and composite structures 
-    such as trees, cycles, contests, studies, and graphs.
-
-    Namespaces: 'name', '_get_name'
-      
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in the 
-            Configuration instance. Defaults to None. 
-
-    """
-    name: str = None
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Sets 'name' attribute.
-        if not hasattr(self, 'name') or self.name is None:  
-            self.name = self._get_name()
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-
-    """ Private Methods """
-    
-    def _get_name(self) -> str:
-        """Returns snakecase of the class name.
-
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        return sourdough.tools.snakify(self.__class__.__name__)
-
   
 @dataclasses.dataclass
 class Registrar(object):
