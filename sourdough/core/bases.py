@@ -125,6 +125,13 @@ class Element(collections.abc.Container, abc.ABC):
         except AttributeError:
             pass
 
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: Any = None, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass 
+
     """ Private Methods """
     
     def _get_name(self) -> str:
@@ -138,13 +145,6 @@ class Element(collections.abc.Container, abc.ABC):
         
         """
         return sourdough.tools.snakify(self.__class__.__name__)
-
-    """ Public Methods """
-    
-    @abc.abstractmethod
-    def apply(self, data: Any = None, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass 
 
     
 @dataclasses.dataclass
@@ -249,55 +249,3 @@ class Coordinator(Vessel, abc.ABC):
         for item in iter(self):
             self.__next__()
         return self
-
-
-@dataclasses.dataclass
-class Converter(abc.ABC):
-    """
-    """
-    accepts: Tuple[Type] = tuple()
-    returns: Type = None
-    parameters: Tuple[str] = tuple()
-    additions: Tuple[str] = tuple()
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'registry' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        cls.convert = functools.singledispatchmethod(cls.__class__.convert)
-                
-    """ Public Methods """
-    
-    @functools.singledispatchmethod
-    def convert(self, item, instance: object = None) -> Any:
-        """[summary]
-
-        Args:
-            item ([type]): [description]
-            instance (object, optional): [description]. Defaults to None.
-
-        Raises:
-            TypeError: [description]
-
-        Returns:
-            Any: [description]
-            
-        """
-        if isinstance(item, self.returns):
-            converted = item
-            if instance is not None:
-                for addition in self.additions:
-                    setattr(converted, addition, getattr(instance, addition))
-        elif item == self.returns:
-            kwargs = {}
-            if instance is not None:
-                for parameter in self.parameters:
-                    kwargs[parameter] = getattr(instance, parameter)
-            converted = item(**kwargs)
-        else:
-            raise TypeError(
-                f'Must be these types: {self.accepts}, or {self.returns}')
-        return converted
-            
-    
