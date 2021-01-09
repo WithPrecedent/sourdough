@@ -1,5 +1,5 @@
 """
-interfaces: abstract base classes for core sourdough interfaces.
+bases: abstract base classes for core sourdough class interfaces
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -13,18 +13,27 @@ classes for use in sourdough, these abstract base classes show how to survive
 static type-checkers and other internal checks made by sourdough.
 
 Contents:
-    Constructor (ABC):
-    Element (collections.abc.Container, ABC):
+    Constructor (ABC): abstract base class for sourdough classes that contruct 
+        other classes and objects. All subclasses must have a 'create' method.
+    Element (collections.abc.Container, ABC): abstract base class for sourdough
+        containers used in composite structures. It automatically assigns a 
+        'name' attribute if none is passed. Subclasses must have an 'apply' 
+        method. Any contained items are stored in 'contents'.
     Vessel (Iterable, ABC): abstract base class for sourdough iterables. All 
         subclasses must have an 'add' method as well as store their contents in 
         the 'contents' attribute.
-    Coordinator (Vessel, ABC):
+    Coordinator (Vessel, ABC): abstract base class for directing other classes
+        to perform actions. It provides generic 'advance' and 'complete' 
+        methods. Subclasses must provide a 'validate' method to check and/or
+        convert attributes of a subclass instance.
     
 """
 from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
+import functools
+import inspect
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -240,4 +249,55 @@ class Coordinator(Vessel, abc.ABC):
         for item in iter(self):
             self.__next__()
         return self
- 
+
+
+@dataclasses.dataclass
+class Converter(abc.ABC):
+    """
+    """
+    accepts: Tuple[Type] = tuple()
+    returns: Type = None
+    parameters: Tuple[str] = tuple()
+    additions: Tuple[str] = tuple()
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'registry' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        cls.convert = functools.singledispatchmethod(cls.__class__.convert)
+                
+    """ Public Methods """
+    
+    @functools.singledispatchmethod
+    def convert(self, item, instance: object = None) -> Any:
+        """[summary]
+
+        Args:
+            item ([type]): [description]
+            instance (object, optional): [description]. Defaults to None.
+
+        Raises:
+            TypeError: [description]
+
+        Returns:
+            Any: [description]
+            
+        """
+        if isinstance(item, self.returns):
+            converted = item
+            if instance is not None:
+                for addition in self.additions:
+                    setattr(converted, addition, getattr(instance, addition))
+        elif item == self.returns:
+            kwargs = {}
+            if instance is not None:
+                for parameter in self.parameters:
+                    kwargs[parameter] = getattr(instance, parameter)
+            converted = item(**kwargs)
+        else:
+            raise TypeError(
+                f'Must be these types: {self.accepts}, or {self.returns}')
+        return converted
+            
+    

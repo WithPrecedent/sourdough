@@ -14,13 +14,17 @@ from _typeshed import NoneType
 import dataclasses
 import functools
 import inspect
+import logging
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+                    Optional, Sequence, Set, Tuple, Type, Union)
 import warnings
 
 import sourdough 
-   
+
+
+logger = logging.getLogger()
+  
    
 @dataclasses.dataclass
 class Project(sourdough.types.Hybrid, sourdough.interfaces.Coordinator):
@@ -30,7 +34,7 @@ class Project(sourdough.types.Hybrid, sourdough.interfaces.Coordinator):
         contents (Sequence[Union[str, sourdough.Director]]): stored Director
             classes, Director instances, or the names of Director subclasses 
             stored in 'options'. Defaults to an empty list.
-        settings (Union[Type, str, pathlib.Path]]): a Configuration-compatible class,
+        settings (Union[Type[], str, pathlib.Path]]): a Configuration-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
             supported file type with settings for a Configuration instance is 
             located. Defaults to the default Configuration instance.
