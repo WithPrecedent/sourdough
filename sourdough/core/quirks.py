@@ -9,7 +9,25 @@ attributes. But they are designed for multiple inheritance and easy addition
 to other classes. Despite not meeting the traditional definition of "mixin,"
 they are internally referred to as "mixins" because of their functionality.
 
+Although python doesn't require the separation of interfaces in the same way
+that more structured languages do, this module is included to make it clearer
+for users trying to expand sourdough's functionality. The included abstract base
+classes show the required and included methods for all of the core classes in 
+sourdough. So, whether you intend to directly subclass or write alternate 
+classes for use in sourdough, these abstract base classes show how to survive 
+static type-checkers and other internal checks made by sourdough.
+
 Contents:
+    Constructor (ABC): abstract base class for sourdough classes that contruct 
+        other classes and objects. All subclasses must have a 'create' method.
+    Element (collections.abc.Container): abstract base class for sourdough
+        containers used in composite structures. It automatically assigns a 
+        'name' attribute if none is passed. Subclasses must have an 'apply' 
+        method. Any contained items are stored in 'contents'.
+    Coordinator (Vessel, ABC): abstract base class for directing other classes
+        to perform actions. It provides generic 'advance' and 'complete' 
+        methods. Subclasses must provide a 'validate' method to check and/or
+        convert attributes of a subclass instance.   
     Element (object): mixin adding a 'name' attribute to allow storage by Hybrid
         subclasses.
     Registrar (object): mixin for storing subclasses automatically.
@@ -31,6 +49,7 @@ ToDo:
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -40,7 +59,147 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-  
+ 
+@dataclasses.dataclass
+class Constructor(collections.abc, abc.ABC):
+    """Parent for classes that construct other classes or objects.
+    
+    Subclasses must have a 'create' method.
+    
+    """
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
+        # Calls parent initialization methods, if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+     
+    """ Required Subclass Methods """ 
+     
+    @abc.abstractmethod
+    def create(self, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass
+
+    """ Dunder Methods """
+
+    def __contains__(self, item: Any) -> bool:
+        """Returns whether 'item' is in or equal to 'contents'.
+
+        Args:
+            item (Any): item to check versus 'contents'
+            
+        Returns:
+            bool: if 'item' is in or equal to 'contents' (True). Otherwise, it
+                returns False.
+
+        """
+        try:
+            return item in self.contents
+        except TypeError:
+            return item == self.contents
+        return self
+    
+
+@dataclasses.dataclass
+class Element(collections.abc.Container, abc.ABC):
+    """Parent for classes stored in composite structures.
+    
+    Automatically provides a 'name' attribute to a part of a composite 
+    structure, if it isn't otherwise passed.
+
+    Subclasses must provide their own 'apply' methods.
+
+    Args:
+        contents (Any): stored item(s).
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+
+    """
+    contents: Any = None
+    name: str = None
+    
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Sets 'name' attribute.
+        if not hasattr(self, 'name') or self.name is None:  
+            self.name = self._get_name()
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: Any = None, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass 
+
+    """ Private Methods """
+    
+    def _get_name(self) -> str:
+        """Returns snakecase of the class name.
+
+        If a user wishes to use an alternate naming system, a subclass should
+        simply override this method. 
+        
+        Returns:
+            str: name of class for internal referencing and some access methods.
+        
+        """
+        return sourdough.tools.snakify(self.__class__.__name__)
+
+
+@dataclasses.dataclass
+class Coordinator(sourdough.types.Vessel, abc.ABC):
+    """Abstract base class for organizers and directors for Constructors
+    
+    Subclasses must have a 'validate' method which either validates or converts
+    instance attributes.
+    
+    Args:
+        contents (Iterable[Any]): stored iterable. Defaults to None.
+              
+    """
+    contents: Iterable[Any] = None
+    
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def validate(self, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass
+    
+    """ Public Methods """
+    
+    def advance(self) -> Any:
+        """Returns next product of an instance iterable."""
+        return self.__next__()
+
+    def complete(self) -> None:
+        """Executes each step in an instance's iterable."""
+        for item in iter(self):
+            self.__next__()
+        return self
+
+ 
 @dataclasses.dataclass
 class Registrar(object):
     """Registry interface for core sourdough classes.

@@ -5,6 +5,9 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Vessel (Iterable, ABC): abstract base class for sourdough iterables. All 
+        subclasses must have an 'add' method as well as store their contents in 
+        the 'contents' attribute.
     Progression (MutableSequence, Vessel): sourdough drop-in replacement for 
         list with additional functionality.
     Hybrid (Progression): iterable with both dict and list interfaces and 
@@ -32,9 +35,80 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
- 
+
 @dataclasses.dataclass
-class Progression(collections.abc.MutableSequence, sourdough.interfaces.Vessel):
+class Vessel(collections.abc.Iterable, abc.ABC):
+    """Abstract base class for sourdough iterables.
+  
+    A Vessel differs from a general python iterable in 3 ways:
+        1) It must include an 'add' method which provides the default mechanism
+            for adding new items to the iterable. All of the other appropriate
+            methods for adding to a python iterable ('append', 'extend', 
+            'update', etc.) remain, but 'add' allows a subclass to designate the
+            preferred method of adding to the iterable's stored data.
+        2) It allows the '+' operator to be used to join a Vessel subclass 
+            instance of the same general type (Mapping, Sequence, Tuple, etc.). 
+            The '+' operator calls the Vessel subclass 'add' method to implement 
+            how the added item(s) is/are added to the Vessel subclass instance.
+        3) The internally stored iterable is located in the 'contents' 
+            attribute. This allows for consistent coordination among classes and
+            mixins.
+    
+    Args:
+        contents (Iterable[Any]): stored iterable. Defaults to None.
+              
+    """
+    contents: Iterable[Any] = None
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
+        # Calls parent initialization methods, if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+          
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def add(self, item: Any) -> None:
+        """Adds 'item' to 'contents' in the default manner.
+        
+        Subclasses must provide their own methods."""
+        pass
+    
+    """ Dunder Methods """
+
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents' using the 'add' method.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+
+@dataclasses.dataclass
+class Progression(collections.abc.MutableSequence, Vessel):
     """Basic sourdough list replacement.
     
     A Progression differs from an ordinary python list only in ways inherited
@@ -505,7 +579,7 @@ class Hybrid(Progression):
 
  
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, sourdough.interfaces.Vessel):
+class Lexicon(collections.abc.MutableMapping, Vessel):
     """Basic sourdough dict replacement.
     
     A Lexicon differs from an ordinary python dict in 1 additional way than
