@@ -4,43 +4,34 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-sourdough quirks are not technically mixins beecause they have required 
-attributes. But they are designed for multiple inheritance and easy addition
+sourdough quirks are not technically mixins because some have required 
+attributes. Traditionally, mixins do not have any attributes and only add 
+functionality. quirks are designed for multiple inheritance and easy addition
 to other classes. Despite not meeting the traditional definition of "mixin,"
-they are internally referred to as "mixins" because of their functionality.
+they are internally referred to as "mixins" because their design and goals are
+otherwise similar to mixins.
 
 Although python doesn't require the separation of interfaces in the same way
-that more structured languages do, this module is included to make it clearer
-for users trying to expand sourdough's functionality. The included abstract base
-classes show the required and included methods for all of the core classes in 
-sourdough. So, whether you intend to directly subclass or write alternate 
-classes for use in sourdough, these abstract base classes show how to survive 
+that more structured languages do, some of the includes quirks in this module
+are designed to make it clearer for users trying to expand sourdough's 
+functionality. These quirks show the required and included methods for core
+classes in sourdough. So, whether you intend to directly subclass or write 
+alternate classes for use in sourdough, these quirks show how to survive 
 static type-checkers and other internal checks made by sourdough.
 
 Contents:
-    Constructor (ABC): abstract base class for sourdough classes that contruct 
-        other classes and objects. All subclasses must have a 'create' method.
-    Element (collections.abc.Container): abstract base class for sourdough
-        containers used in composite structures. It automatically assigns a 
-        'name' attribute if none is passed. Subclasses must have an 'apply' 
-        method. Any contained items are stored in 'contents'.
-    Coordinator (Vessel, ABC): abstract base class for directing other classes
-        to perform actions. It provides generic 'advance' and 'complete' 
-        methods. Subclasses must provide a 'validate' method to check and/or
-        convert attributes of a subclass instance.   
-    Element (object): mixin adding a 'name' attribute to allow storage by Hybrid
-        subclasses.
-    Registrar (object): mixin for storing subclasses automatically.
-    Librarian (object): mixin for storing subclass instances automatically.
-    Loader (object): lazy loader which uses a 'load' method to import python
-        classes, functions, and other items at runtime. 
-        
-    # Validator (Registry, Quirk, ABC): base class for type validators and 
-    #     converters. The class provides a universal 'verify' method for type
-    #     validation. All subclasses must have a 'convert' method for type 
-    #     conversion. 
-    # ProxyMixin (Quirk, ABC): mixin which creates a python property which 
-    #     refers to another attribute by using the 'proxify' method.
+    Constructor (object): quirk for sourdough classes that contruct other 
+        classes and objects. All subclasses must have a 'create' method.
+    Element (object): quirk for sourdough containers used in composite 
+        structures. It automatically assigns a 'name' attribute if none is 
+        passed. Subclasses must have an 'apply' method. 
+    Coordinator (object): quirk for directing other classes to perform actions. 
+        It provides generic 'advance' and 'complete' methods. Subclasses must 
+        provide a 'validate' methods to check and/or convert attribute values.
+    Registrar (object): quirk for storing subclasses automatically.
+    Librarian (object): quirk for storing subclass instances automatically.
+    Loader (object): quirk enabling lazy loadin to import python classes, 
+        functions, and other items at runtime. 
 
 ToDo:
     Add in Validator mixins.
@@ -49,7 +40,6 @@ ToDo:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -61,7 +51,7 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Constructor(collections.abc, abc.ABC):
+class Constructor(object):
     """Parent for classes that construct other classes or objects.
     
     Subclasses must have a 'create' method.
@@ -91,32 +81,14 @@ class Constructor(collections.abc, abc.ABC):
         """Subclasses must provide their own methods."""
         pass
 
-    """ Dunder Methods """
-
-    def __contains__(self, item: Any) -> bool:
-        """Returns whether 'item' is in or equal to 'contents'.
-
-        Args:
-            item (Any): item to check versus 'contents'
-            
-        Returns:
-            bool: if 'item' is in or equal to 'contents' (True). Otherwise, it
-                returns False.
-
-        """
-        try:
-            return item in self.contents
-        except TypeError:
-            return item == self.contents
-        return self
-    
 
 @dataclasses.dataclass
-class Element(collections.abc.Container, abc.ABC):
+class Element(object):
     """Parent for classes stored in composite structures.
     
-    Automatically provides a 'name' attribute to a part of a composite 
-    structure, if it isn't otherwise passed.
+    Automatically provides a 'name' attribute to a subclass, if it isn't 
+    otherwise passed. This is important for parts of sourdough composite objects 
+    like trees and graphs.
 
     Subclasses must provide their own 'apply' methods.
 
@@ -168,7 +140,7 @@ class Element(collections.abc.Container, abc.ABC):
 
 
 @dataclasses.dataclass
-class Coordinator(sourdough.types.Vessel, abc.ABC):
+class Coordinator(object):
     """Abstract base class for organizers and directors for Constructors
     
     Subclasses must have a 'validate' method which either validates or converts

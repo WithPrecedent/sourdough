@@ -145,3 +145,4 @@ cython_debug/
 # poetry settings
 /poetry.toml
 .python-version
+sourdough.code-workspace

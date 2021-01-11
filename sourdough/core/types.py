@@ -4,7 +4,22 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+Unless otherwise noted, all sourdough types are compatible with sourdough 
+quirks. Following normal python multiple inheritance rules, quirks should be 
+listed before any base sourdough class. I have attempted to design sourdough
+to allow for any order of inherited types and quirks. But I cannot guarantee
+that the classes will work as intended if the python ordering rules are not
+followed.
+
+All sourdough types have a 'contents' attribute where an item or 'items' are
+internally stored. This is used instead of the normal 'data' attribute use in
+base python classes to make it easier for users to know which object they are
+accessing when using either 'contents' or 'data'.
+
 Contents:
+    Proxy (collections.abc.Container): basic wrapper for a stored static or
+        iterable item. Dunder methods attempt to intelligently apply access
+        methods to either the wrapper or the wrapped item.
     Vessel (Iterable, ABC): abstract base class for sourdough iterables. All 
         subclasses must have an 'add' method as well as store their contents in 
         the 'contents' attribute.
@@ -36,6 +51,127 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+class Proxy(collections.abc.Container):
+    """Container for holding single items.
+    
+    A Proxy differs than an ordinary container in 2 significant ways:
+        1) When an 'in' call is made, the '__contains__' method first looks to
+            see if the item is stored in 'contents' (if 'contents' is a 
+            collection). If that check gets a TypeError, the method then checks
+            if the item is equivalent to 'contents'. This allows a Proxy to be
+            agnostic as to the type of item(s) in 'contents' while returning the
+            expected result from an 'in' call.
+        2) Access methods for getting, setting, and deleting try to 
+            intelligently direct the user's call to the proxy or stored class.
+            So, for example, when a user tries to set an attribute on the proxy,
+            the method will replace an attribute that exists in the proxy if
+            one exists. But if there is no such attribute, the set method is
+            applied to 'contents'.
+
+    Args:
+        contents (Any): any stored item(s). Defaults to None.
+        
+    ToDo:
+        Add more dunder methods to address less common and fringe cases for use
+            of a Proxy class.
+        
+    """
+    contents: Any = None
+
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
+        # Calls parent initialization methods, if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+    
+    """ Dunder Methods """
+       
+    def __contains__(self, item: Any) -> bool:
+        """Returns whether 'item' is in or equal to 'contents'.
+
+        Args:
+            item (Any): item to check versus 'contents'
+            
+        Returns:
+            bool: if 'item' is in or equal to 'contents' (True). Otherwise, it
+                returns False.
+
+        """
+        try:
+            return item in self.contents
+        except TypeError:
+            return item == self.contents
+
+    def __getattr__(self, attribute: str) -> Any:
+        """Looks for 'attribute' in 'contents'.
+
+        Args:
+            attribute (str): name of attribute to return.
+
+        Raises:
+            AttributeError: if 'attribute' is not found in 'contents'.
+
+        Returns:
+            Any: matching attribute.
+
+        """
+        try:
+            return getattr(self.contents, attribute)
+        except AttributeError:
+            raise AttributeError(f'{attribute} is not in contents') 
+
+    def __setattr__(self, attribute: str, value: Any):
+        """Sets 'attribute' to 'value'.
+        
+        If 'attribute' exists in this class instance, its new value is set to
+        'value.' Otherwise, 'attribute' and 'value' are set in what is stored
+        in 'contents'
+
+        Args:
+            attribute (str): name of attribute to set.
+            value (Any): value to store in 'attribute'.
+
+        """
+        if hasattr(self, attribute):
+            super().__setattr__(self, attribute, value)
+        else:
+            super().__setattr__(self.contents, attribute, value)
+
+    def __delattr__(self, attribute: str):
+        """Deletes 'attribute'.
+        
+        If 'attribute' exists in this class instance, it is deleted. Otherwise, 
+        this method attempts to delete 'attribute' from what is stored in 
+        'contents'
+
+        Args:
+            attribute (str): name of attribute to set.
+            value (Any): value to store in 'attribute'.
+
+        Raises:
+            AttributeError: if 'attribute' is neither found in a class instance
+                nor in 'contents'.
+            
+        """
+        try:
+            super().__delattr__(self, attribute)
+        except AttributeError:
+            try:
+                super().__delattr__(self.contents, attribute)
+            except AttributeError:
+                raise AttributeError(f'{attribute} is not in contents') 
+                        
+  
 @dataclasses.dataclass
 class Vessel(collections.abc.Iterable, abc.ABC):
     """Abstract base class for sourdough iterables.
@@ -108,7 +244,7 @@ class Vessel(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Progression(collections.abc.MutableSequence, Vessel):
+class Progression(Vessel, collections.abc.MutableSequence):
     """Basic sourdough list replacement.
     
     A Progression differs from an ordinary python list only in ways inherited
@@ -579,7 +715,7 @@ class Hybrid(Progression):
 
  
 @dataclasses.dataclass
-class Lexicon(collections.abc.MutableMapping, Vessel):
+class Lexicon(Vessel, collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
     
     A Lexicon differs from an ordinary python dict in 1 additional way than
