@@ -30,7 +30,7 @@ class Builder(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     method should return the value for the named parameter.
 
     Args:
-        contents (Mapping[Any, Any]): keys are the names of the parameters to
+        contents (Mapping[str, Any]): keys are the names of the parameters to
             pass when an object is created. Values are the defaults to use when
             there is not a method named with this format: '_get_{key}'. Keys
             are iterated in order when the 'create' method is called. Defaults
@@ -42,7 +42,7 @@ class Builder(sourdough.quirks.Constructor, sourdough.types.Lexicon):
             method which corresponds to a key in the registry. Defaults to None.
         
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     base: Type = None
     
     """ Public Methods """
@@ -98,14 +98,14 @@ class Director(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     created by a sourdough builder.
     
     Args:
-        contents (Mapping[str, object]): keys are names of objects stored and 
+        products (Mapping[str, object]): keys are names of objects stored and 
             values are the stored object. Defaults to an empty dict.
         builder (Constructor): related builder which constructs objects to be 
             stored in 'contents'.
     
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builder: sourdough.quirks.Constructor = None
+    builders: Mapping[str, Builder] = dataclasses.field(default_factory = dict)
     
     """ Public Methods """
     
@@ -121,8 +121,24 @@ class Director(sourdough.quirks.Constructor, sourdough.types.Lexicon):
                 passed to a class when an instance is created.
             
         """
-        self.contents[name] = self.builder.create(name = name, **kwargs)
+        if name is not None:
+            self.contents[name] = self.builders[name].create(name = name, 
+                                                             **kwargs)
+        else:
+            for key, builder in self.builders.items():
+                self.contents[key] = builder.create(name = key, **kwargs)
         return self
+    
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'builders'.
+
+        Returns:
+            Iterable: of 'builders'.
+
+        """
+        return iter(self.builders)
 
 
 """ Composite Structures """
@@ -142,7 +158,7 @@ class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
 
 
 @dataclasses.dataclass
-class Component(Node, sourdough.types.Hybrid):
+class Composite(Node, sourdough.types.Hybrid):
     
     contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
         default_factory = list) 

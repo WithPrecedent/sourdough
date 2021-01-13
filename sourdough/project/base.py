@@ -1,89 +1,81 @@
 """
-base: core base classes for sourdough projects
+bases: essential classes applying sourdough's core to a project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Director (Registrar, Hybrid):
-    Creator (Registrar, ABC): base class for creating outputs for a sourdough
-        project. All subclasses must have a 'create' method. All concrete
-        subclasses are automatically registered in the 'registry' class
-        attribute and in 'creators'.
-    Product (Registrar, Element, Lexicon, ABC): base class for outputs of a 
-        Creator's 'create' method.
-    Component (Librarian, Registrar, Element, ABC):
-    
+    Settings
+    Filer
+    Creator
+    Component
+
 """
 from __future__ import annotations
-import abc
 import dataclasses
-import textwrap
+import pathlib
+from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-            
+    
 
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-              sourdough.types.Lexicon, abc.ABC):
-    """
-            
+class Settings(sourdough.types.Configuration):
+    """Loads and Stores configuration settings for a Project.
+
     Args:
-        
+        contents (Union[str, pathlib.Path, Mapping[Any, Mapping[Any, Any]]]): a 
+            dict, a str file path to a file with settings, or a pathlib Path to
+            a file with settings. Defaults to en empty dict.
+        infer_types (bool]): whether values in 'contents' are converted to other 
+            datatypes (True) or left alone (False). If 'contents' was imported 
+            from an .ini file, a False value will leave all values as strings. 
+            Defaults to True.
+        defaults (Mapping[str, Mapping[str]]): any default options that should
+            be used when a user does not provide the corresponding options in 
+            their configuration settings. Defaults to a dict with 'general'
+            and 'files' section listed in the class annotations.
+        skip (Sequence[str]): names of suffixes to skip when constructing nodes
+            for a sourdough project.
+
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    product: Type = None
-    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
-    
-    """ Public Methods """
-    
-    @abc.abstractmethod
-    def create(self, name: str, director: sourdough.Director, 
-               **kwargs) -> object:
-        """[summary]
+    contents: Union[str,pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
+        dataclasses.field(default_factory = dict))
+    infer_types: bool = True
+    defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+        default_factory = lambda: {
+            'general': {
+                'verbose': False,
+                'parallelize': True,
+                'conserve_memery': False},
+            'files': {
+                'source_format': 'csv',
+                'interim_format': 'csv',
+                'final_format': 'csv',
+                'file_encoding': 'windows-1252'}})
+    skip: Sequence[str] = dataclasses.field(
+        default_factory = lambda: ['general', 'files', 'parameters'])
 
-        Args:
-            name (str): [description]
-            director (sourdough.Director): [description]
 
-        Returns:
-            object: [description]
-            
-        """
-        pass      
-
-          
 @dataclasses.dataclass
-class Director(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-               sourdough.types.Lexicon, abc.ABC):
-    """Constructs, organizes, and implements part of a sourdough project.
-        
-    Args:
-        contents (Mapping[str, object]]): stored objects created by the 
-            'create' methods of 'stages'. Defaults to an empty dict.
+class Filer(sourdough.files.Clerk):
+    pass
 
-        project (sourdough.Project)
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. If it is None, the 'name' will be attempted to be 
-            inferred from the first section name in 'settings' after 'general' 
-            and 'files'. If that fails, 'name' will be the snakecase name of the
-            class. Defaults to None. 
-         
-    """
-    contents: Mapping[str, Type] = dataclasses.field(default_factory = dict)
-    creators: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
-    project: Union[object, Type] = None
+
+@dataclasses.dataclass
+class Manager(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+              sourdough.structures.Builder):
+
+    contents: sourdough.structures.Graph = sourdough.structures.Graph()
+    builders: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
     name: str = None
+    project: Union[object, Type] = None
+    automatic: bool = True
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'creators'])
-    registry: ClassVar[Mapping[str, Director]] = sourdough.types.Catalog()
+        'builders'])
+    registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -100,158 +92,195 @@ class Director(sourdough.quirks.Registrar, sourdough.quirks.Element,
         # Advances through 'creator' stages if 'automatic' is True.
         if self.automatic:
             self.complete()
-
-    """ Public Methods """
-
-    def advance(self) -> Any:
-        """Returns next product created in iterating a Director instance."""
-        return self.__next__()
-
-    def complete(self) -> None:
-        """Advances through the stored Creator instances.
-        
-        The results of the iteration is that each item produced is stored in 
-        'content's with a key of the 'produces' attribute of each stage.
-        
-        """
-        self.creator.complete()
-        return self
     
     """ Private Methods """
-    
-    def _validate_name(self) -> None:
-        """Creates 'name' if one doesn't exist."""
-        if not self.name:
-            self.name = sourdough.tools.snakify(self.__class__)
-        return self
-    
-    def _validate_creators(self) -> None:
-        """Creates 'name' if one doesn't exist.
-        
-        If 'name' was not passed, this method first tries to infer 'name' as the 
-        first appropriate section name in 'settings'. If that doesn't work, it 
-        uses the snakecase name of the class.
+
+    def _validate_builders(self) -> None:
+        """
         
         """
 
         return self
 
-    
+
 @dataclasses.dataclass
-class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
-    """Base container class for sourdough composite objects.
+class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+              sourdough.structures.Builder):
     
-    A Component has a 'name' attribute for internal referencing and to allow 
-    sourdough iterables to function propertly. Component instances can be used 
-    to create a variety of composite workflows such as trees, cycles, contests, 
-    studies, and graphs.
-    
-    Args:
-        contents (Any): item(s) contained by a Component instance.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
-        registry (ClassVar[Mapping[str, Type]]): a mapping storing all concrete
-            subclasses. Defaults to the Catalog instance 'components'.
-            
-    """
-    contents: Any = None
-    subcontents: Any = None
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    base: Type = None
     name: str = None
-    needs: Union[str, Sequence[str]] = dataclasses.field(default_factory = list)
-    produces: str = None
-    design: str = None
+    manager: Manager = None
+    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
+
+
+@dataclasses.dataclass
+class Component(sourdough.quirks.Registrar, sourdough.structures.Node):
+    
+    contents: sourdough.quirks.Element = None 
+    name: str = None
+    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
+
+
+@dataclasses.dataclass
+class Worker(Component, sourdough.types.Hybrid):
+    
+    contents: Sequence[Component] = dataclasses.field(default_factory = list) 
+    name: str = None
     iterations: Union[int, str] = 1
     criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
     parallel: ClassVar[bool] = False
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def apply(self, director: sourdough.Director) -> sourdough.Director:
-        """Subclasses must provide their own methods."""
-        return director
-          
-    """ Public Methods """ 
     
-    def finalize(self, recursive: bool = True) -> None:
+    """ Public Methods """
+    
+    def apply(self, data: Any = None, **kwargs) -> Any:
         """[summary]
 
         Args:
-            recursive (bool, optional): [description]. Defaults to True.
+            data (Any, optional): [description]. Defaults to None.
 
         Returns:
-            [type]: [description]
-            
+            Any: [description]
         """
-        new_contents = []
-        for child in self.contents:
-            new_child = self._instancify(component = child)
-            if hasattr(new_child, 'finalize') and recursive:
-                new_child = new_child.finalize(recursive = recursive)
-            new_contents.append(new_child)
-        self.contents = new_contents
-        return self 
-         
-    # def implement(self, data: Any = None, **kwargs) -> Any:
-    #     """[summary]
-
-    #     Args:
-    #         data (Any): [description]
-
-    #     Returns:
-    #         Any: [description]
-    #     """
-    #     if data is not None:
-    #         kwargs['data'] = data
-    #     try:
-    #         self.contents.implement(**kwargs)
-    #     except AttributeError:
-    #         raise AttributeError(
-    #             'stored object in Workflow lacks implement method')              
-
-    """ Private Methods """
-
-    def _instancify(self, component: Union[str, Component], 
-                    **kwargs) -> Component:
-        """
-            
-        """
-        if isinstance(component, Component):
-            for key, value in kwargs.items():
-                setattr(component, key, value)
-        else:
-            if isinstance(component, str):
-                try:
-                    component = self.registry.select(key = component)
-                except KeyError:
-                    raise KeyError(
-                        'component not found in the Component registry')
-            elif issubclass(component, Component):
-                pass
+        for node in self.contents:
+            if data is None:
+                node.apply(data = data, **kwargs)
             else:
-                raise TypeError('component must be a Component or str')
-            component = component(**kwargs)
-        return component 
+                data = node.apply(data = data, **kwargs)
+        if data is None:
+            return self
+        else:
+            return data
 
-    """ Dunder Methods """
+             
+@dataclasses.dataclass
+class Step(Component, sourdough.types.Proxy):
+    """Wrapper for a Technique.
 
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
+    Subclasses of Step can store additional methods and attributes to apply to 
+    all possible technique instances that could be used. This is often useful 
+    when using parallel Worklow instances which test a variety of strategies 
+    with similar or identical parameters and/or methods.
 
-        Returns:
-            str: default string representation of an instance.
+    A Step instance will try to return attributes from Technique if the
+    attribute is not found in the Step instance. 
 
-        """
-        return '\n'.join([textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            components:'''),
-            f'''{textwrap.indent(str(self.contents), '    ')}'''])   
+    Args:
+        contents (Technique): technique instance to be used in a Workflow.
+            Defaults ot None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+                        
+    """
+    contents: Union[Technique, str] = None
+    name: str = None
+                
+    """ Properties """
+    
+    @property
+    def technique(self) -> Technique:
+        return self.contents
+    
+    @technique.setter
+    def technique(self, value: Technique) -> None:
+        self.contents = value
+        return self
+    
+    @technique.deleter
+    def technique(self) -> None:
+        self.contents = None
+        return self
+    
+    """ Public Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> object:
+        """Applies Technique instance in 'contents'.
         
+        The code below outlines a basic method that a subclass should build on
+        for a properly functioning Step.
+        
+        Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            data (object): optional object to apply 'contents' to. Defaults to
+                None.
+                
+        Returns:
+            object: with any modifications made by 'contents'. If data is not
+                passed, nothing is returned.        
+        
+        """
+        if data is None:
+            self.contents.apply(**kwargs)
+            return self
+        else:
+            return self.contents.apply(data = data, **kwargs)
+
+
+@dataclasses.dataclass
+class Technique(Component):
+    """Base class for primitive objects in a sourdough composite object.
+    
+    The 'contents' and 'parameters' attributes are combined at the last moment
+    to allow for runtime alterations.
+    
+    Args:
+        contents (Callable, str): core object used by the 'apply' method or a
+            str matching a callable object in the algorithms resource. Defaults 
+            to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'apply' method is called. Defaults to an empty dict.
+                                    
+    """
+    contents: Union[Callable, str] = None
+    name: str = None
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+
+    """ Properties """
+    
+    @property
+    def algorithm(self) -> Union[object, str]:
+        return self.contents
+    
+    @algorithm.setter
+    def algorithm(self, value: Union[object, str]) -> None:
+        self.contents = value
+        return self
+    
+    @algorithm.deleter
+    def algorithm(self) -> None:
+        self.contents = None
+        return self
+        
+    """ Public Methods """
+    
+    def apply(self, data: object = None, **kwargs) -> object:
+        """Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            data (object): optional object to apply 'contents' to. Defaults to
+                None.
+                
+        Returns:
+            object: with any modifications made by 'contents'. If data is not
+                passed, nothing is returned.        
+        
+        """
+        if data is None:
+            if self.contents:
+                data = self.contents.apply(**self.parameters, **kwargs)
+            return data
+        else:
+            if self.contents:
+                return self.contents.apply(data, **self.parameters, **kwargs)
+            else:
+                return None
+
