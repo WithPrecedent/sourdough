@@ -45,14 +45,15 @@ import dataclasses
 import inspect
 from sourdough.utilities.tools import deannotate
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+                    Optional, Sequence, Tuple, Type, Union, get_args, 
+                    get_origin)
 
 import sourdough
 
  
 @dataclasses.dataclass
 class Constructor(object):
-    """Parent for classes that construct other classes or objects.
+    """Mixin for classes that construct other classes or objects.
     
     Subclasses must have a 'create' method.
     
@@ -84,7 +85,7 @@ class Constructor(object):
 
 @dataclasses.dataclass
 class Element(object):
-    """Parent for classes stored in composite structures.
+    """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
     otherwise passed. This is important for parts of sourdough composite objects 
@@ -141,7 +142,7 @@ class Element(object):
 
 @dataclasses.dataclass
 class Coordinator(object):
-    """Abstract base class for organizers and directors for Constructors
+    """Mixin for organizer and director classes.
     
     Subclasses must have a 'validate' method which either validates or converts
     instance attributes.
@@ -350,7 +351,7 @@ class Loader(object):
   
 # @dataclasses.dataclass
 # class Validator(object):
-#     """Base class for type validation and/or conversion Quirks.
+#     """Mixin for type validation and/or conversion Quirks.
     
 #     To use this mixin, a base class must have a 'contents' attribute for the
 #     items to be validated and/or converted.
@@ -410,13 +411,13 @@ class Loader(object):
 #             Tuple[Any]: base level of stored type in an annotation
         
 #         """
-#         origin = typing.get_origin(annotation)
-#         args = typing.get_args(annotation)
+#         origin = get_origin(annotation)
+#         args = get_args(annotation)
 #         if origin is Union:
-#             accepts = tuple(deannotate(a)[0] for a in args)
+#             accepts = tuple(self.deannotate(a)[0] for a in args)
 #         else:
 #             self.stores = origin
-#             accepts = typing.get_args(annotation)
+#             accepts = get_args(annotation)
 #         return accepts
         
 #     def verify(self, contents: Any) -> Any:

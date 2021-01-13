@@ -12,7 +12,7 @@ import sourdough
 
 @dataclasses.dataclass
 class AComponent(
-    sourdough.Vessel,
+    sourdough.Bunch,
     sourdough.Registry,
     sourdough.quirks.Element):
     pass
@@ -41,7 +41,7 @@ class ProxiedComponent(sourdough.Proxy, OtherComponent):
 
 
 def test_mixins():
-    # Tests Component, Registry, and Vessel
+    # Tests Component, Registry, and Bunch
     a_component = AComponent()
     other_component = OtherComponent()
     assert 'other_component' in AComponent.library

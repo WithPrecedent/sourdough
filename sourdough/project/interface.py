@@ -25,92 +25,89 @@ import sourdough
 
 logger = logging.getLogger()
  
- 
 
-@dataclasses.dataclass
-class Validator(object):
-    """
-    """
-    project: Project
-    accepts: Tuple[Type]
-    returns: type
-    parameters: Tuple[str] = tuple()
-    additions: Tuple[str] = tuple()
+# @dataclasses.dataclass
+# class Validator(object):
+#     """
+#     """
+#     project: Project
+#     accepts: Tuple[Type]
+#     returns: type
+#     parameters: Tuple[str] = tuple()
+#     additions: Tuple[str] = tuple()
     
-    """ Public Methods """
+#     """ Public Methods """
     
-    @functools.singledispatchmethod
-    def convert(self, item) -> Any:
-        """[summary]
+#     @functools.singledispatchmethod
+#     def convert(self, item) -> Any:
+#         """[summary]
 
-        Args:
-            item ([type]): [description]
-            instance (object, optional): [description]. Defaults to None.
+#         Args:
+#             item ([type]): [description]
+#             instance (object, optional): [description]. Defaults to None.
 
-        Raises:
-            TypeError: [description]
+#         Raises:
+#             TypeError: [description]
 
-        Returns:
-            Any: [description]
+#         Returns:
+#             Any: [description]
             
-        """
-        if isinstance(item, self.returns):
-            converted = item
-            for addition in self.additions:
-                setattr(converted, addition, getattr(self.project, addition))
-        elif item == self.returns:
-            kwargs = {}
-            for parameter in self.parameters:
-                kwargs[parameter] = getattr(self.project, parameter)
-            converted = item(**kwargs)
-        else:
-            raise TypeError(
-                f'Must be these types: {self.accepts}, or {self.returns}')
-        return converted
+#         """
+#         if isinstance(item, self.returns):
+#             converted = item
+#             for addition in self.additions:
+#                 setattr(converted, addition, getattr(self.project, addition))
+#         elif item == self.returns:
+#             kwargs = {}
+#             for parameter in self.parameters:
+#                 kwargs[parameter] = getattr(self.project, parameter)
+#             converted = item(**kwargs)
+#         else:
+#             raise TypeError(
+#                 f'Must be these types: {self.accepts}, or {self.returns}')
+#         return converted
 
-settings_validator = Validator(
-    acccepts = [str, pathlib.Path], 
-    returns = sourdough.Settings)          
+# settings_validator = Validator(
+#     acccepts = [str, pathlib.Path], 
+#     returns = sourdough.Settings)          
 
     
-@functools.singledispatch
-def validate(self, item, returns: Type, project: Project) -> Any:
-    """Validates 'settings' or converts it to a Configuration instance."""
-    raise TypeError(
-            'settings must be a Configuration, Path, str, or None type.')
+# @functools.singledispatch
+# def validate(self, item, returns: Type, project: Project) -> Any:
+#     """Validates 'settings' or converts it to a Configuration instance."""
+#     raise TypeError(
+#             'settings must be a Configuration, Path, str, or None type.')
 
-@validate.register
-def _(self, item: object) -> sourdough.Settings:
-    return item
+# @validate.register
+# def _(self, item: object) -> sourdough.Settings:
+#     return item
 
-@validate.register
-def _(self, item: Type) -> sourdough.Settings:
-    return item()
+# @validate.register
+# def _(self, item: Type) -> sourdough.Settings:
+#     return item()
     
-@validate.register
-def _(self, settings: str) -> sourdough.Settings:
-    return self.bases.settings(contents = settings)
+# @validate.register
+# def _(self, settings: str) -> sourdough.Settings:
+#     return self.bases.settings(contents = settings)
 
-@validate.register
-def _(self, settings: pathlib.Path) -> sourdough.Settings:
-    return self.bases.settings(contents = settings)
+# @validate.register
+# def _(self, settings: pathlib.Path) -> sourdough.Settings:
+#     return self.bases.settings(contents = settings)
 
-@validate.register
-def _(self, settings: None) -> sourdough.Settings:
-    return self.bases.settings(contents = settings)
-
-
+# @validate.register
+# def _(self, settings: None) -> sourdough.Settings:
+#     return self.bases.settings(contents = settings)
 
 
-  
-   
 @dataclasses.dataclass
-class Project(sourdough.types.Hybrid, sourdough.interfaces.Coordinator):
+class Project(sourdough.quirks.Director):
     """Constructs, organizes, and implements a a collection of projects.
 
     Args:
-        contents (Sequence[Union[str, sourdough.Director]]): stored Director
-            classes, Director instances, or the names of Director subclasses 
+        contents (Mapping[str, object]): keys are names of objects stored and 
+            values are the stored object. Defaults to an empty dict.
+        builder (Constructor): related builder which constructs objects to be 
+            stored in 'contents'. subclasses 
             stored in 'options'. Defaults to an empty list.
         settings (Union[Type[], str, pathlib.Path]]): a Configuration-compatible class,
             a str or pathlib.Path containing the file path where a file of a 
@@ -145,9 +142,8 @@ class Project(sourdough.types.Hybrid, sourdough.interfaces.Coordinator):
             SimpleBases.
 
     """
-    contents: Sequence[Any] = dataclasses.field(default_factory = list)
-    directors: Union[sourdough.base.Director, str] = dataclasses.field(
-        default_factory = list)
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    builder: sourdough.quirks.Constructor = None
     settings: Union[sourdough.types.Configuration, str, pathlib.Path] = None
     clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
     bases: object = sourdough.project.bases

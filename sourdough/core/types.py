@@ -20,14 +20,14 @@ Contents:
     Proxy (collections.abc.Container): basic wrapper for a stored static or
         iterable item. Dunder methods attempt to intelligently apply access
         methods to either the wrapper or the wrapped item.
-    Vessel (Iterable, ABC): abstract base class for sourdough iterables. All 
+    Bunch (Iterable, ABC): abstract base class for sourdough iterables. All 
         subclasses must have an 'add' method as well as store their contents in 
         the 'contents' attribute.
-    Progression (MutableSequence, Vessel): sourdough drop-in replacement for 
+    Progression (MutableSequence, Bunch): sourdough drop-in replacement for 
         list with additional functionality.
     Hybrid (Progression): iterable with both dict and list interfaces and 
         methods that stores items with a 'name' attribute.
-    Lexicon (MutableMapping, Vessel): sourdough's drop-in replacement for 
+    Lexicon (MutableMapping, Bunch): sourdough's drop-in replacement for 
         python dicts with some added functionality.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
@@ -41,6 +41,7 @@ import abc
 import collections.abc
 import configparser
 import dataclasses
+import functools
 import importlib.util
 import json
 import pathlib
@@ -51,6 +52,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+@dataclasses.dataclass
 class Proxy(collections.abc.Container):
     """Container for holding single items.
     
@@ -173,19 +175,19 @@ class Proxy(collections.abc.Container):
                         
   
 @dataclasses.dataclass
-class Vessel(collections.abc.Iterable, abc.ABC):
+class Bunch(collections.abc.Iterable, abc.ABC):
     """Abstract base class for sourdough iterables.
   
-    A Vessel differs from a general python iterable in 3 ways:
+    A Bunch differs from a general python iterable in 3 ways:
         1) It must include an 'add' method which provides the default mechanism
             for adding new items to the iterable. All of the other appropriate
             methods for adding to a python iterable ('append', 'extend', 
             'update', etc.) remain, but 'add' allows a subclass to designate the
             preferred method of adding to the iterable's stored data.
-        2) It allows the '+' operator to be used to join a Vessel subclass 
+        2) It allows the '+' operator to be used to join a Bunch subclass 
             instance of the same general type (Mapping, Sequence, Tuple, etc.). 
-            The '+' operator calls the Vessel subclass 'add' method to implement 
-            how the added item(s) is/are added to the Vessel subclass instance.
+            The '+' operator calls the Bunch subclass 'add' method to implement 
+            how the added item(s) is/are added to the Bunch subclass instance.
         3) The internally stored iterable is located in the 'contents' 
             attribute. This allows for consistent coordination among classes and
             mixins.
@@ -244,11 +246,11 @@ class Vessel(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Progression(Vessel, collections.abc.MutableSequence):
+class Progression(Bunch, collections.abc.MutableSequence):
     """Basic sourdough list replacement.
     
     A Progression differs from an ordinary python list only in ways inherited
-    from Vessel ('add' method, storage of data in 'contents', and allowing the
+    from Bunch ('add' method, storage of data in 'contents', and allowing the
     '+' operator to join Progressions with other lists and Progressions).
     
     The 'add' method attempts to extend 'contents' with the item to be added.
@@ -715,11 +717,11 @@ class Hybrid(Progression):
 
  
 @dataclasses.dataclass
-class Lexicon(Vessel, collections.abc.MutableMapping):
+class Lexicon(Bunch, collections.abc.MutableMapping):
     """Basic sourdough dict replacement.
     
     A Lexicon differs from an ordinary python dict in 1 additional way than
-    a Vessel:
+    a Bunch:
         1) It includes "excludify" and "subsetify" methods which return new
             instances with a subset of 'contents' based upon the 'subset'
             argument passed to the method. 'excludify' returns all 'contents'
@@ -1126,11 +1128,8 @@ class Configuration(sourdough.types.Lexicon):
 
     """ Public Methods """
 
-    def validate(self, 
-            contents: Union[
-                str,
-                pathlib.Path,
-                Mapping[Any, Any]]) -> Mapping[Any, Any]:
+    def validate(self, contents: Union[Mapping[Any, Any], str, 
+                                       pathlib.Path]) -> Mapping[Any, Any]:
         """Validates 'contents' or converts 'contents' to the proper type.
 
         Args:
@@ -1154,12 +1153,9 @@ class Configuration(sourdough.types.Lexicon):
         elif contents is None:
             return {}
         else:
-            raise TypeError(
-                'contents must be None or a dict, Path, or str type')
+            raise TypeError('contents must be a dict, Path, str, or None type')
 
-    def add(self, 
-            section: str, 
-            contents: Mapping[Any, Any]) -> None:
+    def add(self, section: str, contents: Mapping[Any, Any]) -> None:
         """Adds 'settings' to 'contents'.
 
         Args:

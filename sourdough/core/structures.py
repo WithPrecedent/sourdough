@@ -10,7 +10,6 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -23,7 +22,7 @@ import sourdough
 
    
 @dataclasses.dataclass
-class Builder(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
+class Builder(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     """Builds complex class instances.
 
     For any parameters which require further construction code, a subclass
@@ -45,6 +44,8 @@ class Builder(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     base: Type = None
+    
+    """ Public Methods """
 
     def create(self, name: str = None, **kwargs) -> object:
         """Builds and returns an instance based on 'name' and 'kwargs'.
@@ -67,7 +68,7 @@ class Builder(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
                     kwargs[parameter] = method(name = name, **kwargs)
                 except KeyError:
                     kwargs[parameter] = self.contents[parameter]
-        product = self.get_product(name = name, **kwargs)
+        product = self.get_product(name = name)
         return product(**kwargs) 
     
     def get_product(self, name: str) -> Type:
@@ -83,14 +84,14 @@ class Builder(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
             
         """
         try:
-            product = self.base.registry.acquire(key = name)
+            product = self.base.acquire(key = name)
         except (KeyError, AttributeError, TypeError):
             product = self.base
         return product  
     
 
 @dataclasses.dataclass  
-class Director(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
+class Director(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     """Directs and stores objects created by a builder.
     
     A Director is not necessary, but provides a convenient way to store objects
@@ -99,12 +100,12 @@ class Director(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
     Args:
         contents (Mapping[str, object]): keys are names of objects stored and 
             values are the stored object. Defaults to an empty dict.
-        builder (Abstract Builder): related builder which constructs objects to
-            be stored in 'contents'.
+        builder (Constructor): related builder which constructs objects to be 
+            stored in 'contents'.
     
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builder: sourdough.interfaces.Constructor = None
+    builder: sourdough.quirks.Constructor = None
     
     """ Public Methods """
     
@@ -128,9 +129,8 @@ class Director(sourdough.types.Lexicon, sourdough.interfaces.Constructor):
   
 
 @dataclasses.dataclass
-class Node(sourdough.interfaces.Element, sourdough.types.Lexicon):
-
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
+    
     name: str = None
 
     """ Required Subclass Methods """
@@ -142,9 +142,10 @@ class Node(sourdough.interfaces.Element, sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(sourdough.interfaces.Element, sourdough.types.Hybrid):
+class Component(Node, sourdough.types.Hybrid):
     
-    contents: Sequence[sourdough.interfaces.Element] = dataclasses.field(default_factory = list) 
+    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
+        default_factory = list) 
     name: str = None
     
     """ Public Methods """
@@ -170,7 +171,7 @@ class Component(sourdough.interfaces.Element, sourdough.types.Hybrid):
         
     
 @dataclasses.dataclass
-class Leaf(sourdough.interfaces.Element, collections.abc.Container):
+class Leaf(Node):
 
     contents: Callable = None 
     name: str = None
@@ -190,7 +191,7 @@ class Leaf(sourdough.interfaces.Element, collections.abc.Container):
 
 
 @dataclasses.dataclass
-class Graph(sourdough.interfaces.Element, sourdough.types.Lexicon):
+class Graph(sourdough.quirks.Element, sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are
@@ -296,18 +297,21 @@ class Graph(sourdough.interfaces.Element, sourdough.types.Lexicon):
     
     """ Private Methods """
     
-    def _find_all_paths(self, start: str, end: str, path: List[str] = []):
-        """[summary]
+    def _find_all_paths(self, start: str, end: str, 
+                        path: List[str] = []) -> List[List[str]]:
+        """Returns all paths in graph from 'start' to 'end'.
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
         Args:
-            start (str): [description]
-            end (str): [description]
-            path (List[str], optional): [description]. Defaults to [].
+            start (str): name of Node instance to start paths from.
+            end (str): name of Node instance to end paths.
+            path (List[str]): a path from 'start' to 'end'. Defaults to an empty 
+                list. 
 
         Returns:
-            [type]: [description]
+            List[List[str]]: a list of possible paths (each path is a list of
+                Node names) from 'start' to 'end'
             
         """
         path = path + [start]
