@@ -20,7 +20,7 @@ alternate classes for use in sourdough, these quirks show how to survive
 static type-checkers and other internal checks made by sourdough.
 
 Contents:
-    Constructor (object): quirk for sourdough classes that contruct other 
+    Builder (object): quirk for sourdough classes that contruct other 
         classes and objects. All subclasses must have a 'create' method.
     Element (object): quirk for sourdough containers used in composite 
         structures. It automatically assigns a 'name' attribute if none is 
@@ -52,7 +52,7 @@ import sourdough
 
  
 @dataclasses.dataclass
-class Constructor(object):
+class Builder(object):
     """Mixin for classes that construct other classes or objects.
     
     Subclasses must have a 'create' method.

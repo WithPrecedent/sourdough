@@ -41,7 +41,6 @@ import abc
 import collections.abc
 import configparser
 import dataclasses
-import functools
 import importlib.util
 import json
 import pathlib
@@ -1391,8 +1390,8 @@ class Configuration(sourdough.types.Lexicon):
                     'key must be a str and value must be a dict type')
         return self
 
-    def __missing__(self, key: str) -> 'Configuration':
-        """Automatically creates a nested Configuration if 'key' is missing.
+    def __missing__(self, key: str) -> Dict:
+        """Automatically creates a nested dict if 'key' is missing.
         
         This method implements autovivification.
         
@@ -1400,9 +1399,9 @@ class Configuration(sourdough.types.Lexicon):
             key (str): name of key sought in this instance.
             
         Returns:
-            Configuration: a new, nested settings at 'key'.
+            Dict: a new, nested empty dict at 'key'.
         
         """
-        value = self[key] = type(self)(infer_types = False)
+        value = self[key] = {}
         return value
         

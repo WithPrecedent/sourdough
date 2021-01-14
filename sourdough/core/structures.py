@@ -18,11 +18,11 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-""" Builder Structure """
+""" Factory Structure """
 
    
 @dataclasses.dataclass
-class Builder(sourdough.quirks.Constructor, sourdough.types.Lexicon):
+class Factory(sourdough.quirks.Builder, sourdough.types.Lexicon):
     """Builds complex class instances.
 
     For any parameters which require further construction code, a subclass
@@ -91,7 +91,7 @@ class Builder(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     
 
 @dataclasses.dataclass  
-class Director(sourdough.quirks.Constructor, sourdough.types.Lexicon):
+class Director(sourdough.quirks.Builder, sourdough.types.Lexicon):
     """Directs and stores objects created by a builder.
     
     A Director is not necessary, but provides a convenient way to store objects
@@ -100,12 +100,12 @@ class Director(sourdough.quirks.Constructor, sourdough.types.Lexicon):
     Args:
         products (Mapping[str, object]): keys are names of objects stored and 
             values are the stored object. Defaults to an empty dict.
-        builder (Constructor): related builder which constructs objects to be 
+        builder (Builder): related builder which constructs objects to be 
             stored in 'contents'.
     
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builders: Mapping[str, Builder] = dataclasses.field(default_factory = dict)
+    builders: Mapping[str, Factory] = dataclasses.field(default_factory = dict)
     
     """ Public Methods """
     

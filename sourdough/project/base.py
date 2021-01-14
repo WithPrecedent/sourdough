@@ -22,6 +22,50 @@ import sourdough
     
 
 @dataclasses.dataclass
+class Bases(sourdough.quirks.Loader):
+    """Base classes for a sourdough projects.
+    
+    Args:
+
+            
+    """
+    settings: Union[str, Type] = 'sourdough.base.Settings'
+    filer: Union[str, Type] = 'sourdough.base.Filer' 
+    manager: Union[str, Type] = 'sourdough.base.Manager'
+    creator: Union[str, Type] = 'sourdough.base.Creator'
+    component: Union[str, Type] = 'sourdough.base.Component'
+
+    """ Properties """
+    
+    def component_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.component.registry.keys()) 
+    
+    def manager_suffixes(self) -> Tuple[str]:
+        return tuple(key + 's' for key in self.manager.registry.keys()) 
+   
+    """ Public Methods """
+   
+    def get_class(self, name: str, kind: str) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+        """
+        base = getattr(self, kind)
+        if hasattr(base, 'registry'):
+            try:
+                product = base.registry.acquire(key = name)
+            except KeyError:
+                product = base
+        else:
+            product = base
+        return product   
+    
+    
+@dataclasses.dataclass
 class Settings(sourdough.types.Configuration):
     """Loads and Stores configuration settings for a Project.
 
@@ -65,8 +109,16 @@ class Filer(sourdough.files.Clerk):
 
 
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-              sourdough.structures.Builder):
+class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
+              sourdough.quirks.Builder):
+    
+    contents: Any = None
+    name: str = None
+    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
+
+
+@dataclasses.dataclass
+class Manager(Creator):
 
     contents: sourdough.structures.Graph = sourdough.structures.Graph()
     builders: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
@@ -75,7 +127,6 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Element,
     automatic: bool = True
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
         'builders'])
-    registry: ClassVar[Mapping[str, Manager]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -104,14 +155,12 @@ class Manager(sourdough.quirks.Registrar, sourdough.quirks.Element,
 
 
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-              sourdough.structures.Builder):
+class Worker(Creator):
     
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     base: Type = None
     name: str = None
     manager: Manager = None
-    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
 
 
 @dataclasses.dataclass
@@ -123,7 +172,7 @@ class Component(sourdough.quirks.Registrar, sourdough.structures.Node):
 
 
 @dataclasses.dataclass
-class Worker(Component, sourdough.types.Hybrid):
+class Composite(Component, sourdough.types.Hybrid):
     
     contents: Sequence[Component] = dataclasses.field(default_factory = list) 
     name: str = None

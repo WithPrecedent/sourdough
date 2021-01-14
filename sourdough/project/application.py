@@ -102,7 +102,7 @@ class Settings(sourdough.types.Configuration):
 
 
 @dataclasses.dataclass
-class Builder(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
+class Factory(sourdough.quirks.Registrar, sourdough.types.Lexicon, abc.ABC):
     
     contents: Mapping[str, str] = dataclasses.field(default_factory = dict)
 

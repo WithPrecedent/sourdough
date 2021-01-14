@@ -13,7 +13,7 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_managers': ['parser', 'munger'],
+        'cool_project_builders': ['parser', 'munger'],
         'cool_project_design': 'pipeline'},
     'parser': {
         'parser_design': 'contest',

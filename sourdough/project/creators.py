@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Architect (Creator):
-    Builder (Creator):
+    Factory (Creator):
     Worker (Creator):
     
 """
@@ -220,7 +220,7 @@ class Architect(sourdough.Creator):
            
       
 @dataclasses.dataclass
-class Builder(sourdough.Creator):
+class Factory(sourdough.Creator):
     """Constructs finalized plan.
     
     Args:

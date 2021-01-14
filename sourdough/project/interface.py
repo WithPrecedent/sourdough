@@ -24,51 +24,7 @@ import sourdough
 
 
 logger = logging.getLogger()
- 
 
-@dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough projects.
-    
-    Args:
-
-            
-    """
-    settings: Union[str, Type] = 'sourdough.base.Settings'
-    filer: Union[str, Type] = 'sourdough.base.Filer' 
-    manager: Union[str, Type] = 'sourdough.base.Manager'
-    creator: Union[str, Type] = 'sourdough.base.Creator'
-    component: Union[str, Type] = 'sourdough.base.Component'
-
-    """ Properties """
-    
-    def component_suffixes(self) -> Tuple[str]:
-        return tuple(key + 's' for key in self.component.registry.keys()) 
-    
-    def manager_suffixes(self) -> Tuple[str]:
-        return tuple(key + 's' for key in self.manager.registry.keys()) 
-   
-    """ Public Methods """
-   
-    def get_class(self, name: str, kind: str) -> Type:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-        """
-        base = getattr(self, kind)
-        if hasattr(base, 'registry'):
-            try:
-                product = base.registry.acquire(key = name)
-            except KeyError:
-                product = base
-        else:
-            product = base
-        return product   
-    
 
 @dataclasses.dataclass
 class Project(sourdough.structures.Director):
@@ -77,16 +33,17 @@ class Project(sourdough.structures.Director):
     Args:
         contents (Mapping[str, object]): keys are names of objects stored and 
             values are the stored object. Defaults to an empty dict.
-        builders (Constructor): related builder which constructs objects to be 
+        builders (Builder): related builder which constructs objects to be 
             stored in 'contents'. subclasses 
             stored in 'options'. Defaults to an empty list.
-        settings (Union[Type[], str, pathlib.Path]]): a Configuration-compatible class,
-            a str or pathlib.Path containing the file path where a file of a 
+        settings (Union[sourdough.base.Settings, str, pathlib.Path]]): a
+            Settings-compatible subclass or instance, a str or pathlib.Path 
+            containing the file path where a file of a 
             supported file type with settings for a Configuration instance is 
             located. Defaults to the default Configuration instance.
-        clerk (Union[Type, str, pathlib.Path]]): a Clerk-compatible class or a 
+        filer (Union[Type, str, pathlib.Path]]): a Clerk-compatible class or a 
             str or pathlib.Path containing the full path of where the root 
-            folder should be located for file input and output. A 'clerk' must 
+            folder should be located for file input and output. A 'filer' must 
             contain all file path and import/export methods for use throughout 
             sourdough. Defaults to the default Clerk instance. 
         name (str): designates the name of a class instance that is used for 
@@ -101,8 +58,8 @@ class Project(sourdough.structures.Director):
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
-        automatic (bool): whether to automatically advance 'director' (True) or 
-            whether the director must be advanced manually (False). Defaults to 
+        automatic (bool): whether to automatically advance 'builder' (True) or 
+            whether the builder must be advanced manually (False). Defaults to 
             True.
         data (object): any data object for the project to be applied. If it is
             None, an instance will still execute its workflow, but it won't
@@ -114,16 +71,18 @@ class Project(sourdough.structures.Director):
 
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builders: Mapping[str, Type] = dataclasses.field(default_factory = dict)
-    settings: Union[sourdough.types.Configuration, str, pathlib.Path] = None
-    clerk: Union[sourdough.Clerk, str, pathlib.Path] = None
-    bases: object = sourdough.project.bases
+    builders: Mapping[str, Union[sourdough.quirks.Builder, 
+                                 str]] = dataclasses.field(
+                                     default_factory = dict)
+    settings: Union[sourdough.types.Configuration, pathlib.Path, str] = None
+    filer: Union[sourdough.Clerk, pathlib.Path, str] = None
+    bases: object = sourdough.base.Bases()
     name: str = None
     identification: str = None
     automatic: bool = True
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'clerk', 'builders'])
+        'settings', 'name', 'identification', 'filer', 'builders'])
     
     """ Initialization Methods """
 
@@ -149,13 +108,13 @@ class Project(sourdough.structures.Director):
             
     """ Public Methods """
     
-    def add_director(self, director: Union[str, Type, object]) -> None:
+    def add_builder(self, builder: Union[str, Type, object]) -> None:
         """
 
         Args:
-            director (Union[str, Type, object]): [description]
+            builder (Union[str, Type, object]): [description]
         """
-        self.directors.append(self._validate_director(director = director))
+        self.builders.append(self._validate_builder(builder = builder))
         return self  
     
     def validate(self, validations: List[str] = None) -> None:
@@ -178,34 +137,29 @@ class Project(sourdough.structures.Director):
                                     
     """ Private Methods """
     
-    @functools.singledispatchmethod
-    def _validate_settings(self, settings) -> sourdough.Settings:
-        """Validates 'settings' or converts it to a Configuration instance."""
-        raise TypeError(
+    def _validate_settings(self, settings: Union[sourdough.types.Configuration, 
+            pathlib.Path, str]) -> sourdough.types.Configuration:
+        """Validates 'settings' or converts it to a Configuration instance.
+        
+        The method also injects the 'general' section of a Configuration 
+        instance into this Director instance as attributes. This allows easy, 
+        direct access of settings like 'verbose'.
+        
+        """
+        if isinstance(settings, self.bases.settings):
+            pass
+        elif inspect.isclass(settings):
+            settings = settings()
+        elif settings is None or isinstance(settings, (str, pathlib.Path)):
+            settings = self.bases.settings(contents = settings)
+        else:
+            raise TypeError(
                 'settings must be a Configuration, Path, str, or None type.')
-    
-    @_validate_settings.register
-    def _(self, settings: sourdough.Settings) -> sourdough.Settings:
+        # Adds 'general' section attributes from 'settings'.
+        settings.inject(instance = self)
         return settings
 
-    @_validate_settings.register
-    def _(self, settings: Type[sourdough.Settings]) -> sourdough.Settings:
-        return settings()
-        
-    @_validate_settings.register
-    def _(self, settings: str) -> sourdough.Settings:
-        return self.bases.settings(contents = settings)
-
-    @_validate_settings.register
-    def _(self, settings: pathlib.Path) -> sourdough.Settings:
-        return self.bases.settings(contents = settings)
-    
-    @_validate_settings.register
-    def _(self, settings: None) -> sourdough.Settings:
-        return self.bases.settings(contents = settings)
-       
-    @functools.singledispatchmethod
-    def _validate_name(self, name) -> str:
+    def _validate_name(self, name: str) -> str:
         """Creates 'name' if one doesn't exist.
         
         If 'name' was not passed, this method first tries to infer 'name' as the 
@@ -213,21 +167,14 @@ class Project(sourdough.structures.Director):
         uses the snakecase name of the class.
         
         """
-        raise TypeError('name must be a str or None type.')
-
-    @_validate_name.register
-    def _(self, name: str) -> str:
+        if not name:
+            node_sections = self.settings.excludify(subset = self.settings.skip)
+            try:
+                name = node_sections.keys()[0]
+            except IndexError:
+                name = sourdough.tools.snakify(self.__class__)
         return name
-    
-    @_validate_name.register
-    def _validate_name(self, name: None) -> str:
-        try:
-            node_sections = self.settings.excludify(subset = self.rules.skip)
-            return node_sections.keys()[0]
-        except IndexError:
-            return sourdough.tools.snakify(self.__class__)
-    
-    @functools.singledispatchmethod
+
     def _validate_identification(self, identification) -> str:
         """Creates unique 'identification' if one doesn't exist.
         
@@ -235,19 +182,13 @@ class Project(sourdough.structures.Director):
         an underscore and the date and time.
         
         """
-        raise TypeError('identification must be a str or None type.')
-
-    @_validate_identification.register
-    def _(self, identification: str) -> str:
+        if not identification:
+            identification = sourdough.tools.datetime_string(prefix = self.name)
         return identification
-        
-    @_validate_identification.register
-    def _(self, identification: None) -> str:
-        return sourdough.tools.datetime_string(prefix = self.name)
-    
-    @functools.singledispathmethod
-    def _validate_clerk(self, clerk) -> sourdough.files.Clerk:
-        """Validates 'clerk' or converts it to a Clerk instance.
+
+    def _validate_filer(self, filer: Union[sourdough.Clerk, pathlib.Path, 
+                                           str]) -> sourdough.Clerk:
+        """Validates 'filer' or converts it to a Clerk instance.
         
         If a file path is passed, that becomes the root folder with the default
         file structure in the default Clerk instance.
@@ -256,66 +197,51 @@ class Project(sourdough.structures.Director):
         instance's 'settings'.
         
         """
-        raise TypeError('clerk must be a Clerk, Path, str, or None type.')
-    
-    @_validate_clerk.register
-    def _(self, clerk: sourdough.files.clerk) -> sourdough.files.Clerk:  
-        return clerk  
-    
-    @_validate_clerk.register
-    def _(self, clerk: Type[sourdough.files.clerk]) -> sourdough.files.Clerk:  
-        return clerk(settings = self.settings)
+        if isinstance(filer, self.bases.filer):
+            filer.settings = self.settings
+        elif inspect.isclass(filer):
+            filer = filer(settings = self.settings)
+        elif filer is None or isinstance(filer, (str, pathlib.Path)):
+            filer = self.bases.filer(
+                root_folder = filer, 
+                settings = self.settings)
+        else:
+            raise TypeError('filer must be a Clerk, Path, str, or None type.')
+        return filer
 
-    @_validate_clerk.register
-    def _(self, clerk: str) -> sourdough.files.Clerk:  
-        return self.bases.clerk(root_folder = clerk, settings = self.settings) 
-    
-    @_validate_clerk.register
-    def _(self, clerk: pathlib.Path) -> sourdough.files.Clerk:  
-        return self.bases.clerk(root_folder = clerk, settings = self.settings)
-    
-    @_validate_clerk.register
-    def _(self, clerk: NoneType) -> sourdough.files.Clerk:  
-        return self.bases.clerk(root_folder = clerk, settings = self.settings)
-    
-    def _validate_directors(self) -> None:
-        """Validates 'contents' or converts it to Director instances.
+    def _validate_builders(self, builders: Mapping[
+            str, Union[sourdough.quirks.Builder, str]]) -> (
+                Mapping[str, sourdough.quirks.Builder]):
+        """Validates 'builders' or converts them to Builder subclasses.
         
         """
-        if not self.contents:
+        if not builders:
             try:
-                self.contents = self.settings[self.name][
-                    f'{self.name}_directors']
+                builders = self.settings[self.name][f'{self.name}_builders']
             except KeyError:
                 pass
-        new_contents = []
-        for item in self.contents:
-            new_contents.append(self._validate_director(director = item))
-        self.contents = new_contents
-        return self
+        new_builders = []
+        for item in builders:
+            new_builders.append(self._validate_builder(builder = item))
+        return new_builders
 
-    @functools.singledispathmethod
-    def _validate_director(self, director) -> sourdough.Director:
+    def _validate_builder(self, builder: Union[
+            str, sourdough.quirks.Builder]) -> sourdough.quirks.Builder:
         """
         """
-        raise TypeError('director must be a str or Director type')
+        if isinstance(builder, str):
+            builder = self.bases.get_class(name = builder, kind = 'builder')
+            builder = builder(name = builder, project = self)
+        elif inspect.isclass(builder):
+            builder = builder(project = self)
+        elif isinstance(builder, self.bases.settings.builder):
+            builder.project = self
+        else:
+            raise TypeError(
+                'contents must be a list of str or Director types')
+        return builder
 
-    @_validate_director.register
-    def _(self, director: str) -> sourdough.Director:
-        director = self.bases.get_class(name = director, kind = 'director')
-        return director(name = director, project = self)'
-    
-    @_validate_director.register
-    def _(self, director: sourdough.Director) -> sourdough.Director:
-        director.project = self
-        return director
-    
-    @_validate_director.register
-    def _(self, director: Type[sourdough.Director]) -> sourdough.Director:
-        return director(project = self)
-    
-    @functools.singledispathmethod
-    def _validate_factory(self, factory) -> sourdough.project.bases.factory:
+    def _validate_factory(self) -> None:
         """Validates 'factory' or converts it to a Factory instance.'"""
         if isinstance(self.factory, self.bases.factory):
             pass
@@ -330,7 +256,7 @@ class Project(sourdough.structures.Director):
         else:
             raise TypeError('factory must be a Factory, str, or None type.')
         return self
-       
+    
     """ Dunder Methods """     
 
     def __iter__(self) -> Iterable:
@@ -349,14 +275,14 @@ class Project(sourdough.structures.Director):
             Any: item project by the 'create' method of a Creator.
             
         """
-        if self.index < len(self.directors):
-            director = self.directors[self.index]
+        if self.index < len(self.builders):
+            builder = self.builders[self.index]
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Starting {director.__name__}')
-            director.complete()
+                print(f'Starting {builder.__name__}')
+            builder.complete()
             self.index += 1
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Completed {director.__name__}')
+                print(f'Completed {builder.__name__}')
         else:
             raise IndexError()
         return self
