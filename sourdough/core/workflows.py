@@ -1,5 +1,5 @@
 """
-structures: common design patterns and structures adapted to sourdough
+structures: common composite structures adapted to sourdough
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -18,135 +18,11 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-""" Factory Structure """
-
-   
-@dataclasses.dataclass
-class Factory(sourdough.quirks.Builder, sourdough.types.Lexicon):
-    """Builds complex class instances.
-
-    For any parameters which require further construction code, a subclass
-    should include a method named '_get_{name of a key in 'contents'}'. That
-    method should return the value for the named parameter.
-
-    Args:
-        contents (Mapping[str, Any]): keys are the names of the parameters to
-            pass when an object is created. Values are the defaults to use when
-            there is not a method named with this format: '_get_{key}'. Keys
-            are iterated in order when the 'create' method is called. Defaults
-            to an empty dict.
-        base (Type): a class that can either be a class to create an instance
-            from or a class with a 'registry' attribute that holds stored
-            classes. If a user intends to get a class stored in the 'registry'
-            attribute, they need to pass a 'name' argument to the 'create' 
-            method which corresponds to a key in the registry. Defaults to None.
-        
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    base: Type = None
-    
-    """ Public Methods """
-
-    def create(self, name: str = None, **kwargs) -> object:
-        """Builds and returns an instance based on 'name' and 'kwargs'.
-
-        Args:
-            name (str): name of a class stored in 'base.registry.' If there is
-                no registry, 'name' is None, or 'name' doesn't match a key in
-                'base.registry', then an instance of 'base' is returned.
-            kwargs (Dict[Any, Any]): any specific parameters that a user wants
-                passed to a class when an instance is created.
-
-        Returns:
-            object: an instance of a stored class.
-            
-        """
-        for parameter in self.contents.keys():
-            if parameter not in kwargs:
-                try:
-                    method = getattr(self, f'_get_{parameter}')
-                    kwargs[parameter] = method(name = name, **kwargs)
-                except KeyError:
-                    kwargs[parameter] = self.contents[parameter]
-        product = self.get_product(name = name)
-        return product(**kwargs) 
-    
-    def get_product(self, name: str) -> Type:
-        """Returns a class stored in 'base.registry' or 'base'.
-
-        Args:
-            name (str): the name of the sought class corresponding to a key in
-                'base.registry'. If 'name' is None or doesn't match a key in
-                'base.registry', the class listed in 'base' is returned instead.
-
-        Returns:
-            Type: a stored class.
-            
-        """
-        try:
-            product = self.base.acquire(key = name)
-        except (KeyError, AttributeError, TypeError):
-            product = self.base
-        return product  
-    
-
-@dataclasses.dataclass  
-class Director(sourdough.quirks.Builder, sourdough.types.Lexicon):
-    """Directs and stores objects created by a builder.
-    
-    A Director is not necessary, but provides a convenient way to store objects
-    created by a sourdough builder.
-    
-    Args:
-        products (Mapping[str, object]): keys are names of objects stored and 
-            values are the stored object. Defaults to an empty dict.
-        builder (Builder): related builder which constructs objects to be 
-            stored in 'contents'.
-    
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builders: Mapping[str, Factory] = dataclasses.field(default_factory = dict)
-    
-    """ Public Methods """
-    
-    def create(self, name: str = None, **kwargs) -> None:
-        """Builds and stores an instance based on 'name' and 'kwargs'.
-
-        Args:
-            name (str): name of a class stored in 'builder.base.registry.' If 
-                there is no registry, 'name' is None, or 'name' doesn't match a 
-                key in 'builder.base.registry', then an instance of 
-                'builder.base' is instanced and stored.
-            kwargs (Dict[Any, Any]): any specific parameters that a user wants
-                passed to a class when an instance is created.
-            
-        """
-        if name is not None:
-            self.contents[name] = self.builders[name].create(name = name, 
-                                                             **kwargs)
-        else:
-            for key, builder in self.builders.items():
-                self.contents[key] = builder.create(name = key, **kwargs)
-        return self
-    
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'builders'.
-
-        Returns:
-            Iterable: of 'builders'.
-
-        """
-        return iter(self.builders)
-
-
-""" Composite Structures """
-  
-
 @dataclasses.dataclass
 class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
+    """ 
     
+    """
     name: str = None
 
     """ Required Subclass Methods """
@@ -159,7 +35,9 @@ class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
 
 @dataclasses.dataclass
 class Composite(Node, sourdough.types.Hybrid):
+    """
     
+    """
     contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
         default_factory = list) 
     name: str = None
@@ -207,7 +85,16 @@ class Leaf(Node):
 
 
 @dataclasses.dataclass
-class Graph(sourdough.quirks.Element, sourdough.types.Lexicon):
+class Workflow(sourdough.quirks.Element, sourdough.types.Bunch):
+    """Stores a sourdough workflow.
+    
+    """  
+    contents: Iterable = None
+    name: str = None
+
+
+@dataclasses.dataclass
+class Graph(sourdough.types.Lexicon, Workflow):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are
@@ -356,4 +243,94 @@ class Graph(sourdough.quirks.Element, sourdough.types.Lexicon):
         
         """
         return iter(self.permutations)
-          
+
+
+@dataclasses.dataclass
+class Builder(sourdough.types.Producer):
+    """Stores a sourdough workflow.
+    
+    """  
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    creator: sourdough.project.Creator = dataclasses.field(repr = False, 
+                                                           default = None)
+
+    """ Public Methods """
+    
+    def create(self, source: Any) -> Workflow:
+        return source
+
+    """ Private Methods """
+    
+    def _settings_to_component(self, name: str, **kwargs) -> Type[Node]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+            
+        """
+        section = self.creator.settings[name]
+        if hasattr(self.creator.bases.component, 'registry'):
+            try:
+                component = self.base.registry.acquire(key = name)
+            except KeyError:
+                try:
+                    design = self.creator.settings
+                    product = self.base.registry.acquire(key = kwargs['design'])
+                except (KeyError, TypeError):
+                    product = self.base
+        else:
+            product = self.base
+        return product        
+
+
+@dataclasses.dataclass
+class GraphBuilder(sourdough.types.Producer):
+    """Stores a sourdough workflow.
+    
+    """  
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    project: sourdough.Project = dataclasses.field(repr = False, default = None)
+    
+    """ Public Methods """
+    
+    def create(self, source: Union[sourdough.resources.Configuration,
+                                   Mapping[str, Sequence[str]],
+                                   Sequence[Sequence[str]]]) -> Graph:
+        """
+        """
+        if isinstance(source, sourdough.types.Configuration):
+            return self._from_configuration(source = source)
+        elif isinstance(source, sourdough.types.Configuration):
+            return self._from_adjacency_list(source = source)
+        elif isinstance(source, sourdough.types.Configuration):
+            return self._from_adjacency_matrix(source = source)
+        else:
+            raise TypeError('source must be a Configuration, adjacency list, '
+                            'or adjacency matrix')   
+            
+    """ Private Methods """
+    
+    def _from_configuration(self, 
+                            source: sourdough.resources.Configuration) -> Graph:
+        return source
+    
+    def _from_adjacency_list(self, 
+                            source: sourdough.resources.Configuration) -> Graph:
+        return source
+    
+    def _from_adjacency_matrix(self, 
+                            source: sourdough.resources.Configuration) -> Graph:
+        return source
+           
+
+@dataclasses.dataclass
+class Tree(sourdough.types.Hybrid, Workflow):
+    """Stores a tree structured workflow.
+    
+    """  
+    contents: Sequence[Node] = dataclasses.field(default_factory = list)
+    name: str = None
+        

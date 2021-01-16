@@ -1,10 +1,11 @@
 """
-bases: essential classes applying sourdough's core to a project
+base: essential classes applying sourdough's core to a project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Bases
     Settings
     Filer
     Creator
@@ -12,9 +13,9 @@ Contents:
 
 """
 from __future__ import annotations
+import abc
 import dataclasses
 import pathlib
-from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -25,23 +26,48 @@ import sourdough
 class Bases(sourdough.quirks.Loader):
     """Base classes for a sourdough projects.
     
+    Changing the attributes on a Bases instance allows users to specify 
+    different base classes for a sourdough project in the necessary categories.
+    Project will automatically use the base classes in the Bases instance 
+    passed to it.
+    
+    Since this is a subclass of Loader, attribute values can either be classes
+    or strings of the import path of classes. In the latter case, the base
+    classes will be lazily loaded when called.
+    
     Args:
-
+        settings (Union[str, Type]): configuration class or a str of the import
+            path for the configuration class. 
+        file (Union[str, Type]): file management class or a str of the import
+            path for the file management class. 
+        component (Union[str, Type]): base node class or a str of the import
+            path for the base node class. 
+        creator (Union[str, Type]): base builder class or a str of the import
+            path for the base builder class.
             
     """
-    settings: Union[str, Type] = 'sourdough.base.Settings'
-    filer: Union[str, Type] = 'sourdough.base.Filer' 
-    manager: Union[str, Type] = 'sourdough.base.Manager'
-    creator: Union[str, Type] = 'sourdough.base.Creator'
-    component: Union[str, Type] = 'sourdough.base.Component'
+    settings: Union[str, Type] = 'sourdough.project.Settings'
+    filer: Union[str, Type] = 'sourdough.project.Filer' 
+    component: Union[str, Type] = 'sourdough.project.Component'
+    creator: Union[str, Type] = 'sourdough.project.Creator'
 
     """ Properties """
     
     def component_suffixes(self) -> Tuple[str]:
+        """[summary]
+
+        Returns:
+            Tuple[str]: [description]
+        """
         return tuple(key + 's' for key in self.component.registry.keys()) 
     
-    def manager_suffixes(self) -> Tuple[str]:
-        return tuple(key + 's' for key in self.manager.registry.keys()) 
+    def creator_suffixes(self) -> Tuple[str]:
+        """[summary]
+
+        Returns:
+            Tuple[str]: [description]
+        """
+        return tuple(key + 's' for key in self.creator.registry.keys()) 
    
     """ Public Methods """
    
@@ -66,14 +92,14 @@ class Bases(sourdough.quirks.Loader):
     
     
 @dataclasses.dataclass
-class Settings(sourdough.types.Configuration):
+class Settings(sourdough.resources.Configuration):
     """Loads and Stores configuration settings for a Project.
 
     Args:
-        contents (Union[str, pathlib.Path, Mapping[Any, Mapping[Any, Any]]]): a 
+        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
             dict, a str file path to a file with settings, or a pathlib Path to
             a file with settings. Defaults to en empty dict.
-        infer_types (bool]): whether values in 'contents' are converted to other 
+        infer_types (bool): whether values in 'contents' are converted to other 
             datatypes (True) or left alone (False). If 'contents' was imported 
             from an .ini file, a False value will leave all values as strings. 
             Defaults to True.
@@ -85,7 +111,7 @@ class Settings(sourdough.types.Configuration):
             for a sourdough project.
 
     """
-    contents: Union[str,pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
+    contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
         dataclasses.field(default_factory = dict))
     infer_types: bool = True
     defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
@@ -100,33 +126,57 @@ class Settings(sourdough.types.Configuration):
                 'final_format': 'csv',
                 'file_encoding': 'windows-1252'}})
     skip: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files', 'parameters'])
+        default_factory = lambda: ['general', 'files', 'filer', 'parameters'])
 
 
 @dataclasses.dataclass
-class Filer(sourdough.files.Clerk):
+class Filer(sourdough.resources.Clerk):
     pass
 
 
+
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, sourdough.quirks.Element, 
-              sourdough.quirks.Builder):
-    
-    contents: Any = None
+class Component(sourdough.quirks.Registrar, sourdough.structures.Node):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        sourdough ([type]): [description]
+        
+    """
+    contents: sourdough.quirks.Element = None 
     name: str = None
     registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
 
 
 @dataclasses.dataclass
-class Manager(Creator):
+class Creator(sourdough.quirks.Registrar, sourdough.quirks.Validator, 
+              sourdough.structures.Producer, abc.ABC):
+    """[summary]
 
-    contents: sourdough.structures.Graph = sourdough.structures.Graph()
-    builders: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
-    name: str = None
-    project: Union[object, Type] = None
+    Args:
+        sourdough ([type]): [description]
+        sourdough ([type]): [description]
+        sourdough ([type]): [description]
+        
+    """
+    contents: Mapping[str, str] = dataclasses.field(default_factory = lambda: {
+        'name': None,
+        'contents': [],
+        'subcontents': {},
+        'design': 'pipeline', 
+        'needs': [], 
+        'produces': str, 
+        'iterations': 1, 
+        'criteria': [], 
+        'parallel': False,
+        'parameters': {}})
+    settings: Union[object, Type, pathlib.Path, str, Mapping] = None
+    bases: object = Bases()
     automatic: bool = True
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'builders'])
+    validations: ClassVar[Sequence[str]] = dataclasses.field(
+        default_factory = list)
+    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
     
     """ Initialization Methods """
 
@@ -138,198 +188,189 @@ class Manager(Creator):
         except AttributeError:
             pass
         # Calls validation methods based on items listed in 'validations'.
-        for validation in self.validations:
-            getattr(self, f'_validate_{validation}')()
-        # Advances through 'creator' stages if 'automatic' is True.
-        if self.automatic:
-            self.complete()
-    
+        self.validate()
+                 
+    """ Required Subclass Methods """ 
+     
+    @abc.abstractmethod
+    def create(self, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass
+
     """ Private Methods """
-
-    def _validate_builders(self) -> None:
-        """
-        
-        """
-
-        return self
-
-
-@dataclasses.dataclass
-class Worker(Creator):
     
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    base: Type = None
-    name: str = None
-    manager: Manager = None
-
-
-@dataclasses.dataclass
-class Component(sourdough.quirks.Registrar, sourdough.structures.Node):
+    def _kwargify(self, name: str) -> Dict[str, Any]:
+        section = self.creator.settings[name]
+        design = self.creator.settings[name]
     
-    contents: sourdough.quirks.Element = None 
-    name: str = None
-    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
-
-
-@dataclasses.dataclass
-class Composite(Component, sourdough.types.Hybrid):
-    
-    contents: Sequence[Component] = dataclasses.field(default_factory = list) 
-    name: str = None
-    iterations: Union[int, str] = 1
-    criteria: Union[str, Callable, Sequence[Union[Callable, str]]] = None
-    parallel: ClassVar[bool] = False
-    
-    """ Public Methods """
-    
-    def apply(self, data: Any = None, **kwargs) -> Any:
+    def _section_to_component(self, name: str, **kwargs) -> Type[Any]:
         """[summary]
 
         Args:
-            data (Any, optional): [description]. Defaults to None.
+            name (str): [description]
 
         Returns:
-            Any: [description]
+            Type: [description]
+            
         """
-        for node in self.contents:
-            if data is None:
-                node.apply(data = data, **kwargs)
-            else:
-                data = node.apply(data = data, **kwargs)
-        if data is None:
-            return self
+        section = self.creator.settings[name]
+        design = self.creator.settings[name]
+        if hasattr(self.creator.bases.component, 'registry'):
+            try:
+                component = self.base.registry.acquire(key = name)
+            except KeyError:
+                try:
+                    design = self.creator.settings
+                    product = self.base.registry.acquire(key = kwargs['design'])
+                except (KeyError, TypeError):
+                    product = self.base
         else:
-            return data
-
-             
-@dataclasses.dataclass
-class Step(Component, sourdough.types.Proxy):
-    """Wrapper for a Technique.
-
-    Subclasses of Step can store additional methods and attributes to apply to 
-    all possible technique instances that could be used. This is often useful 
-    when using parallel Worklow instances which test a variety of strategies 
-    with similar or identical parameters and/or methods.
-
-    A Step instance will try to return attributes from Technique if the
-    attribute is not found in the Step instance. 
-
-    Args:
-        contents (Technique): technique instance to be used in a Workflow.
-            Defaults ot None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-                        
-    """
-    contents: Union[Technique, str] = None
-    name: str = None
-                
-    """ Properties """
-    
-    @property
-    def technique(self) -> Technique:
-        return self.contents
-    
-    @technique.setter
-    def technique(self, value: Technique) -> None:
-        self.contents = value
-        return self
-    
-    @technique.deleter
-    def technique(self) -> None:
-        self.contents = None
-        return self
-    
-    """ Public Methods """
-    
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies Technique instance in 'contents'.
-        
-        The code below outlines a basic method that a subclass should build on
-        for a properly functioning Step.
-        
-        Applies stored 'contents' with 'parameters'.
-        
-        Args:
-            data (object): optional object to apply 'contents' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'contents'. If data is not
-                passed, nothing is returned.        
-        
-        """
-        if data is None:
-            self.contents.apply(**kwargs)
-            return self
-        else:
-            return self.contents.apply(data = data, **kwargs)
+            product = self.base
+        return product        
 
 
 @dataclasses.dataclass
-class Technique(Component):
-    """Base class for primitive objects in a sourdough composite object.
+class Manager(Creator):
+    """Directs and stores objects created by a creator.
     
-    The 'contents' and 'parameters' attributes are combined at the last moment
-    to allow for runtime alterations.
+    A Director is not necessary, but provides a convenient way to store objects
+    created by a sourdough creator.
     
     Args:
-        contents (Callable, str): core object used by the 'apply' method or a
-            str matching a callable object in the algorithms resource. Defaults 
-            to None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'apply' method is called. Defaults to an empty dict.
-                                    
-    """
-    contents: Union[Callable, str] = None
-    name: str = None
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
 
-    """ Properties """
     
-    @property
-    def algorithm(self) -> Union[object, str]:
-        return self.contents
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    creators: Mapping[str, Creator] = dataclasses.field(default_factory = dict)
+    project: Union[object, Type] = None
+    automatic: bool = True
+    validations: ClassVar[Sequence[str]] = dataclasses.field(
+        default_factory = lambda: ['creators'])   
     
-    @algorithm.setter
-    def algorithm(self, value: Union[object, str]) -> None:
-        self.contents = value
-        return self
-    
-    @algorithm.deleter
-    def algorithm(self) -> None:
-        self.contents = None
-        return self
-        
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Calls validation methods based on items listed in 'validations'.
+        self.validate()
+        # Advances through 'creator' stages if 'automatic' is True.
+        if self.automatic:
+            self.complete()
+              
     """ Public Methods """
     
-    def apply(self, data: object = None, **kwargs) -> object:
-        """Applies stored 'contents' with 'parameters'.
-        
+    def create(self, name: str = None, **kwargs) -> None:
+        """Builds and stores an instance based on 'name' and 'kwargs'.
+
         Args:
-            data (object): optional object to apply 'contents' to. Defaults to
-                None.
-                
-        Returns:
-            object: with any modifications made by 'contents'. If data is not
-                passed, nothing is returned.        
+            name (str): name of a class stored in 'creator.base.registry.' If 
+                there is no registry, 'name' is None, or 'name' doesn't match a 
+                key in 'creator.base.registry', then an instance of 
+                'creator.base' is instanced and stored.
+            kwargs (Dict[Any, Any]): any specific parameters that a user wants
+                passed to a class when an instance is created.
+            
+        """
+        if name is not None:
+            self.contents[name] = self.creators[name].create(name = name, 
+                                                             **kwargs)
+        else:
+            for key, creator in self.creators.items():
+                self.contents[key] = creator.create(name = key, **kwargs)
+        return self
+    
+    """ Private Methods """
+
+    def _validate_creators(self) -> None:
+        """
         
         """
-        if data is None:
-            if self.contents:
-                data = self.contents.apply(**self.parameters, **kwargs)
-            return data
-        else:
-            if self.contents:
-                return self.contents.apply(data, **self.parameters, **kwargs)
-            else:
-                return None
+
+        return self
+       
+    """ Dunder Methods """
+    
+    def __iter__(self) -> Iterable[Any]:
+        """Returns iterable of 'creators'.
+
+        Returns:
+            Iterable: of 'creators'.
+
+        """
+        return iter(self.creators)
+
+   
+@dataclasses.dataclass
+class Worker(Creator):
+    """Builds complex class instances.
+
+    For any parameters which require further construction code, a subclass
+    should include a method named '_get_{name of a key in 'contents'}'. That
+    method should return the value for the named parameter.
+
+    Args:
+        contents (Mapping[str, Any]): keys are the names of the parameters to
+            pass when an object is created. Values are the defaults to use when
+            there is not a method named with this format: '_get_{key}'. Keys
+            are iterated in order when the 'create' method is called. Defaults
+            to an empty dict.
+        base (Type): a class that can either be a class to create an instance
+            from or a class with a 'registry' attribute that holds stored
+            classes. If a user intends to get a class stored in the 'registry'
+            attribute, they need to pass a 'name' argument to the 'create' 
+            method which corresponds to a key in the registry. Defaults to None.
+        
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    base: Type = None
+    
+    """ Public Methods """
+
+    def create(self, name: str = None, **kwargs) -> object:
+        """Builds and returns an instance based on 'name' and 'kwargs'.
+
+        Args:
+            name (str): name of a class stored in 'base.registry.' If there is
+                no registry, 'name' is None, or 'name' doesn't match a key in
+                'base.registry', then an instance of 'base' is returned.
+            kwargs (Dict[Any, Any]): any specific parameters that a user wants
+                passed to a class when an instance is created.
+
+        Returns:
+            object: an instance of a stored class.
+            
+        """
+        for parameter in self.contents.keys():
+            if parameter not in kwargs:
+                try:
+                    method = getattr(self, f'_get_{parameter}')
+                    kwargs[parameter] = method(name = name, **kwargs)
+                except KeyError:
+                    kwargs[parameter] = self.contents[parameter]
+        product = self.produce(name = name)
+        return product(**kwargs) 
+    
+    def produce(self, name: str) -> Type:
+        """Returns a class stored in 'base.registry' or 'base'.
+
+        Args:
+            name (str): the name of the sought class corresponding to a key in
+                'base.registry'. If 'name' is None or doesn't match a key in
+                'base.registry', the class listed in 'base' is returned instead.
+
+        Returns:
+            Type: a stored class.
+            
+        """
+        try:
+            product = self.base.acquire(key = name)
+        except (KeyError, AttributeError, TypeError):
+            product = self.base
+        return product  
 

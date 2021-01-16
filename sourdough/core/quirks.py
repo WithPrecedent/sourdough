@@ -50,38 +50,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
- 
-@dataclasses.dataclass
-class Builder(object):
-    """Mixin for classes that construct other classes or objects.
-    
-    Subclasses must have a 'create' method.
-    
-    """
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance.
-        
-        Although this method ordinarily does nothing, it makes the order of the
-        inherited classes less important with multiple inheritance, such as when 
-        adding sourdough quirks. 
-        
-        """
-        # Calls parent initialization methods, if they exist.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-     
-    """ Required Subclass Methods """ 
-     
-    @abc.abstractmethod
-    def create(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
-
 
 @dataclasses.dataclass
 class Element(object):
@@ -141,36 +109,59 @@ class Element(object):
 
 
 @dataclasses.dataclass
-class Coordinator(object):
-    """Mixin for organizer and director classes.
-    
-    Subclasses must have a 'validate' method which either validates or converts
-    instance attributes.
-    
-    Args:
-        contents (Iterable[Any]): stored iterable. Defaults to None.
-              
-    """
-    contents: Iterable[Any] = None
-    
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def validate(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
-    
-    """ Public Methods """
-    
-    def advance(self) -> Any:
-        """Returns next product of an instance iterable."""
-        return self.__next__()
+class Validator(object):
+    """Mixin for calling validation methods
 
-    def complete(self) -> None:
-        """Executes each step in an instance's iterable."""
-        for item in iter(self):
-            self.__next__()
-        return self
+    Args:
+        validations (List[str]): a list of attributes that need validating.
+            Each item in 'validations' should also have a corresponding
+            method named f'_validate_{item}'. Defaults to an empty list. 
+               
+    """
+    validations: ClassVar[Sequence[str]] = dataclasses.field(
+        default_factory = list)
+
+    """ Public Methods """
+
+    def validate(self, validations: Sequence[str] = None) -> None:
+        """Validates or converts stored attributes.
+        
+        Args:
+            validations (List[str]): a list of attributes that need validating.
+                Each item in 'validations' should also have a corresponding
+                method named f'_validate_{item}'. If not passed, the
+                'validations' attribute will be used instead. Defaults to None. 
+        
+        """
+        if validations is None:
+            validations = self.validations
+        # Calls validation methods based on items listed in 'validations'.
+        for item in validations:
+            try:
+                kwargs = {item: getattr(self, item)}
+                setattr(self, item, getattr(
+                    self, f'_validate_{item}')(**kwargs))
+            except AttributeError:
+                pass
+        return self     
+
+
+# @dataclasses.dataclass
+# class Coordinator(object):
+#     """Mixin for organizer and director classes.
+              
+#     """
+#     """ Public Methods """
+
+#     def advance(self) -> Any:
+#         """Returns next product of an instance iterable."""
+#         return self.__next__()
+
+#     def complete(self) -> None:
+#         """Executes each step in an instance's iterable."""
+#         for item in iter(self):
+#             self.__next__()
+#         return self
 
  
 @dataclasses.dataclass

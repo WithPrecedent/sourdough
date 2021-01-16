@@ -44,34 +44,16 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 
 from . import utilities
+
 from . import core
-from . import project
-from . import components
-
-from .utilities import tools
-
-from .core import interfaces
 from .core import types
-from .core import structures
-from .core import files
 from .core import quirks
+from .core import resources
+from .core import workflows
 from .core import workshop
+from .core.interface import Project
 
-from .project.base import Manager
-from .project.base import Creator
-from .project.base import Product
-from .project.base import Component
-from .project import base
-from .project import products
-from .project import creators
-
-from .components import workflows
-from .components import elements
-from .components import graphs
-
-from .project.interface import Project
-from .project import interface
-
+from . import project
 
 
 # importables = {

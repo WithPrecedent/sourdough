@@ -1,68 +1,366 @@
 """
-files: sourdough file management classes
+resources: classes for configuration and iteracting with external files
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Clerk: interface for sourdough file management classes and methods.
-
+    Configuration (Lexicon): stores configuration settings after either loading 
+        them from disk or by the passed arguments.    
+    Clerk (Lexicon): interface for sourdough file management classes and 
+        methods.
+         
 """
 from __future__ import annotations
 import abc
 import csv
+import configparser
 import dataclasses
 import datetime
 import importlib
+import importlib.util
+import json
 import pathlib
 import sys
+import toml
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 import sourdough
 
 
-def importify(
-        module: str, 
-        file_path: Union[pathlib.Path, str] = None, 
-        key: str = None) -> object:
-    """Lazily loads 'module' or object from 'module'.
+@dataclasses.dataclass
+class Configuration(sourdough.types.Lexicon):
+    """Loads and stores configuration settings.
 
-    If 'file_path' is passed, this function will import the python module from
-    that path.
+    To create Configuration instance, a user can pass a:
+        1) file path to a compatible file type;
+        2) string containing a a file path to a compatible file type;
+                                or,
+        3) 2-level nested dict.
+
+    If 'contents' is imported from a file, Configuration creates a dict and can 
+    convert the dict values to appropriate datatypes. Currently, supported file 
+    types are: ini, json, toml, and python.
+
+    If 'infer_types' is set to True (the default option), str dict values are 
+    automatically converted to appropriate datatypes (str, list, float, bool, 
+    and int are currently supported). Type conversion is automatically disabled
+    if the source file is a python module (assuming the user has properly set
+    the types of the stored python dict).
+
+    Because Configuration uses ConfigParser for .ini files, by default it stores 
+    a 2-level dict. The desire for accessibility and simplicity dictated this 
+    limitation. A greater number of levels can be achieved by having separate
+    sections with names corresponding to the strings in the values of items in 
+    other sections. This is implemented in the 'project' subpackage.
 
     Args:
-        module (str): name of module holding object that is sought.
-        file_path (pathlib.Path, str): file path where the python module is
-            located. Defaults to None.
-        key (str): name of object within 'module' that is sought. Defaults to 
-            None.
+        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
+            dict, a str file path to a file with settings, or a pathlib Path to
+            a file with settings. Defaults to en empty dict.
+        infer_types (bool]): whether values in 'contents' are converted to other 
+            datatypes (True) or left alone (False). If 'contents' was imported 
+            from an .ini file, a False value will leave all values as strings. 
+            Defaults to True.
+        defaults (Mapping[str, Mapping[str]]): any default options that should
+            be used when a user does not provide the corresponding options in 
+            their configuration settings. Defaults to an empty dict.
 
-    Raises:
-        ImportError: if 'key' is not found in 'module'.
-
-    Returns:
-        object: class, function, or variable in 'module'.
-        
     """
-    if file_path:
+    contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
+        dataclasses.field(default_factory = dict))
+    infer_types: bool = True
+    defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+        default_factory = dict)
+
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
         try:
-            spec = importlib.util.spec_from_file_location(module, file_path)
-            loaded = importlib.util.module_from_spec(spec)
-            sys.modules[module] = loaded
-            spec.loader.exec_module(loaded)
-        except (ImportError, AttributeError):
-            raise ImportError(f'failed to load {module} in {file_path}')   
-    else:
-        try:
-            loaded = importlib.import_module(module)
-        except (ImportError, AttributeError):
-            raise ImportError(f'failed to load {key} in {module}')
-    if key:
-        try:
-            loaded = getattr(loaded, key)
+            super().__post_init__()
         except AttributeError:
-            raise ImportError(f'{key} not found in {module}')
-    return loaded
+            pass
+        # Validates passed 'contents' on class initialization.
+        self.contents = self.validate(contents = self.contents)
+        # Infers types for values in 'contents', if the 'infer_types' option is 
+        # selected.
+        if self.infer_types:
+            self.contents = self._infer_types(contents = self.contents)
+        # Adds default settings as backup settings to 'contents'.
+        self.contents = self._add_defaults(contents = self.contents)
+
+    """ Public Methods """
+
+    def validate(self, contents: Union[Mapping[Any, Any], str, 
+                                       pathlib.Path]) -> Mapping[Any, Any]:
+        """Validates 'contents' or converts 'contents' to the proper type.
+
+        Args:
+            contents (Union[str, pathlib.Path, Mapping[Any, Any]]): a dict, a
+                str file path to a file with settings, or a pathlib Path to a 
+                file with settings.
+
+        Raises:
+            TypeError: if 'contents' is neither a str, dict, or Path.
+
+        Returns:
+            Mapping[Any, Any]: 'contents' in its proper form.
+
+        """
+        if isinstance(contents, Mapping):
+            return contents
+        elif isinstance(contents, (str, pathlib.Path)):
+            extension = str(pathlib.Path(contents).suffix)[1:]
+            load_method = getattr(self, f'_load_from_{extension}')
+            return load_method(file_path = contents)
+        elif contents is None:
+            return {}
+        else:
+            raise TypeError('contents must be a dict, Path, str, or None type')
+
+    def add(self, section: str, contents: Mapping[Any, Any]) -> None:
+        """Adds 'settings' to 'contents'.
+
+        Args:
+            section (str): name of section to add 'contents' to.
+            contents (Mapping[Any, Any]): a dict to store in 'section'.
+
+        """
+        try:
+            self[section].update(self.validate(contents = contents))
+        except KeyError:
+            self[section] = self.validate(contents = contents)
+        return self
+
+    def inject(self, instance: object,
+               additional: Union[Sequence[str], str] = None, 
+               overwrite: bool = False) -> object:
+        """Injects appropriate items into 'instance' from 'contents'.
+
+        Args:
+            instance (object): sourdough class instance to be modified.
+            additional (Union[Sequence[str], str]]): other section(s) in 
+                'contents' to inject into 'instance'. Defaults to None.
+            overwrite (bool]): whether to overwrite a local attribute in 
+                'instance' if there are values stored in that attribute. 
+                Defaults to False.
+
+        Returns:
+            instance (object): sourdough class instance with modifications made.
+
+        """
+        sections = ['general']
+        try:
+            sections.append(instance.name)
+        except AttributeError:
+            pass
+        if additional:
+            sections.extend(sourdough.tools.listify(additional))
+        for section in sections:
+            try:
+                for key, value in self.contents[section].items():
+                    instance = self._inject(
+                        instance = instance,
+                        attribute = key,
+                        value = value,
+                        overwrite = overwrite)
+            except KeyError:
+                pass
+        return instance
+
+    """ Private Methods """
+
+    def _load_from_ini(self, file_path: str) -> Mapping[Any, Any]:
+        """Returns settings dictionary from an .ini file.
+
+        Args:
+            file_path (str): path to configparser-compatible .ini file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        try:
+            contents = configparser.ConfigParser(dict_type = dict)
+            contents.optionxform = lambda option: option
+            contents.read(str(file_path))
+            return dict(contents._sections)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    def _load_from_json(self, file_path: str) -> Mapping[Any, Any]:
+        """Returns settings dictionary from an .json file.
+
+        Args:
+            file_path (str): path to configparser-compatible .json file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        try:
+            with open(pathlib.Path(file_path)) as settings_file:
+                settings = json.load(settings_file)
+            return settings
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    def _load_from_py(self, file_path: str) -> Mapping[Any, Any]:
+        """Returns a settings dictionary from a .py file.
+
+        Args:
+            file_path (str): path to python module with '__dict__' dict
+                defined.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a
+                file.
+
+        """
+        # Disables type conversion if the source is a python file.
+        self.infer_types = False
+        try:
+            file_path = pathlib.Path(file_path)
+            import_path = importlib.util.spec_from_file_location(
+                file_path.name,
+                file_path)
+            import_module = importlib.util.module_from_spec(import_path)
+            import_path.loader.exec_module(import_module)
+            return import_module.settings
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    def _load_from_toml(self, file_path: str) -> Mapping[Any, Any]:
+        """Returns settings dictionary from a .toml file.
+
+        Args:
+            file_path (str): path to configparser-compatible .toml file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        try:
+            return toml.load(file_path)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    def _infer_types(self,
+            contents: Mapping[Any, Mapping[Any, Any]]) -> Mapping[
+                str, Mapping[Any, Any]]:
+        """Converts stored values to appropriate datatypes.
+
+        Args:
+            contents (Mapping[Any, Mapping[Any, Any]]): a nested contents dict
+                to review.
+
+        Returns:
+            Mapping[Any, Mapping[Any, Any]]: with the nested values converted to 
+                the appropriate datatypes.
+
+        """
+        new_contents = {}
+        for key, value in contents.items():
+            if isinstance(value, dict):
+                inner_bundle = {
+                    inner_key: sourdough.tools.typify(inner_value)
+                    for inner_key, inner_value in value.items()}
+                new_contents[key] = inner_bundle
+            else:
+                new_contents[key] = sourdough.tools.typify(value)
+        return new_contents
+
+    def _add_defaults(self, contents: Mapping[str, Mapping[str, Any]]) -> (
+            Mapping[str, Mapping[str, Any]]):
+        """Creates a backup set of mappings for sourdough settings lookup.
+
+
+        Args:
+            contents (MutableMapping[Any, Mapping[Any, Any]]): a nested contents 
+                dict to add defaults to.
+
+        Returns:
+            Mapping[Any, Mapping[Any, Any]]: with stored defaults added.
+
+        """
+        new_contents = self.defaults
+        new_contents.update(contents)
+        return new_contents
+
+    def _inject(self, instance: object, attribute: str, value: Any, 
+                overwrite: bool) -> object:
+        """Adds attribute to 'instance' based on conditions.
+
+        Args:
+            instance (object): sourdough class instance to be modified.
+            attribute (str): name of attribute to inject.
+            value (Any): value to assign to attribute.
+            overwrite (bool]): whether to overwrite a local attribute
+                in 'instance' if there are values stored in that attribute.
+                Defaults to False.
+
+        Returns:
+            object: with attribute possibly injected.
+
+        """
+        if (not hasattr(instance, attribute)
+                or not getattr(instance, attribute)
+                or overwrite):
+            setattr(instance, attribute, value)
+        return instance
+
+    """ Dunder Methods """
+
+    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
+        """Creates new key/value pair(s) in a section of the active dictionary.
+
+        Args:
+            key (str): name of a section in the active dictionary.
+            value (Mapping[str, Any]): the dictionary to be placed in that 
+                section.
+
+        Raises:
+            TypeError if 'key' isn't a str or 'value' isn't a dict.
+
+        """
+        try:
+            self.contents[key].update(value)
+        except KeyError:
+            try:
+                self.contents[key] = value
+            except TypeError:
+                raise TypeError(
+                    'key must be a str and value must be a dict type')
+        return self
+
+    def __missing__(self, key: str) -> Dict:
+        """Automatically creates a nested dict if 'key' is missing.
+        
+        This method implements autovivification.
+        
+        Args:
+            key (str): name of key sought in this instance.
+            
+        Returns:
+            Dict: a new, nested empty dict at 'key'.
+        
+        """
+        value = self[key] = {}
+        return value
 
 
 @dataclasses.dataclass
@@ -74,11 +372,11 @@ class Clerk(object):
     sourdough, pandas, and numpy objects.
 
     Args:
-        settings (sourdough.types.Configuration): a Configuration instance, preferably with a 
-            section named 'filer' or 'files' with file-management related 
-            settings. If 'settings' does not have file configuration options or
-            if 'settings' is None, internal defaults will be used. Defaults to
-            None.
+        settings (sourdough.resources.Configuration): a Configuration instance, 
+            preferably with a section named 'filer' or 'files' with file-
+            management related settings. If 'settings' does not have file 
+            configuration options or if 'settings' is None, internal defaults 
+            will be used. Defaults to None.
         root_folder (Union[str, pathlib.Path]): the complete path from which the 
             other paths and folders used by Clerk are ordinarily derived 
             (unless you decide to use full paths for all other options). 
@@ -91,8 +389,12 @@ class Clerk(object):
             name or a complete path if the 'output_folder' is not off of
             'root_folder'. Defaults to 'output'.
 
+
+    ToDo:
+        Refactor and simplify with accompanying classes.
+
     """
-    settings: sourdough.types.Configuration = None
+    settings: sourdough.resources.Configuration = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -103,9 +405,8 @@ class Clerk(object):
         """Initializes class instance attributes."""
         # Attempots to Inject attributes from 'settings'.
         try:
-            self.settings.inject(
-                instance = self, 
-                additional = ['files', 'filer'])
+            self.settings.inject(instance = self, additional = ['files', 
+                                                                'filer'])
         except (AttributeError, TypeError):
             pass
         # Validates core folder paths and writes them to disk.
@@ -373,7 +674,7 @@ class Clerk(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self,
-            settings: sourdough.types.Configuration) -> Mapping[Any, Any]:
+            settings: sourdough.resources.Configuration) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
