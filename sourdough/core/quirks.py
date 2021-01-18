@@ -52,7 +52,29 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Element(object):
+class QuirkWorkshop(sourdough.types.Workshop):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
+
+
+@dataclasses.dataclass
+class Quirk(sourdough.types.Product):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    workshop: ClassVar[sourdough.types.Workshop] = QuirkWorkshop
+
+
+@dataclasses.dataclass
+class Element(Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -109,7 +131,7 @@ class Element(object):
 
 
 @dataclasses.dataclass
-class Validator(object):
+class Validator(Quirk):
     """Mixin for calling validation methods
 
     Args:
@@ -165,7 +187,7 @@ class Validator(object):
 
  
 @dataclasses.dataclass
-class Registrar(object):
+class Registrar(Quirk):
     """Registry interface for core sourdough classes.
     
     A Registrar automatically registers all concrete (non-abstract) subclasses
@@ -218,7 +240,7 @@ class Registrar(object):
     
     
 @dataclasses.dataclass
-class Librarian(object):
+class Librarian(Quirk):
     """Library interface for core sourdough classes.
     
     Librarian automatically registers all subclass instances using the 'deposit' 
@@ -279,7 +301,7 @@ class Librarian(object):
 
 
 @dataclasses.dataclass
-class Loader(object):
+class Loader(Quirk):
     """Faciliates lazy loading from modules.
 
     Subclasses with attributes storing strings containing import paths 

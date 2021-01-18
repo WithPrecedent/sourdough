@@ -18,6 +18,40 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough 
 
 
+@dataclasses.dataclass
+class ComponentWorksop(sourdough.factory.Workshop):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+    """
+    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
+ 
+
+@dataclasses.dataclass
+class Component(sourdough.factory.Product, sourdough.workflows.Node):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+    """
+    name: str = None
+    contents: Any = None
+
+    """ Class Methods """
+
+    @classmethod
+    def register(cls) -> None:
+        """Registers a subclass in a Catalog in ComponentWorkshop.
+        
+        The default 'register' method uses the snake-case name of the class as
+        the key for the stored subclass.
+        
+        """
+        key = sourdough.tools.snakify(cls.__name__)
+        ComponentWorksop.registry[key] = cls
+        return cls
+    
 # @dataclasses.dataclass
 # class Workshop(sourdough.types.Catalog):
 
