@@ -29,13 +29,13 @@ def test_settings():
             'parser_tasks': 'divide',
             'divide_techniques': ['slice', 'dice']},
         'divide_parameters': {'replace_strings': True}}
-    ini_settings = sourdough.resources.Configuration(
+    ini_settings = sourdough.base.Configuration(
         contents = pathlib.Path('tests') / 'ini_settings.ini')
     assert ini_settings.contents == actual_settings
-    py_settings = sourdough.resources.Configuration(
+    py_settings = sourdough.base.Configuration(
         contents = pathlib.Path('tests') / 'py_settings.py')
     assert py_settings.contents == actual_settings
-    json_settings = sourdough.resources.Configuration(
+    json_settings = sourdough.base.Configuration(
         contents = pathlib.Path('tests') / 'json_settings.json')
     assert json_settings.contents == actual_settings
     assert ini_settings['general']['seed'] == 43

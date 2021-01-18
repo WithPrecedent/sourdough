@@ -42,7 +42,6 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
-import inspect
 from sourdough.utilities.tools import deannotate
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union, get_args, 
@@ -51,30 +50,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-@dataclasses.dataclass
-class QuirkWorkshop(sourdough.types.Workshop):
-    """[summary]
-
-    Args:
-        sourdough ([type]): [description]
-        
-    """
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
-
 
 @dataclasses.dataclass
-class Quirk(sourdough.types.Product):
-    """[summary]
-
-    Args:
-        sourdough ([type]): [description]
-        
-    """
-    workshop: ClassVar[sourdough.types.Workshop] = QuirkWorkshop
-
-
-@dataclasses.dataclass
-class Element(Quirk):
+class Element(sourdough.base.Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -84,7 +62,6 @@ class Element(Quirk):
     Subclasses must provide their own 'apply' methods.
 
     Args:
-        contents (Any): stored item(s).
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
             sourdough instance needs settings from a Configuration instance, 
@@ -92,7 +69,6 @@ class Element(Quirk):
             instance. Defaults to None. 
 
     """
-    contents: Any = None
     name: str = None
     
     """ Initialization Methods """
@@ -131,7 +107,7 @@ class Element(Quirk):
 
 
 @dataclasses.dataclass
-class Validator(Quirk):
+class Validator(sourdough.base.Quirk):
     """Mixin for calling validation methods
 
     Args:
@@ -167,6 +143,39 @@ class Validator(Quirk):
                 pass
         return self     
 
+ 
+@dataclasses.dataclass
+class Producer(sourdough.types.Lexicon, sourdough.base.Quirk):
+    """
+    
+    Subclasses must have a 'create' method. 
+    
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance.
+        
+        Although this method ordinarily does nothing, it makes the order of the
+        inherited classes less important with multiple inheritance, such as when 
+        adding sourdough quirks. 
+        
+        """
+        # Calls parent initialization methods, if they exist.
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+     
+    """ Required Subclass Methods """ 
+     
+    @abc.abstractmethod
+    def create(self, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass
+
 
 # @dataclasses.dataclass
 # class Coordinator(object):
@@ -187,7 +196,7 @@ class Validator(Quirk):
 
  
 @dataclasses.dataclass
-class Registrar(Quirk):
+class Registrar(sourdough.base.Quirk):
     """Registry interface for core sourdough classes.
     
     A Registrar automatically registers all concrete (non-abstract) subclasses
@@ -240,16 +249,16 @@ class Registrar(Quirk):
     
     
 @dataclasses.dataclass
-class Librarian(Quirk):
-    """Library interface for core sourdough classes.
+class Librarian(sourdough.base.Quirk):
+    """Store interface for core sourdough classes.
     
     Librarian automatically registers all subclass instances using the 'deposit' 
-    method which stores the subclass instances in 'library'.
+    method which stores the subclass instances in 'store'.
     
     To use this quirk, the '__post_init__' method must be called.
     
     """
-    library: ClassVar[Mapping[str, object]] = sourdough.types.Catalog()
+    store: ClassVar[Mapping[str, object]] = sourdough.types.Catalog()
 
     """ Initialization Methods """
 
@@ -260,7 +269,7 @@ class Librarian(Quirk):
             super().__post_init__()
         except AttributeError:
             pass
-        # Stores subclass in Library.
+        # Stores subclass in Store.
         self.deposit()
 
     """ Public Methods """
@@ -274,12 +283,12 @@ class Librarian(Quirk):
         
         """
         try:
-            self.library[self.name] = self
+            self.store[self.name] = self
         except (AttributeError, TypeError):
             try:
-                self.library[sourdough.tools.snakify(self.__name__)] = self
+                self.store[sourdough.tools.snakify(self.__name__)] = self
             except (AttributeError, TypeError):
-                self.library[sourdough.tools.snakify(
+                self.store[sourdough.tools.snakify(
                     self.__class__.__name__)] = self 
         return self
     
@@ -297,11 +306,11 @@ class Librarian(Quirk):
             object: stored subclass isntance.
             
         """
-        return copy.deepcopy(cls.library.select(key))
+        return copy.deepcopy(cls.store.select(key))
 
 
 @dataclasses.dataclass
-class Loader(Quirk):
+class Loader(sourdough.base.Quirk):
     """Faciliates lazy loading from modules.
 
     Subclasses with attributes storing strings containing import paths 

@@ -350,7 +350,7 @@ class Creator(sourdough.Factory):
             
         """
         try:
-            component.contents = sourdough.resources.options.algorithms[component.name]
+            component.contents = sourdough.base.options.algorithms[component.name]
         except KeyError:
             component.contents = None
         return component

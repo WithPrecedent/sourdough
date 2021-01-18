@@ -92,7 +92,7 @@ class Bases(sourdough.quirks.Loader):
     
     
 @dataclasses.dataclass
-class Settings(sourdough.resources.Configuration):
+class Settings(sourdough.base.Configuration):
     """Loads and Stores configuration settings for a Project.
 
     Args:
@@ -130,7 +130,7 @@ class Settings(sourdough.resources.Configuration):
 
 
 @dataclasses.dataclass
-class Filer(sourdough.resources.Clerk):
+class Filer(sourdough.base.Clerk):
     pass
 
 

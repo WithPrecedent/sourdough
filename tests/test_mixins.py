@@ -44,10 +44,10 @@ def test_mixins():
     # Tests Component, Registry, and Bunch
     a_component = AComponent()
     other_component = OtherComponent()
-    assert 'other_component' in AComponent.library
-    assert 'other_component' in a_component.library
-    assert 'other_component' in AComponent.library
-    assert 'other_component' in a_component.library
+    assert 'other_component' in AComponent.store
+    assert 'other_component' in a_component.store
+    assert 'other_component' in AComponent.store
+    assert 'other_component' in a_component.store
     an_instance = a_component.instance(key = 'other_component', name = 'test')
     assert an_instance.name == 'test'
     another_instance = a_component.borrow(key = 'other_component')

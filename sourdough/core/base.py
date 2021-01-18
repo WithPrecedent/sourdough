@@ -1,10 +1,12 @@
 """
-resources: classes for configuration and iteracting with external files
+base: base classes for sourdough projects
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+
+
     Configuration (Lexicon): stores configuration settings after either loading 
         them from disk or by the passed arguments.    
     Clerk (Lexicon): interface for sourdough file management classes and 
@@ -28,8 +30,120 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+
 @dataclasses.dataclass
-class Configuration(sourdough.types.Lexicon):
+class Base(abc.ABC):
+    """Quirk for connecting a base class to a Library.
+    
+    Class Attributes:
+        library (Library): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+        
+    """
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library.registry' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        if not hasattr(cls, 'library'):  
+            cls.library = Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            cls.library[key] = cls
+
+
+@dataclasses.dataclass
+class Library(sourdough.types.Catalog):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    contents: Mapping[Any, Type[Base]] = dataclasses.field(
+        default_factory = dict)
+ 
+    """ Public Methods """
+
+    def borrow(self, name: str) -> Type[Base]:
+        return self.select(key = name)
+
+    def build(self, name: str, 
+              quirks: Union[str, Sequence[str]] = None) -> Type[Base]:
+        """Returns the stored class instance matching 'name'.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            kwargs: parameters and arguments to pass to the instanced class.
+
+        Returns:
+            Type: stored class instance.
+            
+        """
+        bases = []
+        if quirks is not None:
+            bases.extend(sourdough.tools.listify(
+                sourdough.base.Quirk.library.select(key = quirks)))
+        bases.append(self.select(name = name))
+        return dataclasses.dataclass(type(name, tuple(bases), {}))
+    
+    def instance(self, name: str, quirks: Union[str, Sequence[str]] = None, 
+                 **kwargs) -> object:
+        """Returns the stored class instance matching 'name'.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            kwargs: parameters and arguments to pass to the instanced class.
+
+        Returns:
+            Type: stored class instance.
+            
+        """
+        if quirks is None:
+            return self.select(name = name)(**kwargs)
+        else:
+            return self.build(name = name, quirks = quirks)(**kwargs)
+
+
+@dataclasses.dataclass
+class Quirk(Base):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    
+
+@dataclasses.dataclass
+class Component(sourdough.quirks.Element, Base):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    name: str = None
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+     
+
+@dataclasses.dataclass
+class Creator(sourdough.quirks.Producer, Base):
+    """[summary]
+
+    Args:
+        sourdough ([type]): [description]
+        
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+ 
+
+@dataclasses.dataclass
+class Configuration(sourdough.types.Lexicon, Base):
     """Loads and stores configuration settings.
 
     To create Configuration instance, a user can pass a:
@@ -364,7 +478,7 @@ class Configuration(sourdough.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Clerk(object):
+class Clerk(Base):
     """File and folder management for sourdough.
 
     Creates and stores dynamic and static file paths, properly formats files
@@ -372,7 +486,7 @@ class Clerk(object):
     sourdough, pandas, and numpy objects.
 
     Args:
-        settings (sourdough.resources.Configuration): a Configuration instance, 
+        settings (Configuration): a Configuration instance, 
             preferably with a section named 'filer' or 'files' with file-
             management related settings. If 'settings' does not have file 
             configuration options or if 'settings' is None, internal defaults 
@@ -394,7 +508,7 @@ class Clerk(object):
         Refactor and simplify with accompanying classes.
 
     """
-    settings: sourdough.resources.Configuration = None
+    settings: Configuration = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -673,8 +787,8 @@ class Clerk(object):
                 load_method = '_pickle_object',
                 save_method = '_unpickle_object')}
 
-    def _get_default_parameters(self,
-            settings: sourdough.resources.Configuration) -> Mapping[Any, Any]:
+    def _get_default_parameters(self, 
+                                settings: Configuration) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
@@ -990,7 +1104,7 @@ class FileSaver(Distributor):
 
 
 @dataclasses.dataclass
-class FileFormat(sourdough.quirks.Loader):
+class FileFormat(object):
     """File format information.
 
     Args:

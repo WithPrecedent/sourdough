@@ -26,8 +26,86 @@ logger = logging.getLogger()
 
 
 @dataclasses.dataclass
+class Bases(sourdough.quirks.Loader):
+    """Base classes for a sourdough projects.
+    
+    Changing the attributes on a Bases instance allows users to specify 
+    different base classes for a sourdough project in the necessary categories.
+    Project will automatically use the base classes in the Bases instance 
+    passed to it.
+    
+    Since this is a subclass of Loader, attribute values can either be classes
+    or strings of the import path of classes. In the latter case, the base
+    classes will be lazily loaded when called.
+    
+    Args:
+        settings (Union[str, Type]): configuration class or a str of the import
+            path for the configuration class. 
+        file (Union[str, Type]): file management class or a str of the import
+            path for the file management class. 
+        component (Union[str, Type]): base node class or a str of the import
+            path for the base node class. 
+        creator (Union[str, Type]): base builder class or a str of the import
+            path for the base builder class.
+        quirk (Union[str, Type]): base mixin class or a str of the import
+            path for the base mixin class. This base is only needed if the
+            user is creating custom classes from strings at runtime using the
+            sourdough Library class.
+            
+    """
+    settings: Union[str, Type] = 'sourdough.base.Settings'
+    filer: Union[str, Type] = 'sourdough.base.Filer' 
+    component: Union[str, Type] = 'sourdough.base.Component'
+    creator: Union[str, Type] = 'sourdough.base.Creator'
+    quirk: Union[str, Type] = 'sourdough.base.Quirk'
+
+    """ Properties """
+    
+    @property
+    def component_suffixes(self) -> Tuple[str]:
+        """[summary]
+
+        Returns:
+            Tuple[str]: [description]
+        """
+        return tuple(key + 's' for key in self.component.registry.keys()) 
+    
+    @property
+    def creator_suffixes(self) -> Tuple[str]:
+        """[summary]
+
+        Returns:
+            Tuple[str]: [description]
+        """
+        return tuple(key + 's' for key in self.creator.registry.keys()) 
+   
+    """ Public Methods """
+   
+    def get_class(self, name: Union[str, Sequence[str]], kind: str) -> Type:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            Type: [description]
+            
+        """
+        base = getattr(self, kind)
+        product = None
+        for key in sourdough.tools.listify(name):
+            try:
+                product = base.duplicate(name = key)
+                break
+            except (AttributeError, KeyError):
+                pass
+        product = product or base
+        return product   
+   
+   
+@dataclasses.dataclass
 class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
-              sourdough.structures.Producer):
+              sourdough.quirks.Producer):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:

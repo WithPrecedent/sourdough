@@ -12,7 +12,7 @@ import sourdough
 
 
 def test_filer():
-    settings = sourdough.resources.Configuration(
+    settings = sourdough.base.Configuration(
         contents = pathlib.Path('tests') / 'ini_settings.ini')
     filer = sourdough.Clerk(settings = settings)
     # Tests injection from settings.

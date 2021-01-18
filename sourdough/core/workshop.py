@@ -1,5 +1,5 @@
 """
-workshop: interface for runtime class and object product
+workshop: creator classes for building complex workflows
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -9,138 +9,100 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import dataclasses
-import inspect
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough 
 
-
+  
 @dataclasses.dataclass
-class ComponentWorksop(sourdough.factory.Workshop):
-    """[summary]
+class Builder(sourdough.base.Creator, abc.ABC):
+    """Stores a sourdough workflow.
+    
+    """  
+    project: sourdough.Project = dataclasses.field(repr = False, default = None)
 
-    Args:
-        sourdough ([type]): [description]
-    """
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
- 
+    """ Public Methods """
+    
+    def create(self, source: Any) -> sourdough.base.Node:
+        return source
 
-@dataclasses.dataclass
-class Component(sourdough.factory.Product, sourdough.workflows.Node):
-    """[summary]
+    """ Private Methods """
+    
+    def _create_from_settings() -> sourdough.Base.Node:
+        pass
+    
+    def _get_parameters(self, name: str, **kwargs) -> Mapping[str, Any]:
+        """[summary]
 
-    Args:
-        sourdough ([type]): [description]
-    """
-    name: str = None
-    contents: Any = None
+        Args:
+            name (str): [description]
 
-    """ Class Methods """
-
-    @classmethod
-    def register(cls) -> None:
-        """Registers a subclass in a Catalog in ComponentWorkshop.
-        
-        The default 'register' method uses the snake-case name of the class as
-        the key for the stored subclass.
-        
+        Returns:
+            Parameters: [description]
         """
-        key = sourdough.tools.snakify(cls.__name__)
-        ComponentWorksop.registry[key] = cls
-        return cls
+        try:
+            kwargs.update(self.project.settings[f'{name}_parameters'])
+        except KeyError:
+            pass
+        return kwargs
     
-# @dataclasses.dataclass
-# class Workshop(sourdough.types.Catalog):
+    def _get_node(self, name: str) -> Type[sourdough.base.Node]:
+        """[summary]
 
-#     contents: Mapping[str, Callable] = dataclasses.field(default_factory = dict)
-#     project: Project = None
+        Args:
+            name (str): [description]
 
-#     """ Initialization Methods """
-
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent and/or mixin initialization method(s).
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass
-#         # Checks to see if 'project' exists.
-#         if self.project is None:
-#             raise ValueError(
-#                 f'{self.__class__.__name__} requires a Project instance')
-#         # Creates base classes with selected Quirk mixins.
-#         self.create_bases()
-#         # Point the 'bases' of Project to 'contents' attribute.
-#         Project.bases = self.contents
-    
-#     """ Public Methods """
-    
-#     def create_bases(self) -> None:
-#         """[summary]
-
-#         Returns:
-#             [type]: [description]
-#         """
-#         quirks = self._get_settings_quirks()
-#         for key, value in self.manager.project.bases.items():
-#             self.contents[key] = self.create_class(
-#                 name = key, 
-#                 base = value, 
-#                 quirks = quirks)
-#         return self
+        Returns:
+            Type: [description]
             
-#     def create_class(self, name: str, base: Callable, 
-#                      quirks: Sequence[sourdough.Quirk]) -> Callable:
-#         """[summary]
+        """
+        keys = [name]
+        try:
+            keys.append(self.project.settings[name][f'{name}_structure'])
+        except KeyError:
+            keys.append(self.project.settings['general']['default_structure'])
+        return self.project.bases.get_class(kind = 'component', name = keys)
+       
 
-#         Args:
-#             name (str): [description]
-#             base (Callable): [description]
-#             quirks (Sequence[sourdough.Quirk])
-
-#         Returns:
-#             Callable: [description]
-            
-#         """
-#         if quirks:
-#             bases = quirks.append(base)
-#             new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
-#             # Recursively adds quirks to items in the 'registry' of 'base'.
-#             if hasattr(base, 'registry'):
-#                 newregistry = {}
-#                 for key, value in base.registry.items():
-#                     newregistry[key] = self.create_class(
-#                         name = key,
-#                         base = value,
-#                         quirks = quirks)
-#                 new_base.registry = newregistry
-#         else:
-#             new_base = base
-#         return new_base
-             
-#     """ Private Methods """
+@dataclasses.dataclass
+class GraphCreator(Builder):
+    """Stores a sourdough workflow.
     
-#     def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
-#         """[summary]
-
-#         Returns:
-#             Sequence[sourdough.Quirk]: [description]
+    """  
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    project: sourdough.Project = dataclasses.field(repr = False, default = None)
+    
+    """ Public Methods """
+    
+    def create(self, source: Union[sourdough.base.Configuration,
+                                   Mapping[str, Sequence[str]],
+                                   Sequence[Sequence[str]]]) -> Graph:
+        """
+        """
+        if isinstance(source, sourdough.types.Configuration):
+            return self._from_configuration(source = source)
+        elif isinstance(source, sourdough.types.Configuration):
+            return self._from_adjacency_list(source = source)
+        elif isinstance(source, sourdough.types.Configuration):
+            return self._from_adjacency_matrix(source = source)
+        else:
+            raise TypeError('source must be a Configuration, adjacency list, '
+                            'or adjacency matrix')   
             
-#         """
-#         settings_keys = {
-#             'verbose': 'talker', 
-#             'early_validation': 'validator', 
-#             'conserve_memory': 'conserver'}
-#         quirks = []
-#         for key, value in settings_keys.items():
-#             try:
-#                 if self.manager.project.settings['general'][key]:
-#                     quirks.append(sourdough.Quirk.options[value])
-#             except KeyError:
-#                 pass
-#         return quirks
-
- 
+    """ Private Methods """
+    
+    def _from_configuration(self, 
+                            source: sourdough.base.Configuration) -> Graph:
+        return source
+    
+    def _from_adjacency_list(self, 
+                            source: sourdough.base.Configuration) -> Graph:
+        return source
+    
+    def _from_adjacency_matrix(self, 
+                            source: sourdough.base.Configuration) -> Graph:
+        return source
+           
+       

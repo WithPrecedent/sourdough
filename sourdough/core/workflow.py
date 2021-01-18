@@ -9,7 +9,7 @@ Contents:
     
 """
 from __future__ import annotations
-import abc
+import abc 
 import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -19,7 +19,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
+class Node(sourdough.base.Component, abc.ABC):
     """ 
     
     """
@@ -31,15 +31,34 @@ class Node(sourdough.quirks.Element, sourdough.types.Proxy, abc.ABC):
     def apply(self, data: Any = None, **kwargs) -> Any:
         """Subclasses must provide their own methods."""
         pass 
+     
+    
+@dataclasses.dataclass
+class Technique(Node, sourdough.types.Proxy):
+
+    contents: Callable = None 
+    name: str = None
+    
+    """ Public Methods """
+    
+    def apply(self, data: Any = None, **kwargs) -> Any:
+        """[summary]
+
+        Args:
+            data (Any, optional): [description]. Defaults to None.
+
+        Returns:
+            Any: [description]
+        """
+        return self.contents(data = data, **kwargs)
 
 
 @dataclasses.dataclass
-class Composite(Node, sourdough.types.Hybrid):
+class Pipeline(Node, sourdough.types.Progression):
     """
     
     """
-    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
-        default_factory = list) 
+    contents: Sequence[Node] = dataclasses.field(default_factory = list) 
     name: str = None
     
     """ Public Methods """
@@ -63,38 +82,9 @@ class Composite(Node, sourdough.types.Hybrid):
         else:
             return data
         
-    
-@dataclasses.dataclass
-class Leaf(Node):
-
-    contents: Callable = None 
-    name: str = None
-    
-    """ Public Methods """
-    
-    def apply(self, data: Any = None, **kwargs) -> Any:
-        """[summary]
-
-        Args:
-            data (Any, optional): [description]. Defaults to None.
-
-        Returns:
-            Any: [description]
-        """
-        return self.contents(data = data, **kwargs)
-
 
 @dataclasses.dataclass
-class Workflow(sourdough.quirks.Element, sourdough.types.Bunch):
-    """Stores a sourdough workflow.
-    
-    """  
-    contents: Iterable = None
-    name: str = None
-
-
-@dataclasses.dataclass
-class Graph(sourdough.types.Lexicon, Workflow):
+class Graph(Node, sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are
@@ -156,7 +146,7 @@ class Graph(sourdough.types.Lexicon, Workflow):
         return self._find_all_paths(start = self.root, end = self.end)
         
     """ Public Methods """
-          
+    
     def add_node(self, node: Node) -> None:
         """Adds a node to the graph.
             
@@ -173,6 +163,9 @@ class Graph(sourdough.types.Lexicon, Workflow):
             
         """
         self.edges[start] = stop
+        return self
+
+    def apply(self) -> object:
         return self
 
     def delete_node(self, name: str) -> None:
@@ -246,91 +239,128 @@ class Graph(sourdough.types.Lexicon, Workflow):
 
 
 @dataclasses.dataclass
-class Builder(sourdough.types.Producer):
-    """Stores a sourdough workflow.
+class Tree(Node, sourdough.types.Hybrid):
+    """
     
-    """  
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    creator: sourdough.project.Creator = dataclasses.field(repr = False, 
-                                                           default = None)
-
+    """
+    contents: Sequence[Node] = dataclasses.field(default_factory = list) 
+    name: str = None
+    
     """ Public Methods """
     
-    def create(self, source: Any) -> Workflow:
-        return source
-
-    """ Private Methods """
-    
-    def _settings_to_component(self, name: str, **kwargs) -> Type[Node]:
+    def apply(self, data: Any = None, **kwargs) -> Any:
         """[summary]
 
         Args:
-            name (str): [description]
+            data (Any, optional): [description]. Defaults to None.
 
         Returns:
-            Type: [description]
-            
+            Any: [description]
         """
-        section = self.creator.settings[name]
-        if hasattr(self.creator.bases.component, 'registry'):
-            try:
-                component = self.base.registry.acquire(key = name)
-            except KeyError:
-                try:
-                    design = self.creator.settings
-                    product = self.base.registry.acquire(key = kwargs['design'])
-                except (KeyError, TypeError):
-                    product = self.base
+        for node in self.contents:
+            if data is None:
+                node.apply(data = data, **kwargs)
+            else:
+                data = node.apply(data = data, **kwargs)
+        if data is None:
+            return self
         else:
-            product = self.base
-        return product        
-
-
-@dataclasses.dataclass
-class GraphBuilder(sourdough.types.Producer):
-    """Stores a sourdough workflow.
-    
-    """  
+            return data
+   
+       
+@dataclasses.dataclass    
+class Parameters(sourdough.types.Lexicon):
+    """
+    """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    project: sourdough.Project = dataclasses.field(repr = False, default = None)
+    name: str = None
+    base: Union[Type, str] = None
+    required: Sequence[str] = dataclasses.field(default_factory = list)
+    runtime: Mapping[str, str] = dataclasses.field(default_factory = dict)
+    selected: Sequence[str] = dataclasses.field(default_factory = list)
+    default: ClassVar[Mapping[str, Any]] = {}
     
     """ Public Methods """
     
-    def create(self, source: Union[sourdough.resources.Configuration,
-                                   Mapping[str, Sequence[str]],
-                                   Sequence[Sequence[str]]]) -> Graph:
+    def create(self, creator: sourdough.project.Creator, **kwargs) -> None:
+        """[summary]
+
+        Args:
+            creator (sourdough.project.Creator): [description]
+
         """
-        """
-        if isinstance(source, sourdough.types.Configuration):
-            return self._from_configuration(source = source)
-        elif isinstance(source, sourdough.types.Configuration):
-            return self._from_adjacency_list(source = source)
-        elif isinstance(source, sourdough.types.Configuration):
-            return self._from_adjacency_matrix(source = source)
-        else:
-            raise TypeError('source must be a Configuration, adjacency list, '
-                            'or adjacency matrix')   
-            
+        if not kwargs:
+            kwargs = self.default
+        for kind in ['settings', 'required', 'runtime', 'selected']:
+            kwargs = getattr(self, f'_get_{kind}')(creator = creator, **kwargs)
+        self.contents = kwargs
+        return self
+    
     """ Private Methods """
     
-    def _from_configuration(self, 
-                            source: sourdough.resources.Configuration) -> Graph:
-        return source
-    
-    def _from_adjacency_list(self, 
-                            source: sourdough.resources.Configuration) -> Graph:
-        return source
-    
-    def _from_adjacency_matrix(self, 
-                            source: sourdough.resources.Configuration) -> Graph:
-        return source
-           
+    def _get_settings(self, creator: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
 
-@dataclasses.dataclass
-class Tree(sourdough.types.Hybrid, Workflow):
-    """Stores a tree structured workflow.
+        Args:
+            creator (sourdough.project.Creator): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        try:
+            kwargs.update(creator.settings[f'{self.name}_parameters'])
+        except KeyError:
+            pass
+        return kwargs
     
-    """  
-    contents: Sequence[Node] = dataclasses.field(default_factory = list)
-    name: str = None
-        
+    def _get_required(self, creator: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
+
+        Args:
+            creator (sourdough.project.Creator): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        for item in self.required:
+            if item not in kwargs:
+                kwargs[item] = self.default[item]
+        return kwargs
+    
+    def _get_runtime(self, creator: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
+
+        Args:
+            creator (sourdough.project.Creator): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        for parameter, attribute in self.runtime.items():
+            try:
+                kwargs[parameter] = getattr(creator, attribute)
+            except AttributeError:
+                pass
+        return kwargs
+
+    def _get_selected(self, creator: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
+
+        Args:
+            creator (sourdough.project.Creator): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        if self.selected:
+            kwargs = {k: kwargs[k] for k in self.selected}
+        return kwargs
+  
