@@ -1,19 +1,17 @@
 """
-elements: primitive Component subclasses
+workflow: nodes in a sourdough workflow
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Technique (Loader, Component): base-level class to apply algorithms as
-        part of a Workflow.
-    Step (Component): wrapper for a Technique used in construction of parallel
-        Workflows.
+
     
 """
 from __future__ import annotations
-import collections.abc
+import abc 
 import dataclasses
+import itertools
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -21,7 +19,23 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Technique(sourdough.Component):
+class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+    """ 
+    
+    """
+    name: str = None
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def apply(self, data: Any = None, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass 
+     
+
+@dataclasses.dataclass
+class Technique(Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -33,11 +47,9 @@ class Technique(sourdough.Component):
             to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
         parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
             when the 'apply' method is called. Defaults to an empty dict.
                                     
@@ -86,9 +98,9 @@ class Technique(sourdough.Component):
             else:
                 return None
 
-             
+        
 @dataclasses.dataclass
-class Step(sourdough.Component):
+class Step(Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
@@ -104,11 +116,9 @@ class Step(sourdough.Component):
             Defaults ot None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
                         
     """
     contents: Union[Technique, str] = None

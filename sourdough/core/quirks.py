@@ -20,18 +20,18 @@ alternate classes for use in sourdough, these quirks show how to survive
 static type-checkers and other internal checks made by sourdough.
 
 Contents:
-    Builder (object): quirk for sourdough classes that contruct other 
-        classes and objects. All subclasses must have a 'create' method.
-    Element (object): quirk for sourdough containers used in composite 
+    Quirk (Base, ABC): base class for all sourdough quirks (described above). 
+        Its 'library' class attribute stores all subclasses.
+    Element (Quirk): quirk for sourdough containers used in composite 
         structures. It automatically assigns a 'name' attribute if none is 
         passed. Subclasses must have an 'apply' method. 
-    Coordinator (object): quirk for directing other classes to perform actions. 
-        It provides generic 'advance' and 'complete' methods. Subclasses must 
-        provide a 'validate' methods to check and/or convert attribute values.
-    Registrar (object): quirk for storing subclasses automatically.
-    Librarian (object): quirk for storing subclass instances automatically.
-    Loader (object): quirk enabling lazy loadin to import python classes, 
-        functions, and other items at runtime. 
+    # Coordinator (Quirk): quirk for directing other classes to perform actions. 
+    #     It provides generic 'advance' and 'complete' methods. Subclasses must 
+    #     provide a 'validate' methods to check and/or convert attribute values.
+    # Registrar (Quirk): quirk for storing subclasses automatically.
+    # Librarian (Quirk): quirk for storing subclass instances automatically.
+    # Loader (Quirk): quirk enabling lazy loadin to import python classes, 
+    #     functions, and other items at runtime. 
 
 ToDo:
     Add in Validator mixins.
@@ -50,16 +50,26 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+@dataclasses.dataclass
+class Quirk(sourdough.types.Base, abc.ABC):
+    """Base class for sourdough quirks (mixin-approximations).
+    
+    Args:
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+        
+    """
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    
 
 @dataclasses.dataclass
-class Element(sourdough.base.Quirk):
+class Element(Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
     otherwise passed. This is important for parts of sourdough composite objects 
     like trees and graphs.
-
-    Subclasses must provide their own 'apply' methods.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -84,13 +94,6 @@ class Element(sourdough.base.Quirk):
         except AttributeError:
             pass
 
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def apply(self, data: Any = None, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass 
-
     """ Private Methods """
     
     def _get_name(self) -> str:
@@ -107,7 +110,7 @@ class Element(sourdough.base.Quirk):
 
 
 @dataclasses.dataclass
-class Validator(sourdough.base.Quirk):
+class Validator(Quirk):
     """Mixin for calling validation methods
 
     Args:
@@ -145,7 +148,7 @@ class Validator(sourdough.base.Quirk):
 
  
 @dataclasses.dataclass
-class Producer(sourdough.types.Lexicon, sourdough.base.Quirk):
+class Producer(sourdough.types.Lexicon, Quirk):
     """
     
     Subclasses must have a 'create' method. 
@@ -196,7 +199,7 @@ class Producer(sourdough.types.Lexicon, sourdough.base.Quirk):
 
  
 @dataclasses.dataclass
-class Registrar(sourdough.base.Quirk):
+class Registrar(Quirk):
     """Registry interface for core sourdough classes.
     
     A Registrar automatically registers all concrete (non-abstract) subclasses
@@ -249,7 +252,7 @@ class Registrar(sourdough.base.Quirk):
     
     
 @dataclasses.dataclass
-class Librarian(sourdough.base.Quirk):
+class Librarian(Quirk):
     """Store interface for core sourdough classes.
     
     Librarian automatically registers all subclass instances using the 'deposit' 
@@ -310,7 +313,7 @@ class Librarian(sourdough.base.Quirk):
 
 
 @dataclasses.dataclass
-class Loader(sourdough.base.Quirk):
+class Loader(Quirk):
     """Faciliates lazy loading from modules.
 
     Subclasses with attributes storing strings containing import paths 

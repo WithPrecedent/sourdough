@@ -41,7 +41,7 @@ class Bases(sourdough.quirks.Loader):
     Args:
         settings (Union[str, Type]): configuration class or a str of the import
             path for the configuration class. 
-        file (Union[str, Type]): file management class or a str of the import
+        filer (Union[str, Type]): file management class or a str of the import
             path for the file management class. 
         component (Union[str, Type]): base node class or a str of the import
             path for the base node class. 
@@ -53,11 +53,13 @@ class Bases(sourdough.quirks.Loader):
             sourdough Library class.
             
     """
-    settings: Union[str, Type] = 'sourdough.base.Settings'
-    filer: Union[str, Type] = 'sourdough.base.Filer' 
-    component: Union[str, Type] = 'sourdough.base.Component'
-    creator: Union[str, Type] = 'sourdough.base.Creator'
-    quirk: Union[str, Type] = 'sourdough.base.Quirk'
+    settings: Union[str, Type] = 'sourdough.resources.Settings'
+    filer: Union[str, Type] = 'sourdough.resources.Filer' 
+    structure: Union[str, Type] = 'sourdough.composites.Structure'
+    component: Union[str, Type] = 'sourdough.nodes.Component'
+    builder: Union[str, Type] = 'sourdough.workshop.Builder'
+    manager: Union[str, Type] = 'sourdough.directors.Manager'
+    quirk: Union[str, Type] = 'sourdough.quirks.Quirk'
 
     """ Properties """
     

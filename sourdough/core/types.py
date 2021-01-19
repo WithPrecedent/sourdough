@@ -32,6 +32,11 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
+    Base (ABC): abstract class for connecting another class to a Library, which
+        stores subclass instances.
+    Library (Catalog): a dictionary that stores subclasses and includes methods
+        to access, build, or instance those classes. This includes runtime
+        construction of new classes using sourdough quirks.
         
 """
 from __future__ import annotations
@@ -274,12 +279,13 @@ class Progression(Bunch, collections.abc.MutableSequence):
     """ Public Methods """
 
     def add(self, item: Sequence[Any], **kwargs) -> None:
-        """Extends 'item' argument to 'contents' attribute.
-        
+        """Tries to extend 'contents' with 'item'. Otherwise, appends.
+
         Args:
             item (Sequence[Any]): items to add to the 'contents' attribute.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
+                
         """
         try:
             self.contents.extend(item)
@@ -365,7 +371,7 @@ class Hybrid(Progression):
     A Hybrid inherits the differences between a Progression and an ordinary 
     python list.
     
-    A Hybrid differs from a Progression in 4 significant ways:
+    A Hybrid differs from a Progression in 3 significant ways:
         1) It only store items with 'name' attributes or properties.
         2) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
@@ -376,11 +382,7 @@ class Hybrid(Progression):
             of lookup speed. As a result, Hybrid should only be used if a high 
             volume of access calls is not anticipated. Ordinarily, the loss of 
             lookup speed should have negligible effect on overall performance.
-        3) It includes 'apply' and 'find' methods which traverse items in
-            'contents' (recursively, if the 'recursive' argument is True), to
-            either 'apply' a Callable or 'find' items matching criteria defined
-            in a Callable. 
-        4) It includes "excludify" and "subsetify" methods which return new
+        3) It includes "excludify" and "subsetify" methods which return new
             instances with a subset of 'contents' based upon the 'subset'
             argument passed to the method. 'excludify' returns all 'contents'
             that do not have names matching items in the 'subset' argument.
@@ -419,29 +421,6 @@ class Hybrid(Progression):
         """
         self.contents.append(item)
         return self    
-    
-    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
-        """Maps 'tool' to items stored in 'contents'.
-        
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            recursive (bool): whether to apply 'tool' to nested items in
-                'contents'. Defaults to True.
-            kwargs: additional arguments to pass when 'tool' is used.
-        
-        """
-        new_contents = []
-        for child in iter(self.contents):
-            if hasattr(child, 'apply') and recursive:
-                new_child = child.apply(tool = tool, recursive = True, **kwargs)
-            elif recursive:
-                new_child = tool(child, **kwargs)
-            else:
-                new_child = child
-            new_contents.append(new_child)
-        self.contents = new_contents
-        return self
 
     def clear(self) -> None:
         """Removes all items from 'contents'."""
@@ -479,33 +458,6 @@ class Hybrid(Progression):
         self.contents.extend(item)
         return self  
 
-    def find(self, tool: Callable, recursive: bool = True, 
-             matches: Sequence[Any] = None, **kwargs) -> Sequence[Any]:
-        """Finds items in 'contents' that match criteria in 'tool'.
-        
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            recursive (bool): whether to apply 'tool' to nested items in
-                'contents'. Defaults to True.
-            matches (Sequence[Any]): items matching the criteria in 'tool'. This 
-                should not be passed by an external call to 'find'. It is 
-                included to allow recursive searching.
-            kwargs: additional arguments to pass when 'tool' is used.
-            
-        Returns:
-            Sequence[Any]: stored items matching the criteria in 'tool'. 
-        
-        """
-        if matches is None:
-            matches = []
-        for item in iter(self.contents):
-            matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, Iterable) and recursive:
-                matches.extend(item.find(tool = tool, recursive = True,
-                                         matches = matches, **kwargs))
-        return matches
-    
     def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) in 'contents' or value in '_default' attribute.
         
@@ -537,7 +489,7 @@ class Hybrid(Progression):
             Sequence[Any]: list of names of stored in 'contents'
             
         """
-        return [c.name for c in self.contents]
+        return (c.name for c in self.contents)
 
     def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Pops item(s) from 'contents'.
@@ -617,7 +569,7 @@ class Hybrid(Progression):
             Sequence[Any]: list of items stored in 'contents'
             
         """
-        return self.contents
+        return tuple(self.contents)
           
     """ Dunder Methods """
 
@@ -1054,3 +1006,107 @@ class Catalog(Lexicon):
             i: self.contents[i] 
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
+
+
+@dataclasses.dataclass
+class Base(abc.ABC):
+    """Abstract base class for connecting a base class to a Library.
+    
+    Any subclass will automatically store itself in the class attribute 
+    'library' using the snakecase name of the class as the key.
+    
+    Args:
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+        
+    """
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            cls.library[key] = cls
+
+
+@dataclasses.dataclass
+class Library(sourdough.types.Catalog):
+    """Stores Base subclasses in a dictionary.
+
+    A Library inherits the differences between a Catalog and a Lexicon.
+    
+    A Library differs from a Catalog in 2 significant ways:
+        1) It should only store Base subclasses as values.
+        2) It includes methods for accessing, building, customizing, and 
+            instancing the stored subclasses.
+        
+    Args:
+        contents (Mapping[Any, Type[Base]]): stored dictionary with only Base 
+            subclasses as values. Defaults to an empty dict.
+        
+    """
+    contents: Mapping[Any, Type[Base]] = dataclasses.field(
+        default_factory = dict)
+ 
+    """ Public Methods """
+
+    def borrow(self, name: str) -> Type[Base]:
+        """Returns a stored subclass unchanged.
+
+        Args:
+            name (str): key to accessing subclass in 'contents'.
+
+        Returns:
+            Type[Base]: corresponding Base subclass.
+            
+        """
+        return self.select(key = name)
+
+    def build(self, name: str, 
+              quirks: Union[str, Sequence[str]] = None) -> Type[Base]:
+        """Returns subclass matching 'name' with selected quirks.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            quirks (Union[str, Sequence[str]]): names of Quirk subclasses to
+                add to the custom built class. Defaults to None.
+
+        Returns:
+            Type: stored class.
+            
+        """
+        bases = []
+        if quirks is not None:
+            bases.extend(sourdough.tools.listify(
+                sourdough.base.Quirk.library.select(key = quirks)))
+        bases.append(self.select(name = name))
+        return dataclasses.dataclass(type(name, tuple(bases), {}))
+    
+    def instance(self, name: str, quirks: Union[str, Sequence[str]] = None, 
+                 **kwargs) -> object:
+        """Returns the stored class instance matching 'name'.
+        
+        If 'quirks' are also passed, they will be added to the returned class
+        inheritance.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            quirks (Union[str, Sequence[str]]): names of Quirk subclasses to
+                add to the custom built class. Defaults to None.
+            kwargs: parameters and arguments to pass to the instanced class.
+
+        Returns:
+            object: stored class instance or custom built class with 'quirks'.
+            
+        """
+        if quirks is None:
+            return self.select(name = name)(**kwargs)
+        else:
+            return self.build(name = name, quirks = quirks)(**kwargs)

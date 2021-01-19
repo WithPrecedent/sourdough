@@ -34,11 +34,9 @@ class Node(sourdough.quirks.Registar, sourdough.quirks.Element,
         children (Any): item(s) contained by a Node instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
         parameters (Mapping[Any, Any]]): parameters to be attached to 'children' 
             when the 'apply' method is called. Defaults to an empty dict.
         iterations (Union[int, str]): number of times the 'apply' method should 
@@ -511,11 +509,9 @@ class Worker(sourdough.quirks.Registar, sourdough.quirks.Element,
         children (Any): item(s) contained by a Node instance.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 'name' 
-            should match the appropriate section name in the Configuration instance. 
-            When subclassing, it is sometimes a good idea to use the same 'name' 
-            attribute as the base class for effective coordination between 
-            sourdough classes. 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
         parameters (Mapping[Any, Any]]): parameters to be attached to 'children' 
             when the 'apply' method is called. Defaults to an empty dict.
         iterations (Union[int, str]): number of times the 'apply' method should 

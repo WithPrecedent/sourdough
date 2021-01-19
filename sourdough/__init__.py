@@ -47,11 +47,11 @@ from . import utilities
 
 from . import core
 from .core import types
-from .core import base
 from .core import quirks
-from .core import workflows
-from .core import library
-from .core.interface import Project
+from .core import resources
+from .core import structures
+from .core import workshop
+from .project.interface import Project
 
 from . import project
 
