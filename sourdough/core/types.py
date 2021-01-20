@@ -37,7 +37,7 @@ Contents:
     Library (Catalog): a dictionary that stores subclasses and includes methods
         to access, build, or instance those classes. This includes runtime
         construction of new classes using sourdough quirks.
-        
+
 """
 from __future__ import annotations
 import abc
@@ -1006,7 +1006,7 @@ class Catalog(Lexicon):
             i: self.contents[i] 
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
-
+ 
 
 @dataclasses.dataclass
 class Base(abc.ABC):

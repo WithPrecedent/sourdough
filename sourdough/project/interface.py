@@ -5,6 +5,7 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents: 
+    Bases (Loader):
     Project (Hybrid): access point and interface for creating and implementing
         sourdough projects.
 
@@ -45,8 +46,8 @@ class Bases(sourdough.quirks.Loader):
             path for the file management class. 
         component (Union[str, Type]): base node class or a str of the import
             path for the base node class. 
-        creator (Union[str, Type]): base builder class or a str of the import
-            path for the base builder class.
+        manager (Union[str, Type]): base director class or a str of the import
+            path for the base director class.
         quirk (Union[str, Type]): base mixin class or a str of the import
             path for the base mixin class. This base is only needed if the
             user is creating custom classes from strings at runtime using the
@@ -57,12 +58,12 @@ class Bases(sourdough.quirks.Loader):
     filer: Union[str, Type] = 'sourdough.resources.Filer' 
     structure: Union[str, Type] = 'sourdough.composites.Structure'
     component: Union[str, Type] = 'sourdough.nodes.Component'
-    builder: Union[str, Type] = 'sourdough.workshop.Builder'
-    manager: Union[str, Type] = 'sourdough.directors.Manager'
+    creator: Union[str, Type] = 'sourdough.workshop.Creator'
+    manager: Union[str, Type] = 'sourdough.workshop.Manager'
     quirk: Union[str, Type] = 'sourdough.quirks.Quirk'
 
     """ Properties """
-    
+
     @property
     def component_suffixes(self) -> Tuple[str]:
         """[summary]
@@ -70,18 +71,21 @@ class Bases(sourdough.quirks.Loader):
         Returns:
             Tuple[str]: [description]
         """
-        return tuple(key + 's' for key in self.component.registry.keys()) 
+        return self._get_suffixes(name = 'component')
     
     @property
-    def creator_suffixes(self) -> Tuple[str]:
+    def manager_suffixes(self) -> Tuple[str]:
         """[summary]
 
         Returns:
             Tuple[str]: [description]
         """
-        return tuple(key + 's' for key in self.creator.registry.keys()) 
+        return self._get_suffixes(name = 'manager')
    
     """ Public Methods """
+   
+    def _get_suffixes(self, name: str) -> Tuple[str]:
+        return tuple(key + 's' for key in getattr(self, name).library.keys())
    
     def get_class(self, name: Union[str, Sequence[str]], kind: str) -> Type:
         """[summary]
@@ -103,17 +107,17 @@ class Bases(sourdough.quirks.Loader):
                 pass
         product = product or base
         return product   
-   
-   
+
+
 @dataclasses.dataclass
-class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
-              sourdough.quirks.Producer):
+class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
+              sourdough.types.Lexicon):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
         contents (Mapping[str, object]): keys are names of objects stored and 
             values are the stored objects. Defaults to an empty dict.
-        creators (Mapping[str, Union[Type, str]]): related creator which constructs objects to be 
+        managers (Mapping[str, Union[Type, str]]): related manager which constructs objects to be 
             stored in 'contents'. Defaults to an empty list.
         settings (Union[sourdough.base.Settings, str, pathlib.Path]]): a
             Settings-compatible subclass or instance, a str or pathlib.Path 
@@ -137,8 +141,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
-        automatic (bool): whether to automatically advance 'creator' (True) or 
-            whether the creator must be advanced manually (False). Defaults to 
+        automatic (bool): whether to automatically advance 'manager' (True) or 
+            whether the manager must be advanced manually (False). Defaults to 
             True.
         data (object): any data object for the project to be applied. If it is
             None, an instance will still execute its workflow, but it won't
@@ -147,9 +151,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
 
 
     """
-    contents: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.types.Lexicon)
-    creators: Mapping[str, Union[Type, str]] = dataclasses.field(
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    managers: Mapping[str, Union[Type, str]] = dataclasses.field(
         default_factory = sourdough.types.Lexicon)
     settings: Union[object, Type, pathlib.Path, str, Mapping] = None
     filer: Union[object, Type, pathlib.Path, str] = None
@@ -160,7 +163,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     automatic: bool = True
     data: Any = None
     validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'filer', 'structure', 'creators'])
+        'settings', 'name', 'identification', 'filer', 'structure', 'managers'])
     
     """ Initialization Methods """
 
@@ -195,16 +198,12 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     
     @workflow.deleter
     def workflow(self) -> None:
-        self.contents = sourdough.types.Lexicon()
+        self.contents = {}
         return self
    
     """ Public Methods """
     
-    def create(self, data: Any = None):
-        if data is None:
-            data = self.data
-        
-                                          
+                    
     """ Private Methods """
     
     def _validate_settings(self, settings: Union[object, pathlib.Path, str, 
@@ -279,35 +278,35 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             raise TypeError('filer must be a Clerk, Path, str, or None type.')
         return filer
 
-    def _validate_creators(self, creators: Mapping[str, Union[object, str]]) -> (
+    def _validate_managers(self, managers: Mapping[str, Union[object, str]]) -> (
             Mapping[str, object]):
-        """Validates 'creators' or converts them to Builder subclasses.
+        """Validates 'managers' or converts them to Manager subclasses.
         
         """
-        if not creators:
+        if not managers:
             try:
-                creators = self.settings[self.name][f'{self.name}_creators']
+                managers = self.settings[self.name][f'{self.name}_managers']
             except KeyError:
                 pass
-        new_creators = []
-        for item in creators:
-            new_creators.append(self._validate_creator(creator = item))
-        return new_creators
+        new_managers = []
+        for item in managers:
+            new_managers.append(self._validate_manager(manager = item))
+        return new_managers
 
-    def _validate_creator(self, creator: Union[str, object]) -> object:
+    def _validate_manager(self, manager: Union[str, object]) -> object:
         """
         """
-        if isinstance(creator, str):
-            creator = self.bases.get_class(name = creator, kind = 'creator')
-            creator = creator(name = creator, project = self)
-        elif inspect.isclass(creator):
-            creator = creator(project = self)
-        elif isinstance(creator, self.bases.settings.creator):
-            creator.project = self
+        if isinstance(manager, str):
+            manager = self.bases.get_class(name = manager, kind = 'manager')
+            manager = manager(name = manager, project = self)
+        elif inspect.isclass(manager):
+            manager = manager(project = self)
+        elif isinstance(manager, self.bases.settings.manager):
+            manager.project = self
         else:
             raise TypeError(
                 'contents must be a list of str or Director types')
-        return creator
+        return manager
 
     """ Dunder Methods """     
 
@@ -327,14 +326,14 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             Any: item project by the 'create' method of a Creator.
             
         """
-        if self.index < len(self.creators):
-            creator = self.creators[self.index]
+        if self.index < len(self.managers):
+            manager = self.managers[self.index]
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Starting {creator.__name__}')
-            creator.complete()
+                print(f'Starting {manager.__name__}')
+            manager.complete()
             self.index += 1
             if hasattr(self, 'verbose') and self.verbose:
-                print(f'Completed {creator.__name__}')
+                print(f'Completed {manager.__name__}')
         else:
             raise IndexError()
         return self

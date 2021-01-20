@@ -20,9 +20,23 @@ import sourdough
 
 @dataclasses.dataclass
 class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
-    """ 
+    """Abstract base for parts of a sourdough composite workflow.
     
+    All subclasses must have an 'apply' method.
+    
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        contents (Any): stored item for use by a Component subclass instance.  
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+                
     """
+    contents: Any = None
     name: str = None
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
 
@@ -35,7 +49,7 @@ class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
      
 
 @dataclasses.dataclass
-class Technique(Component):
+class Technique(Component, sourdough.types.Proxy):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -100,7 +114,7 @@ class Technique(Component):
 
         
 @dataclasses.dataclass
-class Step(Component):
+class Step(Component, sourdough.types.Proxy):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to apply to 
@@ -165,23 +179,3 @@ class Step(Component):
         else:
             return self.contents.apply(data = data, **kwargs)
 
-    """ Dunder Methods """
-
-    def __getattr__(self, attribute: str) -> Any:
-        """Looks for 'attribute' in 'contents'.
-
-        Args:
-            attribute (str): name of attribute to return.
-
-        Raises:
-            AttributeError: if 'attribute' is not found in 'contents'.
-
-        Returns:
-            Any: matching attribute.
-
-        """
-        try:
-            return getattr(self.contents, attribute)
-        except AttributeError:
-            raise AttributeError(f'{attribute} neither found in {self.name} '
-                                 f'nor {self.contents}') 
