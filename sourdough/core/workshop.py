@@ -8,6 +8,7 @@ Contents:
     Builder (Base, ABC): base class for all sourdough constructors of composite
         structures. All subclasses must have a 'create' method. Its 'library'
         class attribute stores all subclasses.
+        
 """
 from __future__ import annotations
 import abc
@@ -22,6 +23,11 @@ import sourdough
 class Builder(sourdough.types.Base, abc.ABC):
     """Creates a Structure subclass instance.
 
+    All Builder subclasses should follow the naming convention of:
+            '{Class being built}Builder'. 
+    This allows the Builder to be properly matched with the class being 
+    constructed without using an extraneous mapping to link the two.
+
     Args:
         library (ClassVar[Library]): related Library instance that will store
             subclasses and allow runtime construction and instancing of those
@@ -30,21 +36,41 @@ class Builder(sourdough.types.Base, abc.ABC):
     """
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
 
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = sourdough.types.Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            # Removes '_builder' from class name so that the key is consistent
+            # with the key name for the class being constructed.
+            try:
+                key.remove('_builder')
+            except ValueError:
+                pass
+            cls.library[key] = cls
+            
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, source: Any, **kwargs) -> sourdough.structures.Structure:
-        """Creates a Structure subclass instance from 'source'.
+    def create(self, source: Any, **kwargs) -> sourdough.types.Base:
+        """Creates a Base subclass instance from 'source'.
         
         Subclasses must provide their own methods.
 
         Args:
-            source (Any): source object from which to create a new Structure.
-            kwargs: additional arguments to pass when the new Structure is
+            source (Any): source object from which to create an instance of a
+                Base subclass.
+            kwargs: additional arguments to pass when a Base subclass is
                 instanced.
         
         Returns:
-            Structure: a sourdough Structure subclass instance.
+            Base: a sourdough Base subclass instance.
             
         """
         pass  
@@ -76,15 +102,30 @@ class Builder(sourdough.types.Base, abc.ABC):
 
 
 @dataclasses.dataclass
-class ComponentBuilder(Builder):
+class ComponentBuilder(Builder, abc.ABC):
     
-    base: ClassVar[Type[sourdough.nodes.Component]] = sourdough.nodes.Component
+    project: sourdough.Project = None
+    skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
+    
+
+@dataclasses.dataclass
+class TechniqueBuilder(ComponentBuilder):
+    
+    project: sourdough.Project = None
+    skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
+    
+
+@dataclasses.dataclass
+class StepBuilder(ComponentBuilder):
+    
+    project: sourdough.Project = None
     skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
     
     """ Public Methods """
 
     
-    def create(self, name: str, base: sourdough.types.Base, section: Mapping[str, Any]) -> None:
+    def create(self, name: str, component: sourdough.nodes.Component, 
+               section: Mapping[str, Any]) -> None:
         """
         
         """
@@ -147,7 +188,7 @@ class StructureBuilder(Builder, abc.ABC):
        
 
 @dataclasses.dataclass
-class Graphify(Builder):
+class GraphBuilder(Builder):
     """Stores a sourdough workflow.
     
     """  

@@ -148,57 +148,6 @@ class Validator(Quirk):
 
  
 @dataclasses.dataclass
-class Producer(sourdough.types.Lexicon, Quirk):
-    """
-    
-    Subclasses must have a 'create' method. 
-    
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance.
-        
-        Although this method ordinarily does nothing, it makes the order of the
-        inherited classes less important with multiple inheritance, such as when 
-        adding sourdough quirks. 
-        
-        """
-        # Calls parent initialization methods, if they exist.
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-     
-    """ Required Subclass Methods """ 
-     
-    @abc.abstractmethod
-    def create(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
-
-
-# @dataclasses.dataclass
-# class Coordinator(object):
-#     """Mixin for organizer and director classes.
-              
-#     """
-#     """ Public Methods """
-
-#     def advance(self) -> Any:
-#         """Returns next product of an instance iterable."""
-#         return self.__next__()
-
-#     def complete(self) -> None:
-#         """Executes each step in an instance's iterable."""
-#         for item in iter(self):
-#             self.__next__()
-#         return self
-
- 
-@dataclasses.dataclass
 class Registrar(Quirk):
     """Registry interface for core sourdough classes.
     

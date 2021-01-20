@@ -13,8 +13,8 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_builders': ['parser', 'munger'],
-        'cool_project_structure': 'pipeline'},
+        'cool_project_creators': ['parser', 'munger'],
+        'cool_project_structure': 'graph'},
     'parser': {
         'parser_structure': 'contest',
         'parser_steps': ['divide', 'extract'],
