@@ -21,7 +21,7 @@ import sourdough
                        
    
 @dataclasses.dataclass
-class Creator(sourdough.types.Base, abc.ABC):
+class Creator(sourdough.foundry.Builder, abc.ABC):
     """Creates a Structure subclass instance.
 
     All Creator subclasses should follow the naming convention of:
@@ -58,12 +58,15 @@ class Creator(sourdough.types.Base, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, source: Any, **kwargs) -> sourdough.types.Base:
+    def create(self, name: str, source: sourdough.resources.Configuration, 
+               **kwargs) -> sourdough.types.Base:
         """Creates a Base subclass instance from 'source'.
         
         Subclasses must provide their own methods.
 
         Args:
+            name (str): name of section in 'source' to start the creation 
+                process.
             source (Any): source object from which to create an instance of a
                 Base subclass.
             kwargs: additional arguments to pass when a Base subclass is
@@ -73,57 +76,67 @@ class Creator(sourdough.types.Base, abc.ABC):
             Base: a sourdough Base subclass instance.
             
         """
-        pass  
-    
-    """ Public Methods """
-    
-    def borrow(self, base: Type[sourdough.types.Base], 
-               keys: Union[str, Sequence[str]]) -> Type[sourdough.types.Base]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-            
-        """
-        product = None
-        for key in sourdough.tools.tuplify(keys):
-            try:
-                product = base.library.borrow(name = key)
-                break
-            except (AttributeError, KeyError):
-                pass
-        if product is None:
-            raise KeyError(f'No match for {keys} was found in the '
-                           f'{base.__name__} library.')
-        return product 
+        pass
 
    
 @dataclasses.dataclass
-class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
-    """Uses stored creators to create new items.
+class Manager(sourdough.quirks.Validator, sourdough.foundry.Director, 
+              sourdough.base.Component, abc.ABC):
+    """Uses stored builders to create new items.
     
     A Director differs from a Lexicon in 3 significant ways:
-        1) It stores a separate Lexicon called 'creators' which have classes
+        1) It stores a separate Lexicon called 'builders' which have classes
             used to create other items.
-        2) It iterates 'creators' and stores its output in 'contents.' General
+        2) It iterates 'builders' and stores its output in 'contents.' General
             access methods still point to 'contents'.
-        3) It has an additional convenience methods called 'add_creator' for
-            adding new items to 'creators', 'advance' for iterating one step,
+        3) It has an additional convenience methods called 'add_builder' for
+            adding new items to 'builders', 'advance' for iterating one step,
             and 'complete' which completely iterates the instance and stores
             all results in 'contents'.
     
     Args:
-        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
             dict.
               
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    creators: sourdough.types.Lexicon[str, Creator] = dataclasses.field(
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    builders: sourdough.types.Lexicon[str, Creator] = dataclasses.field(
         default_factory = sourdough.types.Lexicon)
+    project: sourdough.Project = None
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'builders'])
 
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        self.index = 0
+        # Advances through 'contents' if 'automatic' is True.
+        if self.automatic:
+            self.complete() 
+    
+    """ Properties """
+    
+    @property
+    def creators(self) -> Mapping[str, Creator]:
+        return self.builders
+    
+    @creators.setter
+    def creators(self, value: Mapping[str, Creator]) -> None:
+        self.builders = value
+        return self
+    
+    @creators.deleter
+    def creators(self) -> None:
+        self.builders = {}
+        return self   
+        
     """ Public Methods """
      
     def add(self, item: Mapping[Any, Any], **kwargs) -> None:
@@ -138,16 +151,16 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
         self.contents.update(item)
         return self
 
-    def add_creator(self, item: Mapping[Any, Any], **kwargs) -> None:
-        """Adds 'item' to the 'creators' attribute.
+    def add_builder(self, item: Mapping[Any, Any], **kwargs) -> None:
+        """Adds 'item' to the 'builders' attribute.
         
         Args:
-            item (Mapping[Any, Any]): items to add to 'creators' attribute.
+            item (Mapping[Any, Any]): items to add to 'builders' attribute.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
                 
         """
-        self.creators.add(item = item)
+        self.builders.add(item = item)
         return self
 
     def advance(self) -> Any:
@@ -157,31 +170,79 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
             Any: item created by a single iteration."""
         return self.__next__()
 
+    def apply(self, data: sourdough.composite.Structure,
+              **kwargs) -> sourdough.composite.Structure:
+        """[summary]
+
+        Args:
+            data (sourdough.composite.Structure): [description]
+
+        Returns:
+            sourdough.composite.Structure: [description]
+            
+        """
+        for creator in iter(self):
+            creator.create()
+            
+            
     def complete(self) -> None:
         """Executes each step in an instance's iterable."""
         for item in iter(self):
             self.__next__()
         return self
 
+    """ Private Methods """
+    
+    def _validate_builders(self, builders: Mapping[str, Union[object, str]]) -> (
+            Mapping[str, object]):
+        """Validates 'builders' or converts them to Manager subclasses.
+        
+        """
+        if not builders:
+            try:
+                builders = self.settings[self.name][f'{self.name}_builders']
+            except KeyError:
+                pass
+        new_builders = []
+        for item in builders:
+            new_builders.append(self._validate_builder(builder = item))
+        return new_builders
+
+    def _validate_builder(self, builder: Union[str, object]) -> object:
+        """
+        """
+        if isinstance(builder, str):
+            builder = self.bases.get_class(name = builder, kind = 'builder')
+            builder = builder(name = builder, project = self)
+        elif inspect.isclass(builder):
+            builder = builder(project = self)
+        elif isinstance(builder, self.bases.settings.builder):
+            builder.project = self
+        else:
+            raise TypeError(
+                'contents must be a list of str or Director types')
+        return builder
+
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'creators'.
+        """Returns iterable of 'builders'.
 
         Returns:
-            Iterable: of 'creators'.
+            Iterable: of 'builders'.
 
         """
-        return iter(self.creators)
+        return iter(self.builders)
 
     def __len__(self) -> int:
-        """Returns length of iterable of 'creators'
+        """Returns length of iterable of 'builders'
 
         Returns:
-            int: length of iterable 'creators'.
+            int: length of iterable 'builders'.
 
         """
         return len(self.__iter__()) 
+
 
 @dataclasses.dataclass
 class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
@@ -325,45 +386,45 @@ class Parameters(sourdough.types.Lexicon):
     
     """ Public Methods """
     
-    def create(self, creator: sourdough.project.Creator, **kwargs) -> None:
+    def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         """
         if not kwargs:
             kwargs = self.default
         for kind in ['settings', 'required', 'runtime', 'selected']:
-            kwargs = getattr(self, f'_get_{kind}')(creator = creator, **kwargs)
+            kwargs = getattr(self, f'_get_{kind}')(builder = builder, **kwargs)
         self.contents = kwargs
         return self
     
     """ Private Methods """
     
-    def _get_settings(self, creator: sourdough.project.Creator, 
+    def _get_settings(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
             
         """
         try:
-            kwargs.update(creator.settings[f'{self.name}_parameters'])
+            kwargs.update(builder.settings[f'{self.name}_parameters'])
         except KeyError:
             pass
         return kwargs
     
-    def _get_required(self, creator: sourdough.project.Creator, 
+    def _get_required(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
@@ -374,12 +435,12 @@ class Parameters(sourdough.types.Lexicon):
                 kwargs[item] = self.default[item]
         return kwargs
     
-    def _get_runtime(self, creator: sourdough.project.Creator, 
+    def _get_runtime(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
@@ -387,17 +448,17 @@ class Parameters(sourdough.types.Lexicon):
         """
         for parameter, attribute in self.runtime.items():
             try:
-                kwargs[parameter] = getattr(creator, attribute)
+                kwargs[parameter] = getattr(builder, attribute)
             except AttributeError:
                 pass
         return kwargs
 
-    def _get_selected(self, creator: sourdough.project.Creator, 
+    def _get_selected(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]

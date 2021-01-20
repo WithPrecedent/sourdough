@@ -111,7 +111,7 @@ class Bases(sourdough.quirks.Loader):
 
 @dataclasses.dataclass
 class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
-              sourdough.types.Lexicon):
+              sourdough.foundry.Director):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
@@ -152,7 +152,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
 
     """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    managers: Mapping[str, Union[Type, str]] = dataclasses.field(
+    builders: Mapping[str, Union[Type, str]] = dataclasses.field(
         default_factory = sourdough.types.Lexicon)
     settings: Union[object, Type, pathlib.Path, str, Mapping] = None
     filer: Union[object, Type, pathlib.Path, str] = None
@@ -199,6 +199,20 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     @workflow.deleter
     def workflow(self) -> None:
         self.contents = {}
+        return self
+
+    @property
+    def managers(self) -> Mapping[str, sourdough.foundry.Director]:
+        return self.builders
+    
+    @managers.setter
+    def managers(self, value: Mapping[str, sourdough.foundry.Director]) -> None:
+        self.builders = value
+        return self
+    
+    @managers.deleter
+    def managers(self) -> None:
+        self.builders = {}
         return self
    
     """ Public Methods """

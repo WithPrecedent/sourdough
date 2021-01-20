@@ -30,11 +30,13 @@ class Builder(sourdough.types.Base, abc.ABC):
     constructed without using an extraneous mapping to link the two.
 
     Args:
+        base (Base):
         library (ClassVar[Library]): related Library instance that will store
             subclasses and allow runtime construction and instancing of those
             stored subclasses.
             
     """
+    base: sourdough.types.Base
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
@@ -77,7 +79,7 @@ class Builder(sourdough.types.Base, abc.ABC):
     
     """ Public Methods """
     
-    def borrow(self, base: Type[sourdough.types.Base], 
+    def borrow(self, 
                keys: Union[str, Sequence[str]]) -> Type[sourdough.types.Base]:
         """[summary]
 
@@ -91,27 +93,27 @@ class Builder(sourdough.types.Base, abc.ABC):
         product = None
         for key in sourdough.tools.tuplify(keys):
             try:
-                product = base.library.borrow(name = key)
+                product = self.base.library.borrow(name = key)
                 break
             except (AttributeError, KeyError):
                 pass
         if product is None:
             raise KeyError(f'No match for {keys} was found in the '
-                           f'{base.__name__} library.')
+                           f'{self.base.__name__} library.')
         return product 
 
    
 @dataclasses.dataclass
 class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
-    """Uses stored creators to create new items.
+    """Uses stored builders to create new items.
     
     A Director differs from a Lexicon in 3 significant ways:
-        1) It stores a separate Lexicon called 'creators' which have classes
+        1) It stores a separate Lexicon called 'builders' which have classes
             used to create other items.
-        2) It iterates 'creators' and stores its output in 'contents.' General
+        2) It iterates 'builders' and stores its output in 'contents.' General
             access methods still point to 'contents'.
-        3) It has an additional convenience methods called 'add_creator' for
-            adding new items to 'creators', 'advance' for iterating one step,
+        3) It has an additional convenience methods called 'add_builder' for
+            adding new items to 'builders', 'advance' for iterating one step,
             and 'complete' which completely iterates the instance and stores
             all results in 'contents'.
     
@@ -121,7 +123,7 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    creators: sourdough.types.Lexicon[str, Builder] = dataclasses.field(
+    builders: sourdough.types.Lexicon[str, Builder] = dataclasses.field(
         default_factory = sourdough.types.Lexicon)
 
     """ Public Methods """
@@ -138,16 +140,16 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
         self.contents.update(item)
         return self
 
-    def add_creator(self, item: Mapping[Any, Any], **kwargs) -> None:
-        """Adds 'item' to the 'creators' attribute.
+    def add_builder(self, item: Mapping[Any, Any], **kwargs) -> None:
+        """Adds 'item' to the 'builders' attribute.
         
         Args:
-            item (Mapping[Any, Any]): items to add to 'creators' attribute.
+            item (Mapping[Any, Any]): items to add to 'builders' attribute.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
                 
         """
-        self.creators.add(item = item)
+        self.builders.add(item = item)
         return self
 
     def advance(self) -> Any:
@@ -166,19 +168,19 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
     """ Dunder Methods """
     
     def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'creators'.
+        """Returns iterable of 'builders'.
 
         Returns:
-            Iterable: of 'creators'.
+            Iterable: of 'builders'.
 
         """
-        return iter(self.creators)
+        return iter(self.builders)
 
     def __len__(self) -> int:
-        """Returns length of iterable of 'creators'
+        """Returns length of iterable of 'builders'
 
         Returns:
-            int: length of iterable 'creators'.
+            int: length of iterable 'builders'.
 
         """
         return len(self.__iter__()) 
