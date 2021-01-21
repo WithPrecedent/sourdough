@@ -21,6 +21,48 @@ import sourdough
                        
    
 @dataclasses.dataclass
+class Manager(sourdough.quirks.Validator, sourdough.foundry.Director, 
+              sourdough.base.Component, abc.ABC):
+    """Uses stored builders to create new items.
+    
+    A Director differs from a Lexicon in 3 significant ways:
+        1) It stores a separate Lexicon called 'builders' which have classes
+            used to create other items.
+        2) It iterates 'builders' and stores its output in 'contents.' General
+            access methods still point to 'contents'.
+        3) It has an additional convenience methods called 'add_builder' for
+            adding new items to 'builders', 'advance' for iterating one step,
+            and 'complete' which completely iterates the instance and stores
+            all results in 'contents'.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+              
+    """
+    name: str = None
+    project: sourdough.Project = None
+    builder: Union[sourdough.foundry.Builder, str] = None
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'builder'])
+    
+    """ Public Methods """
+
+    def apply(self, data: sourdough.composite.Structure,
+              **kwargs) -> sourdough.composite.Structure:
+        """[summary]
+
+        Args:
+            data (sourdough.composite.Structure): [description]
+
+        Returns:
+            sourdough.composite.Structure: [description]
+            
+        """
+        start_section = self.project.settings[self.name]
+
+  
+@dataclasses.dataclass
 class Creator(sourdough.foundry.Builder, abc.ABC):
     """Creates a Structure subclass instance.
 
@@ -77,172 +119,7 @@ class Creator(sourdough.foundry.Builder, abc.ABC):
             
         """
         pass
-
-   
-@dataclasses.dataclass
-class Manager(sourdough.quirks.Validator, sourdough.foundry.Director, 
-              sourdough.base.Component, abc.ABC):
-    """Uses stored builders to create new items.
-    
-    A Director differs from a Lexicon in 3 significant ways:
-        1) It stores a separate Lexicon called 'builders' which have classes
-            used to create other items.
-        2) It iterates 'builders' and stores its output in 'contents.' General
-            access methods still point to 'contents'.
-        3) It has an additional convenience methods called 'add_builder' for
-            adding new items to 'builders', 'advance' for iterating one step,
-            and 'complete' which completely iterates the instance and stores
-            all results in 'contents'.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
               
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    builders: sourdough.types.Lexicon[str, Creator] = dataclasses.field(
-        default_factory = sourdough.types.Lexicon)
-    project: sourdough.Project = None
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'builders'])
-
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        self.index = 0
-        # Advances through 'contents' if 'automatic' is True.
-        if self.automatic:
-            self.complete() 
-    
-    """ Properties """
-    
-    @property
-    def creators(self) -> Mapping[str, Creator]:
-        return self.builders
-    
-    @creators.setter
-    def creators(self, value: Mapping[str, Creator]) -> None:
-        self.builders = value
-        return self
-    
-    @creators.deleter
-    def creators(self) -> None:
-        self.builders = {}
-        return self   
-        
-    """ Public Methods """
-     
-    def add(self, item: Mapping[Any, Any], **kwargs) -> None:
-        """Adds 'item' to the 'contents' attribute.
-        
-        Args:
-            item (Mapping[Any, Any]): items to add to 'contents' attribute.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
-                
-        """
-        self.contents.update(item)
-        return self
-
-    def add_builder(self, item: Mapping[Any, Any], **kwargs) -> None:
-        """Adds 'item' to the 'builders' attribute.
-        
-        Args:
-            item (Mapping[Any, Any]): items to add to 'builders' attribute.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
-                
-        """
-        self.builders.add(item = item)
-        return self
-
-    def advance(self) -> Any:
-        """Returns next product of an instance iterable.'
-        
-        Returns:
-            Any: item created by a single iteration."""
-        return self.__next__()
-
-    def apply(self, data: sourdough.composite.Structure,
-              **kwargs) -> sourdough.composite.Structure:
-        """[summary]
-
-        Args:
-            data (sourdough.composite.Structure): [description]
-
-        Returns:
-            sourdough.composite.Structure: [description]
-            
-        """
-        for creator in iter(self):
-            creator.create()
-            
-            
-    def complete(self) -> None:
-        """Executes each step in an instance's iterable."""
-        for item in iter(self):
-            self.__next__()
-        return self
-
-    """ Private Methods """
-    
-    def _validate_builders(self, builders: Mapping[str, Union[object, str]]) -> (
-            Mapping[str, object]):
-        """Validates 'builders' or converts them to Manager subclasses.
-        
-        """
-        if not builders:
-            try:
-                builders = self.settings[self.name][f'{self.name}_builders']
-            except KeyError:
-                pass
-        new_builders = []
-        for item in builders:
-            new_builders.append(self._validate_builder(builder = item))
-        return new_builders
-
-    def _validate_builder(self, builder: Union[str, object]) -> object:
-        """
-        """
-        if isinstance(builder, str):
-            builder = self.bases.get_class(name = builder, kind = 'builder')
-            builder = builder(name = builder, project = self)
-        elif inspect.isclass(builder):
-            builder = builder(project = self)
-        elif isinstance(builder, self.bases.settings.builder):
-            builder.project = self
-        else:
-            raise TypeError(
-                'contents must be a list of str or Director types')
-        return builder
-
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'builders'.
-
-        Returns:
-            Iterable: of 'builders'.
-
-        """
-        return iter(self.builders)
-
-    def __len__(self) -> int:
-        """Returns length of iterable of 'builders'
-
-        Returns:
-            int: length of iterable 'builders'.
-
-        """
-        return len(self.__iter__()) 
-
 
 @dataclasses.dataclass
 class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
@@ -296,6 +173,7 @@ class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
 
 
 """ Structural Creator Classes """ 
+
 
 @dataclasses.dataclass
 class StructureCreator(sourdough.workshop.Creator, abc.ABC):
