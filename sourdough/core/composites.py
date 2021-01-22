@@ -1,5 +1,5 @@
 """
-structures: lightweight composite structures adapted to sourdough
+composites: lightweight composite structures adapted to sourdough
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -40,7 +40,7 @@ class Structure(sourdough.types.Base, abc.ABC):
     
     @abc.abstractmethod
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each component in 'contents'.
+        """Applies 'tool' to each element in 'contents'.
         
         Subclasses must provide their own methods.
 
@@ -72,23 +72,23 @@ class Structure(sourdough.types.Base, abc.ABC):
 class Graph(sourdough.types.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG).
     
-    Internally, the graph components are stored in 'contents'. And the edges are
+    Internally, the graph elements are stored in 'contents'. And the edges are
     stored as an adjacency list in 'edges' with the 'name' attributes of the
-    components in 'contents' acting as the starting and stopping components in 
+    elements in 'contents' acting as the starting and stopping elements in 
     'edges'.
     
     Although based on the sourdough dict replacement, Lexicon, a Graph differs
     from it in too many ways to list here.
     
     Args:
-        contents (Mapping[str, sourdough.nodes.Component]): keys are the names 
-            of Component instances that are stored in values.
+        contents (Mapping[str, sourdough.quirks.Element]): keys are the names 
+            of Element instances that are stored in values.
         edges (Mapping[str, Sequence[str]]): an adjacency list where the keys
-            are the names of components and the values are names of components 
+            are the names of elements and the values are names of elements 
             which the key is connected to.
             
     """  
-    contents: Mapping[str, sourdough.nodes.Component] = dataclasses.field(
+    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
         default_factory = dict)
     edges: Mapping[str, Sequence[str]] = dataclasses.field(
         default_factory = dict)
@@ -97,13 +97,13 @@ class Graph(sourdough.types.Lexicon, Structure):
     
     @property
     def root(self) -> str:
-        """Returns name of root component in 'contents'.
+        """Returns name of root element in 'contents'.
 
         Raises:
             ValueError: if there is more than 1 root or no roots.
 
         Returns:
-            str: name of root component in contents'
+            str: name of root element in contents'
             
         """
         descendants = itertools.chain(self.edges.values())
@@ -117,13 +117,13 @@ class Graph(sourdough.types.Lexicon, Structure):
            
     @property
     def end(self) -> str:
-        """Returns name of endpoint component in 'contents'.
+        """Returns name of endpoint element in 'contents'.
 
         Raises:
             ValueError: if there is more than 1 endpoint or no endpoints.
 
         Returns:
-            str: name of endpoint component in 'contents'.
+            str: name of endpoint element in 'contents'.
             
         """
         ends = [k for k in self.edges.keys() if not self.edges[k]]
@@ -140,52 +140,52 @@ class Graph(sourdough.types.Lexicon, Structure):
         
         Returns:
             List[List[str]]: returns all paths from 'root' to 'end' in a list
-                of lists of names of components.
+                of lists of names of elements.
                 
         """
         return self._find_all_paths(start = self.root, end = self.end)
         
     """ Public Methods """
     
-    def add(self, item: Union[sourdough.nodes.Component, Tuple[str]]) -> None:
+    def add(self, item: Union[sourdough.quirks.Element, Tuple[str]]) -> None:
         """Adds a item to 'contents' or 'edges' depending on type.
         
         Args:
-            item (Union[sourdough.nodes.Component, Tuple[str]]): either a 
-                Component or a tuple containing the names of components for an 
+            item (Union[sourdough.quirks.Element, Tuple[str]]): either a 
+                Element or a tuple containing the names of elements for an 
                 edge to be created.
         
         """
-        if isinstance(item, sourdough.nodes.Component):
-            self.add_component(component = item)
+        if isinstance(item, sourdough.quirks.Element):
+            self.add_element(element = item)
         elif isinstance(item, tuple) and len(item) == 2:
             self.add_edge(start = item[0], stop = item[1])
         return self
 
-    def add_component(self, component: sourdough.nodes.Component) -> None:
-        """Adds a component to 'contents'.
+    def add_element(self, element: sourdough.quirks.Element) -> None:
+        """Adds a element to 'contents'.
         
         Args:
-            component (Component): component with a name attribute to add to 
+            element (Element): element with a name attribute to add to 
                 'contents'.
         
         """
-        self.contents[component.name] = component
+        self.contents[element.name] = element
         return self
 
     def add_edge(self, start: str, stop: str) -> None:
         """Adds an edge to 'edges'.
 
         Args:
-            start (str): name of component for edge to start.
-            stop (str): name of component for edge to stop.
+            start (str): name of element for edge to start.
+            stop (str): name of element for edge to stop.
             
         """
         self.edges[start] = stop
         return self
 
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each component in 'contents'.
+        """Applies 'tool' to each element in 'contents'.
 
         Args:
             tool (Callable): callable which accepts an object in 'contents' as
@@ -194,16 +194,16 @@ class Graph(sourdough.types.Lexicon, Structure):
             
         """
         new_contents = {}
-        for name, component in self.contents:
-            new_contents[name] = tool(component, **kwargs)
+        for name, element in self.contents:
+            new_contents[name] = tool(element, **kwargs)
         self.contents = new_contents
         return self        
         
-    def delete_component(self, name: str) -> None:
-        """Deletes component from graph.
+    def delete_element(self, name: str) -> None:
+        """Deletes element from graph.
         
         Args:
-            name (str): name of component to delete from 'contents' and 'edges'.
+            name (str): name of element to delete from 'contents' and 'edges'.
             
         """
         del self.contents[name]
@@ -217,8 +217,8 @@ class Graph(sourdough.types.Lexicon, Structure):
         """Deletes edge from graph.
 
         Args:
-            start (str): name of starting component for the edge to delete.
-            stop (str): name of ending component for the edge to delete.
+            start (str): name of starting element for the edge to delete.
+            stop (str): name of ending element for the edge to delete.
             
         """
         self.edges[start].remove(stop)
@@ -237,8 +237,8 @@ class Graph(sourdough.types.Lexicon, Structure):
         
         """
         matches = []
-        for component in self.contents.values():
-            matches.extend(sourdough.tools.listify(tool(component, **kwargs)))
+        for element in self.contents.values():
+            matches.extend(sourdough.tools.listify(tool(element, **kwargs)))
         return matches
    
     """ Private Methods """
@@ -250,14 +250,14 @@ class Graph(sourdough.types.Lexicon, Structure):
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
         Args:
-            start (str): name of Component instance to start paths from.
-            end (str): name of Component instance to end paths.
+            start (str): name of Element instance to start paths from.
+            end (str): name of Element instance to end paths.
             path (List[str]): a path from 'start' to 'end'. Defaults to an empty 
                 list. 
 
         Returns:
             List[List[str]]: a list of possible paths (each path is a list of
-                Component names) from 'start' to 'end'
+                Element names) from 'start' to 'end'
             
         """
         path = path + [start]
@@ -266,10 +266,10 @@ class Graph(sourdough.types.Lexicon, Structure):
         if start not in self.edges:
             return []
         paths = []
-        for component in self.edges[start]:
-            if component not in path:
+        for element in self.edges[start]:
+            if element not in path:
                 new_paths = self._find_all_paths(
-                    start = component, 
+                    start = element, 
                     end = end, 
                     path = path)
                 for new_path in new_paths:
@@ -282,19 +282,19 @@ class Pipeline(sourdough.types.Hybrid, Structure):
     """Stores a linear pipeline data structure.
     
     A Pipeline differs from a Hybrid in 2 significant ways:
-        1) It only stores Component subclasses.
+        1) It only stores Element subclasses.
         2) It includes 'apply' and 'find' methods which traverse items in
             'contents' to either 'apply' a Callable or 'find' items matching 
             criteria defined in a Callable.
 
     Args:
-        contents (Sequence[Component]): items with 'name' attributes to store. 
+        contents (Sequence[Element]): items with 'name' attributes to store. 
             If a dict is passed, the keys will be ignored and only the values 
             will be added to 'contents'. If a single item is passed, it will be 
             placed in a list. Defaults to an empty list.
                          
     """
-    contents: Sequence[sourdough.nodes.Component] = dataclasses.field(
+    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
         default_factory = list) 
     
     """ Public Methods """
@@ -312,7 +312,7 @@ class Pipeline(sourdough.types.Hybrid, Structure):
         return self  
 
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each component in 'contents'.
+        """Applies 'tool' to each element in 'contents'.
 
         Args:
             tool (Callable): callable which accepts an object in 'contents' as
@@ -321,8 +321,8 @@ class Pipeline(sourdough.types.Hybrid, Structure):
             
         """
         new_contents = []
-        for component in self.contents:
-            new_contents.append(tool(component, **kwargs))
+        for element in self.contents:
+            new_contents.append(tool(element, **kwargs))
         self.contents = new_contents
         return self        
        
@@ -339,8 +339,8 @@ class Pipeline(sourdough.types.Hybrid, Structure):
         
         """
         matches = []
-        for component in self.contents:
-            matches.extend(sourdough.tools.listify(tool(component, **kwargs)))
+        for element in self.contents:
+            matches.extend(sourdough.tools.listify(tool(element, **kwargs)))
         return matches
 
     def reorder(self, order: Sequence[str]) -> None:
@@ -364,7 +364,7 @@ class Tree(sourdough.types.Hybrid, Structure):
     """Stores a general tree data structure.
     
     A Tree differs from a Hybrid in 3 significant ways:
-        1) It only stores Component subclasses.
+        1) It only stores Element subclasses.
         2) It has a nested structure with children descending from items in
             'contents'. Consequently, all relevant methods include a 'recursive'
             parameter which determines whether the method should apply to all
@@ -375,13 +375,13 @@ class Tree(sourdough.types.Hybrid, Structure):
             in a Callable.
 
     Args:
-        contents (Sequence[Component]): items with 'name' attributes to store. 
+        contents (Sequence[Element]): items with 'name' attributes to store. 
             If a dict is passed, the keys will be ignored and only the values 
             will be added to 'contents'. If a single item is passed, it will be 
             placed in a list. Defaults to an empty list.
                          
     """
-    contents: Sequence[sourdough.nodes.Component] = dataclasses.field(
+    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
         default_factory = list) 
     
     """ Public Methods """

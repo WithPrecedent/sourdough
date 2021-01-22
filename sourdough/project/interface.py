@@ -54,12 +54,11 @@ class Bases(sourdough.quirks.Loader):
             sourdough Library class.
             
     """
-    settings: Union[str, Type] = 'sourdough.resources.Settings'
-    filer: Union[str, Type] = 'sourdough.resources.Filer' 
-    structure: Union[str, Type] = 'sourdough.composites.Structure'
+    settings: Union[str, Type] = 'sourdough.project.Settings'
+    filer: Union[str, Type] = 'sourdough.project.Filer' 
+    workflow: Union[str, Type] = 'sourdough.composites.Structure'
     component: Union[str, Type] = 'sourdough.nodes.Component'
     creator: Union[str, Type] = 'sourdough.workshop.Creator'
-    manager: Union[str, Type] = 'sourdough.workshop.Manager'
     quirk: Union[str, Type] = 'sourdough.quirks.Quirk'
 
     """ Properties """
@@ -110,14 +109,15 @@ class Bases(sourdough.quirks.Loader):
 
 
 @dataclasses.dataclass
-class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
-              sourdough.foundry.Director):
+class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
+              sourdough.composites.Pipeline):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
         contents (Mapping[str, object]): keys are names of objects stored and 
             values are the stored objects. Defaults to an empty dict.
-        managers (Mapping[str, Union[Type, str]]): related manager which constructs objects to be 
+        managers (Mapping[str, Union[Type, str]]): related manager which 
+            constructs objects to be 
             stored in 'contents'. Defaults to an empty list.
         settings (Union[sourdough.base.Settings, str, pathlib.Path]]): a
             Settings-compatible subclass or instance, a str or pathlib.Path 
@@ -149,21 +149,37 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             apply it to any external data. Defaults to None.  
         validations (Sequence[str]): 
 
-
+    Attributes:
+        creator
+        
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    builders: Mapping[str, Union[Type, str]] = dataclasses.field(
-        default_factory = sourdough.types.Lexicon)
-    settings: Union[object, Type, pathlib.Path, str, Mapping] = None
-    filer: Union[object, Type, pathlib.Path, str] = None
-    bases: object = sourdough.base.Bases()
-    structure: Union[Type, object, str] = None
+    contents: Sequence[Union[
+        sourdough.nodes.Component, 
+        Type[sourdough.nodes.Component],
+        str]] = dataclasses.field(default_factory = sourdough.types.Lexicon)
     name: str = None
+    settings: Union[
+        sourdough.project.Settings, 
+        Type[sourdough.project.Settings], 
+        pathlib.Path, 
+        str, 
+        Mapping[str, Mapping[str, Any]]] = None
+    filer: Union[
+        sourdough.project.Filer, 
+        Type[sourdough.project.Filer], 
+        pathlib.Path, 
+        str] = None
+    bases: Bases = Bases()
+    workflow: Union[
+        sourdough.composites.Structure, 
+        Type[sourdough.composites.Structure], 
+        str] = None
     identification: str = None
     automatic: bool = True
     data: Any = None
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'settings', 'name', 'identification', 'filer', 'structure', 'managers'])
+    validations: ClassVar[Sequence[str]] = dataclasses.field(
+        default_factory = lambda: ['settings', 'name', 'identification', 
+                                   'filer', 'workflow', 'contents'])
     
     """ Initialization Methods """
 
@@ -180,53 +196,35 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
+        # Initializes 'contents'.
+        self._prepare_contents()
         # Advances through 'contents' if 'automatic' is True.
         if self.automatic:
             print('test yes auto')
             self.complete() 
-    
-    """ Properties """
-    
-    @property
-    def workflow(self) -> Mapping[str, object]:
-        return self.contents
-    
-    @workflow.setter
-    def workflow(self, value: Mapping[str, object]) -> None:
-        self.contents = value
-        return self
-    
-    @workflow.deleter
-    def workflow(self) -> None:
-        self.contents = {}
-        return self
 
-    @property
-    def managers(self) -> Mapping[str, sourdough.foundry.Director]:
-        return self.builders
-    
-    @managers.setter
-    def managers(self, value: Mapping[str, sourdough.foundry.Director]) -> None:
-        self.builders = value
-        return self
-    
-    @managers.deleter
-    def managers(self) -> None:
-        self.builders = {}
-        return self
-   
     """ Public Methods """
     
+    def create(self) -> None:
+        section = self.settings[self.name]
+        
                     
     """ Private Methods """
     
-    def _validate_settings(self, settings: Union[object, pathlib.Path, str, 
-                                                 Mapping]) -> object:
+    def _validate_settings(self, settings: Union[
+            sourdough.project.Settings, 
+            Type[sourdough.project.Settings], 
+            pathlib.Path, 
+            str, 
+            Mapping[str, Mapping[str, Any]]]) -> sourdough.project.Settings:
         """Validates 'settings' or converts it to a Configuration instance.
         
         The method also injects the 'general' section of a Configuration 
         instance into this Director instance as attributes. This allows easy, 
         direct access of settings like 'verbose'.
+        
+        Args:
+        
         
         """
         if isinstance(settings, self.bases.settings):
@@ -274,7 +272,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """Validates 'filer' or converts it to a Clerk instance.
         
         If a file path is passed, that becomes the root folder with the default
-        file structure in the default Clerk instance.
+        file workflow in the default Clerk instance.
         
         If an object is passed, its 'settings' attribute is replaced with this 
         instance's 'settings'.
@@ -289,15 +287,33 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
                 root_folder = filer, 
                 settings = self.settings)
         else:
-            raise TypeError('filer must be a Clerk, Path, str, or None type.')
+            raise TypeError('filer must be a Clerk, Path, str, or None.')
         return filer
 
-    def _validate_managers(self, managers: Mapping[str, Union[object, str]]) -> (
-            Mapping[str, object]):
-        """Validates 'managers' or converts them to Manager subclasses.
+    def _validate_workflow(self, workflow: Union[Type, object, str]) -> object:
+        """Validates 'workflow' or converts it to a Structure instance.
         
+        Args:
+         
         """
-        if not managers:
+        if workflow is None:
+            try:
+                workflow = self.settings[self.name][f'{self.name}_structure']
+            except KeyError:
+                workflow = self.settings['general']['default_structure']
+        if isinstance(workflow, self.bases.workflow):
+            pass
+        elif inspect.isclass(workflow):
+            workflow = workflow()
+        elif isinstance(workflow, str):
+            workflow = self.bases.workflow.borrow(name = workflow)()
+        else:
+            raise TypeError('workflow must be a Structure, str, or None.')
+        return workflow
+    
+    def _prepare_contents(self) -> None:
+        """Sets 'contents' and 'creator' based on 'contents'."""
+        if not self.contents:
             try:
                 managers = self.settings[self.name][f'{self.name}_managers']
             except KeyError:

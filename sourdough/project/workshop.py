@@ -12,6 +12,7 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import inspect
 import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -61,6 +62,24 @@ class Manager(sourdough.quirks.Validator, sourdough.foundry.Director,
         """
         start_section = self.project.settings[self.name]
 
+    """ Private Methods """
+    
+    def _validate_builder(self, 
+                          builder: Union[sourdough.foundry.Builder, str]) -> (
+                              sourdough.foundry.Builder):
+        """
+        """
+        if isinstance(builder, sourdough.foundry.builder):
+            builder.manager = self
+        elif inspect.issubclass(sourdough.foundry.builder):
+            builder = builder(manager = self)
+        elif isinstance(builder, str):
+            builder = self.project.bases.builder.borrow(name = builder)
+            builder = builder(manager = self)
+        else:
+            raise TypeError('builder must be a Builder or str type')
+        return builder
+  
   
 @dataclasses.dataclass
 class Creator(sourdough.foundry.Builder, abc.ABC):
@@ -77,6 +96,7 @@ class Creator(sourdough.foundry.Builder, abc.ABC):
             stored subclasses.
             
     """
+    manager: Manager = None
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
@@ -100,8 +120,7 @@ class Creator(sourdough.foundry.Builder, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, name: str, source: sourdough.resources.Configuration, 
-               **kwargs) -> sourdough.types.Base:
+    def create(self, name: str, **kwargs) -> sourdough.types.Base:
         """Creates a Base subclass instance from 'source'.
         
         Subclasses must provide their own methods.
