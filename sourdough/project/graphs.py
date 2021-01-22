@@ -638,7 +638,7 @@ class Contest(Worker):
             iterables. Defaults to True.
                             
     """
-    children: Sequence[sourdough.Component] = dataclasses.field(
+    children: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -682,7 +682,7 @@ class Study(Worker):
             iterables. Defaults to True.
                             
     """
-    children: Sequence[sourdough.Component] = dataclasses.field(
+    children: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -725,7 +725,7 @@ class Survey(Worker):
             iterables. Defaults to True.
                             
     """
-    children: Sequence[sourdough.Component] = dataclasses.field(
+    children: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -744,7 +744,7 @@ class Survey(Worker):
 #             support graphs with unconnected graphs).
             
 #     Args:
-#         children (Sequence[Union[str, sourdough.Component]]): a list of str or
+#         children (Sequence[Union[str, sourdough.project.Component]]): a list of str or
 #             Components. 
 #         name (str): designates the name of a class instance that is used for 
 #             internal referencing throughout sourdough. For example if a 
@@ -759,7 +759,7 @@ class Survey(Worker):
 #             snake case version of the class name ('__class__.__name__').
     
 #     """
-#     children: Sequence[Union[str, sourdough.Component]] = dataclasses.field(
+#     children: Sequence[Union[str, sourdough.project.Component]] = dataclasses.field(
 #         default_factory = list)
 #     name: str = None
 
@@ -776,7 +776,7 @@ class Survey(Worker):
 #             'edge': sourdough.Edge,
 #             'node': sourdough.Node})
         
-    # children: Sequence[Union[sourdough.Component, str]] = dataclasses.field(
+    # children: Sequence[Union[sourdough.project.Component, str]] = dataclasses.field(
     #     default_factory = list)
     # design: str = 'chained'
     # identification: str = None
@@ -835,13 +835,13 @@ class Survey(Worker):
           
     # def add_node(self,
     #         name: str = None,
-    #         element: sourdough.Component = None) -> None:
+    #         element: sourdough.project.Component = None) -> None:
     #     """Adds a node to the graph."""
     #     if element and not name:
     #         name = element.name
     #     elif not name:
     #         raise ValueError('element or name must be passed to add_node')
-    #     node = sourdough.Component(name = name, element = element)
+    #     node = sourdough.project.Component(name = name, element = element)
     #     self.children.append(node)
     #     return self
 
@@ -975,7 +975,7 @@ class Survey(Worker):
     # """ Private Methods """
     
     # def _topological_sort(self, 
-    #         graph: sourdough.products.Workflow) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.products.Workflow) -> Sequence[sourdough.project.Component]:
     #     """[summary]
 
     #     Returns:
@@ -990,8 +990,8 @@ class Survey(Worker):
         
     # def _topological_descend(self, 
     #         graph: sourdough.products.Workflow, 
-    #         node: sourdough.Component,
-    #         searched: list[str]) -> Sequence[sourdough.Component]: 
+    #         node: sourdough.project.Component,
+    #         searched: list[str]) -> Sequence[sourdough.project.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -1009,7 +1009,7 @@ class Survey(Worker):
     #     return sorted_queue    
     
     # def _dfs_sort(self, 
-    #         graph: sourdough.products.Workflow) -> Sequence[sourdough.Component]:
+    #         graph: sourdough.products.Workflow) -> Sequence[sourdough.project.Component]:
     #     """[summary]
 
     #     Returns:
@@ -1024,8 +1024,8 @@ class Survey(Worker):
         
     # def _dfs_descend(self, 
     #         graph: sourdough.products.Workflow, 
-    #         node: sourdough.Component,
-    #         searched: list[str]) -> Sequence[sourdough.Component]: 
+    #         node: sourdough.project.Component,
+    #         searched: list[str]) -> Sequence[sourdough.project.Component]: 
     #     """[summary]
 
     #     Returns:
@@ -1043,7 +1043,7 @@ class Survey(Worker):
     #     """ Properties """
     
     # @property
-    # def root(self) -> sourdough.Component:
+    # def root(self) -> sourdough.project.Component:
     #     """[summary]
 
     #     Raises:
@@ -1062,7 +1062,7 @@ class Survey(Worker):
     #         return rootless[0]
  
     # @property
-    # def endpoints(self) -> Sequence[sourdough.Component]:
+    # def endpoints(self) -> Sequence[sourdough.project.Component]:
     #     """[summary]
 
     #     Returns:
@@ -1075,7 +1075,7 @@ class Survey(Worker):
         
     # def get_sorted(self, 
     #         graph: sourdough.products.Workflow = None,
-    #         return_elements: bool = False) -> Sequence[sourdough.Component]:
+    #         return_elements: bool = False) -> Sequence[sourdough.project.Component]:
     #     """Performs a topological sort on 'graph'.
         
     #     If 'graph' is not passed, the 'children' attribute is used instead.

@@ -21,15 +21,15 @@ import sourdough
        
 
 @dataclasses.dataclass
-class Plan(sourdough.Component):
+class Plan(sourdough.project.Component):
     """Initialized sourdough Component instances without structure.
     
     Args:
-        contents (Sequence[sourdough.Component]): stored list with Component 
+        contents (Sequence[sourdough.project.Component]): stored list with Component 
             instances in its final, iterable structure.
               
     """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
+    contents: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     
     """ Class Methods """
@@ -187,7 +187,7 @@ class Creator(sourdough.Factory):
             prefix = suffix = key
         return prefix, suffix
 
-    def _create_component(self, name: str, **kwargs) -> sourdough.Component:
+    def _create_component(self, name: str, **kwargs) -> sourdough.project.Component:
         """[summary]
         """
         try: 
@@ -217,7 +217,7 @@ class Creator(sourdough.Factory):
 
 
     def _process_node(self, node: sourdough.base.Node, 
-                      outline: Outline) -> Tuple[sourdough.Component, Outline]:
+                      outline: Outline) -> Tuple[sourdough.project.Component, Outline]:
         """ 
         """
         component, outline = self._create_component(
@@ -240,7 +240,7 @@ class Creator(sourdough.Factory):
         return component, outline
 
     def _create_component(self, node: sourdough.base.Node,
-                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
+                          outline: Outline) -> Tuple[sourdough.project.Component, Outline]:
         """[summary]
         """
         try: 
@@ -266,16 +266,16 @@ class Creator(sourdough.Factory):
             outline = outline)
         return component, outline
 
-    def _process_contents(self, component: sourdough.Component,
-                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
+    def _process_contents(self, component: sourdough.project.Component,
+                          outline: Outline) -> Tuple[sourdough.project.Component, Outline]:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             outline (Outline): [description]
 
         Returns:
-            Tuple[sourdough.Component, Outline]: [description]
+            Tuple[sourdough.project.Component, Outline]: [description]
             
         """
         if component.parallel:
@@ -288,8 +288,8 @@ class Creator(sourdough.Factory):
                 outline = outline)
         return component, outline
 
-    def _process_parallel(self, component: sourdough.Component,
-                          outline: Outline) -> Tuple[sourdough.Component, Outline]:
+    def _process_parallel(self, component: sourdough.project.Component,
+                          outline: Outline) -> Tuple[sourdough.project.Component, Outline]:
         """
         """
         # Creates empy list of lists for all possible permutations to be stored.
@@ -316,12 +316,12 @@ class Creator(sourdough.Factory):
             manager = manager)
         return component
 
-    def _process_serial(self, component: sourdough.Component,
-                        outline: Outline) -> Tuple[sourdough.Component, Outline]:
+    def _process_serial(self, component: sourdough.project.Component,
+                        outline: Outline) -> Tuple[sourdough.project.Component, Outline]:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
@@ -337,12 +337,12 @@ class Creator(sourdough.Factory):
         component.contents = new_contents
         return component
 
-    def _finalize_element(self, component: sourdough.Component, 
-                          manager: sourdough.Manager) -> sourdough.Component:
+    def _finalize_element(self, component: sourdough.project.Component, 
+                          manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
@@ -355,8 +355,8 @@ class Creator(sourdough.Factory):
             component.contents = None
         return component
     
-    def _add_attributes(self, component: sourdough.Component,
-                        manager: sourdough.Manager) -> sourdough.Component:
+    def _add_attributes(self, component: sourdough.project.Component,
+                        manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Returns:

@@ -21,7 +21,7 @@ import sourdough
 
    
 @dataclasses.dataclass
-class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
+class Director(sourdough.types.Lexicon, abc.ABC):
     """Uses stored builders to create new items.
     
     A Director differs from a Lexicon in 3 significant ways:
@@ -104,7 +104,7 @@ class Director(sourdough.types.Lexicon, sourdough.types.Base, abc.ABC):
   
    
 @dataclasses.dataclass
-class Builder(sourdough.types.Base, abc.ABC):
+class Builder(abc.ABC):
     """Creates a Structure subclass instance.
 
     All Builder subclasses should follow the naming convention of:
@@ -114,13 +114,10 @@ class Builder(sourdough.types.Base, abc.ABC):
 
     Args:
         base (Base):
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
+
             
     """
     base: sourdough.types.Base
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
     

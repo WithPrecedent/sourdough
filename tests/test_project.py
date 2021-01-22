@@ -79,9 +79,9 @@ def test_project():
     assert 'parser' in sourdough.Manager.registry
     find = Find()
     dynamite = Dynamite()
-    assert 'find' in sourdough.Component.store
-    assert 'annihilate' in sourdough.Component.store
-    assert 'annihilate' not in sourdough.Component.registry
+    assert 'find' in sourdough.project.Component.store
+    assert 'annihilate' in sourdough.project.Component.store
+    assert 'annihilate' not in sourdough.project.Component.registry
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',

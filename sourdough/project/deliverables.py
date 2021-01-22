@@ -73,7 +73,7 @@ class Blueprint(sourdough.Product):
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.Component, sourdough.types.Hybrid):
+class Workflow(sourdough.project.Component, sourdough.types.Hybrid):
     """Iterable base class in a sourdough composite object.
             
     Args:
@@ -101,7 +101,7 @@ class Workflow(sourdough.Component, sourdough.types.Hybrid):
             iterables. Defaults to False.
                             
     """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
+    contents: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -132,7 +132,7 @@ class Plan(sourdough.Product, sourdough.types.Lexicon):
     """Iterable base class in a sourdough composite object.
             
     Args:
-        contents (Mapping[str, sourdough.Component]): keys are str names and
+        contents (Mapping[str, sourdough.project.Component]): keys are str names and
             values are Component subclass instances. Defaults to an empty dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
@@ -142,7 +142,7 @@ class Plan(sourdough.Product, sourdough.types.Lexicon):
             Project instance.   
                             
     """
-    contents: Mapping[str, sourdough.Component] = dataclasses.field(
+    contents: Mapping[str, sourdough.project.Component] = dataclasses.field(
         default_factory = dict)
     name: str = None
     identification: str = None

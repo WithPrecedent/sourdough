@@ -1,5 +1,5 @@
 """
-base: essential classes applying sourdough's core to a project
+base: essential classes executeing sourdough's core to a project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -21,78 +21,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
     
-
+ 
 @dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough projects.
-    
-    Changing the attributes on a Bases instance allows users to specify 
-    different base classes for a sourdough project in the necessary categories.
-    Project will automatically use the base classes in the Bases instance 
-    passed to it.
-    
-    Since this is a subclass of Loader, attribute values can either be classes
-    or strings of the import path of classes. In the latter case, the base
-    classes will be lazily loaded when called.
-    
-    Args:
-        settings (Union[str, Type]): configuration class or a str of the import
-            path for the configuration class. 
-        file (Union[str, Type]): file management class or a str of the import
-            path for the file management class. 
-        component (Union[str, Type]): base node class or a str of the import
-            path for the base node class. 
-        creator (Union[str, Type]): base builder class or a str of the import
-            path for the base builder class.
-            
-    """
-    settings: Union[str, Type] = 'sourdough.project.Settings'
-    filer: Union[str, Type] = 'sourdough.project.Filer' 
-    component: Union[str, Type] = 'sourdough.project.Component'
-    creator: Union[str, Type] = 'sourdough.project.Creator'
-
-    """ Properties """
-    
-    def component_suffixes(self) -> Tuple[str]:
-        """[summary]
-
-        Returns:
-            Tuple[str]: [description]
-        """
-        return tuple(key + 's' for key in self.component.registry.keys()) 
-    
-    def creator_suffixes(self) -> Tuple[str]:
-        """[summary]
-
-        Returns:
-            Tuple[str]: [description]
-        """
-        return tuple(key + 's' for key in self.creator.registry.keys()) 
-   
-    """ Public Methods """
-   
-    def get_class(self, name: str, kind: str) -> Type:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-        """
-        base = getattr(self, kind)
-        if hasattr(base, 'registry'):
-            try:
-                product = base.registry.acquire(key = name)
-            except KeyError:
-                product = base
-        else:
-            product = base
-        return product   
-    
-    
-@dataclasses.dataclass
-class Settings(sourdough.base.Configuration):
+class Settings(sourdough.resources.Configuration):
     """Loads and Stores configuration settings for a Project.
 
     Args:
@@ -130,28 +61,59 @@ class Settings(sourdough.base.Configuration):
 
 
 @dataclasses.dataclass
-class Filer(sourdough.base.Clerk):
+class Filer(sourdough.resources.Clerk):
     pass
 
 
-
 @dataclasses.dataclass
-class Component(sourdough.quirks.Registrar, sourdough.structures.Node):
-    """[summary]
-
+class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+    """Abstract base for parts of a sourdough composite workflow.
+    
+    All subclasses must have an 'execute' method.
+    
     Args:
-        sourdough ([type]): [description]
-        sourdough ([type]): [description]
-        
+        contents (Any): stored item for use by a Component subclass instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        iterations (Union[int, str]): number of times the 'execute' method 
+            should  be called. If 'iterations' is 'infinite', the 'execute' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            Component library. Defaults to None.
+        parallel (ClassVar[bool]): whether the 'contents' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'execute' method is called. Defaults to an empty dict.
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+                
     """
-    contents: sourdough.quirks.Element = None 
+    contents: Any = None
     name: str = None
-    registry: ClassVar[Mapping[str, Creator]] = sourdough.types.Catalog()
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False 
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
 
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def execute(self, data: Any = None, **kwargs) -> Any:
+        """Subclasses must provide their own methods."""
+        pass 
+     
 
 @dataclasses.dataclass
-class Creator(sourdough.quirks.Registrar, sourdough.quirks.Validator, 
-              sourdough.structures.Producer, abc.ABC):
+class Creator(sourdough.quirks.Validator, abc.ABC):
     """[summary]
 
     Args:

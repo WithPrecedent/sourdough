@@ -282,11 +282,11 @@ class Author(sourdough.base.Creator):
     """Initialized sourdough Component instances without structure.
     
     Args:
-        contents (Mapping[str, sourdough.Component]): stored dictionary with 
+        contents (Mapping[str, sourdough.project.Component]): stored dictionary with 
             keys as names of Components and values as Component instances.
               
     """
-    contents: Mapping[str, sourdough.Component] = dataclasses.field(
+    contents: Mapping[str, sourdough.project.Component] = dataclasses.field(
         default_factory = dict)
     
     """ Class Methods """
@@ -298,12 +298,12 @@ class Author(sourdough.base.Creator):
     
     """ Public Methods """
     
-    def add_component(self, component: sourdough.Component) -> None:
+    def add_component(self, component: sourdough.project.Component) -> None:
         self.contents[component.name] = component
         return self
     
     def add_subcomponent(self, parent: str, 
-                         component: sourdough.Component) -> None:
+                         component: sourdough.project.Component) -> None:
         self.contents[parent].add(component)
         return self
  
@@ -388,12 +388,12 @@ class Creator(sourdough.base.Factory):
         'criteria': [], 
         'parallel': False,
         'parameters': {}})
-    base: Type = sourdough.base.Component
+    base: Type = sourdough.project.Component
     
     """ Public Methods """
 
     def build(self, name: str, 
-              director: sourdough.Director) -> sourdough.base.Component:
+              director: sourdough.Director) -> sourdough.project.Component:
         
         return component
 
@@ -465,7 +465,7 @@ class Creator(sourdough.base.Factory):
 
     """ Private Methods """
          
-    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
+    def divide_string(self, key: str, divider: str = None) -> Tuple[str, str]:
         """[summary]
 
         Args:
@@ -623,7 +623,7 @@ class Manager(sourdough.base.Director):
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.base.Component):
+class Workflow(sourdough.project.Component):
     
     def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
@@ -631,7 +631,7 @@ class Workflow(sourdough.base.Component):
 
 
 @dataclasses.dataclass
-class Step(sourdough.base.Component):
+class Step(sourdough.project.Component):
     
     def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""
@@ -639,7 +639,7 @@ class Step(sourdough.base.Component):
 
 
 @dataclasses.dataclass
-class Technique(sourdough.base.Component):
+class Technique(sourdough.project.Component):
     
     def apply(self, director: sourdough.Director) -> sourdough.Director:
         """Subclasses must provide their own methods."""

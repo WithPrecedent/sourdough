@@ -5,12 +5,12 @@ Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Structure (Base, ABC): base class for all sourdough composite structures.
+    Composite (Base, ABC): base class for all sourdough composite structures.
         All subclasses must have 'apply' and 'find' methods. Its 'library'
         class attribute stores all subclasses.
-    Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
-    Pipeline (Hybrid, Structure): a simple serial pipeline data structure.
-    Tree (Hybrid, Structure): a general tree data structure.
+    Graph (Lexicon, Composite): a lightweight directed acyclic graph (DAG).
+    Pipeline (Hybrid, Composite): a simple serial pipeline data structure.
+    Tree (Hybrid, Composite): a general tree data structure.
     
 """
 from __future__ import annotations
@@ -24,20 +24,14 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Structure(sourdough.types.Base, abc.ABC):
+class Composite(abc.ABC):
     """Base class for sourdough's composite objects.
 
     Subclasses must have 'apply' and 'find' methods that follow the criteria
     described in the docstrings for those methods.
-    
-    Args:
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-        
+
     """
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-    
+
     @abc.abstractmethod
     def apply(self, tool: Callable, **kwargs) -> None:
         """Applies 'tool' to each element in 'contents'.
@@ -69,7 +63,7 @@ class Structure(sourdough.types.Base, abc.ABC):
 
 
 @dataclasses.dataclass
-class Graph(sourdough.types.Lexicon, Structure):
+class Graph(sourdough.types.Lexicon, Composite):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph elements are stored in 'contents'. And the edges are
@@ -275,10 +269,10 @@ class Graph(sourdough.types.Lexicon, Structure):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
-
+   
 
 @dataclasses.dataclass
-class Pipeline(sourdough.types.Hybrid, Structure):
+class Pipeline(sourdough.types.Hybrid, Composite):
     """Stores a linear pipeline data structure.
     
     A Pipeline differs from a Hybrid in 2 significant ways:
@@ -360,7 +354,7 @@ class Pipeline(sourdough.types.Hybrid, Structure):
         
         
 @dataclasses.dataclass
-class Tree(sourdough.types.Hybrid, Structure):
+class Tree(sourdough.types.Hybrid, Composite):
     """Stores a general tree data structure.
     
     A Tree differs from a Hybrid in 3 significant ways:

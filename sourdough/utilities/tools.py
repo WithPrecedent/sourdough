@@ -511,6 +511,28 @@ def deduplicate(
     else:
         return iterable
 
+         
+def divide_string(item: str, divider: str = None) -> Tuple[str, str]:
+    """[summary]
+
+    Args:
+        key (str): [description]
+
+    Returns:
+        
+        Tuple[str, str]: [description]
+        
+    """
+    if divider is None:
+        divider = '_'
+    if divider in item:
+        suffix = item.split(divider)[-1]
+        prefix = item[:-len(suffix) - 1]
+    else:
+        prefix = suffix = item
+    return prefix, suffix
+
+
 def drop_prefix(
         iterable: Union[Mapping[str, Any], Sequence[str]],
         prefix: str) -> Union[Mapping[str, Any], Sequence[str]]:

@@ -115,7 +115,7 @@ class Node(sourdough.quirks.Registrar, sourdough.quirks.Element,
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.Component, sourdough.Hybrid):
+class Workflow(sourdough.project.Component, sourdough.Hybrid):
     """Base iterable class for portions of a sourdough project.
     
     Args:
@@ -293,7 +293,7 @@ class Contest(Worker):
             iterables. Defaults to True.
                             
     """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
+    contents: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -337,7 +337,7 @@ class Study(Worker):
             iterables. Defaults to True.
                             
     """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
+    contents: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1
@@ -380,7 +380,7 @@ class Survey(Worker):
             iterables. Defaults to True.
                             
     """
-    contents: Sequence[sourdough.Component] = dataclasses.field(
+    contents: Sequence[sourdough.project.Component] = dataclasses.field(
         default_factory = list)
     name: str = None
     iterations: Union[int, str] = 1

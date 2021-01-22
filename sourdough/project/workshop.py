@@ -22,8 +22,7 @@ import sourdough
                        
    
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Validator, sourdough.foundry.Director, 
-              sourdough.base.Component, abc.ABC):
+class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
     """Uses stored builders to create new items.
     
     A Director differs from a Lexicon in 3 significant ways:
@@ -39,7 +38,7 @@ class Manager(sourdough.quirks.Validator, sourdough.foundry.Director,
     Args:
         contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
             dict.
-              
+                      
     """
     name: str = None
     project: sourdough.Project = None
@@ -49,7 +48,7 @@ class Manager(sourdough.quirks.Validator, sourdough.foundry.Director,
     
     """ Public Methods """
 
-    def apply(self, data: sourdough.composite.Structure,
+    def execute(self, data: sourdough.composite.Structure,
               **kwargs) -> sourdough.composite.Structure:
         """[summary]
 
@@ -82,7 +81,7 @@ class Manager(sourdough.quirks.Validator, sourdough.foundry.Director,
   
   
 @dataclasses.dataclass
-class Creator(sourdough.foundry.Builder, abc.ABC):
+class Creator(sourdough.foundry.Builder, sourdough.types.Base, abc.ABC):
     """Creates a Structure subclass instance.
 
     All Creator subclasses should follow the naming convention of:
@@ -149,7 +148,7 @@ class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
     """ Public Methods """
 
     
-    def create(self, name: str, component: sourdough.nodes.Component, 
+    def create(self, name: str, component: sourdough.project.Component, 
                section: Mapping[str, Any]) -> None:
         """
         
@@ -166,14 +165,31 @@ class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
 
     """ Private Methods """
            
-    def _get_suffixes(self, item: Type[sourdough.nodes.Component]) -> Tuple[str]:
+    def _get_component_settings(self, 
+            settings: sourdough.project.Settings) -> sourdough.project.Settings:
+        """[summary]
+
+        Args:
+            settings (sourdough.project.Settings): [description]
+
+        Returns:
+            sourdough.project.Settings: [description]
+        """
+        parameter_sections = [
+            k for k in settings.keys() if k.endswith('_parameters')]
+        skip_sections = parameter_sections.extend(settings.skip)
+        return settings.excludify(skip_sections)
+        
+    def _get_parameters(self, 
+            item: Type[sourdough.types.Base], 
+            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
         """
         """
         parameters = list(item.__annotations__.keys())
-        return tuple(i for i in parameters if i not in self.skip)
+        return tuple(i for i in parameters if i not in [skip])
     
-    def _get_node(self, name: Union[str, Sequence[str]]) -> (
-            Type[sourdough.base.Node]):
+    def _get_component(self, 
+            name: Union[str, Sequence[str]]) -> Type[sourdough.project.Component]:
         """[summary]
 
         Args:
@@ -224,16 +240,17 @@ class GraphCreator(StructureCreator):
     
     """ Public Methods """
     
-    def create(self, source: Union[sourdough.base.Configuration,
-                                   Mapping[str, Sequence[str]],
-                                   Sequence[Sequence[str]]]) -> Graph:
+    def create(self, source: Union[
+            sourdough.base.Configuration,
+            Mapping[str, Sequence[str]],
+            Sequence[Sequence[str]]]) -> sourdough.composite.Graph:
         """
         """
-        if isinstance(source, sourdough.types.Configuration):
+        if isinstance(source, sourdough.resources.Configuration):
             return self._from_configuration(source = source)
-        elif isinstance(source, sourdough.types.Configuration):
+        elif isinstance(source, Mapping):
             return self._from_adjacency_list(source = source)
-        elif isinstance(source, sourdough.types.Configuration):
+        elif isinstance(source, Sequence):
             return self._from_adjacency_matrix(source = source)
         else:
             raise TypeError('source must be a Configuration, adjacency list, '
@@ -577,7 +594,7 @@ class Factory(sourdough.Creator):
 
     """ Public Methods """
 
-    def create(self, manager: sourdough.Manager) -> sourdough.Component:
+    def create(self, manager: sourdough.Manager) -> sourdough.project.Component:
         """Drafts a Workflow instance based on 'blueprint' in 'manager'.
             
         """ 
@@ -591,7 +608,7 @@ class Factory(sourdough.Creator):
     """ Private Methods """
 
     def _create_component(self, name: str, 
-                          manager: sourdough.Manager) -> sourdough.Component:
+                          manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
@@ -599,7 +616,7 @@ class Factory(sourdough.Creator):
             manager (sourdough.Manager): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.project.Component: [description]
             
         """
         component = self._get_component(name = name, manager = manager)
@@ -607,7 +624,7 @@ class Factory(sourdough.Creator):
                                         manager = manager)
 
     def _get_component(self, name: str,
-                       manager: sourdough.Manager) -> sourdough.Component:
+                       manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
@@ -618,39 +635,39 @@ class Factory(sourdough.Creator):
             KeyError: [description]
 
         Returns:
-            Mapping[str, sourdough.Component]: [description]
+            Mapping[str, sourdough.project.Component]: [description]
             
         """
         instructions = manager['blueprint'][name]
         kwargs = {'name': name, 'contents': instructions.contents}
         try:
-            component = manager.basescomponent.borrow(key = name)
+            component = manager.bases.component.borrow(key = name)
             for key, value in kwargs.items():
                 if value:
                     setattr(component, key, value)
         except KeyError:
             try:
-                component = manager.basescomponent.acquire(key = name)
+                component = manager.bases.component.acquire(key = name)
                 component = component(**kwargs)
             except KeyError:
                 try:
-                    component = manager.basescomponent.acquire(
+                    component = manager.bases.component.acquire(
                         key = instructions.design)
                     component = component(**kwargs)
                 except KeyError:
                     raise KeyError(f'{name} component does not exist')
         return component
 
-    def _finalize_component(self, component: sourdough.Component,
-                            manager: sourdough.Manager) -> sourdough.Component:
+    def _finalize_component(self, component: sourdough.project.Component,
+                            manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.project.Component: [description]
             
         """
         if isinstance(component, Iterable):
@@ -666,16 +683,16 @@ class Factory(sourdough.Creator):
             manager = manager)
         return component
 
-    def _finalize_parallel(self, component: sourdough.Component,
-                           manager: sourdough.Manager) -> sourdough.Component:
+    def _finalize_parallel(self, component: sourdough.project.Component,
+                           manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
-            sourdough.Component: [description]
+            sourdough.project.Component: [description]
             
         """
         # Creates empy list of lists for all possible permutations to be stored.
@@ -702,12 +719,12 @@ class Factory(sourdough.Creator):
             manager = manager)
         return component
 
-    def _finalize_serial(self, component: sourdough.Component, 
-                         manager: sourdough.Manager) -> sourdough.Component:
+    def _finalize_serial(self, component: sourdough.project.Component, 
+                         manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
@@ -723,12 +740,12 @@ class Factory(sourdough.Creator):
         component.contents = new_contents
         return component
 
-    def _finalize_element(self, component: sourdough.Component, 
-                          manager: sourdough.Manager) -> sourdough.Component:
+    def _finalize_element(self, component: sourdough.project.Component, 
+                          manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Args:
-            component (sourdough.Component): [description]
+            component (sourdough.project.Component): [description]
             manager (sourdough.Manager): [description]
 
         Returns:
@@ -741,8 +758,8 @@ class Factory(sourdough.Creator):
             component.contents = None
         return component
     
-    def _add_attributes(self, component: sourdough.Component,
-                        manager: sourdough.Manager) -> sourdough.Component:
+    def _add_attributes(self, component: sourdough.project.Component,
+                        manager: sourdough.Manager) -> sourdough.project.Component:
         """[summary]
 
         Returns:
@@ -778,5 +795,5 @@ class Worker(sourdough.Creator):
         if manager.project.data is not None:
             kwargs['data'] = manager.project.data
         for component in manager['plan']:
-            results.update({component.name: component.apply(**kwargs)})
+            results.update({component.name: component.execute(**kwargs)})
         return results

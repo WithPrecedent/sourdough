@@ -1,19 +1,18 @@
 """
-creators: classes for building products of a sourdough project
+workshop: classes for building a sourdough project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Architect (Creator):
-    Factory (Creator):
-    Worker (Creator):
+
     
 """
 from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import inspect
 import itertools
 import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -23,21 +22,287 @@ import sourdough
                        
 
 @dataclasses.dataclass
-class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
+class Technique(sourdough.types.Proxy, sourdough.project.Component):
+    """Base class for primitive objects in a sourdough composite object.
     
-    project: sourdough.Project = None
-    skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
+    The 'contents' and 'parameters' attributes are combined at the last moment
+    to allow for runtime alterations.
     
+    Args:
+        contents (Any): stored item for use by a Component subclass instance.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        iterations (Union[int, str]): number of times the 'execute' method 
+            should  be called. If 'iterations' is 'infinite', the 'execute' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            Component library. Defaults to None.
+        parallel (ClassVar[bool]): whether the 'contents' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'execute' method is called. Defaults to an empty dict.
+                                    
+    """
+    contents: Any = None
+    name: str = None
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False 
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+
+    """ Properties """
+    
+    @property
+    def algorithm(self) -> Union[object, str]:
+        return self.contents
+    
+    @algorithm.setter
+    def algorithm(self, value: Union[object, str]) -> None:
+        self.contents = value
+        return self
+    
+    @algorithm.deleter
+    def algorithm(self) -> None:
+        self.contents = None
+        return self
+        
+    """ Public Methods """
+    
+    def execute(self, data: object = None, **kwargs) -> object:
+        """Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            data (object): optional object to execute 'contents' to. Defaults to
+                None.
+                
+        Returns:
+            object: with any modifications made by 'contents'. If data is not
+                passed, nothing is returned.        
+        
+        """
+        if data is None:
+            if self.contents:
+                data = self.contents.execute(**self.parameters, **kwargs)
+            return data
+        else:
+            if self.contents:
+                return self.contents.execute(data, **self.parameters, **kwargs)
+            else:
+                return None
+
+        
+@dataclasses.dataclass
+class Step(sourdough.types.Proxy, sourdough.project.Component):
+    """Wrapper for a Technique.
+
+    Subclasses of Step can store additional methods and attributes to execute to 
+    all possible technique instances that could be used. This is often useful 
+    when using parallel Worklow instances which test a variety of strategies 
+    with similar or identical parameters and/or methods.
+
+    A Step instance will try to return attributes from Technique if the
+    attribute is not found in the Step instance. 
+
+    Args:
+        contents (Union[Technique, str]): technique instance to be used in a 
+            Workflow or a str corresponding to an item in the Component Library.
+            Defaults to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        iterations (Union[int, str]): number of times the 'execute' method 
+            should  be called. If 'iterations' is 'infinite', the 'execute' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        criteria (str): after iteration is complete, a 'criteria' determines
+            what should be outputted. This should correspond to a key in the
+            Component library. Defaults to None.
+        parallel (ClassVar[bool]): whether the 'contents' contain other 
+            iterables (True) or static objects (False). If True, a subclass
+            should include a custom iterable for navigating the stored 
+            iterables. Defaults to False.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'execute' method is called. Defaults to an empty dict.
+                                    
+    """
+    contents: Union[Technique, str] = None
+    name: str = None
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False 
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+                
+    """ Properties """
+    
+    @property
+    def technique(self) -> Technique:
+        return self.contents
+    
+    @technique.setter
+    def technique(self, value: Technique) -> None:
+        self.contents = value
+        return self
+    
+    @technique.deleter
+    def technique(self) -> None:
+        self.contents = None
+        return self
+    
+    """ Public Methods """
+    
+    def execute(self, data: object = None, **kwargs) -> object:
+        """Applies Technique instance in 'contents'.
+        
+        The code below outlines a basic method that a subclass should build on
+        for a properly functioning Step.
+        
+        Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            data (object): optional object to execute 'contents' to. Defaults to
+                None.
+                
+        Returns:
+            object: with any modifications made by 'contents'. If data is not
+                passed, nothing is returned.        
+        
+        """
+        if data is None:
+            self.contents.execute(**kwargs)
+            return self
+        else:
+            return self.contents.execute(data = data, **kwargs)
+
 
 @dataclasses.dataclass
-class TechniqueCreator(ComponentCreator):
+class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
+    """Uses stored builders to create new items.
     
+    A Director differs from a Lexicon in 3 significant ways:
+        1) It stores a separate Lexicon called 'builders' which have classes
+            used to create other items.
+        2) It iterates 'builders' and stores its output in 'contents.' General
+            access methods still point to 'contents'.
+        3) It has an additional convenience methods called 'add_builder' for
+            adding new items to 'builders', 'advance' for iterating one step,
+            and 'complete' which completely iterates the instance and stores
+            all results in 'contents'.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+                      
+    """
+    name: str = None
     project: sourdough.Project = None
-    skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
+    builder: Union[sourdough.foundry.Builder, str] = None
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'builder'])
     
+    """ Public Methods """
+
+    def apply(self, data: sourdough.composite.Structure,
+              **kwargs) -> sourdough.composite.Structure:
+        """[summary]
+
+        Args:
+            data (sourdough.composite.Structure): [description]
+
+        Returns:
+            sourdough.composite.Structure: [description]
+            
+        """
+        start_section = self.project.settings[self.name]
+
+    """ Private Methods """
     
+    def _validate_builder(self, 
+                          builder: Union[sourdough.foundry.Builder, str]) -> (
+                              sourdough.foundry.Builder):
+        """
+        """
+        if isinstance(builder, sourdough.foundry.builder):
+            builder.manager = self
+        elif inspect.issubclass(sourdough.foundry.builder):
+            builder = builder(manager = self)
+        elif isinstance(builder, str):
+            builder = self.project.bases.builder.borrow(name = builder)
+            builder = builder(manager = self)
+        else:
+            raise TypeError('builder must be a Builder or str type')
+        return builder
+  
+  
 @dataclasses.dataclass
-class StepCreator(ComponentCreator):
+class Creator(sourdough.foundry.Builder, sourdough.types.Base, abc.ABC):
+    """Creates a Structure subclass instance.
+
+    All Creator subclasses should follow the naming convention of:
+            '{Class being built}Creator'. 
+    This allows the Creator to be properly matched with the class being 
+    constructed without using an extraneous mapping to link the two.
+
+    Args:
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+            
+    """
+    manager: Manager = None
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = sourdough.types.Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            # Removes '_builder' from class name so that the key is consistent
+            # with the key name for the class being constructed.
+            try:
+                key.remove('_builder')
+            except ValueError:
+                pass
+            cls.library[key] = cls
+            
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, name: str, **kwargs) -> sourdough.types.Base:
+        """Creates a Base subclass instance from 'source'.
+        
+        Subclasses must provide their own methods.
+
+        Args:
+            name (str): name of section in 'source' to start the creation 
+                process.
+            source (Any): source object from which to create an instance of a
+                Base subclass.
+            kwargs: additional arguments to pass when a Base subclass is
+                instanced.
+        
+        Returns:
+            Base: a sourdough Base subclass instance.
+            
+        """
+        pass
+              
+
+@dataclasses.dataclass
+class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
     
     project: sourdough.Project = None
     skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
@@ -88,6 +353,7 @@ class StepCreator(ComponentCreator):
 
 
 """ Structural Creator Classes """ 
+
 
 @dataclasses.dataclass
 class StructureCreator(sourdough.workshop.Creator, abc.ABC):
@@ -178,45 +444,45 @@ class Parameters(sourdough.types.Lexicon):
     
     """ Public Methods """
     
-    def create(self, creator: sourdough.project.Creator, **kwargs) -> None:
+    def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         """
         if not kwargs:
             kwargs = self.default
         for kind in ['settings', 'required', 'runtime', 'selected']:
-            kwargs = getattr(self, f'_get_{kind}')(creator = creator, **kwargs)
+            kwargs = getattr(self, f'_get_{kind}')(builder = builder, **kwargs)
         self.contents = kwargs
         return self
     
     """ Private Methods """
     
-    def _get_settings(self, creator: sourdough.project.Creator, 
+    def _get_settings(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
             
         """
         try:
-            kwargs.update(creator.settings[f'{self.name}_parameters'])
+            kwargs.update(builder.settings[f'{self.name}_parameters'])
         except KeyError:
             pass
         return kwargs
     
-    def _get_required(self, creator: sourdough.project.Creator, 
+    def _get_required(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
@@ -227,12 +493,12 @@ class Parameters(sourdough.types.Lexicon):
                 kwargs[item] = self.default[item]
         return kwargs
     
-    def _get_runtime(self, creator: sourdough.project.Creator, 
+    def _get_runtime(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
@@ -240,17 +506,17 @@ class Parameters(sourdough.types.Lexicon):
         """
         for parameter, attribute in self.runtime.items():
             try:
-                kwargs[parameter] = getattr(creator, attribute)
+                kwargs[parameter] = getattr(builder, attribute)
             except AttributeError:
                 pass
         return kwargs
 
-    def _get_selected(self, creator: sourdough.project.Creator, 
+    def _get_selected(self, builder: sourdough.project.Creator, 
                       **kwargs) -> Dict[str, Any]:
         """[summary]
 
         Args:
-            creator (sourdough.project.Creator): [description]
+            builder (sourdough.project.Creator): [description]
 
         Returns:
             Dict[str, Any]: [description]
