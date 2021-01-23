@@ -85,7 +85,8 @@ def test_project():
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
-    print('test parser', project['parser'].contents)
+    print('test parser contents', project['parser'].contents)
+    print('test parser', project['parser'].keys())
     return
 
 

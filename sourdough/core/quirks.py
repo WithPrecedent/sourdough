@@ -137,12 +137,10 @@ class Validator(Quirk):
             validations = self.validations
         # Calls validation methods based on items listed in 'validations'.
         for item in validations:
-            try:
+            if hasattr(self, f'_validate_{item}'):
                 kwargs = {item: getattr(self, item)}
                 setattr(self, item, getattr(
                     self, f'_validate_{item}')(**kwargs))
-            except AttributeError:
-                pass
         return self     
 
  

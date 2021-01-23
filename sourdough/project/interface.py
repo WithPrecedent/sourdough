@@ -11,6 +11,7 @@ Contents:
 
 """
 from __future__ import annotations
+import copy
 import dataclasses
 import inspect
 import logging
@@ -189,7 +190,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             pass
         # Calls validation methods.
         self.validate()
-        print('test project bases', self.bases)
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Adds 'general' section attributes from 'settings'.
@@ -366,11 +366,11 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         """
         if isinstance(manager, str):
-            name = manager
+            name = copy.deepcopy(manager)
             manager = self.bases.manager.library.borrow(
                 name = [manager, 'manager'])
             manager = manager(name = name, project = self)
-        elif inspect.issubclass(manager, sourdough.project.Manager):
+        elif issubclass(manager, sourdough.project.Manager):
             manager = manager(project = self)
         elif isinstance(manager, self.bases.settings.manager):
             manager.project = self

@@ -69,18 +69,18 @@ class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
 
     """ Dunder Methods """
     
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
+    # def __str__(self) -> str:
+    #     """Returns default string representation of an instance.
 
-        Returns:
-            str: default string representation of an instance.
+    #     Returns:
+    #         str: default string representation of an instance.
 
-        """
-        return '\n'.join([textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            components:'''),
-            f'''{textwrap.indent(str(self.contents), '    ')}'''])   
+    #     """
+    #     return '\n'.join([textwrap.dedent(f'''
+    #         sourdough {self.__class__.__name__}
+    #         name: {self.name}
+    #         components:'''),
+    #         f'''{textwrap.indent(str(self.contents), '    ')}'''])   
          
    
 @dataclasses.dataclass

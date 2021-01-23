@@ -12,6 +12,7 @@ from .configuration import Settings
 from .clerk import Filer
 from .structures import *
 from .nodes import *
+from .interface import Bases
 from .builder import Manager
 
 

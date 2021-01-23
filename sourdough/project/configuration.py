@@ -81,7 +81,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     project: Union[object, Type] = None
-    bases: sourdough.interface.Bases = None
+    bases: sourdough.project.Bases = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parallel: ClassVar[bool] = False 
@@ -123,13 +123,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     """ Private Methods """
 
     def _validate_bases(self, bases: Union[
-            Type[sourdough.interface.Bases],
-            sourdough.interface.Bases]):
+            Type[sourdough.project.Bases],
+            sourdough.project.Bases]):
         """[summary]
 
         Args:
-            bases (Union[ Type[sourdough.interface.Bases], 
-                sourdough.interface.Bases]): [description]
+            bases (Union[ Type[sourdough.project.Bases], 
+                sourdough.project.Bases]): [description]
 
         Raises:
             TypeError: [description]
@@ -137,9 +137,9 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         Returns:
             [type]: [description]
         """
-        if isinstance(bases, sourdough.interface.Bases):
+        if isinstance(bases, sourdough.project.Bases):
             pass
-        elif inspect.issubclass(bases, sourdough.interface.Bases):
+        elif issubclass(bases, sourdough.project.Bases):
             bases = bases()
         elif bases is None:
             bases = self.project.bases
@@ -251,7 +251,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 keys = [component, design, base]
             component = self.bases.component.borrow(name = keys)
             component = component(name = component)
-        elif inspect.issubclass(component, self.bases.settings.component):
+        elif issubclass(component, self.bases.settings.component):
             kwargs = {}
             name = sourdough.tools.snakify(component.__name__)
         elif isinstance(component, self.bases.settings.component):

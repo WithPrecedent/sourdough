@@ -70,7 +70,7 @@ class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
         """
         if isinstance(builder, sourdough.foundry.builder):
             builder.manager = self
-        elif inspect.issubclass(sourdough.foundry.builder):
+        elif issubclass(sourdough.foundry.builder):
             builder = builder(manager = self)
         elif isinstance(builder, str):
             builder = self.project.bases.builder.borrow(name = builder)
@@ -140,20 +140,7 @@ class Creator(sourdough.foundry.Builder, sourdough.types.Base, abc.ABC):
     
     """ Private Methods """
     
-    def _get_component_settings(self, 
-            settings: sourdough.project.Settings) -> sourdough.project.Settings:
-        """[summary]
 
-        Args:
-            settings (sourdough.project.Settings): [description]
-
-        Returns:
-            sourdough.project.Settings: [description]
-        """
-        parameter_sections = [
-            k for k in settings.keys() if k.endswith('_parameters')]
-        skip_sections = parameter_sections.extend(settings.skip)
-        return settings.excludify(skip_sections)
         
     def _get_parameters(self, 
             item: Type[sourdough.types.Base], 

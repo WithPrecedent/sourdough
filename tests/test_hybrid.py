@@ -11,7 +11,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class AElement(sourdough.quirks.Element):
+class AnElement(sourdough.quirks.Element):
     pass
 
 
@@ -23,7 +23,7 @@ class AnotherElement(sourdough.quirks.Element):
 def test_hybrid():
     workflow = sourdough.types.Hybrid()
     workflow.setdefault('default value')
-    a_element = AElement(name = 'test_name')
+    a_element = AnElement(name = 'test_name')
     another_element = AnotherElement()
     some_element = AnotherElement(name = 'some_element')
     workflow.add(a_element)
@@ -60,16 +60,7 @@ def test_hybrid():
     workflow.setdefault(None)  
     assert workflow.get('nothing') == None
     workflow['crazy_element'] = AnotherElement(name = 'crazy')
-    workflow.append(sourdough.types.Hybrid(
-        name = 'nested', 
-        contents = [another_element, some_element]))
-    assert workflow.keys() == [
-        'some_element', 
-        'another_element',
-        'new_workflow', 
-        'crazy',
-        'nested']
-    assert len(workflow) == 6
+    assert len(workflow) == 4
     workflow.clear()
     assert len(workflow) == 0
     workflow += another_element

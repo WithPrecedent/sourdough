@@ -25,5 +25,5 @@ settings = {
         'munger_design': 'survey',
         'munger_steps': ['search', 'destroy'],
         'search_techniques': ['find', 'locate'],
-        'destroy_techniques': ['explode', 'annihilate']},
+        'destroy_techniques': ['explode', 'dynamite']},
     'divide_parameters': {'replace_strings': True}}

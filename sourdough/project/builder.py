@@ -14,6 +14,7 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import copy
 import dataclasses
 import inspect
 import pathlib
@@ -25,7 +26,7 @@ import sourdough
     
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Element, sourdough.quirks.Validator, 
-              sourdough.types.Base):
+              sourdough.composites.Pipeline, sourdough.types.Base):
     """Creates and executes portions of a workflow in a sourdough project.
 
     Args:
@@ -35,12 +36,10 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         
     """
     
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    contents: Sequence[str] = dataclasses.field(default_factory = list)
     name: str = None
-    project: Union[object, Type] = dataclasses.field(
-        repr = False, 
-        default = None)
-    bases: sourdough.interface.Bases = None
+    project: sourdough.Project = dataclasses.field(repr = False, default = None)
+    bases: sourdough.project.Bases = None
     validations: ClassVar[Sequence[str]] = ['bases', 'contents']
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
@@ -68,13 +67,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     """ Private Methods """
 
     def _validate_bases(self, bases: Union[
-            Type[sourdough.interface.Bases],
-            sourdough.interface.Bases]):
+            Type[sourdough.project.Bases],
+            sourdough.project.Bases]):
         """[summary]
 
         Args:
-            bases (Union[ Type[sourdough.interface.Bases], 
-                sourdough.interface.Bases]): [description]
+            bases (Union[ Type[sourdough.project.Bases], 
+                sourdough.project.Bases]): [description]
 
         Raises:
             TypeError: [description]
@@ -82,17 +81,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         Returns:
             [type]: [description]
         """
-        print('test validating bases', bases)
-        if isinstance(bases, sourdough.interface.Bases):
-            print('test instance')
+        if isinstance(bases, sourdough.project.Bases):
             pass
-        elif inspect.issubclass(bases, sourdough.interface.Bases):
-            print('test subclass')
+        elif (inspect.isclass(bases) 
+                and issubclass(bases, sourdough.project.Bases)):
             bases = bases()
         elif bases is None:
             bases = self.project.bases
-            print('test bases', bases)
-            print('test project bases', self.project.bases)
         else:
             raise TypeError('bases must be a Bases or None.')
         return bases 
@@ -113,7 +108,8 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         return self._validate_component_contents(
             name = self.name,
-            contents = contents)
+            contents = contents,
+            instances = [])
 
     def _validate_component_contents(self, 
             name: str, 
@@ -121,7 +117,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 sourdough.project.Component, 
                 Type[sourdough.project.Component],
                 str]],
-            instances: List[sourdough.project.Component] = []) -> (
+            instances: List[sourdough.project.Component]) -> (
                 Sequence[sourdough.project.Component]):
         """[summary]
 
@@ -134,20 +130,24 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             Sequence[sourdough.project.Component]: [description]
             
         """
+        print('test incoming contents', name, contents)
         if not contents:
             contents, base = self._get_components_from_settings(name = name)
         else:
             base = self.bases.component
+        print('test after settings contents', contents, base)
         for component in contents:
             instance = self._validate_component(
                 component = component,
                 base = base)
-            if (isinstance(instance, Iterable) 
-                    and hasattr(instance, 'contents')):
-                instances = self._validate_component_contents(
+            print('test instance', instance)
+            if hasattr(instance, 'contents'):
+                subinstances = self._validate_component_contents(
                     name = instance.name,
                     contents = instance.contents,
                     instances = instances)
+                if subinstances:
+                    instances.extend(subinstances)
             instances.append(instance)
         return instances
     
@@ -162,57 +162,64 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             List[str]: [description]
             
         """
-        suffixes = self.bases.component_suffixes
+        suffixes = self.bases.component.library.suffixes
         try:
             matches = [
-                k for k in self.settings[name].keys() 
+                k for k in self.project.settings[name].keys() 
                 if k.startswith(name) and k.endswith(suffixes)]
         except KeyError:
             matches = [
-                k for k in self.settings[self.name].keys() 
-                if k.startswith(name) and k.endswith(suffixes)]    
+                k for k in self.project.settings[self.name].keys() 
+                if k.startswith(name) and k.endswith(suffixes)] 
         if len(matches) > 1:
             raise ValueError(f'{name} must have only 1 set of components')
         elif len(matches) == 0:
-            raise ValueError(f'No components found for {name}')
+            base = None
+            components = []
         else:
             key = matches[0]
             base = key.split('_')[-1][:-1]
             try:
-                components = sourdough.tools.listify(self.settings[name][key])
+                components = sourdough.tools.listify(
+                    self.project.settings[name][key])
+                del self.project.settings[name][key]
             except KeyError:
                 try:
                     components = sourdough.tools.listify(
-                        self.settings[self.name][key])
+                        self.project.settings[self.name][key])
+                    del self.project.settings[name][key]
                 except KeyError:
                     components = []
         return components, base
         
-    def _validate_component(self, component: Union[str, object], 
-                            base: str) -> object:
+    def _validate_component(self, 
+            component: Union[
+                str, 
+                sourdough.project.Component, 
+                Type[sourdough.project.Component]], 
+            base: str) -> object:
         """
         """
         if isinstance(component, str):
-            kwargs = {'name': component}
-            name = kwargs['name'] 
+            name = copy.deepcopy(component)
+            kwargs = {'name': name}
             design = self._get_design(name = component)
             if design is None:
-                keys = [component, base]
+                keys = [name, base]
             else:
-                keys = [component, design, base]
+                keys = [name, design, base]
             component = self.bases.component.library.borrow(name = keys)
-            component = component(name = component)
-        elif inspect.issubclass(component, self.bases.settings.component):
+            component = component(name = name)
+        elif issubclass(component, self.bases.component):
             kwargs = {}
             name = sourdough.tools.snakify(component.__name__)
-        elif isinstance(component, self.bases.settings.component):
+        elif isinstance(component, self.bases.component):
             kwargs = {}
             name = component.name
         else:
             raise TypeError('contents must be a list of str or Component')
         if inspect.isclass(component):
-            parameters = self._get_components_from_settings(
-                component = component)
+            parameters = self._get_components_from_settings(name = component)
             for parameter in parameters:
                 try:
                     kwargs[parameter] = getattr(self, f'_get_{parameter}')()
@@ -229,13 +236,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         """
         try:
-            design = self.settings[name][f'{name}_design']
+            design = self.project.settings[name][f'{name}_design']
         except KeyError:
             try:
-                design = self.settings[name][f'design']
+                design = self.project.settings[name][f'design']
             except KeyError:
                 try:
-                    design = self.settings[self.name][f'{name}_design']
+                    design = self.project.settings[self.name][f'{name}_design']
                 except KeyError:
                     design = None
         return design
@@ -252,13 +259,14 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         """
         try:
-            argument = self.settings[name][f'{name}_{parameter}']
+            argument = self.project.settings[name][f'{name}_{parameter}']
         except KeyError:
             try:
-                argument = self.settings[name][parameter]
+                argument = self.project.settings[name][parameter]
             except KeyError:
                 try:
-                    argument = self.settings[self.name][f'{name}_{parameter}']
+                    argument = self.project.settings[self.name][
+                        f'{name}_{parameter}']
                 except KeyError:
                     argument = None
         return argument

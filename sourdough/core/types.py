@@ -232,6 +232,16 @@ class Bunch(collections.abc.Iterable, abc.ABC):
         self.add(other)
         return self
 
+    def __iadd__(self, other: Any) -> None:
+        """Combines argument with 'contents' using the 'add' method.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(other)
+        return self
+
     def __iter__(self) -> Iterable[Any]:
         """Returns iterable of 'contents'.
 
@@ -287,9 +297,9 @@ class Progression(Bunch, collections.abc.MutableSequence):
                 additional parameters.
                 
         """
-        try:
+        if isinstance(item, Iterable) and not isinstance(item, str):
             self.contents.extend(item)
-        except TypeError:
+        else:
             self.contents.append(item)
         return self  
 
@@ -488,7 +498,7 @@ class Hybrid(Progression):
             Sequence[Any]: list of names of stored in 'contents'
             
         """
-        return (c.name for c in self.contents)
+        return [c.name for c in self.contents]
 
     def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Pops item(s) from 'contents'.
@@ -549,16 +559,16 @@ class Hybrid(Progression):
                 Mapping is passed, the values are added to 'contents' and the 
                 keys become the 'name' attributes of those values. To mimic 
                 'update', the passed 'items' are added to 'contents' by the 
-                'extend' method.           
+                'append' method.           
         
         """
         if isinstance(items, Mapping):
             for key, value in items.items():
                 new_item = value
                 new_item.name = key
-                self.extend(item = new_item)
+                self.append(item = new_item)
         else:
-            self.extend(item = items)
+            self.append(item = items)
         return self
 
     def values(self) -> Sequence[Any]:
@@ -568,7 +578,7 @@ class Hybrid(Progression):
             Sequence[Any]: list of items stored in 'contents'
             
         """
-        return tuple(self.contents)
+        return self.contents
           
     """ Dunder Methods """
 
@@ -656,7 +666,7 @@ class Hybrid(Progression):
             int: length of iterable 'contents'.
 
         """
-        return len(self.__iter__())
+        return len(self.contents)
 
  
 @dataclasses.dataclass
@@ -1067,7 +1077,7 @@ class Library(Catalog):
     def suffixes(self) -> Tuple[str]:
         """
         """
-        return tuple(key + 's' for key in self.library.keys())
+        return tuple(key + 's' for key in self.contents.keys())
     
     """ Public Methods """
 
