@@ -86,6 +86,24 @@ def deannotate(annotation: Any) -> Tuple[Any]:
         return annotation
     else:
         return typing.get_args(annotation)
+            
+def delistify(
+        variable: Any,
+        default_value: Any = None) -> Sequence[Any]:
+    """
+
+    """
+    if variable is None:
+        if default_value is None:
+            return []
+        elif default_value in ['None', 'none']:
+            return None
+        else:
+            return default_value
+    elif isinstance(variable, list):
+        return variable[0]
+    else:
+        return variable
           
 def importify(module: str, key: str) -> object:
     """Lazily loads object from 'module'.
@@ -200,13 +218,10 @@ def listify(
             return None
         else:
             return default_value
-    elif isinstance(variable, list):
+    elif isinstance(variable, list) and not isinstance(variable, str):
         return variable
     else:
-        try:
-            return list(variable)
-        except TypeError:
-            return [variable]
+        return [variable]
 
 def numify(variable: str) -> Union[int, float, str]:
     """Attempts to convert 'variable' to a numeric type.
@@ -367,13 +382,10 @@ def tuplify(
             return None
         else:
             return default_value
-    elif isinstance(variable, tuple):
+    elif isinstance(variable, tuple) and not isinstance(variable, str):
         return variable
     else:
-        try:
-            return tuple(variable)
-        except TypeError:
-            return (variable)
+        return tuple(variable)
         
 def typify(variable: str) -> Union[Sequence, int, float, bool, str]:
     """Converts stingsr to appropriate, supported datatypes.

@@ -14,61 +14,61 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Parser(sourdough.Manager):
+class Parser(sourdough.project.Manager):
 
     pass
 
 
 @dataclasses.dataclass
-class Search(sourdough.elements.Step):
+class Search(sourdough.project.Step):
 
     pass   
 
 
 @dataclasses.dataclass
-class Divide(sourdough.elements.Step):
+class Divide(sourdough.project.Step):
 
     pass   
     
     
 @dataclasses.dataclass
-class Destroy(sourdough.elements.Step):
+class Destroy(sourdough.project.Step):
 
     pass   
     
 
 @dataclasses.dataclass
-class Slice(sourdough.elements.Technique):
+class Slice(sourdough.project.Technique):
 
     pass  
 
 
 @dataclasses.dataclass
-class Dice(sourdough.elements.Technique):
+class Dice(sourdough.project.Technique):
 
     pass 
     
     
 @dataclasses.dataclass
-class Find(sourdough.elements.Technique):
+class Find(sourdough.project.Technique):
 
     pass 
 
     
 @dataclasses.dataclass
-class Locate(sourdough.elements.Technique):
+class Locate(sourdough.project.Technique):
 
     pass 
 
     
 @dataclasses.dataclass
-class Explode(sourdough.elements.Technique):
+class Explode(sourdough.project.Technique):
 
     pass 
 
     
 @dataclasses.dataclass
-class Dynamite(sourdough.elements.Technique):
+class Dynamite(sourdough.project.Technique):
     
     name: str = 'annihilate'
 # 
@@ -76,16 +76,16 @@ class Dynamite(sourdough.elements.Technique):
     
 
 def test_project():
-    assert 'parser' in sourdough.Manager.registry
+    assert 'parser' in sourdough.project.Manager.library
     find = Find()
     dynamite = Dynamite()
-    assert 'find' in sourdough.project.Component.store
-    assert 'annihilate' in sourdough.project.Component.store
-    assert 'annihilate' not in sourdough.project.Component.registry
+    assert 'find' in sourdough.project.Component.library
+    assert 'annihilate' not in sourdough.project.Component.library
     project = sourdough.Project(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'composite_settings.py',
         automatic = True)
+    print('test parser', project['parser'].contents)
     return
 
 

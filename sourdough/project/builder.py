@@ -22,49 +22,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-
-@dataclasses.dataclass
-class Settings(sourdough.resources.Configuration):
-    """Loads and Stores configuration settings for a Project.
-
-    Args:
-        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
-            dict, a str file path to a file with settings, or a pathlib Path to
-            a file with settings. Defaults to en empty dict.
-        infer_types (bool): whether values in 'contents' are converted to other 
-            datatypes (True) or left alone (False). If 'contents' was imported 
-            from an .ini file, a False value will leave all values as strings. 
-            Defaults to True.
-        defaults (Mapping[str, Mapping[str]]): any default options that should
-            be used when a user does not provide the corresponding options in 
-            their configuration settings. Defaults to a dict with 'general'
-            and 'files' section listed in the class annotations.
-        skip (Sequence[str]): names of suffixes to skip when constructing nodes
-            for a sourdough project.
-
-    """
-    contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
-        dataclasses.field(default_factory = dict))
-    infer_types: bool = True
-    defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
-        default_factory = lambda: {
-            'general': {
-                'verbose': False,
-                'parallelize': True,
-                'conserve_memery': False},
-            'files': {
-                'source_format': 'csv',
-                'interim_format': 'csv',
-                'final_format': 'csv',
-                'file_encoding': 'windows-1252'}})
-    skip: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files', 'filer', 'parameters'])
-
-
-@dataclasses.dataclass
-class Filer(sourdough.resources.Clerk):
-    pass  
-
     
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Element, sourdough.quirks.Validator, 
@@ -80,13 +37,12 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
-    project: Union[object, Type] = None
+    project: Union[object, Type] = dataclasses.field(
+        repr = False, 
+        default = None)
     bases: sourdough.interface.Bases = None
-    iterations: Union[int, str] = 1
-    criteria: str = None
-    parallel: ClassVar[bool] = False 
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     validations: ClassVar[Sequence[str]] = ['bases', 'contents']
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
 
@@ -97,27 +53,16 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             super().__post_init__()
         except AttributeError:
             pass
+        self.validate()
       
     """ Public Methods """
     
-    def create(self, name: str = None, **kwargs) -> None:
+    def create(self, **kwargs) -> None:
         """Builds and stores an instance based on 'name' and 'kwargs'.
 
         Args:
-            name (str): name of a class stored in 'creator.base.registry.' If 
-                there is no registry, 'name' is None, or 'name' doesn't match a 
-                key in 'creator.base.registry', then an instance of 
-                'creator.base' is instanced and stored.
-            kwargs (Dict[Any, Any]): any specific parameters that a user wants
-                passed to a class when an instance is created.
             
         """
-        if name is not None:
-            self.contents[name] = self.creators[name].create(name = name, 
-                                                             **kwargs)
-        else:
-            for key, creator in self.creators.items():
-                self.contents[key] = creator.create(name = key, **kwargs)
         return self
     
     """ Private Methods """
@@ -137,12 +82,17 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         Returns:
             [type]: [description]
         """
+        print('test validating bases', bases)
         if isinstance(bases, sourdough.interface.Bases):
+            print('test instance')
             pass
         elif inspect.issubclass(bases, sourdough.interface.Bases):
+            print('test subclass')
             bases = bases()
         elif bases is None:
             bases = self.project.bases
+            print('test bases', bases)
+            print('test project bases', self.project.bases)
         else:
             raise TypeError('bases must be a Bases or None.')
         return bases 
@@ -161,8 +111,9 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             Sequence[sourdough.project.Component]: [description]
             
         """
-        return self._validate_component_contents(name = self.name, 
-                                                 contents = contents)
+        return self._validate_component_contents(
+            name = self.name,
+            contents = contents)
 
     def _validate_component_contents(self, 
             name: str, 
@@ -249,7 +200,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 keys = [component, base]
             else:
                 keys = [component, design, base]
-            component = self.bases.component.borrow(name = keys)
+            component = self.bases.component.library.borrow(name = keys)
             component = component(name = component)
         elif inspect.issubclass(component, self.bases.settings.component):
             kwargs = {}
@@ -311,14 +262,3 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 except KeyError:
                     argument = None
         return argument
-             
-    """ Dunder Methods """
-    
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'creators'.
-
-        Returns:
-            Iterable: of 'creators'.
-
-        """
-        return iter(self.creators)

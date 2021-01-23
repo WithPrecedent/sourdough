@@ -1,16 +1,16 @@
 """
-composites: lightweight composite structures adapted to sourdough
+structures: lightweight composite structures adapted to sourdough
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Composite (Base, ABC): base class for all sourdough composite structures.
+    Structure (Base, ABC): base class for all sourdough composite structures.
         All subclasses must have 'apply' and 'find' methods. Its 'library'
         class attribute stores all subclasses.
-    Graph (Lexicon, Composite): a lightweight directed acyclic graph (DAG).
-    Pipeline (Hybrid, Composite): a simple serial pipeline data structure.
-    Tree (Hybrid, Composite): a general tree data structure.
+    Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
+    Pipeline (Hybrid, Structure): a simple serial pipeline data structure.
+    Tree (Hybrid, Structure): a general tree data structure.
     
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Composite(abc.ABC):
+class Structure(abc.ABC):
     """Base class for sourdough's composite objects.
 
     Subclasses must have 'apply' and 'find' methods that follow the criteria
@@ -76,7 +76,7 @@ class Composite(abc.ABC):
 
 
 @dataclasses.dataclass
-class Graph(sourdough.types.Lexicon, Composite):
+class Graph(sourdough.types.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG).
     
     Internally, the graph nodes are stored in 'contents'. And the edges are
@@ -343,7 +343,7 @@ class Graph(sourdough.types.Lexicon, Composite):
   
 
 @dataclasses.dataclass
-class Pipeline(sourdough.types.Hybrid, Composite):
+class Pipeline(sourdough.types.Hybrid, Structure):
     """Stores a linear pipeline data structure.
     
     A Pipeline differs from a Hybrid in 2 significant ways:
@@ -425,7 +425,7 @@ class Pipeline(sourdough.types.Hybrid, Composite):
         
         
 @dataclasses.dataclass
-class Tree(sourdough.types.Hybrid, Composite):
+class Tree(sourdough.types.Hybrid, Structure):
     """Stores a general tree data structure.
     
     A Tree differs from a Hybrid in 3 significant ways:

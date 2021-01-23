@@ -5,8 +5,7 @@ settings = {
         'settings_priority': True,
         'early_validation': False,
         'conserve_memery': False,
-        'parallelize': True,
-        'default_workflow': 'graph'},
+        'parallelize': True},
     'files': {
         'source_format': 'csv',
         'interim_format': 'csv',
@@ -14,7 +13,7 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_creators': ['parser', 'munger'],
+        'cool_project_managers': ['parser', 'munger'],
         'cool_project_workflow': 'graph'},
     'parser': {
         'parser_design': 'contest',

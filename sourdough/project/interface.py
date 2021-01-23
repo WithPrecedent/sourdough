@@ -11,7 +11,6 @@ Contents:
 
 """
 from __future__ import annotations
-from _typeshed import NoneType
 import dataclasses
 import inspect
 import logging
@@ -85,26 +84,26 @@ class Bases(sourdough.quirks.Loader):
     def _get_suffixes(self, name: str) -> Tuple[str]:
         return tuple(key + 's' for key in getattr(self, name).library.keys())
    
-    def get_class(self, name: Union[str, Sequence[str]], kind: str) -> Type:
-        """[summary]
+    # def get_class(self, name: Union[str, Sequence[str]], kind: str) -> Type:
+    #     """[summary]
 
-        Args:
-            name (str): [description]
+    #     Args:
+    #         name (str): [description]
 
-        Returns:
-            Type: [description]
+    #     Returns:
+    #         Type: [description]
             
-        """
-        base = getattr(self, kind)
-        product = None
-        for key in sourdough.tools.listify(name):
-            try:
-                product = base.duplicate(name = key)
-                break
-            except (AttributeError, KeyError):
-                pass
-        product = product or base
-        return product   
+    #     """
+    #     base = getattr(self, kind)
+    #     product = None
+    #     for key in sourdough.tools.listify(name):
+    #         try:
+    #             product = base.duplicate(name = key)
+    #             break
+    #         except (AttributeError, KeyError):
+    #             pass
+    #     product = product or base
+    #     return product   
 
 
 @dataclasses.dataclass
@@ -153,7 +152,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     contents: Sequence[Union[
         sourdough.project.Manager, 
         Type[sourdough.project.Manager],
-        str]] = dataclasses.field(default_factory = sourdough.types.Lexicon)
+        str]] = dataclasses.field(default_factory = list)
     name: str = None
     settings: Union[
         sourdough.project.Settings, 
@@ -176,9 +175,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     identification: str = None
     automatic: bool = True
     data: Any = None
-    validations: ClassVar[Sequence[str]] = dataclasses.field(
-        default_factory = lambda: ['settings', 'name', 'identification', 
-                                   'filer', 'workflow', 'contents'])
+    validations: ClassVar[Sequence[str]] = [
+        'settings', 'name', 'identification', 'filer', 'workflow', 'contents']
     
     """ Initialization Methods """
 
@@ -189,46 +187,38 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             super().__post_init__()
         except AttributeError:
             pass
+        # Calls validation methods.
+        self.validate()
+        print('test project bases', self.bases)
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
-        # Initializes 'contents' and 'creator'.
-        self._prepare_contents()
-        self._prepare_creator()
-        # Advances through 'contents' if 'automatic' is True.
+        # Calls 'create' and 'execute' if 'automatic' is True.
         if self.automatic:
-            print('test yes auto')
-            self.complete() 
-
+            self.create()
+            self.execute()
+            
     """ Public Methods """
 
-    def create(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+    def create(self, **kwargs) -> None:
         """[summary]
 
         Args:
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Project: [description]
+            kwargs
             
         """
-        settings = self._get_component_settings(settings = project.settings)
-        project_section = settings.pop(project.name)
-        component_keys = [
-            k for k in project_section.keys() 
-            if k.endswith(self.bases.component_suffixes)]
-        base = component_keys[0].split('_')[-1][:-1]
-        components = sourdough.tools.listify(project_section[component_keys[0]])
-        for item in components:
-            component = self._get_component(name = tuple(item, base))
-            component_parameters = self._get_parameters(item = component)
+        for manager in self.contents:
+            manager.create()
         return self
     
     def execute(self) -> None:
-        
+        """
+        """
+        for plan in self.workflow:
+            plan.execute()
         return self
                   
     """ Private Methods """
@@ -336,13 +326,14 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
                 try:
                     workflow = self.settings[self.name]['workflow']
                 except KeyError:
-                    workflow = self.settings['general']['default_workflow']
-        if isinstance(workflow, self.bases.workflow):
-            pass
+                    workflow = 'graph'
+        if isinstance(workflow, str):
+            workflow = self.bases.workflow.library.borrow(name = workflow)
+            workflow = workflow(contains = self.bases.component)
+        elif isinstance(workflow, self.bases.workflow):
+            workflow.contains = self.bases.component
         elif inspect.isclass(workflow):
-            workflow = workflow()
-        elif isinstance(workflow, str):
-            workflow = self.bases.workflow.borrow(name = workflow)()
+            workflow = workflow(contains = self.bases.component)
         else:
             raise TypeError('workflow must be a Workflow, str, or None.')
         return workflow
@@ -350,8 +341,17 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     def _validate_contents(self, contents: Sequence[Union[
             sourdough.project.Manager, 
             Type[sourdough.project.Manager],
-            str]]) -> None:
-        """Sets 'contents' and 'creator' based on 'contents'."""
+            str]]) -> Sequence[sourdough.project.Manager]:
+        """[summary]
+
+        Args:
+            contents (Sequence[Union[ sourdough.project.Manager, 
+                Type[sourdough.project.Manager], str]]): [description]
+
+        Returns:
+            Sequence[sourdough.project.Manager]: [description]
+            
+        """
         if not contents:
             try:
                 contents = self.settings[self.name][f'{self.name}_managers']
@@ -366,8 +366,10 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         """
         if isinstance(manager, str):
-            manager = self.bases.manager.borrow(name = manager)
-            manager = manager(name = manager, project = self)
+            name = manager
+            manager = self.bases.manager.library.borrow(
+                name = [manager, 'manager'])
+            manager = manager(name = name, project = self)
         elif inspect.issubclass(manager, sourdough.project.Manager):
             manager = manager(project = self)
         elif isinstance(manager, self.bases.settings.manager):
@@ -405,70 +407,3 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         else:
             raise IndexError()
         return self
-
-
-@dataclasses.dataclass
-class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
-    """Uses stored builders to create new items.
-    
-    A Director differs from a Lexicon in 3 significant ways:
-        1) It stores a separate Lexicon called 'builders' which have classes
-            used to create other items.
-        2) It iterates 'builders' and stores its output in 'contents.' General
-            access methods still point to 'contents'.
-        3) It has an additional convenience methods called 'add_builder' for
-            adding new items to 'builders', 'advance' for iterating one step,
-            and 'complete' which completely iterates the instance and stores
-            all results in 'contents'.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-                      
-    """
-    contents: Any = None
-    name: str = None
-    iterations: Union[int, str] = 1
-    criteria: str = None
-    parallel: ClassVar[bool] = False 
-    bases: sourdough.project.Bases = None
-    builder: Union[sourdough.foundry.Builder, str] = None
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'bases'])
-    
-    """ Public Methods """
-
-    def create(self, **kwargs) -> None:
-        return self
-
-    def execute(self, data: sourdough.composite.Structure,
-              **kwargs) -> sourdough.composite.Structure:
-        """[summary]
-
-        Args:
-            data (sourdough.composite.Structure): [description]
-
-        Returns:
-            sourdough.composite.Structure: [description]
-            
-        """
-        start_section = self.project.settings[self.name]
-
-    """ Private Methods """
-    
-    def _validate_builder(self, 
-                          builder: Union[sourdough.foundry.Builder, str]) -> (
-                              sourdough.foundry.Builder):
-        """
-        """
-        if isinstance(builder, sourdough.foundry.builder):
-            builder.manager = self
-        elif inspect.issubclass(sourdough.foundry.builder):
-            builder = builder(manager = self)
-        elif isinstance(builder, str):
-            builder = self.project.bases.builder.borrow(name = builder)
-            builder = builder(manager = self)
-        else:
-            raise TypeError('builder must be a Builder or str type')
-        return builder
-         

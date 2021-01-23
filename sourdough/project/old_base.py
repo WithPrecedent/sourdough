@@ -239,17 +239,3 @@ class Component(sourdough.quirks.Registrar, sourdough.quirks.Element, abc.ABC):
         return component 
 
     """ Dunder Methods """
-
-    def __str__(self) -> str:
-        """Returns default string representation of an instance.
-
-        Returns:
-            str: default string representation of an instance.
-
-        """
-        return '\n'.join([textwrap.dedent(f'''
-            sourdough {self.__class__.__name__}
-            name: {self.name}
-            components:'''),
-            f'''{textwrap.indent(str(self.contents), '    ')}'''])   
-        

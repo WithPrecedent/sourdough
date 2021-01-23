@@ -142,9 +142,9 @@ class Proxy(collections.abc.Container):
 
         """
         if hasattr(self, attribute):
-            super().__setattr__(self, attribute, value)
+            super().__setattr__(attribute, value)
         else:
-            super().__setattr__(self.contents, attribute, value)
+            super().__setattr__(attribute, value)
 
     def __delattr__(self, attribute: str):
         """Deletes 'attribute'.
@@ -819,7 +819,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             int: length of iterable 'contents'.
 
         """
-        return len(self.__iter__())
+        return len(self.contents)
 
 
 @dataclasses.dataclass
@@ -1031,38 +1031,10 @@ class Catalog(Lexicon):
             i: self.contents[i] 
             for i in self.contents if i not in sourdough.tools.listify(key)}
         return self
- 
+  
 
 @dataclasses.dataclass
-class Base(abc.ABC):
-    """Abstract base class for connecting a base class to a Library.
-    
-    Any subclass will automatically store itself in the class attribute 
-    'library' using the snakecase name of the class as the key.
-    
-    Args:
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-        
-    """
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = Library()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            cls.library[key] = cls
-            
-
-@dataclasses.dataclass
-class Library(sourdough.types.Catalog):
+class Library(Catalog):
     """Stores Base subclasses in a dictionary.
 
     A Library inherits the differences between a Catalog and a Lexicon.
@@ -1075,10 +1047,19 @@ class Library(sourdough.types.Catalog):
     Args:
         contents (Mapping[Any, Type[Base]]): stored dictionary with only Base 
             subclasses as values. Defaults to an empty dict.
-        
+        defaults (Sequence[Any]]): a list of keys in 'contents' which will be 
+            used to return items when 'default' is sought. If not passed, 
+            'default' will be set to all keys.
+        always_return_list (bool): whether to return a list even when the key 
+            passed is not a list or special access key (True) or to return a 
+            list only when a list or special access key is used (False). 
+            Defaults to False.       
     """
     contents: Mapping[Any, Type[Base]] = dataclasses.field(
         default_factory = dict)
+    default: Any = None
+    defaults: Sequence[Any] = dataclasses.field(default_factory = list)
+    always_return_list: bool = False
 
     """ Properties """
     
@@ -1090,7 +1071,7 @@ class Library(sourdough.types.Catalog):
     
     """ Public Methods """
 
-    def borrow(self, name: str) -> Type[Base]:
+    def borrow(self, name: Union[str, Sequence[str]]) -> Type[Base]:
         """Returns a stored subclass unchanged.
 
         Args:
@@ -1100,7 +1081,14 @@ class Library(sourdough.types.Catalog):
             Type[Base]: corresponding Base subclass.
             
         """
-        return self.select(key = name)
+        match = self.default
+        for item in sourdough.tools.listify(name):
+            try:
+                match = self[item]
+                break
+            except KeyError:
+                pass
+        return match
 
     def build(self, name: str, 
               quirks: Union[str, Sequence[str]] = None) -> Type[Base]:
@@ -1118,7 +1106,7 @@ class Library(sourdough.types.Catalog):
         bases = []
         if quirks is not None:
             bases.extend(sourdough.tools.listify(
-                sourdough.base.Quirk.library.select(key = quirks)))
+                sourdough.base.Quirk.library.select(name = quirks)))
         bases.append(self.select(name = name))
         return dataclasses.dataclass(type(name, tuple(bases), {}))
     
@@ -1143,3 +1131,32 @@ class Library(sourdough.types.Catalog):
             return self.select(name = name)(**kwargs)
         else:
             return self.build(name = name, quirks = quirks)(**kwargs)
+
+
+@dataclasses.dataclass
+class Base(abc.ABC):
+    """Abstract base class for connecting a base class to a Library.
+    
+    Any subclass will automatically store itself in the class attribute 
+    'library' using the snakecase name of the class as the key.
+    
+    Args:
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+        
+    """
+    library: ClassVar[Library] = Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            cls.library[key] = cls
+           

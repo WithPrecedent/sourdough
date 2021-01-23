@@ -119,8 +119,7 @@ class Validator(Quirk):
             method named f'_validate_{item}'. Defaults to an empty list. 
                
     """
-    validations: ClassVar[Sequence[str]] = dataclasses.field(
-        default_factory = list)
+    validations: ClassVar[Sequence[str]] = []
 
     """ Public Methods """
 

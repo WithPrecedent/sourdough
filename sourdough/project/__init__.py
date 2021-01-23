@@ -8,7 +8,11 @@ Contents:
 
 """
 
-from .base import *
+from .configuration import Settings
+from .clerk import Filer
+from .structures import *
+from .nodes import *
+from .builder import Manager
 
 
 __version__ = '0.1.2'

@@ -1,5 +1,5 @@
 """
-components:
+nodes:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -14,6 +14,7 @@ import copy
 import dataclasses
 import itertools
 import pprint
+import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -65,10 +66,25 @@ class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
     def execute(self, data: Any = None, **kwargs) -> Any:
         """Subclasses must provide their own methods."""
         pass 
-     
 
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        """Returns default string representation of an instance.
+
+        Returns:
+            str: default string representation of an instance.
+
+        """
+        return '\n'.join([textwrap.dedent(f'''
+            sourdough {self.__class__.__name__}
+            name: {self.name}
+            components:'''),
+            f'''{textwrap.indent(str(self.contents), '    ')}'''])   
+         
+   
 @dataclasses.dataclass
-class Worker(sourdough.project.PipelineFlow, Component):
+class Worker(sourdough.composites.Pipeline, Component):
     """Applies a project Workflow and produces results.
 
     Args:

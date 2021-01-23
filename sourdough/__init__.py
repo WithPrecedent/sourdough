@@ -44,13 +44,14 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 
 from . import utilities
+from .utilities import tools
 
 from . import core
 from .core import types
 from .core import quirks
 from .core import resources
-from .core import structures
-from .core import workshop
+from .core import composites
+from .core import foundry
 from .project.interface import Project
 
 from . import project
