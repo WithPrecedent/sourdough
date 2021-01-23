@@ -397,7 +397,8 @@ class Hybrid(Progression):
             
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)
-    
+    default: Any = None
+        
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
@@ -407,8 +408,6 @@ class Hybrid(Progression):
             super().__post_init__()
         except AttributeError:
             pass  
-        # Sets initial default value for the 'get' method.
-        self._default = None
         
     """ Public Methods """
 
@@ -459,19 +458,19 @@ class Hybrid(Progression):
         return self  
 
     def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
-        """Returns value(s) in 'contents' or value in '_default' attribute.
+        """Returns value(s) in 'contents' or value in 'default' attribute.
         
         Args:
             key (Union[Any, int]): index or key for value in 'contents'.
                 
         Returns:
             Union[Any, Sequence[Any]]: items in 'contents' or value in 
-                '_default' attribute. 
+                'default' attribute. 
         """
         try:
             return self[key]
         except KeyError:
-            return self._default
+            return self.default
 
     def items(self) -> Iterable:
         """Emulates python dict 'items' method.
@@ -522,7 +521,7 @@ class Hybrid(Progression):
             value (Any): default value to return.
             
         """
-        self._default = value 
+        self.default = value 
             
     def subsetify(self, subset: Union[Any, Sequence[Any]], 
                   **kwargs) -> Hybrid[Any]:
@@ -679,7 +678,8 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
               
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-
+    default: Any = None
+    
     """ Initialization Methods """
     
     def __post_init__(self) -> None:
@@ -726,7 +726,31 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         subset = sourdough.tools.listify(subset)
         contents = {k: v for k, v in self.contents.items() if k not in subset}
         return self.__class__(contents = contents, **kwargs)
+
+    def get(self, key: Any) -> Any:
+        """Returns value in 'contents' or value in 'default' attribute.
+        
+        Args:
+            key (Any): key for value in 'contents'.
+                
+        Returns:
+            Any: value matching key in 'contents' or 'default' value. 
             
+        """
+        try:
+            return self[key]
+        except KeyError:
+            return self.default
+      
+    def setdefault(self, value: Any) -> None:
+        """Sets default value to return when 'get' method is used.
+        
+        Args:
+            value (Any): default value to return.
+            
+        """
+        self.default = value 
+                   
     def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
@@ -837,7 +861,8 @@ class Catalog(Lexicon):
             Defaults to False.
                      
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)  
+    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    default: Any = None
     defaults: Sequence[Any] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     
@@ -1034,7 +1059,7 @@ class Base(abc.ABC):
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             cls.library[key] = cls
-
+            
 
 @dataclasses.dataclass
 class Library(sourdough.types.Catalog):
@@ -1054,7 +1079,15 @@ class Library(sourdough.types.Catalog):
     """
     contents: Mapping[Any, Type[Base]] = dataclasses.field(
         default_factory = dict)
- 
+
+    """ Properties """
+    
+    @property
+    def suffixes(self) -> Tuple[str]:
+        """
+        """
+        return tuple(key + 's' for key in self.library.keys())
+    
     """ Public Methods """
 
     def borrow(self, name: str) -> Type[Base]:

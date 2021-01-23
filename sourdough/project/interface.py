@@ -24,7 +24,7 @@ import sourdough
 
 
 logger = logging.getLogger()
-
+    
 
 @dataclasses.dataclass
 class Bases(sourdough.quirks.Loader):
@@ -399,4 +399,70 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         else:
             raise IndexError()
         return self
-        
+
+
+@dataclasses.dataclass
+class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
+    """Uses stored builders to create new items.
+    
+    A Director differs from a Lexicon in 3 significant ways:
+        1) It stores a separate Lexicon called 'builders' which have classes
+            used to create other items.
+        2) It iterates 'builders' and stores its output in 'contents.' General
+            access methods still point to 'contents'.
+        3) It has an additional convenience methods called 'add_builder' for
+            adding new items to 'builders', 'advance' for iterating one step,
+            and 'complete' which completely iterates the instance and stores
+            all results in 'contents'.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
+            dict.
+                      
+    """
+    contents: Any = None
+    name: str = None
+    iterations: Union[int, str] = 1
+    criteria: str = None
+    parallel: ClassVar[bool] = False 
+    bases: sourdough.project.Bases = None
+    builder: Union[sourdough.foundry.Builder, str] = None
+    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
+        'bases'])
+    
+    """ Public Methods """
+
+    def create(self, **kwargs) -> None:
+        return self
+
+    def execute(self, data: sourdough.composite.Structure,
+              **kwargs) -> sourdough.composite.Structure:
+        """[summary]
+
+        Args:
+            data (sourdough.composite.Structure): [description]
+
+        Returns:
+            sourdough.composite.Structure: [description]
+            
+        """
+        start_section = self.project.settings[self.name]
+
+    """ Private Methods """
+    
+    def _validate_builder(self, 
+                          builder: Union[sourdough.foundry.Builder, str]) -> (
+                              sourdough.foundry.Builder):
+        """
+        """
+        if isinstance(builder, sourdough.foundry.builder):
+            builder.manager = self
+        elif inspect.issubclass(sourdough.foundry.builder):
+            builder = builder(manager = self)
+        elif isinstance(builder, str):
+            builder = self.project.bases.builder.borrow(name = builder)
+            builder = builder(manager = self)
+        else:
+            raise TypeError('builder must be a Builder or str type')
+        return builder
+         

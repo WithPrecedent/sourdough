@@ -16,13 +16,13 @@ settings = {
         'cool_project_creators': ['parser', 'munger'],
         'cool_project_structure': 'graph'},
     'parser': {
-        'parser_structure': 'contest',
+        'parser_design': 'contest',
         'parser_steps': ['divide', 'extract'],
         'divide_techniques': ['slice', 'dice'],
         'extract_techniques': ['harvest', 'process', 'something'],
         'random_thing': True},
     'munger': {
-        'munger_structure': 'survey',
+        'munger_design': 'survey',
         'munger_steps': ['search', 'destroy'],
         'search_techniques': ['find', 'locate'],
         'destroy_techniques': ['explode', 'annihilate']},

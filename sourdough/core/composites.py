@@ -34,7 +34,7 @@ class Composite(abc.ABC):
 
     @abc.abstractmethod
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each element in 'contents'.
+        """Applies 'tool' to each node in 'contents'.
         
         Subclasses must provide their own methods.
 
@@ -45,7 +45,20 @@ class Composite(abc.ABC):
             
         """
         pass        
-    
+
+    @abc.abstractmethod
+    def create(self, source: Any, **kwargs) -> None:
+        """Creates composite 'contents' from 'source' and kwargs.
+        
+        Subclasses must provide their own methods.
+
+        Args:
+            source (Any): item to create 'contents' from.
+            kwargs: additional arguments to pass need for composite creation.
+            
+        """
+        return self
+       
     @abc.abstractmethod 
     def find(self, tool: Callable, **kwargs) -> Sequence[Any]:
         """Finds items in 'contents' that match criteria in 'tool'.
@@ -66,9 +79,9 @@ class Composite(abc.ABC):
 class Graph(sourdough.types.Lexicon, Composite):
     """Stores a directed acyclic graph (DAG).
     
-    Internally, the graph elements are stored in 'contents'. And the edges are
+    Internally, the graph nodes are stored in 'contents'. And the edges are
     stored as an adjacency list in 'edges' with the 'name' attributes of the
-    elements in 'contents' acting as the starting and stopping elements in 
+    nodes in 'contents' acting as the starting and stopping nodes in 
     'edges'.
     
     Although based on the sourdough dict replacement, Lexicon, a Graph differs
@@ -78,9 +91,12 @@ class Graph(sourdough.types.Lexicon, Composite):
         contents (Mapping[str, sourdough.quirks.Element]): keys are the names 
             of Element instances that are stored in values.
         edges (Mapping[str, Sequence[str]]): an adjacency list where the keys
-            are the names of elements and the values are names of elements 
+            are the names of nodes and the values are names of nodes 
             which the key is connected to.
-            
+    
+    ToDo:
+        Write '_convert_adjacency_matrix'.
+          
     """  
     contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
         default_factory = dict)
@@ -91,13 +107,13 @@ class Graph(sourdough.types.Lexicon, Composite):
     
     @property
     def root(self) -> str:
-        """Returns name of root element in 'contents'.
+        """Returns name of root node in 'contents'.
 
         Raises:
             ValueError: if there is more than 1 root or no roots.
 
         Returns:
-            str: name of root element in contents'
+            str: name of root node in contents'
             
         """
         descendants = itertools.chain(self.edges.values())
@@ -111,13 +127,13 @@ class Graph(sourdough.types.Lexicon, Composite):
            
     @property
     def end(self) -> str:
-        """Returns name of endpoint element in 'contents'.
+        """Returns name of endpoint node in 'contents'.
 
         Raises:
             ValueError: if there is more than 1 endpoint or no endpoints.
 
         Returns:
-            str: name of endpoint element in 'contents'.
+            str: name of endpoint node in 'contents'.
             
         """
         ends = [k for k in self.edges.keys() if not self.edges[k]]
@@ -134,7 +150,7 @@ class Graph(sourdough.types.Lexicon, Composite):
         
         Returns:
             List[List[str]]: returns all paths from 'root' to 'end' in a list
-                of lists of names of elements.
+                of lists of names of nodes.
                 
         """
         return self._find_all_paths(start = self.root, end = self.end)
@@ -146,40 +162,40 @@ class Graph(sourdough.types.Lexicon, Composite):
         
         Args:
             item (Union[sourdough.quirks.Element, Tuple[str]]): either a 
-                Element or a tuple containing the names of elements for an 
+                Element or a tuple containing the names of nodes for an 
                 edge to be created.
         
         """
         if isinstance(item, sourdough.quirks.Element):
-            self.add_element(element = item)
+            self.add_node(node = item)
         elif isinstance(item, tuple) and len(item) == 2:
             self.add_edge(start = item[0], stop = item[1])
         return self
 
-    def add_element(self, element: sourdough.quirks.Element) -> None:
-        """Adds a element to 'contents'.
+    def add_node(self, node: sourdough.quirks.Element) -> None:
+        """Adds a node to 'contents'.
         
         Args:
-            element (Element): element with a name attribute to add to 
+            node (Element): node with a name attribute to add to 
                 'contents'.
         
         """
-        self.contents[element.name] = element
+        self.contents[node.name] = node
         return self
 
     def add_edge(self, start: str, stop: str) -> None:
         """Adds an edge to 'edges'.
 
         Args:
-            start (str): name of element for edge to start.
-            stop (str): name of element for edge to stop.
+            start (str): name of node for edge to start.
+            stop (str): name of node for edge to stop.
             
         """
         self.edges[start] = stop
         return self
 
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each element in 'contents'.
+        """Applies 'tool' to each node in 'contents'.
 
         Args:
             tool (Callable): callable which accepts an object in 'contents' as
@@ -188,16 +204,47 @@ class Graph(sourdough.types.Lexicon, Composite):
             
         """
         new_contents = {}
-        for name, element in self.contents:
-            new_contents[name] = tool(element, **kwargs)
+        for name, node in self.contents:
+            new_contents[name] = tool(node, **kwargs)
         self.contents = new_contents
         return self        
-        
-    def delete_element(self, name: str) -> None:
-        """Deletes element from graph.
+
+    def create(self, source: Union[Mapping[str, Sequence[str]],
+                                   Sequence[Sequence[str]]],
+               catalog: Mapping[str, sourdough.quirks.Element] = None) -> None:
+        """[summary]
+
+        Args:
+            source (Union[Mapping[str, Sequence[str]], 
+                Sequence[Sequence[str]]]): [description]
+            catalog (Mapping[str, sourdough.quirks.Element], optional): 
+                Defaults to None.
+
+        Raises:
+            TypeError: [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        if isinstance(source, Mapping):
+            self.contents, self.edges = self._convert_adjacency_dict(
+                source = source, 
+                catalog = catalog)
+        elif isinstance(source, Sequence):
+            self.contents, self.edges = self._convert_adjacency_matrix(
+                source = source, 
+                catalog = catalog)
+        else:
+            raise TypeError(
+                'source must be an adjacency dict or adjacency matrix')   
+        return self
+            
+    def delete_node(self, name: str) -> None:
+        """Deletes node from graph.
         
         Args:
-            name (str): name of element to delete from 'contents' and 'edges'.
+            name (str): name of node to delete from 'contents' and 'edges'.
             
         """
         del self.contents[name]
@@ -211,8 +258,8 @@ class Graph(sourdough.types.Lexicon, Composite):
         """Deletes edge from graph.
 
         Args:
-            start (str): name of starting element for the edge to delete.
-            stop (str): name of ending element for the edge to delete.
+            start (str): name of starting node for the edge to delete.
+            stop (str): name of ending node for the edge to delete.
             
         """
         self.edges[start].remove(stop)
@@ -231,12 +278,36 @@ class Graph(sourdough.types.Lexicon, Composite):
         
         """
         matches = []
-        for element in self.contents.values():
-            matches.extend(sourdough.tools.listify(tool(element, **kwargs)))
+        for node in self.contents.values():
+            matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
         return matches
    
     """ Private Methods """
     
+    def _convert_adjacency_dict(self, source: Mapping[str, Sequence[str]],
+            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
+                Mapping[str, sourdough.quirks.Element], 
+                Mapping[str, Sequence[str]]]:
+        """
+        """
+        edges = source
+        if catalog is None:
+            nodes = source.keys()
+        else:
+            nodes = [catalog.get(k) for k in source.keys()]
+        contents = dict(zip(source.keys(), nodes))  
+        return contents, edges
+
+    def _convert_adjacency_matrix(self, source: Sequence[Sequence[str]],
+            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
+                Mapping[str, sourdough.quirks.Element], 
+                Mapping[str, Sequence[str]]]:
+        """
+        """
+        contents = {}
+        edges = {}
+        return contents, edges
+       
     def _find_all_paths(self, start: str, end: str, 
                         path: List[str] = []) -> List[List[str]]:
         """Returns all paths in graph from 'start' to 'end'.
@@ -260,16 +331,16 @@ class Graph(sourdough.types.Lexicon, Composite):
         if start not in self.edges:
             return []
         paths = []
-        for element in self.edges[start]:
-            if element not in path:
+        for node in self.edges[start]:
+            if node not in path:
                 new_paths = self._find_all_paths(
-                    start = element, 
+                    start = node, 
                     end = end, 
                     path = path)
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
-   
+  
 
 @dataclasses.dataclass
 class Pipeline(sourdough.types.Hybrid, Composite):
@@ -306,7 +377,7 @@ class Pipeline(sourdough.types.Hybrid, Composite):
         return self  
 
     def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each element in 'contents'.
+        """Applies 'tool' to each node in 'contents'.
 
         Args:
             tool (Callable): callable which accepts an object in 'contents' as
@@ -315,8 +386,8 @@ class Pipeline(sourdough.types.Hybrid, Composite):
             
         """
         new_contents = []
-        for element in self.contents:
-            new_contents.append(tool(element, **kwargs))
+        for node in self.contents:
+            new_contents.append(tool(node, **kwargs))
         self.contents = new_contents
         return self        
        
@@ -333,8 +404,8 @@ class Pipeline(sourdough.types.Hybrid, Composite):
         
         """
         matches = []
-        for element in self.contents:
-            matches.extend(sourdough.tools.listify(tool(element, **kwargs)))
+        for node in self.contents:
+            matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
         return matches
 
     def reorder(self, order: Sequence[str]) -> None:

@@ -11,7 +11,6 @@ Contents:
 from __future__ import annotations
 import abc
 import dataclasses
-import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -36,6 +35,7 @@ class Workflow(sourdough.types.Base, abc.ABC):
             stored subclasses.
         
     """
+    contains: Type[sourdough.types.Base]
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
         
     """ Initialization Methods """
@@ -59,23 +59,158 @@ class Workflow(sourdough.types.Base, abc.ABC):
     """ Required Subclass Methods """
 
     @abc.abstractmethod
+    def create(self, **kwargs) -> None:
+        """Subclasses must provide their own methods."""
+        pass
+    
+    @abc.abstractmethod
     def execute(self, **kwargs) -> Any:
         """Subclasses must provide their own methods."""
         pass
 
     """ Private Methods """
 
+    def _get_component_settings(self, 
+            settings: sourdough.project.Settings) -> sourdough.project.Settings:
+        """[summary]
 
+        Args:
+            settings (sourdough.project.Settings): [description]
+
+        Returns:
+            sourdough.project.Settings: [description]
+        """
+        parameter_sections = [
+            k for k in settings.keys() if k.endswith('_parameters')]
+        skip_sections = parameter_sections + settings.skip
+        return settings.excludify(skip_sections)
+    
+    def _get_component_design(self, name: str, 
+                    settings: sourdough.project.Settings) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            settings (sourdough.project.Settings): [description]
+
+        Returns:
+            str: [description]
+        """
+        try:
+            design = settings[name][f'{name}_design']
+        except KeyError:
+            try:
+                design = settings[name][f'design']
+            except KeyError:      
+                design = settings['general']['default_design']
+        return design
+             
+    def _get_component_parameters(self, 
+            item: Type[sourdough.types.Base], 
+            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
+        """[summary]
+
+        Args:
+            item (Type[sourdough.types.Base]): [description]
+            skip (List[str]): [description]. 
+                Defaults to lambda:['name', 'contents'].
+
+        Returns:
+            Tuple[str]: [description]
+        """
+        parameters = list(item.__annotations__.keys())
+        return tuple(i for i in parameters if i not in [skip])
+  
+       
 @dataclasses.dataclass
 class GraphFlow(sourdough.composites.Graph, Workflow):
+    """Stores a workflow in a directed acyclic graph (DAG).
+    
+    Internally, the graph nodes are stored in 'contents'. And the edges are
+    stored as an adjacency dict in 'edges' with the 'name' attributes of the
+    nodes in 'contents' acting as the starting and stopping nodes in 
+    'edges'.
+    
+    Args:
+        contents (Mapping[str, sourdough.project.Component]): keys are the names 
+            of Element instances that are stored in values.
+        edges (Mapping[str, Sequence[str]]): an adjacency list where the keys
+            are the names of nodes and the values are names of nodes 
+            which the key is connected to.
+    
+    """
+  
+    def create(self, source: Union[sourdough.project.Settings,
+                                   Mapping[str, Sequence[str]],
+                                   Sequence[Sequence[str]]],
+            catalog: Mapping[str, sourdough.project.Component] = None) -> None:
+        """[summary]
 
+        Args:
+            source (Union[sourdough.project.Settings, Mapping[str, 
+                Sequence[str]], Sequence[Sequence[str]]]): [description]
+            catalog (Mapping[str, sourdough.quirks.Element], optional): 
+                Defaults to None.
 
-        
-     
+        Raises:
+            TypeError: [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        if isinstance(source, sourdough.project.Settings):
+            self.contents, self.edges = self._convert_settings(
+                source = source, 
+                catalog = catalog)
+        else:
+            try:
+                super().create(source = source, catalog = catalog)
+            except TypeError:
+                raise TypeError(
+                    'source must be an adjacency dict, adjacency matrix, or '
+                    'Settings')   
+        return self
+    
     def execute(self, **kwargs) -> Any:
         """Subclasses must provide their own methods."""
         pass
-   
+ 
+    """ Private Methods """
+    
+    def _convert_settings(self, source: sourdough.project.Settings,
+            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
+                Mapping[str, sourdough.quirks.Element], 
+                Mapping[str, Sequence[str]]]:
+        """
+        """
+        contents = {}
+        edges = {}
+        settings = self._get_component_settings(settings = source)
+        name = settings[settings.keys()[0]]
+        section = settings.pop(name)
+        component_names = [
+            k for k in section.keys() if k.endswith(self.contains.suffixes)]
+        base = component_names[0].split('_')[-1][:-1]
+        components = section[component_names[0]]
+        for item in sourdough.tools.tuplify(components):
+            component = self.borrow(name = tuple(item, base))
+            component_parameters = self._get_component_parameters(
+                item = component)
+            kwargs = {'name': item}
+            for parameter in component_parameters:
+                try:
+                    kwargs[parameter] = section[f'{name}_{parameter}']
+                except KeyError:
+                    try:
+                        kwargs[parameter] = section[parameter]
+                    except KeyError:
+                        pass
+            self.add_node(component(**kwargs))
+            self.add_edge(start = name, stop = item)
+        return contents, edges
+
+ 
 @dataclasses.dataclass
 class PipelineFlow(sourdough.composites.Pipeline, Workflow):
 
@@ -91,372 +226,489 @@ class TreeFlow(sourdough.composites.Tree, Workflow):
         """Subclasses must provide their own methods."""
         pass
 
-
-# @dataclasses.dataclass
-# class Aggregation(sourdough.products.Workflow):
-#     """Aggregates unordered objects.
+     
+  
+@dataclasses.dataclass    
+class Parameters(sourdough.types.Lexicon):
+    """
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    base: Union[Type, str] = None
+    required: Sequence[str] = dataclasses.field(default_factory = list)
+    runtime: Mapping[str, str] = dataclasses.field(default_factory = dict)
+    selected: Sequence[str] = dataclasses.field(default_factory = list)
+    default: ClassVar[Mapping[str, Any]] = {}
     
-#     Distinguishing characteristics of an Aggregation:
-#         1) Order doesn't matter. Therefore, the 'apply' method will execute the
-#             stored contents in an arbitary order.
-#         2) Stored Components do not need to be connected. If attributes of the
-#             stored Components created connections, those connections will be 
-#             left in tact.
-#         3) Many of Hybrid's inherited methods will return errors because the 
-#             stored 'contents' are a set and therefore immutable.
-        
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty set.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to False.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = set)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = False 
+    """ Public Methods """
     
+    def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
+        """[summary]
 
-# @dataclasses.dataclass
-# class SerialFlow(sourdough.products.Workflow, abc.ABC):
-#     """Base class for serially workflows Flows in sourdough projects.
-        
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to False.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = False  
+        Args:
+            builder (sourdough.project.Creator): [description]
+
+        """
+        if not kwargs:
+            kwargs = self.default
+        for kind in ['settings', 'required', 'runtime', 'selected']:
+            kwargs = getattr(self, f'_get_{kind}')(builder = builder, **kwargs)
+        self.contents = kwargs
+        return self
     
+    """ Private Methods """
     
-# @dataclasses.dataclass
-# class Cycle(SerialFlow):
-#     """Ordered sourdough Components which will be repetitively called.
+    def _get_settings(self, builder: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
 
-#     Distinguishing characteristics of a Pipeline:
-#         1) Follows a sequence of instructions (serial workflow).
-#         2) It may pass data or other arguments to the next step in the sequence.
-#         3) Only one connection or path exists between each object.
-#         4) It repeats the number of times set in the 'iterations' attribute.
-#             If 'iteratations' is 'infinite', the loop will repeat until stopped
-#             by a condition set in 'criteria'.
-        
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 10.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to False.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 10
-#     criteria: str = None
-#     parallel: ClassVar[bool] = False 
+        Args:
+            builder (sourdough.project.Creator): [description]
 
-#     """ Public Methods """
-    
-#     def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Manager:
-#         """[summary]
-
-#         Args:
-#             project (sourdough.Project): [description]
-
-#         Returns:
-#             sourdough.Project: [description]
+        Returns:
+            Dict[str, Any]: [description]
             
-#         """
-#         if 'data' not in kwargs and manager.project.data:
-#             kwargs['data'] = manager.project.data
-#         for i in self.iterations:
-#             project = super().apply(project = project, **kwargs)
-#         return project   
+        """
+        try:
+            kwargs.update(builder.settings[f'{self.name}_parameters'])
+        except KeyError:
+            pass
+        return kwargs
+    
+    def _get_required(self, builder: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
 
+        Args:
+            builder (sourdough.project.Creator): [description]
 
-# @dataclasses.dataclass
-# class Pipeline(SerialFlow):
-#     """Ordered sourdough Components without branching.
-
-#     Distinguishing characteristics of a Pipeline:
-#         1) Follows a sequence of instructions (serial workflow).
-#         2) It may pass data or other arguments to the next step in the sequence.
-#         3) Only one connection or path exists between each object. There is no
-#             branching or looping.
-        
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to False.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = False 
-
-
-# @dataclasses.dataclass
-# class ParallelFlow(sourdough.products.Workflow, abc.ABC):
-#     """Base class for parallelly workflowd Flows in sourdough projects.
-        
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to True.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = True
-          
-#     """ Public Methods """
-
-#     def apply(self, manager: sourdough.Manager, **kwargs) -> sourdough.Project:
-#         """[summary]
-
-#         Args:
-#             project (sourdough.Project): [description]
-
-#         Returns:
-#             sourdough.Project: [description]
+        Returns:
+            Dict[str, Any]: [description]
             
-#         """
-#         if hasattr(manager.project, 'parallelize') and manager.project.parallelize:
-#             multiprocessing.set_start_method('spawn')
-#             with multiprocessing.Pool() as pool:
-#                 components = zip(self.contents)
-#                 all_projects = pool.starmap(super().apply, components)
-#             # queue = multiprocessing.Queue()
-#             # process = multiprocessing.Process(target = project, args = (queue,))
-#             # process.start()
-#             # process.join()
-#             return all_projects
-#         else:
-#             return super().apply(project = project, **kwargs)
+        """
+        for item in self.required:
+            if item not in kwargs:
+                kwargs[item] = self.default[item]
+        return kwargs
+    
+    def _get_runtime(self, builder: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
 
+        Args:
+            builder (sourdough.project.Creator): [description]
 
-# @dataclasses.dataclass
-# class Contest(ParallelFlow):
-#     """Stores Workflows in a comparative parallel workflow and chooses the best.
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        for parameter, attribute in self.runtime.items():
+            try:
+                kwargs[parameter] = getattr(builder, attribute)
+            except AttributeError:
+                pass
+        return kwargs
 
-#     Distinguishing characteristics of a Contest:
-#         1) Applies different components in parallel.
-#         2) Chooses the best stored Component based upon 'criteria'.
-#         3) Each stored Component is only attached to the Contest with exactly 
-#             one connection (these connections are not defined separately - they
-#             are simply part of the parallel workflow).
+    def _get_selected(self, builder: sourdough.project.Creator, 
+                      **kwargs) -> Dict[str, Any]:
+        """[summary]
+
+        Args:
+            builder (sourdough.project.Creator): [description]
+
+        Returns:
+            Dict[str, Any]: [description]
+            
+        """
+        if self.selected:
+            kwargs = {k: kwargs[k] for k in self.selected}
+        return kwargs
         
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to True.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = True
-    
-    
-# @dataclasses.dataclass
-# class Study(ParallelFlow):
-#     """Stores Flows in a comparative parallel workflow.
-
-#     Distinguishing characteristics of a Study:
-#         1) Applies different components and creates new branches of the overall
-#             Project workflow.
-#         2) Maintains all of the repetitions without selecting or averaging the 
-#             results.
-#         3) Each stored Component is only attached to the Study with exactly 
-#             one connection (these connections are not defined separately - they
-#             are simply part of the parallel workflow).
-                      
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to True.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = True
         
-    
-# @dataclasses.dataclass
-# class Survey(ParallelFlow):
-#     """Stores Flows in a comparative parallel workflow and averages results.
+@dataclasses.dataclass
+class Architect(sourdough.Creator):
+    """Creates a blueprint of a sourdough Plan.
 
-#     Distinguishing characteristics of a Survey:
-#         1) Applies different components in parallel.
-#         2) Averages or otherwise combines the results based upon selected 
-#             criteria.
-#         3) Each stored Component is only attached to the Survey with exactly 
-#             one connection (these connections are not defined separately - they
-#             are simply part of the parallel workflow).    
-                    
-#     Args:
-#         contents (Sequence[Component]): Component subclass instances. Defaults 
-#             to an empty list.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout sourdough. For example, if a 
-#             sourdough instance needs settings from a Configuration instance, 'name' 
-#             should match the appropriate section name in the Configuration instance. 
-#             When subclassing, it is sometimes a good idea to use the same 'name' 
-#             attribute as the base class for effective coordination between 
-#             sourdough classes.
-#         iterations (Union[int, str]): number of times the 'apply' method should 
-#             be called. If 'iterations' is 'infinite', the 'apply' method will
-#             continue indefinitely unless the method stops further iteration.
-#             Defaults to 1.
-#         criteria (str): after iteration is complete, a 'criteria' determines
-#             what should be outputted. This should correspond to a key in the
-#             'algorithms' Catalog for the sourdough manager.project. Defaults to None.
-#         parallel (ClassVar[bool]): whether the 'contents' contain other 
-#             iterables (True) or static objects (False). If True, a subclass
-#             should include a custom iterable for navigating the stored 
-#             iterables. Defaults to True.
-                            
-#     """
-#     contents: Sequence[sourdough.project.Component] = dataclasses.field(
-#         default_factory = list)
-#     name: str = None
-#     iterations: Union[int, str] = 1
-#     criteria: str = None
-#     parallel: ClassVar[bool] = True
+    Architect creates a dictionary representation, a blueprint, of the overall 
+    manager Plan. In the blueprint produced, keys are the names of components 
+    and values are Instruction instances.
+    
+    Args:
+                        
+    """
+    action: ClassVar[str] = 'Drafting'
+    needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
+    produces: ClassVar[Type] = 'blueprint'
+
+    """ Public Methods """
+    
+    def create(self, manager: sourdough.Manager) -> sourdough.types.Lexicon:
+        """Creates a blueprint based on 'manager.project.settings'.
+
+        Args:
+            manager (sourdough.Manager): a Project instance with options and
+                other information needed for blueprint construction.
+
+        Returns:
+            Project: with modifications made to its 'design' attribute.
+            
+        """ 
+        blueprint = manager.bases.product.acquire(key = self.produces)(
+            identification = manager.project.identification)
+        for name, section in manager.project.settings.items():
+            # Tests whether the section in 'manager.project.settings' is related to the 
+            # construction of a project object by examining the key names to see
+            # if any end in a suffix corresponding to a known base type. If so, 
+            # that section is harvested for information which is added to 
+            # 'blueprint'.
+            if (not name.endswith(tuple(manager.project.settings.rules.skip_suffixes))
+                    and name not in manager.project.settings.rules.skip_sections
+                    and any(
+                        [i.endswith(sourdough.base.options.component_suffixes) 
+                        for i in section.keys()])):
+                blueprint = self._add_instructions(
+                    name = name,
+                    design = None,
+                    blueprint = blueprint,
+                    manager = manager)
+        return blueprint
+        
+    """ Private Methods """
+    
+    def _add_instructions(self, name: str, design: str,
+                          blueprint: sourdough.products.Blueprint,
+                          manager: sourdough.Manager, **kwargs) -> (
+                              sourdough.products.Blueprint):
+        """[summary]
+
+        Args:
+            name (str): [description]
+            blueprint (sourdough.types.Lexicon): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.types.Lexicon: [description]
+            
+        """
+        if name not in blueprint:
+            blueprint[name] = sourdough.products.Instructions(name = name)
+        # Adds appropraite design type to 'blueprint' for 'name'.
+        blueprint[name].design = self._get_design(
+            name = name, 
+            design = design,
+            manager = manager)
+        # Adds any appropriate parameters to 'blueprint' for 'name'.
+        blueprint[name].parameters = self._get_parameters(
+            name = name, 
+            manager = manager)
+        # If 'name' is in 'settings', this method iterates through each key, 
+        # value pair in section and stores or extracts the information needed
+        # to fill out the appropriate Instructions instance in blueprint.
+        if name in manager.project.settings:
+            instructions_attributes = {}
+            for key, value in manager.project.settings[name].items():
+                # If a 'key' has an underscore, text after the last underscore 
+                # becomes the 'suffix' and text before becomes the 
+                # 'prefix'. If there is no underscore, 'prefix' and
+                # 'suffix' are both assigned to 'key'.
+                prefix, suffix = self._divide_key(key = key)
+                # A 'key' ending with one of the component-related suffixes 
+                # triggers recursive searching throughout 'manager.project.settings'.
+                if suffix in sourdough.base.options.component_suffixes:
+                    contains = suffix.rstrip('s')
+                    blueprint[prefix].contents = sourdough.tools.listify(value)
+                    for item in blueprint[prefix].contents:
+                        blueprint = self._add_instructions(
+                            name = item,
+                            design = contains,
+                            blueprint = blueprint,
+                            manager = manager)
+                elif suffix in manager.project.settings.rules.special_section_suffixes:
+                    instruction_kwargs = {suffix: value}
+                    blueprint = self._add_instruction(
+                        name = prefix, 
+                        blueprint = blueprint,
+                        **instruction_kwargs)
+                # All other keys are presumed to be attributes to be added to a
+                # Component instance.
+                else:
+                    blueprint[name].attributes.update({key: value})
+        return blueprint
+
+    def _get_design(self, name: str, design: str, 
+                    manager: sourdough.Manager) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            design (str): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        try:
+            return manager.project.settings[name][f'{name}_design']
+        except KeyError:
+            if design is None:
+                return manager.project.settings.rules.default_design
+            else:
+                return design
+
+    def _get_parameters(self, name: str, 
+                        manager: sourdough.Manager) -> Dict[Any, Any]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            project (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.types.Lexicon: [description]
+            
+        """
+        try:
+            return manager.project.settings[f'{name}_parameters']
+        except KeyError:
+            return {}
+        
+    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            
+            Tuple[str, str]: [description]
+            
+        """
+        if divider is None:
+            divider = '_'
+        if divider in key:
+            suffix = key.split('_')[-1]
+            prefix = key[:-len(suffix) - 1]
+        else:
+            prefix = suffix = key
+        return prefix, suffix
+       
+    def _add_instruction(self, name: str, 
+                         blueprint: sourdough.products.Blueprint, 
+                         **kwargs) -> sourdough.products.Blueprint:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            blueprint (sourdough.types.Lexicon): [description]
+
+        Returns:
+            sourdough.types.Lexicon: [description]
+            
+        """
+        # Adds any kwargs to 'blueprint' as appropriate.
+        for key, value in kwargs.items():
+            if isinstance(getattr(blueprint[name], key), list):
+                getattr(blueprint[name].key).extend(
+                    sourdough.tools.listify(value))
+            elif isinstance(getattr(blueprint[name], key), dict):
+                getattr(blueprint[name], key).update(value) 
+            else:
+                setattr(blueprint[name], key, value)           
+        return blueprint
+
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        return pprint.pformat(self, sort_dicts = False, compact = True)
+           
+      
+@dataclasses.dataclass
+class Factory(sourdough.Creator):
+    """Constructs finalized plan.
+    
+    Args:
+                        
+    """
+    action: ClassVar[str] = 'Creating'
+    needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
+    produces: ClassVar[Type] = 'plan'
+
+    """ Public Methods """
+
+    def create(self, manager: sourdough.Manager) -> sourdough.project.Component:
+        """Drafts a Workflow instance based on 'blueprint' in 'manager'.
+            
+        """ 
+        plan = manager.bases.product.acquire(key = self.produces)(
+            identification = manager.project.identification)
+        plan.contents = self._create_component(
+            name = manager.project.name, 
+            manager = manager)
+        return plan
+    
+    """ Private Methods """
+
+    def _create_component(self, name: str, 
+                          manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.project.Component: [description]
+            
+        """
+        component = self._get_component(name = name, manager = manager)
+        return self._finalize_component(component = component, 
+                                        manager = manager)
+
+    def _get_component(self, name: str,
+                       manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            manager (sourdough.Manager): [description]
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            Mapping[str, sourdough.project.Component]: [description]
+            
+        """
+        instructions = manager['blueprint'][name]
+        kwargs = {'name': name, 'contents': instructions.contents}
+        try:
+            component = manager.basescomponent.borrow(key = name)
+            for key, value in kwargs.items():
+                if value:
+                    setattr(component, key, value)
+        except KeyError:
+            try:
+                component = manager.basescomponent.acquire(key = name)
+                component = component(**kwargs)
+            except KeyError:
+                try:
+                    component = manager.basescomponent.acquire(
+                        key = instructions.design)
+                    component = component(**kwargs)
+                except KeyError:
+                    raise KeyError(f'{name} component does not exist')
+        return component
+
+    def _finalize_component(self, component: sourdough.project.Component,
+                            manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.project.Component: [description]
+            
+        """
+        if isinstance(component, Iterable):
+            if component.parallel:
+                finalizer = self._finalize_parallel
+            else:
+                finalizer = self._finalize_serial
+        else:
+            finalizer = self._finalize_element
+        component = finalizer(component = component, manager = manager)
+        component = self._add_attributes(
+            component = component, 
+            manager = manager)
+        return component
+
+    def _finalize_parallel(self, component: sourdough.project.Component,
+                           manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            sourdough.project.Component: [description]
+            
+        """
+        # Creates empy list of lists for all possible permutations to be stored.
+        possible = []
+        # Populates list of lists with different options.
+        for item in component.contents:
+            possible.append(manager['blueprint'][item].contents)
+        # Computes Cartesian product of possible permutations.
+        combos = list(map(list, itertools.product(*possible)))
+        wrappers = [
+            self._create_component(i, manager) for i in component.contents]
+        new_contents = []
+        for combo in combos:
+            new_combo = [self._create_component(i, manager) for i in combo]
+            steps = []
+            for i, step in enumerate(wrappers):
+                new_step = copy.deepcopy(step)
+                new_step.contents = new_combo[i]
+                steps.append(new_step)
+            new_contents.append(steps)
+        component.contents = new_contents
+        component = self._add_attributes(
+            component = component, 
+            manager = manager)
+        return component
+
+    def _finalize_serial(self, component: sourdough.project.Component, 
+                         manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            Component: [description]
+            
+        """
+        new_contents = []
+        for item in component.contents:
+            instance = self._create_component(
+                name = item, 
+                manager = manager)
+            new_contents.append(instance)
+        component.contents = new_contents
+        return component
+
+    def _finalize_element(self, component: sourdough.project.Component, 
+                          manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            manager (sourdough.Manager): [description]
+
+        Returns:
+            Component: [description]
+            
+        """
+        try:
+            component.contents = sourdough.base.options.algorithms[component.name]
+        except KeyError:
+            component.contents = None
+        return component
+    
+    def _add_attributes(self, component: sourdough.project.Component,
+                        manager: sourdough.Manager) -> sourdough.project.Component:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        attributes = manager['blueprint'][component.name].attributes
+        for key, value in attributes.items():
+            setattr(component, key, value)
+        return component    

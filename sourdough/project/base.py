@@ -20,8 +20,8 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
-    
- 
+
+
 @dataclasses.dataclass
 class Settings(sourdough.resources.Configuration):
     """Loads and Stores configuration settings for a Project.
@@ -64,53 +64,6 @@ class Settings(sourdough.resources.Configuration):
 class Filer(sourdough.resources.Clerk):
     pass
 
-
-@dataclasses.dataclass
-class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
-    """Abstract base for parts of a sourdough composite workflow.
-    
-    All subclasses must have an 'execute' method.
-    
-    Args:
-        contents (Any): stored item for use by a Component subclass instance.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        iterations (Union[int, str]): number of times the 'execute' method 
-            should  be called. If 'iterations' is 'infinite', the 'execute' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        criteria (str): after iteration is complete, a 'criteria' determines
-            what should be outputted. This should correspond to a key in the
-            Component library. Defaults to None.
-        parallel (ClassVar[bool]): whether the 'contents' contain other 
-            iterables (True) or static objects (False). If True, a subclass
-            should include a custom iterable for navigating the stored 
-            iterables. Defaults to False.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'execute' method is called. Defaults to an empty dict.
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-                
-    """
-    contents: Any = None
-    name: str = None
-    iterations: Union[int, str] = 1
-    criteria: str = None
-    parallel: ClassVar[bool] = False 
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def execute(self, data: Any = None, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass 
-     
 
 @dataclasses.dataclass
 class Creator(sourdough.quirks.Validator, abc.ABC):
