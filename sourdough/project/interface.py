@@ -58,7 +58,7 @@ class Bases(sourdough.quirks.Loader):
     filer: Union[str, Type] = 'sourdough.project.Filer' 
     workflow: Union[str, Type] = 'sourdough.project.Workflow'
     component: Union[str, Type] = 'sourdough.project.Component'
-    creator: Union[str, Type] = 'sourdough.project.Creator'
+    manager: Union[str, Type] = 'sourdough.project.Manager'
 
     """ Properties """
 
@@ -115,7 +115,11 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     Args:
         contents (Mapping[str, object]): keys are names of objects stored and 
             values are the stored objects. Defaults to an empty dict.
-
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
         settings (Union[sourdough.base.Settings, str, pathlib.Path]]): a
             Settings-compatible subclass or instance, a str or pathlib.Path 
             containing the file path where a file of a 
@@ -129,11 +133,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         bases (ClassVar[object]): contains information about default base 
             classes used by a Director instance. Defaults to an instance of 
             SimpleBases.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
+        workflow ()
         identification (str): a unique identification name for a Director 
             instance. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
@@ -151,8 +151,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         
     """
     contents: Sequence[Union[
-        sourdough.project.Component, 
-        Type[sourdough.project.Component],
+        sourdough.project.Manager, 
+        Type[sourdough.project.Manager],
         str]] = dataclasses.field(default_factory = sourdough.types.Lexicon)
     name: str = None
     settings: Union[
@@ -168,8 +168,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         str] = None
     bases: Bases = Bases()
     workflow: Union[
-        sourdough.composites.Structure, 
-        Type[sourdough.composites.Structure], 
+        sourdough.project.Workflow, 
+        Type[sourdough.project.Workflow], 
         str] = None
     results: Mapping[str, Any] = dataclasses.field(
         default_factory = sourdough.types.Lexicon)
@@ -178,7 +178,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     data: Any = None
     validations: ClassVar[Sequence[str]] = dataclasses.field(
         default_factory = lambda: ['settings', 'name', 'identification', 
-                                   'filer', 'workflow'])
+                                   'filer', 'workflow', 'contents'])
     
     """ Initialization Methods """
 
@@ -204,7 +204,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             self.complete() 
 
     """ Public Methods """
-    
+
     def create(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
         """[summary]
 
@@ -225,7 +225,12 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         for item in components:
             component = self._get_component(name = tuple(item, base))
             component_parameters = self._get_parameters(item = component)
-                    
+        return self
+    
+    def execute(self) -> None:
+        
+        return self
+                  
     """ Private Methods """
     
     def _validate_settings(self, settings: Union[
@@ -252,8 +257,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
                                             (str, pathlib.Path, Mapping)):
             settings = self.bases.settings(contents = settings)
         else:
-            raise TypeError(
-                'settings must be a Configuration, Path, str, or None type.')
+            raise TypeError('settings must be a Settings, Path, str, or None.')
         # Adds 'general' section attributes from 'settings'.
         settings.inject(instance = self)
         return settings
@@ -264,6 +268,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         If 'name' was not passed, this method first tries to infer 'name' as the 
         first appropriate section name in 'settings'. If that doesn't work, it 
         uses the snakecase name of the class.
+        
+        Args:
         
         """
         if not name:
@@ -279,6 +285,9 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         
         By default, 'identification' is set to the 'name' attribute followed by
         an underscore and the date and time.
+        
+        Args:
+        
         
         """
         if not identification:
@@ -308,13 +317,13 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
                 root_folder = filer, 
                 settings = self.settings)
         else:
-            raise TypeError('filer must be a Clerk, Path, str, or None.')
+            raise TypeError('filer must be a Filer, Path, str, or None.')
         return filer
 
     def _validate_workflow(self, workflow: Union[
-            sourdough.composites.Structure, 
-            Type[sourdough.composites.Structure], 
-            str]) -> sourdough.composites.Structure:
+            sourdough.project.Workflow, 
+            Type[sourdough.project.Workflow], 
+            str]) -> sourdough.project.Workflow:
         """Validates 'workflow' or converts it to a Structure instance.
         
         Args:
@@ -322,9 +331,12 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         if workflow is None:
             try:
-                workflow = self.settings[self.name][f'{self.name}_structure']
+                workflow = self.settings[self.name][f'{self.name}_workflow']
             except KeyError:
-                workflow = self.settings['general']['default_structure']
+                try:
+                    workflow = self.settings[self.name]['workflow']
+                except KeyError:
+                    workflow = self.settings['general']['default_workflow']
         if isinstance(workflow, self.bases.workflow):
             pass
         elif inspect.isclass(workflow):
@@ -332,43 +344,37 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         elif isinstance(workflow, str):
             workflow = self.bases.workflow.borrow(name = workflow)()
         else:
-            raise TypeError('workflow must be a Structure, str, or None.')
+            raise TypeError('workflow must be a Workflow, str, or None.')
         return workflow
     
-    def _prepare_contents(self) -> None:
+    def _validate_contents(self, contents: Sequence[Union[
+            sourdough.project.Manager, 
+            Type[sourdough.project.Manager],
+            str]]) -> None:
         """Sets 'contents' and 'creator' based on 'contents'."""
-        if not self.contents:
+        if not contents:
             try:
-                self.contents = self.settings[self.name][f'{self.name}_managers']
+                contents = self.settings[self.name][f'{self.name}_managers']
             except KeyError:
                 pass
-        if isinstance(self.workflow, str):
-            self.creator = self.bases.creator.borrow(name = self.workflow)
         new_contents = []
-        for item in self.contents:
-            new_contents.append(self._validate_manager(content = item))
+        for manager in contents:
+            new_contents.append(self._validate_manager(manager = manager))
         return new_contents
 
     def _validate_manager(self, manager: Union[str, object]) -> object:
         """
         """
         if isinstance(manager, str):
-            manager = self.bases.get_class(name = manager, kind = 'manager')
+            manager = self.bases.manager.borrow(name = manager)
             manager = manager(name = manager, project = self)
-        elif inspect.isclass(manager):
+        elif inspect.issubclass(manager, sourdough.project.Manager):
             manager = manager(project = self)
         elif isinstance(manager, self.bases.settings.manager):
             manager.project = self
         else:
-            raise TypeError(
-                'contents must be a list of str or Director types')
+            raise TypeError('contents must be a list of str or Manager')
         return manager
-   
-    def _prepare_creator(self) -> None:
-        """Sets 'creator' based on 'workflow'."""
-        key = sourdough.tools.snakify(self.workflow.__name__)
-        self.creator = self.bases.creator.borrow(name = key)
-        return self
 
     """ Dunder Methods """     
 

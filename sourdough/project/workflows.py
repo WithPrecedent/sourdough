@@ -57,70 +57,12 @@ class Workflow(sourdough.types.Base, abc.ABC):
             cls.library[key] = cls
             
     """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def create(self, **kwargs) -> None:
-        """Subclasses must provide their own methods."""
-        pass
     
     @abc.abstractmethod
     def execute(self, **kwargs) -> Any:
         """Subclasses must provide their own methods."""
         pass
 
-    """ Private Methods """
-
-    def _get_component_settings(self, 
-            settings: sourdough.project.Settings) -> sourdough.project.Settings:
-        """[summary]
-
-        Args:
-            settings (sourdough.project.Settings): [description]
-
-        Returns:
-            sourdough.project.Settings: [description]
-        """
-        parameter_sections = [
-            k for k in settings.keys() if k.endswith('_parameters')]
-        skip_sections = parameter_sections + settings.skip
-        return settings.excludify(skip_sections)
-    
-    def _get_component_design(self, name: str, 
-                    settings: sourdough.project.Settings) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (sourdough.project.Settings): [description]
-
-        Returns:
-            str: [description]
-        """
-        try:
-            design = settings[name][f'{name}_design']
-        except KeyError:
-            try:
-                design = settings[name][f'design']
-            except KeyError:      
-                design = settings['general']['default_design']
-        return design
-             
-    def _get_component_parameters(self, 
-            item: Type[sourdough.types.Base], 
-            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
-        """[summary]
-
-        Args:
-            item (Type[sourdough.types.Base]): [description]
-            skip (List[str]): [description]. 
-                Defaults to lambda:['name', 'contents'].
-
-        Returns:
-            Tuple[str]: [description]
-        """
-        parameters = list(item.__annotations__.keys())
-        return tuple(i for i in parameters if i not in [skip])
-  
        
 @dataclasses.dataclass
 class GraphFlow(sourdough.composites.Graph, Workflow):
