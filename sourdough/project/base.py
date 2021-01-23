@@ -166,11 +166,14 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         return self._validate_component_contents(name = self.name, 
                                                  contents = contents)
 
-    def _validate_component_contents(self, name: str, 
+    def _validate_component_contents(self, 
+            name: str, 
             contents: Sequence[Union[
                 sourdough.project.Component, 
                 Type[sourdough.project.Component],
-                str]]) -> Sequence[sourdough.project.Component]:
+                str]],
+            instances: List[sourdough.project.Component] = []) -> (
+                Sequence[sourdough.project.Component]):
         """[summary]
 
         Args:
@@ -186,18 +189,18 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             contents, base = self._get_components_from_settings(name = name)
         else:
             base = self.bases.component
-        new_contents = []
         for component in contents:
-            subcomponent = self._validate_component(
+            instance = self._validate_component(
                 component = component,
                 base = base)
-            if (isinstance(subcomponent, Iterable) 
-                    and hasattr(subcomponent, 'contents')):
-                subcomponent.contents = self._validate_component_contents(
-                    name = subcomponent.name,
-                    contents = subcomponent.contents)
-            new_contents.append(subcomponent)
-        return new_contents
+            if (isinstance(instance, Iterable) 
+                    and hasattr(instance, 'contents')):
+                instances = self._validate_component_contents(
+                    name = instance.name,
+                    contents = instance.contents,
+                    instances = instances)
+            instances.append(instance)
+        return instances
     
     def _get_components_from_settings(self, name: str) -> Tuple[List[str], str]:
         """[summary]
