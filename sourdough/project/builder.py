@@ -38,9 +38,11 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     
     contents: Sequence[str] = dataclasses.field(default_factory = list)
     name: str = None
+    design: str = None
+    contains: str = None
     project: sourdough.Project = dataclasses.field(repr = False, default = None)
     bases: sourdough.project.Bases = None
-    validations: ClassVar[Sequence[str]] = ['bases', 'contents']
+    validations: ClassVar[Sequence[str]] = ['bases']
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
@@ -56,12 +58,21 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
       
     """ Public Methods """
     
-    def create(self, **kwargs) -> None:
+    def create(self, **kwargs) -> sourdough.project.Workflow:
         """Builds and stores an instance based on 'name' and 'kwargs'.
 
         Args:
             
         """
+        design = self._get_design(name = self.name)
+        workflow = self.bases.workflow.library.borrow(name = design)
+        suffixes = self.bases.component.library.suffixes
+        components_key = [
+            k for k in self.project.settings[self.name].keys() 
+            if k.startswith(self.name) and k.endswith(suffixes)][0]
+        contains = components_key.split('_')[-1][:-1]
+        
+         
         return self
     
     """ Private Methods """
@@ -104,11 +115,19 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
 
         Returns:
             Sequence[sourdough.project.Component]: [description]
-            
+             
         """
+        self.design = self.design or self._get_design(name = self.name)
+        suffixes = self.bases.component.library.suffixes
+        components_key = [
+            k for k in self.project.settings[self.name].keys() 
+            if k.startswith(self.name) and k.endswith(suffixes)][0]
+        self.contains = components_key.split('_')[-1][:-1]
+        contents = self.project.settings[self.name][components_key]
         return self._validate_component_contents(
             name = self.name,
             contents = contents,
+            contains = self.contains,
             instances = [])
 
     def _validate_component_contents(self, 
@@ -117,6 +136,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 sourdough.project.Component, 
                 Type[sourdough.project.Component],
                 str]],
+            contains: str,
             instances: List[sourdough.project.Component]) -> (
                 Sequence[sourdough.project.Component]):
         """[summary]
@@ -132,7 +152,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         print('test incoming contents', name, contents)
         if not contents:
-            contents, base = self._get_components_from_settings(name = name)
+            contents, base = self._get_contents_from_settings(name = name)
         else:
             base = self.bases.component
         print('test after settings contents', contents, base)
@@ -151,7 +171,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             instances.append(instance)
         return instances
     
-    def _get_components_from_settings(self, name: str) -> Tuple[List[str], str]:
+    def _get_contents_from_settings(self, name: str) -> Tuple[List[str], str]:
         """[summary]
 
         Raises:
@@ -219,7 +239,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         else:
             raise TypeError('contents must be a list of str or Component')
         if inspect.isclass(component):
-            parameters = self._get_components_from_settings(name = component)
+            parameters = self._get_contents_from_settings(name = component)
             for parameter in parameters:
                 try:
                     kwargs[parameter] = getattr(self, f'_get_{parameter}')()
