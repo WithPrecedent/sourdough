@@ -56,55 +56,35 @@ class Bases(sourdough.quirks.Loader):
     """
     settings: Union[str, Type] = 'sourdough.project.Settings'
     filer: Union[str, Type] = 'sourdough.project.Filer' 
-    workflow: Union[str, Type] = 'sourdough.project.Workflow'
     component: Union[str, Type] = 'sourdough.project.Component'
+    creator: Union[str, Type] = 'sourdough.project.Creator'
     manager: Union[str, Type] = 'sourdough.project.Manager'
 
-    """ Properties """
+    # """ Properties """
 
-    @property
-    def component_suffixes(self) -> Tuple[str]:
-        """[summary]
-
-        Returns:
-            Tuple[str]: [description]
-        """
-        return self._get_suffixes(name = 'component')
-    
-    @property
-    def manager_suffixes(self) -> Tuple[str]:
-        """[summary]
-
-        Returns:
-            Tuple[str]: [description]
-        """
-        return self._get_suffixes(name = 'manager')
-   
-    """ Public Methods """
-   
-    def _get_suffixes(self, name: str) -> Tuple[str]:
-        return tuple(key + 's' for key in getattr(self, name).library.keys())
-   
-    # def get_class(self, name: Union[str, Sequence[str]], kind: str) -> Type:
+    # @property
+    # def component_suffixes(self) -> Tuple[str]:
     #     """[summary]
 
-    #     Args:
-    #         name (str): [description]
+    #     Returns:
+    #         Tuple[str]: [description]
+    #     """
+    #     return self._get_suffixes(name = 'component')
+    
+    # @property
+    # def manager_suffixes(self) -> Tuple[str]:
+    #     """[summary]
 
     #     Returns:
-    #         Type: [description]
-            
+    #         Tuple[str]: [description]
     #     """
-    #     base = getattr(self, kind)
-    #     product = None
-    #     for key in sourdough.tools.listify(name):
-    #         try:
-    #             product = base.duplicate(name = key)
-    #             break
-    #         except (AttributeError, KeyError):
-    #             pass
-    #     product = product or base
-    #     return product   
+    #     return self._get_suffixes(name = 'manager')
+   
+    # """ Public Methods """
+   
+    # def _get_suffixes(self, name: str) -> Tuple[str]:
+    #     return tuple(key + 's' for key in getattr(self, name).library.keys())
+   
 
 
 @dataclasses.dataclass
@@ -210,6 +190,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             kwargs
             
         """
+        print('test workflow at project create', self.workflow)
         for manager in self.contents:
             manager.create()
         return self
@@ -321,19 +302,20 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         if workflow is None:
             try:
-                workflow = self.settings[self.name][f'{self.name}_workflow']
+                workflow = self.settings[self.name][f'{self.name}_design']
             except KeyError:
                 try:
-                    workflow = self.settings[self.name]['workflow']
+                    workflow = self.settings[self.name]['structure']
                 except KeyError:
                     workflow = 'graph'
         if isinstance(workflow, str):
-            workflow = self.bases.workflow.library.borrow(name = workflow)
-            workflow = workflow(contains = self.bases.component)
+            name = copy.deepcopy(workflow)
+            workflow = self.bases.component.library.borrow(name = workflow)
+            workflow = workflow(name = name)
         elif isinstance(workflow, self.bases.workflow):
-            workflow.contains = self.bases.component
+            pass
         elif inspect.isclass(workflow):
-            workflow = workflow(contains = self.bases.component)
+            workflow = workflow()
         else:
             raise TypeError('workflow must be a Workflow, str, or None.')
         return workflow

@@ -17,252 +17,119 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-@dataclasses.dataclass
-class Workflow(sourdough.types.Base, abc.ABC):
-    """Base class for composite structures in a sourdough project.
-
-    Subclasses must have an 'execute' method that follow the criteria described 
-    in the docstring for that method.
-    
-    All Workflow subclasses should follow the naming convention of:
-            '{Name of Structure}Flow'. 
-    This allows the Workflow to be properly matched with the class being 
-    constructed without using an extraneous mapping to link the two.
-    
-    Args:
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-        
-    """
-    contains: Type[sourdough.types.Base]
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-        
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            # Removes '_flow' from class name so that the key is consistent
-            # with the key name for the class being constructed. Keys with
-            # '_flow' are also created by the 'super().__init_subclass__' call. 
-            key = key[:-5]
-            cls.library[key] = cls
-            
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def execute(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
-
-  
-@dataclasses.dataclass
-class GraphFlow(sourdough.composites.Graph, Workflow):
-    """Stores a workflow in a directed acyclic graph (DAG).
-    
-    Internally, the graph nodes are stored in 'contents'. And the edges are
-    stored as an adjacency dict in 'edges' with the 'name' attributes of the
-    nodes in 'contents' acting as the starting and stopping nodes in 
-    'edges'.
-    
-    Args:
-        contents (Mapping[str, sourdough.project.Component]): keys are the names 
-            of Element instances that are stored in values.
-        edges (Mapping[str, Sequence[str]]): an adjacency list where the keys
-            are the names of nodes and the values are names of nodes 
-            which the key is connected to.
-    
-    """
-  
-    def create(self, source: Union[sourdough.project.Settings,
-                                   Mapping[str, Sequence[str]],
-                                   Sequence[Sequence[str]]],
-            catalog: Mapping[str, sourdough.project.Component] = None) -> None:
-        """[summary]
-
-        Args:
-            source (Union[sourdough.project.Settings, Mapping[str, 
-                Sequence[str]], Sequence[Sequence[str]]]): [description]
-            catalog (Mapping[str, sourdough.quirks.Element], optional): 
-                Defaults to None.
-
-        Raises:
-            TypeError: [description]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        if isinstance(source, sourdough.project.Settings):
-            self.contents, self.edges = self._convert_settings(
-                source = source, 
-                catalog = catalog)
-        else:
-            try:
-                super().create(source = source, catalog = catalog)
-            except TypeError:
-                raise TypeError(
-                    'source must be an adjacency dict, adjacency matrix, or '
-                    'Settings')   
-        return self
-    
-    def execute(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
  
-    """ Private Methods """
-    
-    def _convert_settings(self, source: sourdough.project.Settings,
-            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
-                Mapping[str, sourdough.quirks.Element], 
-                Mapping[str, Sequence[str]]]:
-        """
-        """
-        contents = {}
-        edges = {}
-        settings = self._get_component_settings(settings = source)
-        name = settings[settings.keys()[0]]
-        section = settings.pop(name)
-        component_names = [
-            k for k in section.keys() if k.endswith(self.contains.suffixes)]
-        base = component_names[0].split('_')[-1][:-1]
-        components = section[component_names[0]]
-        for item in sourdough.tools.tuplify(components):
-            component = self.borrow(name = tuple(item, base))
-            component_parameters = self._get_component_parameters(
-                item = component)
-            kwargs = {'name': item}
-            for parameter in component_parameters:
-                try:
-                    kwargs[parameter] = section[f'{name}_{parameter}']
-                except KeyError:
-                    try:
-                        kwargs[parameter] = section[parameter]
-                    except KeyError:
-                        pass
-            self.add_node(component(**kwargs))
-            self.add_edge(start = name, stop = item)
-        return contents, edges
+# @dataclasses.dataclass
+# class PipelineFlow(sourdough.composites.Pipeline, Workflow):
 
- 
-@dataclasses.dataclass
-class PipelineFlow(sourdough.composites.Pipeline, Workflow):
-
-    def execute(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
+#     def execute(self, **kwargs) -> Any:
+#         """Subclasses must provide their own methods."""
+#         pass
 
 
-@dataclasses.dataclass
-class TreeFlow(sourdough.composites.Tree, Workflow):
+# @dataclasses.dataclass
+# class TreeFlow(sourdough.composites.Tree, Workflow):
 
-    def execute(self, **kwargs) -> Any:
-        """Subclasses must provide their own methods."""
-        pass
+#     def execute(self, **kwargs) -> Any:
+#         """Subclasses must provide their own methods."""
+#         pass
 
      
   
-@dataclasses.dataclass    
-class Parameters(sourdough.types.Lexicon):
-    """
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    base: Union[Type, str] = None
-    required: Sequence[str] = dataclasses.field(default_factory = list)
-    runtime: Mapping[str, str] = dataclasses.field(default_factory = dict)
-    selected: Sequence[str] = dataclasses.field(default_factory = list)
-    default: ClassVar[Mapping[str, Any]] = {}
+# @dataclasses.dataclass    
+# class Parameters(sourdough.types.Lexicon):
+#     """
+#     """
+#     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+#     name: str = None
+#     base: Union[Type, str] = None
+#     required: Sequence[str] = dataclasses.field(default_factory = list)
+#     runtime: Mapping[str, str] = dataclasses.field(default_factory = dict)
+#     selected: Sequence[str] = dataclasses.field(default_factory = list)
+#     default: ClassVar[Mapping[str, Any]] = {}
     
-    """ Public Methods """
+#     """ Public Methods """
     
-    def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
-        """[summary]
+#     def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
+#         """[summary]
 
-        Args:
-            builder (sourdough.project.Creator): [description]
+#         Args:
+#             builder (sourdough.project.Creator): [description]
 
-        """
-        if not kwargs:
-            kwargs = self.default
-        for kind in ['settings', 'required', 'runtime', 'selected']:
-            kwargs = getattr(self, f'_get_{kind}')(builder = builder, **kwargs)
-        self.contents = kwargs
-        return self
+#         """
+#         if not kwargs:
+#             kwargs = self.default
+#         for kind in ['settings', 'required', 'runtime', 'selected']:
+#             kwargs = getattr(self, f'_get_{kind}')(builder = builder, **kwargs)
+#         self.contents = kwargs
+#         return self
     
-    """ Private Methods """
+#     """ Private Methods """
     
-    def _get_settings(self, builder: sourdough.project.Creator, 
-                      **kwargs) -> Dict[str, Any]:
-        """[summary]
+#     def _get_settings(self, builder: sourdough.project.Creator, 
+#                       **kwargs) -> Dict[str, Any]:
+#         """[summary]
 
-        Args:
-            builder (sourdough.project.Creator): [description]
+#         Args:
+#             builder (sourdough.project.Creator): [description]
 
-        Returns:
-            Dict[str, Any]: [description]
+#         Returns:
+#             Dict[str, Any]: [description]
             
-        """
-        try:
-            kwargs.update(builder.settings[f'{self.name}_parameters'])
-        except KeyError:
-            pass
-        return kwargs
+#         """
+#         try:
+#             kwargs.update(builder.settings[f'{self.name}_parameters'])
+#         except KeyError:
+#             pass
+#         return kwargs
     
-    def _get_required(self, builder: sourdough.project.Creator, 
-                      **kwargs) -> Dict[str, Any]:
-        """[summary]
+#     def _get_required(self, builder: sourdough.project.Creator, 
+#                       **kwargs) -> Dict[str, Any]:
+#         """[summary]
 
-        Args:
-            builder (sourdough.project.Creator): [description]
+#         Args:
+#             builder (sourdough.project.Creator): [description]
 
-        Returns:
-            Dict[str, Any]: [description]
+#         Returns:
+#             Dict[str, Any]: [description]
             
-        """
-        for item in self.required:
-            if item not in kwargs:
-                kwargs[item] = self.default[item]
-        return kwargs
+#         """
+#         for item in self.required:
+#             if item not in kwargs:
+#                 kwargs[item] = self.default[item]
+#         return kwargs
     
-    def _get_runtime(self, builder: sourdough.project.Creator, 
-                      **kwargs) -> Dict[str, Any]:
-        """[summary]
+#     def _get_runtime(self, builder: sourdough.project.Creator, 
+#                       **kwargs) -> Dict[str, Any]:
+#         """[summary]
 
-        Args:
-            builder (sourdough.project.Creator): [description]
+#         Args:
+#             builder (sourdough.project.Creator): [description]
 
-        Returns:
-            Dict[str, Any]: [description]
+#         Returns:
+#             Dict[str, Any]: [description]
             
-        """
-        for parameter, attribute in self.runtime.items():
-            try:
-                kwargs[parameter] = getattr(builder, attribute)
-            except AttributeError:
-                pass
-        return kwargs
+#         """
+#         for parameter, attribute in self.runtime.items():
+#             try:
+#                 kwargs[parameter] = getattr(builder, attribute)
+#             except AttributeError:
+#                 pass
+#         return kwargs
 
-    def _get_selected(self, builder: sourdough.project.Creator, 
-                      **kwargs) -> Dict[str, Any]:
-        """[summary]
+#     def _get_selected(self, builder: sourdough.project.Creator, 
+#                       **kwargs) -> Dict[str, Any]:
+#         """[summary]
 
-        Args:
-            builder (sourdough.project.Creator): [description]
+#         Args:
+#             builder (sourdough.project.Creator): [description]
 
-        Returns:
-            Dict[str, Any]: [description]
+#         Returns:
+#             Dict[str, Any]: [description]
             
-        """
-        if self.selected:
-            kwargs = {k: kwargs[k] for k in self.selected}
-        return kwargs
+#         """
+#         if self.selected:
+#             kwargs = {k: kwargs[k] for k in self.selected}
+#         return kwargs
         
         
 # @dataclasses.dataclass

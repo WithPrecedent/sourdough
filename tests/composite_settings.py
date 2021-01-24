@@ -13,8 +13,11 @@ settings = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_managers': ['parser', 'munger'],
-        'cool_project_workflow': 'graph'},
+        'cool_project_managers': ['reviewer', 'parser', 'munger'],
+        'cool_project_design': 'workflow'},
+    'reviewer': {
+        'reviewer_design': 'plan',
+        'reviewer_techniques': ['scan', 'view']},
     'parser': {
         'parser_design': 'contest',
         'parser_steps': ['divide', 'extract'],

@@ -21,6 +21,75 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
+
+@dataclasses.dataclass
+class ProcessedSection(object):
+    
+    contents: List[str]
+    design: str
+    contains: str
+    attributes: Dict[str, Any]
+
+
+
+@dataclasses.dataclass
+class Creator(sourdough.types.Base):
+    
+    manager: Manager = dataclasses.field(repr = False, default = None)
+    
+    def create(self, 
+            contents: List[str],
+            component: sourdough.project.Component,  
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """[summary]
+
+        Args:
+            manager (sourdough.project.Manager): [description]
+            workflow (Workflow): [description]
+            
+        """
+        for name in contents:
+            component = self.manager.components[name]
+            print('test parallel', component.name, component.parallel)
+            if component.parallel:
+                print('test is parallel', component.name)
+                workflow = self._create_parallel(
+                    component = component, 
+                    workflow = workflow)
+            else:
+                print('test is serial', component.name)
+                workflow = self._create_serial(
+                    component = component, 
+                    workflow = workflow)
+        print('workflow leaving creator', workflow)
+        return workflow
+                
+    """ Private Methods """
+    
+    def _create_parallel(self,
+            component: sourdough.project.Component, 
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """ """
+        return workflow
+
+    def _create_serial(self,
+            component: sourdough.project.Component, 
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """ """
+        try:
+            endpoints = workflow.end
+        except ValueError:
+            endpoints = None
+        workflow.add_node(node = component)
+        if endpoints is not None:
+            for endpoint in sourdough.tools.listify(endpoints):
+                workflow.add_edge(start = endpoint, stop = component.name)
+        if isinstance(component.contents, Iterable):
+            workflow = self.create(
+                contents = component.contents, 
+                component = component,
+                workflow = workflow)
+        return workflow    
     
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Element, sourdough.quirks.Validator, 
@@ -31,16 +100,21 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         library (ClassVar[Library]): related Library instance that will store
             subclasses and allow runtime construction and instancing of those
             stored subclasses.
-        
-    """
     
+
+    """
     contents: Sequence[str] = dataclasses.field(default_factory = list)
     name: str = None
     design: str = None
     contains: str = None
+    creator: Creator = None
+    components: sourdough.types.Catalog = dataclasses.field(
+        default_factory = sourdough.types.Catalog)
     project: sourdough.Project = dataclasses.field(repr = False, default = None)
-    bases: sourdough.project.Bases = None
-    validations: ClassVar[Sequence[str]] = ['bases']
+    bases: sourdough.project.Bases = dataclasses.field(
+        repr = False, 
+        default = None)
+    validations: ClassVar[Sequence[str]] = ['bases', 'design', 'creator']
     library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
     """ Initialization Methods """
@@ -53,6 +127,7 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         except AttributeError:
             pass
         self.validate()
+        self._validate_contents()
       
     """ Public Methods """
     
@@ -63,14 +138,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             
         """
         design = self._get_design(name = self.name)
-        workflow = self.bases.workflow.library.borrow(name = design)
-        suffixes = self.bases.component.library.suffixes
-        components_key = [
-            k for k in self.project.settings[self.name].keys() 
-            if k.startswith(self.name) and k.endswith(suffixes)][0]
-        contains = components_key.split('_')[-1][:-1]
-        
-         
+        manager_workflow = self.bases.component.library.borrow(name = design)()
+        print('test workflow before creator', manager_workflow)
+        self.project.workflow = self.creator.create(
+            contents = self.contents,
+            component = manager_workflow, 
+            workflow = self.project.workflow)
+        print('test workflow after creator', self.project.workflow)
         return self
     
     """ Private Methods """
@@ -100,156 +174,131 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         else:
             raise TypeError('bases must be a Bases or None.')
         return bases 
-            
-    def _validate_contents(self, contents: Sequence[Union[
-            sourdough.project.Component, 
-            Type[sourdough.project.Component],
-            str]]) -> Sequence[sourdough.project.Component]:
+
+    def _validate_design(self, design: str) -> str:
+        """Forces 'design' and 'contains' to both be None or not None."""
+        if design is not None and self.contains is None:
+            design = None
+        elif design is None and self.contains is not None:
+            self.contains = None
+        return design
+
+    def _validate_creator(self, creator: Any) -> Creator:
+        """"""
+        return Creator(manager = self)
+    
+    def _validate_contents(self) -> None:
         """[summary]
-
-        Args:
-            contents (Sequence[Union[ sourdough.project.Component, 
-                Type[sourdough.project.Component], str]]): [description]
-
-        Returns:
-            Sequence[sourdough.project.Component]: [description]
              
         """
-        self.design = self.design or self._get_design(name = self.name)
-        suffixes = self.bases.component.library.suffixes
-        components_key = [
-            k for k in self.project.settings[self.name].keys() 
-            if k.startswith(self.name) and k.endswith(suffixes)][0]
-        self.contains = components_key.split('_')[-1][:-1]
-        contents = self.project.settings[self.name][components_key]
-        return self._validate_component_contents(
-            name = self.name,
-            contents = contents,
-            contains = self.contains,
-            instances = [])
-
-    def _validate_component_contents(self, 
-            name: str, 
-            contents: Sequence[Union[
-                sourdough.project.Component, 
-                Type[sourdough.project.Component],
-                str]],
-            contains: str,
-            instances: List[sourdough.project.Component]) -> (
-                Sequence[sourdough.project.Component]):
+        processed = self._process_section(name = self.name)
+        self._inject_section(item = self, processed = processed)
+        self._process_subcomponents(
+            parent = self.name, 
+            base = self.contains,
+            components = self.contents)
+        return self
+    
+    def _process_section(self, name: str, parent: str = None) -> None:
         """[summary]
 
         Args:
             name (str): [description]
-            contents (Sequence[Union[ sourdough.project.Component, 
-                Type[sourdough.project.Component], str]]): [description]
+            parent (str): [description]
 
         Returns:
-            Sequence[sourdough.project.Component]: [description]
-            
-        """
-        print('test incoming contents', name, contents)
-        if not contents:
-            contents, base = self._get_contents_from_settings(name = name)
-        else:
-            base = self.bases.component
-        print('test after settings contents', contents, base)
-        for component in contents:
-            instance = self._validate_component(
-                component = component,
-                base = base)
-            print('test instance', instance)
-            if hasattr(instance, 'contents'):
-                subinstances = self._validate_component_contents(
-                    name = instance.name,
-                    contents = instance.contents,
-                    instances = instances)
-                if subinstances:
-                    instances.extend(subinstances)
-            instances.append(instance)
-        return instances
-    
-    def _get_contents_from_settings(self, name: str) -> Tuple[List[str], str]:
-        """[summary]
-
-        Raises:
-            ValueError: [description]
-            ValueError: [description]
-
-        Returns:
-            List[str]: [description]
-            
+            [type]: [description]
         """
         suffixes = self.bases.component.library.suffixes
-        try:
-            matches = [
-                k for k in self.project.settings[name].keys() 
-                if k.startswith(name) and k.endswith(suffixes)]
-        except KeyError:
-            matches = [
-                k for k in self.project.settings[self.name].keys() 
-                if k.startswith(name) and k.endswith(suffixes)] 
-        if len(matches) > 1:
-            raise ValueError(f'{name} must have only 1 set of components')
-        elif len(matches) == 0:
-            base = None
-            components = []
-        else:
-            key = matches[0]
-            base = key.split('_')[-1][:-1]
+        if parent:
             try:
-                components = sourdough.tools.listify(
-                    self.project.settings[name][key])
-                del self.project.settings[name][key]
+                section = self.project.settings[parent]
             except KeyError:
-                try:
-                    components = sourdough.tools.listify(
-                        self.project.settings[self.name][key])
-                    del self.project.settings[name][key]
-                except KeyError:
-                    components = []
-        return components, base
-        
-    def _validate_component(self, 
-            component: Union[
-                str, 
-                sourdough.project.Component, 
-                Type[sourdough.project.Component]], 
-            base: str) -> object:
+                section = self.project.settings[self.name]
+        else:
+            section = self.project.settings[name]
+        components_keys = [k for k in section.keys() if k.endswith(suffixes)]
+        try:
+            contents_key = [k for k in components_keys if k.startswith(name)][0]
+        except IndexError:
+            contents_key = None
+        if contents_key is None:
+            contents = None
+            contains = None
+        else:
+            contents = sourdough.tools.listify(section[contents_key])
+            contains = contents_key.split('_')[-1][:-1]
+        design = self._get_design(name = name)
+        attributes = {
+                k: v for k, v in section.items() if k not in components_keys}
+        attributes = {
+            k: v for k, v in attributes.items() if not k.endswith('_design')}
+        return ProcessedSection(
+            contents = contents, 
+            design = design, 
+            contains = contains, 
+            attributes = attributes)
+    
+    def _inject_section(self, 
+            item: object, 
+            processed: ProcessedSection) -> object:
+        """[summary]
+
+        Args:
+            item (object): [description]
+            processed (ProcessedSection): [description]
+
+        Returns:
+            object: [description]
         """
-        """
-        if isinstance(component, str):
-            name = copy.deepcopy(component)
-            kwargs = {'name': name}
-            design = self._get_design(name = component)
-            if design is None:
-                keys = [name, base]
+        if processed.contents:
+            if item.contents is None:
+                item.contents = []
+            if isinstance(processed.contents, list):
+                item.contents.extend(processed.contents)
             else:
-                keys = [name, design, base]
+                item.contents.append(processed.contents)
+            if processed.design:
+                item.design = processed.design
+            elif hasattr(item, 'design') and not item.design:
+                item.design = self.project.settings['sourdough']['default_design']
+            item.contains = processed.contains
+            for key, value in processed.attributes.items():
+                setattr(item, key, value)
+        return item
+    
+    def _process_subcomponents(self, 
+            parent: str, 
+            base: str, 
+            components: List[str]) -> None:
+        """[summary]
+
+        Args:
+            parent (str): [description]
+            components (List[str]): [description]
+        """
+        for name in components:
+            if name in self.project.settings:
+                processed = self._process_section(name = name)
+            else:
+                processed = self._process_section(name = name, parent = parent)
+            if processed.design:
+                keys = [name, processed.design, base]
+            else:
+                keys = [name, base]
             component = self.bases.component.library.borrow(name = keys)
             component = component(name = name)
-        elif issubclass(component, self.bases.component):
-            kwargs = {}
-            name = sourdough.tools.snakify(component.__name__)
-        elif isinstance(component, self.bases.component):
-            kwargs = {}
-            name = component.name
-        else:
-            raise TypeError('contents must be a list of str or Component')
-        if inspect.isclass(component):
-            parameters = self._get_contents_from_settings(name = component)
-            for parameter in parameters:
-                try:
-                    kwargs[parameter] = getattr(self, f'_get_{parameter}')()
-                except AttributeError:
-                    argument = self._get_generic_argument(
-                        name = name,
-                        parameter = parameter)
-                    if argument is not None:
-                        kwargs[parameter] = argument
-            component = component(**kwargs)
-        return component
-
+            component = self._inject_section(
+                item = component, 
+                processed = processed)
+            self.components[component.name] = component
+            if component.contents:
+                self._process_subcomponents(
+                    parent = component.name,
+                    base = component.contains,
+                    components = component.contents)
+        return self
+    
     def _get_design(self, name: str) -> str:
         """
         """
@@ -264,27 +313,3 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
                 except KeyError:
                     design = None
         return design
-
-    def _get_component_parameters(self, 
-            component: Type[sourdough.types.Base], 
-            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
-        """
-        """
-        parameters = list(component.__annotations__.keys())
-        return tuple(i for i in parameters if i not in [skip])
-    
-    def _get_generic_argument(self, name: str, parameter: str) -> Any:
-        """
-        """
-        try:
-            argument = self.project.settings[name][f'{name}_{parameter}']
-        except KeyError:
-            try:
-                argument = self.project.settings[name][parameter]
-            except KeyError:
-                try:
-                    argument = self.project.settings[self.name][
-                        f'{name}_{parameter}']
-                except KeyError:
-                    argument = None
-        return argument

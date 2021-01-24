@@ -116,10 +116,11 @@ class Graph(sourdough.types.Lexicon, Structure):
             str: name of root node in contents'
             
         """
-        descendants = itertools.chain(self.edges.values())
+        stops = itertools.chain(self.edges.values())
+        descendants = [d for d in list(stops) if d][0]
         roots = [k for k in self.edges.keys() if k not in descendants]
         if len(roots) > 1:
-            raise ValueError('Graph is not acyclic - it has more than 1 root')
+            return roots
         elif len(roots) == 0:
             raise ValueError('Graph is not acyclic - it has no root')
         else:
@@ -143,7 +144,7 @@ class Graph(sourdough.types.Lexicon, Structure):
             raise ValueError('Graph is not acyclic - it has no endpoint')
         else:
             return ends[0]
-            
+               
     @property
     def permutations(self) -> List[List[str]]:
         """Returns all paths through graph in list of lists form.
@@ -153,7 +154,7 @@ class Graph(sourdough.types.Lexicon, Structure):
                 of lists of names of nodes.
                 
         """
-        return self._find_all_paths(start = self.root, end = self.end)
+        return self._find_all_permutations(starts = self.root, ends = self.end)
         
     """ Public Methods """
     
@@ -181,6 +182,7 @@ class Graph(sourdough.types.Lexicon, Structure):
         
         """
         self.contents[node.name] = node
+        self.edges[node.name] = []
         return self
 
     def add_edge(self, start: str, stop: str) -> None:
@@ -191,7 +193,16 @@ class Graph(sourdough.types.Lexicon, Structure):
             stop (str): name of node for edge to stop.
             
         """
-        self.edges[start] = stop
+        print('test start stop', start, stop)
+        if start in self.contents and stop in self.contents:
+            try:
+                self.edges[start].append(stop)
+            except KeyError:
+                self.edges[start] = [stop]
+        elif start not in self.contents:
+            raise ValueError(f'{start} node does not exist')
+        else:
+            raise ValueError(f'{stop} node does not exist')
         return self
 
     def apply(self, tool: Callable, **kwargs) -> None:
@@ -307,7 +318,32 @@ class Graph(sourdough.types.Lexicon, Structure):
         contents = {}
         edges = {}
         return contents, edges
-       
+    
+    def _find_all_permutations(self, 
+            starts: str, 
+            ends: Union[str, Sequence[str]]) -> List[List[str]]:
+        """[summary]
+
+        Args:
+            start (str): [description]
+            ends (Union[str, Sequence[str]]): [description]
+
+        Returns:
+            List[List[str]]: [description]
+        """
+        all_permutations = []
+        for start in sourdough.tools.listify(starts):
+            for end in sourdough.tools.listify(ends):
+                paths = self._find_all_paths(
+                    start = start, 
+                    end = end)
+                if paths:
+                    if all(isinstance(path, str) for path in paths):
+                        all_permutations.append(paths)
+                    else:
+                        all_permutations.extend(paths)
+        return all_permutations
+    
     def _find_all_paths(self, start: str, end: str, 
                         path: List[str] = []) -> List[List[str]]:
         """Returns all paths in graph from 'start' to 'end'.

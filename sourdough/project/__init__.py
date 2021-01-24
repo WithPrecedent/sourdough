@@ -10,9 +10,9 @@ Contents:
 
 from .configuration import Settings
 from .clerk import Filer
-from .structures import *
 from .nodes import *
 from .interface import Bases
+from .builder import Creator
 from .builder import Manager
 
 
