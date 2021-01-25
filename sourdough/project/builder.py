@@ -30,7 +30,9 @@ class ProcessedSection(object):
 
 @dataclasses.dataclass
 class Creator(sourdough.types.Base):
+    """Creates a Workflow instance.
     
+    """
     manager: Manager = dataclasses.field(repr = False, default = None)
     
     def create(self, 
@@ -53,6 +55,8 @@ class Creator(sourdough.types.Base):
                 workflow = self._create_serial(
                     contents = component.contents, 
                     workflow = workflow)
+            for root in sourdough.tools.listify(workflow.root):
+                workflow.add_edge(start = component.name, stop = root)
         return workflow
                 
     """ Private Methods """
@@ -89,7 +93,15 @@ class Creator(sourdough.types.Base):
                 workflow = workflow)
         return workflow    
 
-  
+    # def _wrap_node(self, 
+    #         contained: str, 
+    #         container: str, 
+    #         workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        
+        
+        
+    
+    
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Element, sourdough.quirks.Validator, 
               sourdough.composites.Pipeline, sourdough.types.Base):

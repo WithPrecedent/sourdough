@@ -287,10 +287,6 @@ class Workflow(sourdough.composites.Graph, Component):
         self.contents[node.name] = node
         if node.name not in self.edges:
             self.edges[node.name] = []
-        # if node.contents is None:
-        #     self.edges[node.name] = []
-        # else:
-        #     self.edges[node.name] = node.contents
         return self
     
     def combine(self, workflow: Workflow) -> None:
@@ -303,54 +299,14 @@ class Workflow(sourdough.composites.Graph, Component):
             for root in sourdough.tools.listify(workflow.root):
                 self.add_edge(start = end, stop = root)
         return self
-
-    # def create(self, 
-    #         manager: sourdough.project.Manager,
-    #         contents: Sequence[str], 
-    #         workflow: Workflow,
-    #         previous: str = None) -> Workflow:
-    #     """[summary]
-
-    #     Args:
-    #         manager (sourdough.project.Manager): [description]
-    #         workflow (Workflow): [description]
-    #     """
-    #     for name in contents:
-    #         previous = None
-    #         component = manager.components[name]
-    #         workflow.add_node(node = component)
-    #         if isinstance(component.contents, Iterable):
-    #             for subcomponent_name in component.contents:
-    #                 self.create(
-    #                     manager = manager
-    #                 )
-                    
-                    
-    #             if previous is not None:
-    #                 workflow.add_edge(start = previous, stop = component.name)
-    #             previous = component.name
-    #     return workflow
-
-    # def edgeify(self, components: List[Union[str, List[Any]]]) -> None:
-    #     """
-    #     """
-    #     if all(isinstance(c, list) for c in components):
-    #         for plan in components:
-    #             self.edgify(components = plan)
-    #     else:
-    #         previous = None
-    #         for component in components:
-    #             if previous:
-    #                 self.add_edge(start = previous, stop = component)
-    #             previous = component
-    #     return self
-                
+      
     def execute(self, project: sourdough.Project, **kwargs) -> Any:
         """
         """
         for path in self.permutations:
             for node in path:
-                project = node.execute(project = project, **kwargs)
+                project = self.contents[node].execute(
+                    project = project, **kwargs)
         return project
 
     """ Dunder Methods """

@@ -116,7 +116,9 @@ class Graph(sourdough.types.Lexicon, Structure):
             str: name of root node in contents'
             
         """
+        print('test root edges', self.edges.values())
         stops = itertools.chain(self.edges.values())
+        print('test descendants', [d for d in list(stops) if d])
         descendants = [d for d in list(stops) if d][0]
         roots = [k for k in self.edges.keys() if k not in descendants]
         if len(roots) > 1:
@@ -194,7 +196,9 @@ class Graph(sourdough.types.Lexicon, Structure):
             stop (str): name of node for edge to stop.
             
         """
-        if start in self.edges and stop not in self.edges[start]:
+        if (start in self.edges 
+                and stop not in self.edges[start]
+                and start != stop):
             try:
                 self.edges[start].append(stop)
             except KeyError:

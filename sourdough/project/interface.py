@@ -198,9 +198,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     def execute(self) -> None:
         """
         """
-        for plan in self.workflow:
-            print('test plan to execute', plan)
-            plan.execute()
+        self.workflow.execute(project = self)
         return self
                   
     """ Private Methods """
