@@ -181,8 +181,9 @@ class Graph(sourdough.types.Lexicon, Structure):
                 'contents'.
         
         """
-        self.contents[node.name] = node
-        self.edges[node.name] = []
+        if node.name not in self.contents:
+            self.contents[node.name] = node
+            self.edges[node.name] = []
         return self
 
     def add_edge(self, start: str, stop: str) -> None:
@@ -193,16 +194,11 @@ class Graph(sourdough.types.Lexicon, Structure):
             stop (str): name of node for edge to stop.
             
         """
-        print('test start stop', start, stop)
-        if start in self.contents and stop in self.contents:
+        if start in self.edges and stop not in self.edges[start]:
             try:
                 self.edges[start].append(stop)
             except KeyError:
                 self.edges[start] = [stop]
-        elif start not in self.contents:
-            raise ValueError(f'{start} node does not exist')
-        else:
-            raise ValueError(f'{stop} node does not exist')
         return self
 
     def apply(self, tool: Callable, **kwargs) -> None:

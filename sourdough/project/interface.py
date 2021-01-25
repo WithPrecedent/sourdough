@@ -199,6 +199,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         """
         """
         for plan in self.workflow:
+            print('test plan to execute', plan)
             plan.execute()
         return self
                   

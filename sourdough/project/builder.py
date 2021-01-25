@@ -1,21 +1,18 @@
 """
-base: essential classes executeing sourdough's core to a project
+builder: produces workflows and their components
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Bases
-    Settings
-    Filer
-    Creator
-    Component
+
 
 """
 from __future__ import annotations
 import copy
 import dataclasses
 import inspect
+import itertools
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -31,14 +28,12 @@ class ProcessedSection(object):
     attributes: Dict[str, Any]
 
 
-
 @dataclasses.dataclass
 class Creator(sourdough.types.Base):
     
     manager: Manager = dataclasses.field(repr = False, default = None)
     
     def create(self, 
-            contents: List[str],
             component: sourdough.project.Component,  
             workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
         """[summary]
@@ -48,49 +43,53 @@ class Creator(sourdough.types.Base):
             workflow (Workflow): [description]
             
         """
-        for name in contents:
-            component = self.manager.components[name]
-            print('test parallel', component.name, component.parallel)
+        workflow.add_node(node = component)
+        if component.contents:
             if component.parallel:
-                print('test is parallel', component.name)
                 workflow = self._create_parallel(
-                    component = component, 
+                    contents = component.contents, 
                     workflow = workflow)
             else:
-                print('test is serial', component.name)
                 workflow = self._create_serial(
-                    component = component, 
+                    contents = component.contents, 
                     workflow = workflow)
-        print('workflow leaving creator', workflow)
         return workflow
                 
     """ Private Methods """
     
     def _create_parallel(self,
-            component: sourdough.project.Component, 
+            contents: List[str], 
             workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
         """ """
+        # Creates empy list of lists for all possible permutations to be stored.
+        possible = []
+        # Populates list of lists with different options.
+        for item in contents:
+            possible.append(self.manager.components[item].contents)
+        # Computes Cartesian product of possible permutations.
+        combos = list(map(list, itertools.product(*possible)))
+        for combo in combos:
+            workflow = self._create_serial(
+                contents = combo, 
+                workflow = workflow)
         return workflow
-
+    
     def _create_serial(self,
-            component: sourdough.project.Component, 
+            contents: List[str], 
             workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
         """ """
-        try:
-            endpoints = workflow.end
-        except ValueError:
-            endpoints = None
-        workflow.add_node(node = component)
-        if endpoints is not None:
-            for endpoint in sourdough.tools.listify(endpoints):
-                workflow.add_edge(start = endpoint, stop = component.name)
-        if isinstance(component.contents, Iterable):
+        previous = None
+        for name in contents:
+            if previous is not None:
+                workflow.add_edge(start = previous, stop = name)
+            previous = name
+            subcomponent = self.manager.components[name]
             workflow = self.create(
-                contents = component.contents, 
-                component = component,
+                component = subcomponent, 
                 workflow = workflow)
         return workflow    
-    
+
+  
 @dataclasses.dataclass
 class Manager(sourdough.quirks.Element, sourdough.quirks.Validator, 
               sourdough.composites.Pipeline, sourdough.types.Base):
@@ -138,11 +137,13 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
             
         """
         design = self._get_design(name = self.name)
-        manager_workflow = self.bases.component.library.borrow(name = design)()
-        print('test workflow before creator', manager_workflow)
+        manager_component = self.bases.component.library.borrow(name = design)(
+            name = self.name,
+            contents = self.contents)
+        print('test manager workflow parallel', manager_component.parallel)
+        print('test workflow before creator', manager_component)
         self.project.workflow = self.creator.create(
-            contents = self.contents,
-            component = manager_workflow, 
+            component = manager_component, 
             workflow = self.project.workflow)
         print('test workflow after creator', self.project.workflow)
         return self
