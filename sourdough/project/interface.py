@@ -56,35 +56,10 @@ class Bases(sourdough.quirks.Loader):
     """
     settings: Union[str, Type] = 'sourdough.project.Settings'
     filer: Union[str, Type] = 'sourdough.project.Filer' 
+    workflow: Union[str, Type] = 'sourdough.project.Workflow'
     component: Union[str, Type] = 'sourdough.project.Component'
     creator: Union[str, Type] = 'sourdough.project.Creator'
     manager: Union[str, Type] = 'sourdough.project.Manager'
-
-    # """ Properties """
-
-    # @property
-    # def component_suffixes(self) -> Tuple[str]:
-    #     """[summary]
-
-    #     Returns:
-    #         Tuple[str]: [description]
-    #     """
-    #     return self._get_suffixes(name = 'component')
-    
-    # @property
-    # def manager_suffixes(self) -> Tuple[str]:
-    #     """[summary]
-
-    #     Returns:
-    #         Tuple[str]: [description]
-    #     """
-    #     return self._get_suffixes(name = 'manager')
-   
-    # """ Public Methods """
-   
-    # def _get_suffixes(self, name: str) -> Tuple[str]:
-    #     return tuple(key + 's' for key in getattr(self, name).library.keys())
-   
 
 
 @dataclasses.dataclass

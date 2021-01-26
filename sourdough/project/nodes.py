@@ -264,42 +264,46 @@ class Workflow(sourdough.composites.Graph, Component):
             stored subclasses.
         
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = False
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
-     
+    
+    """ Class Methods """
+    
+    @classmethod
+    def from_section(cls, 
+            name: str,
+            contents: Sequence[str], 
+            section: Mapping[str, Any],
+            component_keys: Sequence[str], 
+            **kwargs) -> Workflow:
+        """Creates a Workflow instance from a section of a Settings instance.
+
+        Args:
+            section (Mapping[str, Any]): section of a Settings instance to
+                use to create a Workflow.
+                
+        Returns:
+            Workflow: derived from 'section'
+            
+        """
+        possible = []
+        for item in contents:
+            inner_key = [i for i in component_keys if i.startswith(item)][0]
+            inner_contents = sourdough.tools.listify(section.pop(inner_key))
+            possible.append(inner_contents)
+        # Computes Cartesian product of possible permutations.
+        permutations = list(map(list, itertools.product(*possible)))
+        keys = {f'plan_{i}' for i in len(permutations)}
+        contents = dict(zip(keys, contents))
+        return cls(contents = contents, name = name, **kwargs)   
+    
     """ Public Methods """
 
-    def add_node(self, node: sourdough.quirks.Element) -> None:
-        """Adds a node to 'contents'.
-        
-        Args:
-            node (Element): node with a name attribute to add to 
-                'contents'.
-        
-        """
-        self.contents[node.name] = node
-        if node.name not in self.edges:
-            self.edges[node.name] = []
-        return self
-    
-    def combine(self, workflow: Workflow) -> None:
-        """
-        """
-        current_ends = sourdough.tools.listify(self.end)
-        self.contents.update(workflow.contents)
-        self.edges.update(workflow.edges)
-        for end in current_ends:
-            for root in sourdough.tools.listify(workflow.root):
-                self.add_edge(start = end, stop = root)
-        return self
-      
     def execute(self, project: sourdough.Project, **kwargs) -> Any:
         """
         """
@@ -353,15 +357,14 @@ class Aggregation(Workflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = False
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
     
     
 @dataclasses.dataclass
@@ -398,19 +401,18 @@ class Cycle(Workflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 10
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = False
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
     
     """ Public Methods """
     
-    def execute(self, manager: sourdough.Manager, **kwargs) -> sourdough.Manager:
+    def execute(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
         """[summary]
 
         Args:
@@ -459,15 +461,14 @@ class Plan(Workflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = False
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
 
 
 @dataclasses.dataclass
@@ -496,15 +497,14 @@ class ParallelWorkflow(Workflow, abc.ABC):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
           
     """ Public Methods """
 
@@ -573,15 +573,14 @@ class Contest(ParallelWorkflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
     
     
 @dataclasses.dataclass
@@ -619,15 +618,14 @@ class Study(ParallelWorkflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+
         
     
 @dataclasses.dataclass
@@ -664,12 +662,11 @@ class Survey(ParallelWorkflow):
             when the 'execute' method is called. Defaults to an empty dict.
                 
     """
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
+    contents: Mapping[str, List[str]] = dataclasses.field(
         default_factory = dict)
     name: str = None
     iterations: Union[int, str] = 1
     criteria: str = None
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+

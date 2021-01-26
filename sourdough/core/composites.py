@@ -22,6 +22,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
+
 @dataclasses.dataclass
 class Graph(sourdough.types.Lexicon):
     """Stores a directed acyclic graph (DAG) as an adjacency list.

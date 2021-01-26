@@ -20,12 +20,111 @@ import sourdough
 
 
 @dataclasses.dataclass
+class Creator(sourdough.types.Base):
+    """Creates a Workflow instance.
+    
+    """
+    manager: Manager = dataclasses.field(repr = False, default = None)
+    
+    """ Properties """
+
+    @property
+    def component_library(self) -> sourdough.types.Library:
+        return self.manager.bases.component.library
+    
+    @property
+    def settings(self) -> sourdough.project.Settings:
+        return self.manager.project.settings
+
+    @property
+    def workflow_library(self) -> sourdough.types.Library:
+        return self.manager.bases.workflow.library
+    
+    
+    """ Public Methods """
+    
+    def create(self, name: str, design: str = None) -> None:
+        section = self.settings[name]
+        design = design or self._get_design(name = name, section = section)
+        workflow = self.workflow_library.borrow(name = [name, design])
+        parameters = self._get_potential_parameters(component = workflow)
+        for key, value in section.items():
+            if self._is_related(key = key, name = name):
+                pass
+            elif self._is_component(key = key):
+                pass
+            elif self._is_related_parameter(
+                    key = key, 
+                    name = name, 
+                    parameters = parameters):
+                pass
+            elif self._is_parameter
+                
+            
+        return workflow
+
+    def _is_related_contents(self, key: str, name: str) -> bool:
+        return (
+            self._is_related(key = key, name = name) 
+            and self._is_component(key = key))
+
+    def _is_component(self, key: str) -> bool:
+        return key.endswith(self.component_suffixes)
+    
+    def _is_related(self, key: str, name: str) -> bool:
+        return key.startswith(name)
+
+    def _is_related_parameter(self, 
+            key: str,
+            name: str, 
+            parameters: Tuple[str]) -> bool:
+        return (
+            self._is_related(key = key, name = name) 
+            and self._is_parameter(key = keym parameters = parameters))
+
+    def _is_parameter(self, key: str, parameters: Tuple[str]) -> bool:
+        return key.endswith(parameters)
+
+    def _get_design(self, name: str, section: Mapping[str, Any]) -> str:
+        """
+        """
+        try:
+            design = section[f'{name}_design']
+        except KeyError:
+            try:
+                design = section[f'design']
+            except KeyError:
+                try:
+                    design = self.settings['sourdough'][f'default_design']
+                except KeyError:
+                    design = None
+        return design
+
+    def _get_potential_parameters(self, 
+            component: Type[sourdough.types.Base], 
+            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
+        """
+        """
+        parameters = list(component.__annotations__.keys())
+        return tuple(i for i in parameters if i not in [skip])
+
+
+
+
+
+
+
+
+
+
+
+
+
+@dataclasses.dataclass
 class ProcessedSection(object):
     
-    contents: List[str]
-    design: str
-    contains: str
-    attributes: Dict[str, Any]
+    components: List[str]
+    subcomponents: List[List[str]]
 
 
 @dataclasses.dataclass
@@ -34,6 +133,12 @@ class Creator(sourdough.types.Base):
     
     """
     manager: Manager = dataclasses.field(repr = False, default = None)
+    library: sourdough.types.Library = dataclasses.field(
+        repr = False, 
+        default = None)
+    settings: sourdough.project.Settings = dataclasses.field(
+        repr = False, 
+        default = None)
     
     def create(self, 
             component: sourdough.project.Component,  
@@ -45,7 +150,7 @@ class Creator(sourdough.types.Base):
             workflow (Workflow): [description]
             
         """
-        workflow.add_node(node = component)
+        
         if component.contents:
             if component.parallel:
                 workflow = self._create_parallel(
@@ -60,6 +165,157 @@ class Creator(sourdough.types.Base):
         return workflow
                 
     """ Private Methods """
+
+    def _process_section(self, name: str) -> sourdough.project.Workflow:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        Returns:
+            sourdough.project.Workflow: [description]
+            
+        """
+        
+        component_suffixes = self.library.suffixes
+        is_component = 
+        section = self.settings[name]
+        component_keys = [
+            k for k in section.keys() if k.endswith(component_suffixes)]
+        if component_keys:
+            design = self._get_design(name = name, section = section)
+            workflow = self.library.borrow(name = [name, design])
+            workflow_kwargs = self._create_component_kwargs(
+                component = workflow)
+            workflow_key = [i for i in component_keys if i.startswith(name)][0]
+            workflow_contents = sourdough.tools.listify(
+                section.pop(workflow_key))
+            # workflow_kwargs['contents'] = workflow_contents
+            if workflow.parallel:
+                method = self._create_parallel(
+                    contents = workflow_contents,
+                    component_keys = component_keys,
+                    section = section,
+                    **workflow_kwargs)
+            self.mananger.components[name] = workflow
+            inner_base = workflow_contents.split('_')[-1][:-1]
+            
+            
+            
+            possible = []
+            for item in workflow_contents:
+                inner_keys = [i for i in component_keys if i.startswith(item)]
+                if inner_keys:
+                    inner_contents = sourdough.tools.listify(
+                        section.pop(inner_keys[0]))
+                    possible.append(inner_contents)
+        else:
+            workflow = None
+        return workflow
+
+    # def _process_section(self, name: str, parent: str = None) -> None:
+    #     """[summary]
+
+    #     Args:
+    #         name (str): [description]
+    #         parent (str): [description]
+
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     section = self.settings[name]
+    #     component_suffixes = self.manager.bases.component.library.suffixes
+    #     if parent:
+    #         try:
+    #             section = self.project.settings[parent]
+    #         except KeyError:
+    #             section = self.project.settings[self.name]
+    #     else:
+    #         section = self.project.settings[name]
+    #     components_keys = [k for k in section.keys() if k.endswith(suffixes)]
+    #     try:
+    #         contents_key = [k for k in components_keys if k.startswith(name)][0]
+    #     except IndexError:
+    #         contents_key = None
+    #     if contents_key is None:
+    #         contents = None
+    #         contains = None
+    #     else:
+    #         contents = sourdough.tools.listify(section[contents_key])
+    #         contains = contents_key.split('_')[-1][:-1]
+    #     design = self._get_design(name = name)
+    #     attributes = {
+    #             k: v for k, v in section.items() if k not in components_keys}
+    #     attributes = {
+    #         k: v for k, v in attributes.items() if not k.endswith('_design')}
+    #     return ProcessedSection(
+    #         contents = contents, 
+    #         design = design, 
+    #         contains = contains, 
+    #         attributes = attributes)
+
+    def _create_component_kwargs(self, 
+            name: str,
+            component: Type[sourdough.types.Base],
+            section: Mapping[str, Any]) -> Mapping[str, Any]:
+        """
+        """
+        kwargs = {}
+        parameters = self._get_potential_parameters(component = component)
+        if 'parameters' in parameters:
+            try:
+                kwargs['parameters'] = self.settings[f'name_parameters']
+            except KeyError:
+                pass
+        for parameter in parameters:
+            argument = self._get_argument(
+                    name = name,
+                    parameter = parameter,
+                    section = section)
+            if argument is not None:
+                kwargs[parameter] = argument
+        return kwargs
+
+    def _get_potential_parameters(self, 
+            component: Type[sourdough.types.Base], 
+            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
+        """
+        """
+        parameters = list(component.__annotations__.keys())
+        return tuple(i for i in parameters if i not in [skip])
+
+
+    def _get_argument(self, 
+            name: str, 
+            parameter: str, 
+            section: Mapping[str, Any]) -> Any:
+        """
+        """
+        try:
+            argument = section[f'{name}_{parameter}']
+        except KeyError:
+            try:
+                argument = section[parameter]
+            except KeyError:
+                argument = None
+        return argument
+                   
+    def _create_parallel(self,
+            name: str,
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """ """ 
+        contents = {}
+        component_keys = [
+            k for k in section.keys() if k.endswith(cls.library.suffixes)]
+        workflow_key = [i for i in component_keys if i.startswith(name)][0]
+        workflow_contents = sourdough.tools.listify(section.pop(workflow_key))
+        possible = []
+        for item in workflow_contents:
+            inner_key = [i for i in component_keys if i.startswith(item)][0]
+            inner_contents = sourdough.tools.listify(section.pop(inner_key))
+            possible.append(inner_contents)
+        return cls(contents = contents, name = name)   
+    
     
     def _create_parallel(self,
             contents: List[str], 
@@ -120,6 +376,8 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
     contains: str = None
     creator: Creator = None
     components: sourdough.types.Catalog = dataclasses.field(
+        default_factory = sourdough.types.Catalog)
+    workflows: sourdough.types.Catalog = dataclasses.field(
         default_factory = sourdough.types.Catalog)
     project: sourdough.Project = dataclasses.field(repr = False, default = None)
     bases: sourdough.project.Bases = dataclasses.field(
