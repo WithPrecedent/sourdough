@@ -22,314 +22,343 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 
-
 @dataclasses.dataclass
-class Structure(abc.ABC):
-    """Base class for sourdough's composite objects.
+class Graph(sourdough.types.Lexicon):
+    """Stores a directed acyclic graph (DAG) as an adjacency list.
 
-    Subclasses must have 'apply' and 'find' methods that follow the criteria
-    described in the docstrings for those methods.
-
-    """
-
-    @abc.abstractmethod
-    def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each node in 'contents'.
-        
-        Subclasses must provide their own methods.
-
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
-            
-        """
-        pass        
-
-    @abc.abstractmethod
-    def create(self, source: Any, **kwargs) -> None:
-        """Creates composite 'contents' from 'source' and kwargs.
-        
-        Subclasses must provide their own methods.
-
-        Args:
-            source (Any): item to create 'contents' from.
-            kwargs: additional arguments to pass need for composite creation.
-            
-        """
-        return self
-       
-    @abc.abstractmethod 
-    def find(self, tool: Callable, **kwargs) -> Sequence[Any]:
-        """Finds items in 'contents' that match criteria in 'tool'.
-        
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
-            
-        Returns:
-            Sequence[Any]: stored items matching the criteria in 'tool'. 
-        
-        """
-        pass
-
-
-@dataclasses.dataclass
-class Graph(sourdough.types.Lexicon, Structure):
-    """Stores a directed acyclic graph (DAG).
+    Despite being called an adjacency "list," the typical and most efficient
+    way to store one is using a python dict. A sourdough Graph inherits from
+    a Lexicon in order to allow use of its extra functionality over a plain
+    dict.
     
-    Internally, the graph nodes are stored in 'contents'. And the edges are
-    stored as an adjacency list in 'edges' with the 'name' attributes of the
-    nodes in 'contents' acting as the starting and stopping nodes in 
-    'edges'.
+    Graph also supports autovivification where a list is created as a value for
+    a missing key. This means that a Graph need not inherit from defaultdict.
     
-    Although based on the sourdough dict replacement, Lexicon, a Graph differs
-    from it in too many ways to list here.
+    The Graph does not actually store Node instances. Rather, it maintains the
+    string names of Nodes which can then be used to create and iterate over
+    Nodes.
     
     Args:
-        contents (Mapping[str, sourdough.quirks.Element]): keys are the names 
-            of Element instances that are stored in values.
-        edges (Mapping[str, Sequence[str]]): an adjacency list where the keys
-            are the names of nodes and the values are names of nodes 
-            which the key is connected to.
-    
-    ToDo:
-        Write '_convert_adjacency_matrix'.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            the names of nodes and the values are names of nodes which the key 
+            is connected to.
           
     """  
-    contents: Mapping[str, sourdough.quirks.Element] = dataclasses.field(
-        default_factory = dict)
-    edges: Mapping[str, Sequence[str]] = dataclasses.field(
-        default_factory = dict)
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    default: Any = dataclasses.field(default_factory = list)
 
     """ Properties """
-    
-    @property
-    def root(self) -> str:
-        """Returns name of root node in 'contents'.
-
-        Raises:
-            ValueError: if there is more than 1 root or no roots.
-
-        Returns:
-            str: name of root node in contents'
-            
-        """
-        print('test root edges', self.edges.values())
-        stops = itertools.chain(self.edges.values())
-        print('test descendants', [d for d in list(stops) if d])
-        descendants = [d for d in list(stops) if d][0]
-        roots = [k for k in self.edges.keys() if k not in descendants]
-        if len(roots) > 1:
-            return roots
-        elif len(roots) == 0:
-            raise ValueError('Graph is not acyclic - it has no root')
-        else:
-            return roots[0]
            
     @property
-    def end(self) -> str:
-        """Returns name of endpoint node in 'contents'.
+    def endpoints(self) -> List[str]:
+        """Returns endpoint nodes in the Graph.
 
         Raises:
             ValueError: if there is more than 1 endpoint or no endpoints.
 
         Returns:
-            str: name of endpoint node in 'contents'.
+            str: name of endpoint node in 'nothing'.
             
         """
-        ends = [k for k in self.edges.keys() if not self.edges[k]]
+        ends = [k for k in self.contents.keys() if not self.contents[k]]
         if len(ends) > 1:
             return ends
         elif len(ends) == 0:
-            raise ValueError('Graph is not acyclic - it has no endpoint')
+            raise ValueError('Graph is not acyclic - it has no endpoints')
         else:
             return ends[0]
-               
+              
     @property
-    def permutations(self) -> List[List[str]]:
+    def nodes(self) -> List[str]:
+        """Returns all nodes in the Graph.
+
+        Returns:
+            List[str]: all nodes.
+            
+        """
+        return list(self.keys())
+
+    @property
+    def paths(self) -> List[List[str]]:
         """Returns all paths through graph in list of lists form.
         
         Returns:
-            List[List[str]]: returns all paths from 'root' to 'end' in a list
+            List[List[str]]: returns all paths from 'roots' to 'end' in a list
                 of lists of names of nodes.
                 
         """
-        return self._find_all_permutations(starts = self.root, ends = self.end)
-        
+        return self._find_all_permutations(
+            starts = self.roots, 
+            ends = self.endpoints)
+       
+    @property
+    def roots(self) -> List[str]:
+        """Returns root nodes in the Graph.
+
+        Raises:
+            ValueError: if there are no roots.
+
+        Returns:
+            List[str]: root nodes.
+            
+        """
+        stops = list(itertools.chain.from_iterable(self.contents.values()))
+        roots = [k for k in self.contents.keys() if k not in stops]
+        if len(roots) > 0:
+            return roots
+        else:
+            raise ValueError('Graph is not acyclic - it has no roots')
+    
+    """ Class Methods """
+       
+    @classmethod
+    def from_adjacency(cls, adjacency: Dict[str, List[str]]) -> Graph:
+        """Creates a Graph instance from an adjacency list.
+
+        Args:
+            adjacency (Dict[str, List[str]]): adjacency list used to create a
+                Graph instance.
+            
+        """
+        return cls(contents = adjacency)
+    
+    @classmethod
+    def from_edges(cls, edges: List[Sequence[str]]) -> Graph:
+        """Creates a Graph instance from an edge list.
+
+        Args:
+            edges (List[Sequence[str]]): Edge list used to create a Graph 
+                instance.
+            
+        """
+        contents = {}
+        for edge_pair in edges:
+            if edge_pair[0] not in contents:
+                contents[edge_pair[0]] = [edge_pair[1]]
+            else:
+                contents[edge_pair[0]].append(edge_pair[1])
+            if edge_pair[1] not in contents:
+                contents[edge_pair[1]] = []
+        return cls(contents = contents)
+    
+    @classmethod
+    def from_matrix(cls, matrix: List[List[int]], names: List[str]) -> Graph:
+        """Creates a Graph instance from an adjacency matrix
+
+        Args:
+            matrix (matrix: List[List[int]]): adjacency matrix used to create a 
+                Graph instance. The values in the matrix should be 1 
+                (indicating an edge) and 0 (indicating no edge).
+            names (List[str]): names of nodes in the order of the rows and
+                columns in 'matrix'.
+            
+        """
+        name_mapping = dict(zip(range(len(matrix)), names))
+        raw_adjacency = {
+            i: [j for j, adjacent in enumerate(row) if adjacent] 
+            for i, row in enumerate(matrix)}
+        contents = {}
+        for key, value in raw_adjacency.items():
+            new_key = name_mapping[key]
+            new_values = []
+            for edge in value:
+                new_values.append(name_mapping[edge])
+            contents[new_key] = new_values
+        return cls(contents = contents)
+    
     """ Public Methods """
     
-    def add(self, item: Union[sourdough.quirks.Element, Tuple[str]]) -> None:
-        """Adds a item to 'contents' or 'edges' depending on type.
+    def add(self, item: Union[str, Tuple[str]]) -> None:
+        """Adds a node or edge to 'contents' depending on type.
         
         Args:
-            item (Union[sourdough.quirks.Element, Tuple[str]]): either a 
-                Element or a tuple containing the names of nodes for an 
-                edge to be created.
+            item (Union[str, Tuple[str]]): either a str name or a tuple 
+                containing the names of nodes for an edge to be created.
         
+        Raises:
+            TypeError: if 'item' is neither a str or a tuple of two strings.
+            
         """
-        if isinstance(item, sourdough.quirks.Element):
+        if isinstance(item, str):
             self.add_node(node = item)
         elif isinstance(item, tuple) and len(item) == 2:
             self.add_edge(start = item[0], stop = item[1])
+        else:
+            raise TypeError('item must be a str for adding a node or a tuple '
+                            'of two strings for adding an edge')
         return self
 
-    def add_node(self, node: sourdough.quirks.Element) -> None:
+    def add_node(self, node: str) -> None:
         """Adds a node to 'contents'.
         
         Args:
-            node (Element): node with a name attribute to add to 
-                'contents'.
+            node (str): node to add to the graph.
+            
+        Raises:
+            ValueError: if 'node' is already in 'contents'.
         
         """
-        if node.name not in self.contents:
-            self.contents[node.name] = node
-            self.edges[node.name] = []
+        if node in self.contents:
+            raise ValueError(f'{node} already exists in the graph')
+        else:
+            self.contents[node] = []
         return self
 
     def add_edge(self, start: str, stop: str) -> None:
-        """Adds an edge to 'edges'.
+        """Adds an edge to 'contents'.
 
         Args:
-            start (str): name of node for edge to start.
-            stop (str): name of node for edge to stop.
+            start (str): node for edge to start.
+            stop (str): node for edge to stop.
             
-        """
-        if (start in self.edges 
-                and stop not in self.edges[start]
-                and start != stop):
-            try:
-                self.edges[start].append(stop)
-            except KeyError:
-                self.edges[start] = [stop]
-        return self
-
-    def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each node in 'contents'.
-
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
-            
-        """
-        new_contents = {}
-        for name, node in self.contents:
-            new_contents[name] = tool(node, **kwargs)
-        self.contents = new_contents
-        return self        
-
-    def create(self, source: Union[Mapping[str, Sequence[str]],
-                                   Sequence[Sequence[str]]],
-               catalog: Mapping[str, sourdough.quirks.Element] = None) -> None:
-        """[summary]
-
-        Args:
-            source (Union[Mapping[str, Sequence[str]], 
-                Sequence[Sequence[str]]]): [description]
-            catalog (Mapping[str, sourdough.quirks.Element], optional): 
-                Defaults to None.
-
         Raises:
-            TypeError: [description]
-
-        Returns:
-            [type]: [description]
+            ValueError: if 'start' is the same as 'stop'.
             
         """
-        if isinstance(source, Mapping):
-            self.contents, self.edges = self._convert_adjacency_dict(
-                source = source, 
-                catalog = catalog)
-        elif isinstance(source, Sequence):
-            self.contents, self.edges = self._convert_adjacency_matrix(
-                source = source, 
-                catalog = catalog)
+        if start == stop:
+            raise ValueError(
+                'The start of an edge cannot be the same as the stop')
         else:
-            raise TypeError(
-                'source must be an adjacency dict or adjacency matrix')   
+            self.contents[start].append(stop)
         return self
+
+    def combine(self, graph: Graph) -> None:
+        """Adds 'other' Graph to this Graph.
+
+        Combining creates an edge between every endpoint of this instance's
+        Graph and the every root of 'graph'.
+
+        Args:
+            graph (Graph): a second Graph to combine with this one.
             
-    def delete_node(self, name: str) -> None:
+        Raises:
+            ValueError: if 'graph' has nodes that are also in 'contents'.
+            TypeError: if 'graph' is not a Graph type.
+            
+        """
+        if isinstance(graph, Graph):
+            if any(k in graph.keys() for k in self.keys()):
+                raise ValueError('Cannot combine Graphs with the same nodes')
+            else:
+                current_endpoints = self.endpoints
+                self.contents.update(graph.contents)
+                for endpoint in current_endpoints:
+                    for root in graph.roots:
+                        self.add_edge(start = endpoint, stop = root)
+        else:
+            raise TypeError('graph must be a Graph type to combine')
+        return self
+       
+    def delete_node(self, node: str) -> None:
         """Deletes node from graph.
         
         Args:
-            name (str): name of node to delete from 'contents' and 'edges'.
+            node (str): node to delete from 'contents'.
+        
+        Raises:
+            KeyError: if 'node' is not in 'contents'.
             
         """
-        del self.contents[name]
-        del self.edges[name]
-        for key in self.contents.keys():
-            if name in self.edges[key]:
-                self.edges[key].remove(name)
+        try:
+            del self.contents[node]
+        except KeyError:
+            raise KeyError(f'{node} does not exist in the graph')
         return self
 
     def delete_edge(self, start: str, stop: str) -> None:
         """Deletes edge from graph.
 
         Args:
-            start (str): name of starting node for the edge to delete.
-            stop (str): name of ending node for the edge to delete.
-            
+            start (str): starting node for the edge to delete.
+            stop (str): ending node for the edge to delete.
+        
+        Raises:
+            KeyError: if 'start' is not a node in the Graph.
+            ValueError: if 'stop' does not have an edge with 'start'.
+
         """
-        self.edges[start].remove(stop)
+        try:
+            self.contents[start].remove(stop)
+        except KeyError:
+            raise KeyError(f'{start} does not exist in the graph')
+        except ValueError:
+            raise ValueError(f'{stop} is not connected to {start}')
         return self
 
-    def find(self, tool: Callable, **kwargs) -> Sequence[Any]:
-        """Finds items in 'contents' that match criteria in 'tool'.
-        
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
-            
-        Returns:
-            Sequence[Any]: stored items matching the criteria in 'tool'. 
-        
-        """
-        matches = []
-        for node in self.contents.values():
-            matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
-        return matches
-   
-    """ Private Methods """
-    
-    def _convert_adjacency_dict(self, source: Mapping[str, Sequence[str]],
-            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
-                Mapping[str, sourdough.quirks.Element], 
-                Mapping[str, Sequence[str]]]:
-        """
-        """
-        edges = source
-        if catalog is None:
-            nodes = source.keys()
-        else:
-            nodes = [catalog.get(k) for k in source.keys()]
-        contents = dict(zip(source.keys(), nodes))  
-        return contents, edges
+    def search(self, start: str = None, depth_first: bool = True) -> List[str]:
+        """Returns a path through the Graph.
 
-    def _convert_adjacency_matrix(self, source: Sequence[Sequence[str]],
-            catalog: Mapping[str, sourdough.quirks.Element] = None) -> Tuple[
-                Mapping[str, sourdough.quirks.Element], 
-                Mapping[str, Sequence[str]]]:
-        """
-        """
-        contents = {}
-        edges = {}
-        return contents, edges
-    
+        Args:
+            start (str): node to start the path from. If None, it is assigned to
+                the first root in the Graph. Defaults to None.
+            depth_first (bool): whether the search should be depth first (True)
+                or breadth first (False). Defaults to True.
+
+        Returns:
+            List[str]: nodes in a path through the Graph.
+            
+        """        
+        if start is None:
+            start = self.roots[0]
+        if depth_first:
+            visited = self._depth_first_search(node = start, visited = [])
+        else:
+            visited = self._breadth_first_search(node = start)
+        return visited
+
+    """ Private Methods """
+
+    def _breadth_first_search(self, node: str) -> List[str]:
+        """Returns a breadth first search path through the Graph.
+
+        Args:
+            node (str): node to start the search from.
+
+        Returns:
+            List[str]: nodes in a path through the Graph.
+            
+        """        
+        visited = set()
+        queue = [node]
+        while queue:
+            vertex = queue.pop(0)
+            if vertex not in visited:
+                visited.add(vertex)
+                queue.extend(set(self[vertex]) - visited)
+        return list(visited)
+       
+    def _depth_first_search(self, node: str, visited: List[str]) -> List[str]:
+        """Returns a depth first search path through the Graph.
+
+        Args:
+            node (str): node to start the search from.
+            visited (List[str]): list of visited nodes.
+
+        Returns:
+            List[str]: nodes in a path through the Graph.
+            
+        """  
+        if node not in visited:
+            visited.append(node)
+            for edge in self[node]:
+                self._depth_first_search(node = edge, visited = visited)
+        return visited
+       
     def _find_all_permutations(self, 
-            starts: str, 
+            starts: Union[str, Sequence[str]],
             ends: Union[str, Sequence[str]]) -> List[List[str]]:
         """[summary]
 
         Args:
-            start (str): [description]
-            ends (Union[str, Sequence[str]]): [description]
+            start (Union[str, Sequence[str]]): starting points for paths through
+                the Graph.
+            ends (Union[str, Sequence[str]]): endpoints for paths through the
+                Graph.
 
         Returns:
-            List[List[str]]: [description]
+            List[List[str]]: list of all paths through the Graph from all
+                'starts' to all 'ends'.
+            
         """
         all_permutations = []
         for start in sourdough.tools.listify(starts):
@@ -351,8 +380,8 @@ class Graph(sourdough.types.Lexicon, Structure):
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
         Args:
-            start (str): name of Element instance to start paths from.
-            end (str): name of Element instance to end paths.
+            start (str): node to start paths from.
+            end (str): node to end paths.
             path (List[str]): a path from 'start' to 'end'. Defaults to an empty 
                 list. 
 
@@ -364,10 +393,10 @@ class Graph(sourdough.types.Lexicon, Structure):
         path = path + [start]
         if start == end:
             return [path]
-        if start not in self.edges:
+        if start not in self.contents:
             return []
         paths = []
-        for node in self.edges[start]:
+        for node in self.contents[start]:
             if node not in path:
                 new_paths = self._find_all_paths(
                     start = node, 
@@ -376,10 +405,50 @@ class Graph(sourdough.types.Lexicon, Structure):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
-  
+
+    """ Dunder Methods """
+
+    def __add__(self, other: Graph) -> None:
+        """Adds 'other' Graph to this Graph.
+
+        Graph adding uses the 'combine' method. Read its docstring for further
+        details about how the graphs are added together.
+        
+        Args:
+            other (Graph): a second Graph to combine with this one.
+            
+        """
+        self.combine(graph = other)        
+        return self
+
+    def __iadd__(self, other: Any) -> None:
+        """Adds 'other' Graph to this Graph.
+
+        Graph adding uses the 'combine' method. Read its docstring for further
+        details about how the graphs are added together.
+        
+        Args:
+            other (Graph): a second Graph to combine with this one.
+            
+        """
+        self.combine(graph = other)        
+        return self
+       
+    def __missing__(self, key: str) -> List:
+        """Returns an empty list when a missing 'key' is sought.
+
+        Args:
+            key (str): node sought by an access call.
+
+        Returns:
+            List: empty list of edges.
+            
+        """
+        return self.default
+
 
 @dataclasses.dataclass
-class Pipeline(sourdough.types.Hybrid, Structure):
+class Pipeline(sourdough.types.Hybrid):
     """Stores a linear pipeline data structure.
     
     A Pipeline differs from a Hybrid in 2 significant ways:
@@ -460,92 +529,92 @@ class Pipeline(sourdough.types.Hybrid, Structure):
         return self      
         
         
-@dataclasses.dataclass
-class Tree(sourdough.types.Hybrid, Structure):
-    """Stores a general tree data structure.
+# @dataclasses.dataclass
+# class Tree(sourdough.types.Hybrid, Structure):
+#     """Stores a general tree data structure.
     
-    A Tree differs from a Hybrid in 3 significant ways:
-        1) It only stores Element subclasses.
-        2) It has a nested structure with children descending from items in
-            'contents'. Consequently, all relevant methods include a 'recursive'
-            parameter which determines whether the method should apply to all
-            levels of the tree.
-        3) It includes 'apply' and 'find' methods which traverse items in
-            'contents' (recursively, if the 'recursive' argument is True), to
-            either 'apply' a Callable or 'find' items matching criteria defined
-            in a Callable.
+#     A Tree differs from a Hybrid in 3 significant ways:
+#         1) It only stores Element subclasses.
+#         2) It has a nested structure with children descending from items in
+#             'contents'. Consequently, all relevant methods include a 'recursive'
+#             parameter which determines whether the method should apply to all
+#             levels of the tree.
+#         3) It includes 'apply' and 'find' methods which traverse items in
+#             'contents' (recursively, if the 'recursive' argument is True), to
+#             either 'apply' a Callable or 'find' items matching criteria defined
+#             in a Callable.
 
-    Args:
-        contents (Sequence[Element]): items with 'name' attributes to store. 
-            If a dict is passed, the keys will be ignored and only the values 
-            will be added to 'contents'. If a single item is passed, it will be 
-            placed in a list. Defaults to an empty list.
+#     Args:
+#         contents (Sequence[Element]): items with 'name' attributes to store. 
+#             If a dict is passed, the keys will be ignored and only the values 
+#             will be added to 'contents'. If a single item is passed, it will be 
+#             placed in a list. Defaults to an empty list.
                          
-    """
-    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
-        default_factory = list) 
+#     """
+#     contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
+#         default_factory = list) 
     
-    """ Public Methods """
+#     """ Public Methods """
 
-    def add(self, item: Sequence[Any], **kwargs) -> None:
-        """Appends 'item' argument to 'contents' attribute.
+#     def add(self, item: Sequence[Any], **kwargs) -> None:
+#         """Appends 'item' argument to 'contents' attribute.
         
-        Args:
-            item (Sequence[Any]): items to add to the 'contents' attribute.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
+#         Args:
+#             item (Sequence[Any]): items to add to the 'contents' attribute.
+#             kwargs: creates a consistent interface even when subclasses have
+#                 additional parameters.
                 
-        """
-        self.contents.append(item)
-        return self  
+#         """
+#         self.contents.append(item)
+#         return self  
 
-    def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
-        """Maps 'tool' to items stored in 'contents'.
+#     def apply(self, tool: Callable, recursive: bool = True, **kwargs) -> None:
+#         """Maps 'tool' to items stored in 'contents'.
         
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            recursive (bool): whether to apply 'tool' to nested items in
-                'contents'. Defaults to True.
-            kwargs: additional arguments to pass when 'tool' is used.
+#         Args:
+#             tool (Callable): callable which accepts an object in 'contents' as
+#                 its first argument and any other arguments in kwargs.
+#             recursive (bool): whether to apply 'tool' to nested items in
+#                 'contents'. Defaults to True.
+#             kwargs: additional arguments to pass when 'tool' is used.
         
-        """
-        new_contents = []
-        for child in iter(self.contents):
-            if hasattr(child, 'apply') and recursive:
-                new_child = child.apply(tool = tool, recursive = True, **kwargs)
-            elif recursive:
-                new_child = tool(child, **kwargs)
-            else:
-                new_child = child
-            new_contents.append(new_child)
-        self.contents = new_contents
-        return self
+#         """
+#         new_contents = []
+#         for child in iter(self.contents):
+#             if hasattr(child, 'apply') and recursive:
+#                 new_child = child.apply(tool = tool, recursive = True, **kwargs)
+#             elif recursive:
+#                 new_child = tool(child, **kwargs)
+#             else:
+#                 new_child = child
+#             new_contents.append(new_child)
+#         self.contents = new_contents
+#         return self
 
-    def find(self, tool: Callable, recursive: bool = True, 
-             matches: Sequence[Any] = None, **kwargs) -> Sequence[Any]:
-        """Finds items in 'contents' that match criteria in 'tool'.
+#     def find(self, tool: Callable, recursive: bool = True, 
+#              matches: Sequence[Any] = None, **kwargs) -> Sequence[Any]:
+#         """Finds items in 'contents' that match criteria in 'tool'.
         
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            recursive (bool): whether to apply 'tool' to nested items in
-                'contents'. Defaults to True.
-            matches (Sequence[Any]): items matching the criteria in 'tool'. This 
-                should not be passed by an external call to 'find'. It is 
-                included to allow recursive searching.
-            kwargs: additional arguments to pass when 'tool' is used.
+#         Args:
+#             tool (Callable): callable which accepts an object in 'contents' as
+#                 its first argument and any other arguments in kwargs.
+#             recursive (bool): whether to apply 'tool' to nested items in
+#                 'contents'. Defaults to True.
+#             matches (Sequence[Any]): items matching the criteria in 'tool'. This 
+#                 should not be passed by an external call to 'find'. It is 
+#                 included to allow recursive searching.
+#             kwargs: additional arguments to pass when 'tool' is used.
             
-        Returns:
-            Sequence[Any]: stored items matching the criteria in 'tool'. 
+#         Returns:
+#             Sequence[Any]: stored items matching the criteria in 'tool'. 
         
-        """
-        if matches is None:
-            matches = []
-        for item in iter(self.contents):
-            matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
-            if isinstance(item, Iterable) and recursive:
-                matches.extend(item.find(tool = tool, recursive = True,
-                                         matches = matches, **kwargs))
-        return matches
+#         """
+#         if matches is None:
+#             matches = []
+#         for item in iter(self.contents):
+#             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
+#             if isinstance(item, Iterable) and recursive:
+#                 matches.extend(item.find(tool = tool, recursive = True,
+#                                          matches = matches, **kwargs))
+#         return matches
      
