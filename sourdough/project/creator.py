@@ -20,6 +20,18 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
+
+@dataclasses.dataclass
+class ProcessedSection(object):
+    
+    components: Dict[str, List] = dataclasses.field(default_factory = dict)
+    contains: Dict[str, str] = dataclasses.field(default_factory = dict)
+    design: str = None
+    parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    other: Dict[str, Any] = dataclasses.field(default_factory = dict)
+
+
 @dataclasses.dataclass
 class Creator(sourdough.types.Base, abc.ABC):
     """Creates a sourdough object.
@@ -57,13 +69,6 @@ class WorkflowCreator(abc.ABC):
     manager: sourdough.project.Manager = dataclasses.field(
         repr = False, 
         default = None)
-    
-    """ Required Subclass Class Methods """
-    
-    @abc.abstractmethod
-    def create(self, node: str, **kwargs) -> sourdough.project.Workflow:
-        """Subclasses must provide their own methods."""
-        pass
 
     """ Properties """
     
@@ -74,37 +79,110 @@ class WorkflowCreator(abc.ABC):
     @property
     def library(self) -> sourdough.types.Library:
         return self.manager.bases.workflow.library
+     
+    """ Required Public Methods """
     
-    """ Private Methods """
+    def create(self, node: str) -> sourdough.project.Workflow:
+        """Creates a Creator instance from a section of a Settings instance.
 
-    def _parse_section(self, node: str) -> Dict[str, List[str]]:
+        Args:
+            node (str): starting node in the workflow being created.
+                
+        Returns:
+            Workflow: derived from 'section'.
+            
+        """
+        processed = self.parse_section(name = node)
+        adjacency = self.create_adjacency(processed = processed)
+        components = self.create_components(processed = processed)
+        return sourdough.project.Workflow(
+            contents = adjacency, 
+            components = components)
+
+    def parse_section(self, name: str) -> ProcessedSection:
         """[summary]
 
         Args:
-            self ([type]): [description]
-            List ([type]): [description]
 
         Returns:
-            [type]: [description]
+            ProcessedSection
             
         """
-        section = self.settings[node]
+        section = self.settings[name]
+        processed = ProcessedSection()
+        processed.design = self._get_design(name = name, section = section)
         component_suffixes = self.library.suffixes
-        component_keys = [
-            k for k in section.keys() if k.endswith(component_suffixes)]
-        if component_keys:
-            components_key = [i for i in component_keys if i.startswith(node)][0]
-            components = sourdough.tools.listify(section.pop(components_key))
-            subcomponents = {}
-            for name in components:
-                subcomponent_key = [
-                    i for i in component_keys if i.startswith(name)][0]
-                subcomponents[name] = component_keys[subcomponent_key]
+        section_component = self.library.borrow(name = [name, processed.design])
+        parameters = self._get_parameters(component = section_component)
+        for key, value in section.items():
+            prefix, suffix = self._divide_key(key = key)
+            if 'design' == suffix:
+                pass
+            elif suffix in component_suffixes:
+                processed.contains[prefix] = [suffix[:-1]]
+                processed.components[prefix] = value 
+            elif suffix in parameters:
+                processed.parameters[suffix] = value 
+            elif prefix == name:
+                processed.attributes[suffix] = value
+            else:
+                processed.other[key] = value
+        return processed
+   
+
+    """ Private Methods """
+
+    def _get_design(self, name: str, section: Mapping[str, Any]) -> str:
+        """
+        """
+        try:
+            design = section[f'{name}_design']
+        except KeyError:
+            try:
+                design = section[f'design']
+            except KeyError:
+                try:
+                    design = self.settings['sourdough'][f'default_design']
+                except KeyError:
+                    design = None
+        return design
+
+    def _get_parameters(self, 
+            component: Type[sourdough.types.Base], 
+            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
+        """
+        """
+        parameters = list(component.__annotations__.keys())
+        return tuple(i for i in parameters if i not in [skip])
+
+    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            
+            Tuple[str, str]: [description]
+            
+        """
+        if divider is None:
+            divider = '_'
+        if divider in key:
+            suffix = key.split(divider)[-1]
+            prefix = key[:-len(suffix) - 1]
         else:
-            subcomponents = None
-        return subcomponents
-    
-    
+            prefix = suffix = key
+        return prefix, suffix
+
+    def _inject_attributes(self, 
+            component: sourdough.project.Component, 
+            processed: ProcessedSection) -> sourdough.project.Component:
+        for key, value in processed.attributes.items():
+            setattr(component, key, value)
+        return component
+     
+
 @dataclasses.dataclass
 class Planner(WorkflowCreator):
     """Creates a serial workflow without branching.
@@ -122,38 +200,7 @@ class Planner(WorkflowCreator):
         default = None)
     
     """ Public Methods """
-    
-    def add(self, nodes: Sequence[str], 
-            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
-        """[summary]
 
-        Args:
-            nodes (Sequence[str]): [description]
-            workflow (sourdough.project.Workflow): [description]
-
-        Returns:
-            sourdough.project.Workflow: [description]
-            
-        """
-        for endpoint in workflow.endpoints:
-            workflow.add_edge(start = endpoint, stop = nodes[0])
-        workflow = workflow.append(nodes = nodes)
-        return workflow
-    
-    def create(self, node: str, **kwargs) -> sourdough.project.Workflow:
-        """Creates a Creator instance from a section of a Settings instance.
-
-        Args:
-            node (str): starting node in the workflow being created.
-                
-        Returns:
-            Workflow: derived from 'section'.
-            
-        """
-        workflow = sourdough.project.Workflow()
-        
-        return  
-    
 
 @dataclasses.dataclass
 class Researcher(WorkflowCreator):
