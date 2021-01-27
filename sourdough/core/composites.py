@@ -42,7 +42,9 @@ class Graph(sourdough.types.Lexicon):
     Args:
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             the names of nodes and the values are names of nodes which the key 
-            is connected to.
+            is connected to. Defaults to an empty dict.
+        default (Any): default value to use when a key is missing and a new
+            one is automatically corrected. Defaults to an empty list.
           
     """  
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
@@ -220,9 +222,26 @@ class Graph(sourdough.types.Lexicon):
             raise ValueError(
                 'The start of an edge cannot be the same as the stop')
         else:
+            if stop not in self.contents:
+                self.add_node(node = stop)
             self.contents[start].append(stop)
         return self
 
+    def append(self, nodes: Sequence[str]) -> None:
+        """[summary]
+
+        Args:
+            nodes (Sequence[str]): [description]
+            
+        """
+        for endpoint in self.endpoints:
+            self.add_edge(start = endpoint, stop = nodes[0])
+        previous_node = None
+        for node in nodes:
+            if previous_node is not None:
+                self.add_edge(start = previous_node, stop = node)
+        return self
+    
     def combine(self, graph: Graph) -> None:
         """Adds 'other' Graph to this Graph.
 
@@ -448,86 +467,86 @@ class Graph(sourdough.types.Lexicon):
         return self.default
 
 
-@dataclasses.dataclass
-class Pipeline(sourdough.types.Hybrid):
-    """Stores a linear pipeline data structure.
+# @dataclasses.dataclass
+# class Pipeline(sourdough.types.Hybrid):
+#     """Stores a linear pipeline data structure.
     
-    A Pipeline differs from a Hybrid in 2 significant ways:
-        1) It only stores Element subclasses.
-        2) It includes 'apply' and 'find' methods which traverse items in
-            'contents' to either 'apply' a Callable or 'find' items matching 
-            criteria defined in a Callable.
+#     A Pipeline differs from a Hybrid in 2 significant ways:
+#         1) It only stores Element subclasses.
+#         2) It includes 'apply' and 'find' methods which traverse items in
+#             'contents' to either 'apply' a Callable or 'find' items matching 
+#             criteria defined in a Callable.
 
-    Args:
-        contents (Sequence[Element]): items with 'name' attributes to store. 
-            If a dict is passed, the keys will be ignored and only the values 
-            will be added to 'contents'. If a single item is passed, it will be 
-            placed in a list. Defaults to an empty list.
+#     Args:
+#         contents (Sequence[Element]): items with 'name' attributes to store. 
+#             If a dict is passed, the keys will be ignored and only the values 
+#             will be added to 'contents'. If a single item is passed, it will be 
+#             placed in a list. Defaults to an empty list.
                          
-    """
-    contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
-        default_factory = list) 
+#     """
+#     contents: Sequence[sourdough.quirks.Element] = dataclasses.field(
+#         default_factory = list) 
     
-    """ Public Methods """
+#     """ Public Methods """
 
-    def add(self, item: Sequence[Any], **kwargs) -> None:
-        """Appends 'item' argument to 'contents' attribute.
+#     def add(self, item: Sequence[Any], **kwargs) -> None:
+#         """Appends 'item' argument to 'contents' attribute.
         
-        Args:
-            item (Sequence[Any]): items to add to the 'contents' attribute.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
+#         Args:
+#             item (Sequence[Any]): items to add to the 'contents' attribute.
+#             kwargs: creates a consistent interface even when subclasses have
+#                 additional parameters.
                 
-        """
-        self.contents.append(item)
-        return self  
+#         """
+#         self.contents.append(item)
+#         return self  
 
-    def apply(self, tool: Callable, **kwargs) -> None:
-        """Applies 'tool' to each node in 'contents'.
+#     def apply(self, tool: Callable, **kwargs) -> None:
+#         """Applies 'tool' to each node in 'contents'.
 
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
+#         Args:
+#             tool (Callable): callable which accepts an object in 'contents' as
+#                 its first argument and any other arguments in kwargs.
+#             kwargs: additional arguments to pass when 'tool' is used.
             
-        """
-        new_contents = []
-        for node in self.contents:
-            new_contents.append(tool(node, **kwargs))
-        self.contents = new_contents
-        return self        
+#         """
+#         new_contents = []
+#         for node in self.contents:
+#             new_contents.append(tool(node, **kwargs))
+#         self.contents = new_contents
+#         return self        
        
-    def find(self, tool: Callable, **kwargs) -> Sequence[Any]:
-        """Finds items in 'contents' that match criteria in 'tool'.
+#     def find(self, tool: Callable, **kwargs) -> Sequence[Any]:
+#         """Finds items in 'contents' that match criteria in 'tool'.
         
-        Args:
-            tool (Callable): callable which accepts an object in 'contents' as
-                its first argument and any other arguments in kwargs.
-            kwargs: additional arguments to pass when 'tool' is used.
+#         Args:
+#             tool (Callable): callable which accepts an object in 'contents' as
+#                 its first argument and any other arguments in kwargs.
+#             kwargs: additional arguments to pass when 'tool' is used.
             
-        Returns:
-            Sequence[Any]: stored items matching the criteria in 'tool'. 
+#         Returns:
+#             Sequence[Any]: stored items matching the criteria in 'tool'. 
         
-        """
-        matches = []
-        for node in self.contents:
-            matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
-        return matches
+#         """
+#         matches = []
+#         for node in self.contents:
+#             matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
+#         return matches
 
-    def reorder(self, order: Sequence[str]) -> None:
-        """
+#     def reorder(self, order: Sequence[str]) -> None:
+#         """
 
-        Args:
-            order (Sequence[str]): [description]
+#         Args:
+#             order (Sequence[str]): [description]
 
-        Returns:
-            [type]: [description]
-        """
-        new_contents = []
-        for item in order:
-            new_contents.append(self[item])
-        self.contents = new_contents
-        return self      
+#         Returns:
+#             [type]: [description]
+#         """
+#         new_contents = []
+#         for item in order:
+#             new_contents.append(self[item])
+#         self.contents = new_contents
+#         return self      
         
         
 # @dataclasses.dataclass

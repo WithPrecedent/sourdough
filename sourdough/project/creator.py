@@ -1,5 +1,5 @@
 """
-builder: produces workflows and their components
+creator: produces workflows and their components
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -40,7 +40,7 @@ class Creator(sourdough.types.Base, abc.ABC):
     """ Required Subclass Class Methods """
     
     @abc.abstractmethod
-    def create(cls, **kwargs) -> sourdough.types.Base:
+    def create(self, **kwargs) -> sourdough.types.Base:
         """Subclasses must provide their own methods."""
         pass
     
@@ -76,25 +76,6 @@ class WorkflowCreator(abc.ABC):
         return self.manager.bases.workflow.library
     
     """ Private Methods """
-    
-    def _create_agenda(self, 
-            nodes: List[str], 
-            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
-        """[summary]
-
-        Args:
-            nodes (List[str]): [description]
-            workflow (sourdough.project.Workflow): [description]
-
-        Returns:
-            sourdough.project.Workflow: [description]
-            
-        """
-        previous_node = None
-        for node in nodes:
-            if previous_node is not None:
-                workflow.add_edge(start = previous_node, stop = node)
-        return workflow    
 
     def _parse_section(self, node: str) -> Dict[str, List[str]]:
         """[summary]
@@ -105,6 +86,7 @@ class WorkflowCreator(abc.ABC):
 
         Returns:
             [type]: [description]
+            
         """
         section = self.settings[node]
         component_suffixes = self.library.suffixes
@@ -141,6 +123,23 @@ class Planner(WorkflowCreator):
     
     """ Public Methods """
     
+    def add(self, nodes: Sequence[str], 
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """[summary]
+
+        Args:
+            nodes (Sequence[str]): [description]
+            workflow (sourdough.project.Workflow): [description]
+
+        Returns:
+            sourdough.project.Workflow: [description]
+            
+        """
+        for endpoint in workflow.endpoints:
+            workflow.add_edge(start = endpoint, stop = nodes[0])
+        workflow = workflow.append(nodes = nodes)
+        return workflow
+    
     def create(self, node: str, **kwargs) -> sourdough.project.Workflow:
         """Creates a Creator instance from a section of a Settings instance.
 
@@ -151,14 +150,8 @@ class Planner(WorkflowCreator):
             Workflow: derived from 'section'.
             
         """
-        components = self._parse_section(node = node)
-        possible = list(components.values())
-        # Computes Cartesian product of possible permutations.
-        permutations = list(map(list, itertools.product(*possible)))
-        keys = {f'plan_{i}' for i in len(permutations)}
-        paths = dict(zip(keys, permutations))
-        for path in paths:
-            self._create_agenda(nodes = path)
+        workflow = sourdough.project.Workflow()
+        
         return  
     
 
@@ -179,12 +172,31 @@ class Researcher(WorkflowCreator):
         default = None)
 
     """ Class Methods """
-    
-    def create(cls, 
+
+    def add(self, nodes: List[List[str]], 
+            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+        """[summary]
+
+        Args:
+            nodes (Sequence[str]): [description]
+            workflow (sourdough.project.Workflow): [description]
+
+        Returns:
+            sourdough.project.Workflow: [description]
+            
+        """
+        for plan in nodes:
+            for endpoint in workflow.endpoints:
+                workflow.add_edge(start = endpoint, stop = plan[0])
+            workflow.append(nodes = nodes)
+        return workflow
+       
+    def create(self, 
             node: str,
             contents: Sequence[str], 
             section: Mapping[str, Any],
-            component_keys: Sequence[str], 
+            component_keys: Sequence[str],
+            prefix: str = 'plan', 
             **kwargs) -> Creator:
         """Creates a Creator instance from a section of a Settings instance.
 
@@ -203,6 +215,9 @@ class Researcher(WorkflowCreator):
             possible.append(inner_contents)
         # Computes Cartesian product of possible permutations.
         permutations = list(map(list, itertools.product(*possible)))
-        keys = {f'plan_{i}' for i in len(permutations)}
+        for plan in permutations:
+            workflow = self._create_agenda(nodes = plan, workflow = workflow)
+        keys = {f'{prefix}_{i}' for i in len(permutations)}
         contents = dict(zip(keys, contents))
-        return cls(contents = contents, node = node, **kwargs)   
+        return self(contents = contents, node = node, **kwargs)   
+    

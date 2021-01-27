@@ -1,5 +1,5 @@
 """
-nodes:
+workflows:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -9,51 +9,54 @@ Contents:
     
 """
 from __future__ import annotations
-import abc
 import copy
 import dataclasses
-import itertools
-import multiprocessing
-import pprint
 import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough  
 
-@dataclasses.dataclass
-class Node(object):
-    
-    name: str = None
-    step: str = None
-
 
 @dataclasses.dataclass
-class Workflow(sourdough.quirks.Element, 
-               sourdough.composites.Graph, 
-               sourdough.types.Base, 
-               abc.ABC):
-    """Base class for workflows in a sourdough project.
+class Workflow(sourdough.composites.Graph):
+    """Stores lightweight workflow and corresponding components.
     
     Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-        
-    """
-    name: str = None
-    step: str = None
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            the names of nodes and the values are names of nodes which the key 
+            is connected to. Defaults to an empty dict.
+        default (Any): default value to use when a key is missing and a new
+            one is automatically corrected. Defaults to an empty list.
+        copy_components (bool): whether to make copies of stored components
+            before calling their 'execute' methods (True) or whether to simply
+            use the stored Component instance as is (False). Defaults to False.
+        components (ClassVar[Library]): stores Component instances that 
+            correspond to nodes in the Workflow. Defaults to an empty Library.
+            
+    """  
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    default: Any = dataclasses.field(default_factory = list)
+    copy_components: bool = False
+    components: ClassVar[sourdough.types.Library] = sourdough.types.Library()
 
-    """ Required Subclass Class Methods """
+    """ Public Methods """
     
-    @abc.abstractclassmethod
-    def create(cls, **kwargs) -> Workflow:
-        """Subclasses must provide their own class methods."""
-        pass
+    def execute(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+        """[summary]
+
+        Args:
+            project (sourdough.Project): [description]
+
+        Returns:
+            sourdough.Project: [description]
+        """
+        for path in self.paths:
+            for node in path:
+                if self.copy_components:
+                    component = copy.deepcopy(self.components[node])
+                else:
+                    component = self.components[node]
+                project = component.execute(project = project, **kwargs)    
+        return project
     
