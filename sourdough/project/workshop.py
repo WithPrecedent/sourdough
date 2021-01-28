@@ -1,279 +1,358 @@
 """
-workshop: classes for building a sourdough project
+workflows:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-
 Contents:
-
     
 """
 from __future__ import annotations
-import abc
 import copy
 import dataclasses
 import inspect
-import itertools
-import pprint
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough  
-                       
-   
+
+
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Validator, sourdough.project.Component, abc.ABC):
-    """Uses stored builders to create new items.
-    
-    A Director differs from a Lexicon in 3 significant ways:
-        1) It stores a separate Lexicon called 'builders' which have classes
-            used to create other items.
-        2) It iterates 'builders' and stores its output in 'contents.' General
-            access methods still point to 'contents'.
-        3) It has an additional convenience methods called 'add_builder' for
-            adding new items to 'builders', 'advance' for iterating one step,
-            and 'complete' which completely iterates the instance and stores
-            all results in 'contents'.
-    
+class Blueprint(object):
+    """Stores information from a Settings section about a Workflow
+
     Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-                      
+        
+        
     """
     name: str = None
-    project: sourdough.Project = None
-    builder: Union[sourdough.foundry.Builder, str] = None
-    validations: Sequence[str] = dataclasses.field(default_factory = lambda: [
-        'builder'])
-    
-    """ Public Methods """
+    parallel: bool = False
+    components: Dict[str, List] = dataclasses.field(default_factory = dict)
+    designs: Dict[str, str] = dataclasses.field(default_factory = dict)
+    parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    other: Dict[str, Any] = dataclasses.field(default_factory = dict)
 
-    def execute(self, data: sourdough.composite.Structure,
-              **kwargs) -> sourdough.composite.Structure:
+
+@dataclasses.dataclass
+class WorkflowCreator(sourdough.project.Creator):
+    """Creates a sourdough object.
+    
+    Args:
+        manager (Manager): associated project manager containing needed data
+            for creating objects.
+                       
+    """
+    manager: sourdough.project.Manager = dataclasses.field(
+        repr = False, 
+        default = None)
+
+    """ Properties """
+    
+    @property
+    def library(self) -> sourdough.types.Library:
+        return self.manager.bases.workflow.library
+     
+    """ Required Public Methods """
+    
+    def create(self, node: str) -> sourdough.project.Workflow:
+        """Creates a Creator instance from a section of a Settings instance.
+
+        Args:
+            node (str): starting node in the workflow being created.
+                
+        Returns:
+            Workflow: derived from 'section'.
+            
+        """
+        blueprint = self.parse_section(name = node)
+        graph = self.create_graph(blueprint = blueprint)
+        components = self.create_components(blueprint = blueprint)
+        return sourdough.project.Workflow(
+            contents = graph, 
+            components = components)
+
+    def parse_section(self, name: str) -> Blueprint:
         """[summary]
 
         Args:
-            data (sourdough.composite.Structure): [description]
 
         Returns:
-            sourdough.composite.Structure: [description]
+            Blueprint
             
         """
-        start_section = self.project.settings[self.name]
+        section = self.settings[name]
+        blueprint = Blueprint(name = name)
+        design = self._get_design(name = name, section = section)
+        blueprint.designs[name] = design
+        parameters = self._get_parameters(names = [name, design])
+        for key, value in section.items():
+            prefix, suffix = self._divide_key(key = key)
+            if 'design' == suffix:
+                pass
+            elif suffix in self.library.suffixes:
+                blueprint.bases.update(dict.fromkeys(value, suffix[:-1]))
+                blueprint.components[prefix] = value 
+            elif suffix in parameters:
+                blueprint.parameters[suffix] = value 
+            elif prefix == name:
+                blueprint.attributes[suffix] = value
+            elif suffix == 'steps':
+                blueprint.parallel = True
+            else:
+                blueprint.other[key] = value
+        return blueprint
+   
+    def create_components(self, 
+            blueprint: Blueprint) -> Dict[str, sourdough.project.Component]:
+        """
+        """
+        instances = {}
+        design = blueprint.designs[blueprint.name]
+        section_keys = [blueprint.name, design]
+        section_component = self.library.borrow(name = [section_keys])
+        instances[blueprint.name] = section_component(
+            name = blueprint.name, 
+            **blueprint.parameters)
+        for value in blueprint.components.values():
+            for item in value:
+                if not item in self.settings:
+                    subcomponent_keys = [item, blueprint.designs[item]]
+                    subcomponent = self.library.borrow(name = subcomponent_keys)
+                    instance = subcomponent(name = item)
+                    instances[item] = self._inject_attributes(
+                        component = instance, 
+                        blueprint = blueprint)
+        return instances
 
-    """ Private Methods """
-    
-    def _validate_builder(self, 
-                          builder: Union[sourdough.foundry.Builder, str]) -> (
-                              sourdough.foundry.Builder):
+    def create_graph(self, 
+            blueprint: Blueprint) -> Dict[str, List[str]]:
+        """[summary]
+
+        Args:
+            blueprint (Blueprint): [description]
+
+        Returns:
+            Dict[str, List[str]]: [description]
+            
         """
-        """
-        if isinstance(builder, sourdough.foundry.builder):
-            builder.manager = self
-        elif issubclass(sourdough.foundry.builder):
-            builder = builder(manager = self)
-        elif isinstance(builder, str):
-            builder = self.project.bases.builder.borrow(name = builder)
-            builder = builder(manager = self)
+        if blueprint.parallel:
+            graph = self._create_parallel_graph(blueprint = blueprint)
         else:
-            raise TypeError('builder must be a Builder or str type')
-        return builder
-  
-  
-@dataclasses.dataclass
-class Creator(sourdough.foundry.Builder, sourdough.types.Base, abc.ABC):
-    """Creates a Structure subclass instance.
+            graph = self._create_serial_graph(blueprint = blueprint)
+        return graph
+                     
+    """ Private Methods """
 
-    All Creator subclasses should follow the naming convention of:
-            '{Class being built}Creator'. 
-    This allows the Creator to be properly matched with the class being 
-    constructed without using an extraneous mapping to link the two.
+    def _get_design(self, name: str, section: Mapping[str, Any]) -> str:
+        """
+        """
+        try:
+            design = section[f'{name}_design']
+        except KeyError:
+            try:
+                design = section[f'design']
+            except KeyError:
+                try:
+                    design = self.settings['sourdough'][f'default_design']
+                except KeyError:
+                    design = None
+        return design
+
+    def _get_parameters(self, 
+            names: List[str], 
+            skip: List[str] = lambda: [
+                'name', 'contents', 'design']) -> Tuple[str]:
+        """
+        """
+        component = self.library.borrow(name = names)
+        parameters = list(component.__annotations__.keys())
+        return tuple(i for i in parameters if i not in [skip])
+
+    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
+        """[summary]
+
+        Args:
+            key (str): [description]
+
+        Returns:
+            
+            Tuple[str, str]: [description]
+            
+        """
+        if divider is None:
+            divider = '_'
+        if divider in key:
+            suffix = key.split(divider)[-1]
+            prefix = key[:-len(suffix) - 1]
+        else:
+            prefix = suffix = key
+        return prefix, suffix
+
+    def create_parallel_graph(self,
+                              blueprint: Blueprint) -> Dict[str, List[str]]:
+        """Creates a Creator instance from a section of a Settings instance.
+
+        Args:
+            section (Mapping[str, Any]): section of a Settings instance to
+                use to create a Creator.
+                
+        Returns:
+            Creator: derived from 'section'
+            
+        """
+        graph = sourdough.composites.Graph()
+        steps = blueprint.components[blueprint.name]
+        possible = [blueprint.components[s] for s in steps]
+        # Computes Cartesian product of possible paths.
+        permutations = list(map(list, itertools.product(*possible)))
+        paths = [p + blueprint.designs[blueprint.name] for p in permutations]
+        for path in paths:
+            graph = self._add_plan(
+                contents = path, 
+                blueprint = blueprint, 
+                graph = graph)
+        return graph
+
+    def _create_serial_graph(self, blueprint: Blueprint) -> Dict[str, List[str]]:
+        """[summary]
+
+        Args:
+            blueprint (Blueprint): [description]
+
+        Returns:
+            Dict[str, List[str]]: [description]
+            
+        """
+        graph = sourdough.composites.Graph()
+        graph = self._add_plan(
+            contents = blueprint.contents[blueprint.name],
+            blueprint = blueprint,
+            graph = graph)
+        return graph
+
+    def _add_plan(self, 
+            contents: List[str], 
+            blueprint: Blueprint,
+            graph: sourdough.composites.Graph) -> sourdough.composites.Graph:
+        """[summary]
+
+        Args:
+            contents (List[str]): [description]
+            blueprint (Blueprint): [description]
+            graph (sourdough.composites.Graph): [description]
+
+        Returns:
+            sourdough.composites.Graph: [description]
+            
+        """
+        for item in contents:
+            try:
+                subcontents = blueprint.components[item]
+                graph = self._add_plan(
+                    contents = subcontents,
+                    blueprint = blueprint,
+                    graph = graph)
+            except KeyError:
+                graph.extend(contents)
+        return graph
+      
+    def _inject_attributes(self, 
+            component: sourdough.project.Component, 
+            blueprint: Blueprint) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            blueprint (Blueprint): [description]
+
+        Returns:
+            sourdough.project.Component: [description]
+        """
+        for key, value in blueprint.attributes.items():
+            setattr(component, key, value)
+        return component
+
+
+@dataclasses.dataclass
+class WorkflowManager(sourdough.quirks.Validator, sourdough.project.Manager):
+    """Creates and executes portions of a workflow in a sourdough project.
 
     Args:
         library (ClassVar[Library]): related Library instance that will store
             subclasses and allow runtime construction and instancing of those
             stored subclasses.
-            
+
     """
-    manager: Manager = None
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    name: str = None
+    creator: sourdough.project.Creator = None
+    project: sourdough.Project = dataclasses.field(repr = False, default = None)
+    bases: sourdough.project.Bases = dataclasses.field(
+        repr = False, 
+        default = None)
+    validations: ClassVar[Sequence[str]] = ['bases', 'creator']
     
     """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            # Removes '_builder' from class name so that the key is consistent
-            # with the key name for the class being constructed.
-            try:
-                key.remove('_creator')
-            except ValueError:
-                pass
-            cls.library[key] = cls
-            
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, name: str, **kwargs) -> sourdough.types.Base:
-        """Creates a Base subclass instance from 'source'.
-        
-        Subclasses must provide their own methods.
 
-        Args:
-            name (str): name of section in 'source' to start the creation 
-                process.
-            source (Any): source object from which to create an instance of a
-                Base subclass.
-            kwargs: additional arguments to pass when a Base subclass is
-                instanced.
-        
-        Returns:
-            Base: a sourdough Base subclass instance.
-            
-        """
-        pass
-    
-    """ Private Methods """
-    
-
-        
-    def _get_parameters(self, 
-            item: Type[sourdough.types.Base], 
-            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
-        """
-        """
-        parameters = list(item.__annotations__.keys())
-        return tuple(i for i in parameters if i not in [skip])
-    
-    def _get_component(self, 
-            name: Union[str, Sequence[str]]) -> Type[sourdough.project.Component]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Type: [description]
-            
-        """
-        keys = [name]
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
         try:
-            keys.append(self.project.settings[name][f'{name}_design'])
-        except KeyError:
-            keys.append(self.project.settings['general']['default_node_design'])
-        return self.borrow(keys = keys)
-            
-
-@dataclasses.dataclass
-class ComponentCreator(sourdough.workshop.Creator, abc.ABC):
-    
-    project: sourdough.Project = None
-    skip: ClassVar[Sequence[str]] = ['name', 'contents', 'parameters']
-    
-    """ Public Methods """
-
-    
-    def create(self, name: str, component: sourdough.project.Component, 
-               section: Mapping[str, Any]) -> None:
-        """
-        
-        """
-        suffixes = self._get_suffixes(item = self.base)
-        for item in validations:
-            try:
-                kwargs = {item: getattr(self, item)}
-                setattr(self, item, getattr(
-                    self, f'_validate_{item}')(**kwargs))
-            except AttributeError:
-                pass
-        return self     
-
-    """ Private Methods """
-
-
-""" Structural Creator Classes """ 
-
-
-@dataclasses.dataclass
-class StructureCreator(sourdough.workshop.Creator, abc.ABC):
-    
-    
-    def _get_parameters(self, name: str, **kwargs) -> Mapping[str, Any]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-
-        Returns:
-            Parameters: [description]
-        """
-        try:
-            kwargs.update(self.project.settings[f'{name}_parameters'])
-        except KeyError:
+            super().__post_init__()
+        except AttributeError:
             pass
-        return kwargs
-
-       
-@dataclasses.dataclass
-class GraphCreator(StructureCreator):
-    """Builds a sourdough Graph
-    
-    """  
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    project: sourdough.Project = dataclasses.field(repr = False, default = None)
-    
+        self.validate()
+      
     """ Public Methods """
     
-    def create(self, source: Union[
-            sourdough.base.Configuration,
-            Mapping[str, Sequence[str]],
-            Sequence[Sequence[str]]]) -> sourdough.composite.Graph:
-        """
-        """
-        if isinstance(source, sourdough.resources.Configuration):
-            return self._from_configuration(source = source)
-        elif isinstance(source, Mapping):
-            return self._from_adjacency_list(source = source)
-        elif isinstance(source, Sequence):
-            return self._from_adjacency_matrix(source = source)
-        else:
-            raise TypeError('source must be a Configuration, adjacency list, '
-                            'or adjacency matrix')   
+    def create(self, **kwargs) -> sourdough.project.Workflow:
+        """Builds and stores an instance based on 'name' and 'kwargs'.
+
+        Args:
             
+        """
+
+        return self
+    
     """ Private Methods """
-    
-    def _from_configuration(self, 
-                            source: sourdough.base.Configuration) -> Graph:
-        return source
-    
-    def _from_adjacency_list(self, 
-                            source: sourdough.base.Configuration) -> Graph:
-        return source
-    
-    def _from_adjacency_matrix(self, 
-                            source: sourdough.base.Configuration) -> Graph:
-        return source
+
+    def _validate_bases(self, bases: Union[
+            Type[sourdough.project.Bases],
+            sourdough.project.Bases]):
+        """[summary]
+
+        Args:
+            bases (Union[ Type[sourdough.project.Bases], 
+                sourdough.project.Bases]): [description]
+
+        Raises:
+            TypeError: [description]
+
+        Returns:
+            [type]: [description]
+        """
+        if self.bases is None:
+            self.bases = self.project.bases
+        elif isinstance(bases, sourdough.project.Bases):
+            pass
+        elif (inspect.isclass(bases) 
+                and issubclass(bases, sourdough.project.Bases)):
+            bases = bases()
+        else:
+            raise TypeError('bases must be a Bases or None.')
+        return bases 
+
+    def _validate_creator(self, 
+            creator: Union[str, WorkflowCreator]) -> WorkflowCreator:
+        """"""
+        if isinstance(creator, str):
+            creator = self.bases.creator.borrow(name = 'workflow')
+        elif isinstance(creator, WorkflowCreator):
+            creator.manager = self
+        elif (inspect.isclass(creator) and issubclass(creator, WorkflowCreator):
+            creator = creator(manager = self)
+        return creator
 
 
-
-@dataclasses.dataclass
-class PipelineCreator(StructureCreator):
-    """Builds a sourdough Pipeline
-    
-    """  
-    
-    
-@dataclasses.dataclass
-class TreeCreator(StructureCreator):
-    """Builds a sourdough Tree
-    
-    """  
-         
   
 @dataclasses.dataclass    
 class Parameters(sourdough.types.Lexicon):
@@ -371,418 +450,3 @@ class Parameters(sourdough.types.Lexicon):
             kwargs = {k: kwargs[k] for k in self.selected}
         return kwargs
         
-        
-@dataclasses.dataclass
-class Architect(sourdough.Creator):
-    """Creates a blueprint of a sourdough Plan.
-
-    Architect creates a dictionary representation, a blueprint, of the overall 
-    manager Plan. In the blueprint produced, keys are the names of components 
-    and values are Instruction instances.
-    
-    Args:
-                        
-    """
-    action: ClassVar[str] = 'Drafting'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'settings'
-    produces: ClassVar[Type] = 'blueprint'
-
-    """ Public Methods """
-    
-    def create(self, manager: sourdough.Manager) -> sourdough.types.Lexicon:
-        """Creates a blueprint based on 'manager.project.settings'.
-
-        Args:
-            manager (sourdough.Manager): a Project instance with options and
-                other information needed for blueprint construction.
-
-        Returns:
-            Project: with modifications made to its 'design' attribute.
-            
-        """ 
-        blueprint = manager.bases.product.acquire(key = self.produces)(
-            identification = manager.project.identification)
-        for name, section in manager.project.settings.items():
-            # Tests whether the section in 'manager.project.settings' is related to the 
-            # construction of a project object by examining the key names to see
-            # if any end in a suffix corresponding to a known base type. If so, 
-            # that section is harvested for information which is added to 
-            # 'blueprint'.
-            if (not name.endswith(tuple(manager.project.settings.rules.skip_suffixes))
-                    and name not in manager.project.settings.rules.skip_sections
-                    and any(
-                        [i.endswith(sourdough.base.options.component_suffixes) 
-                        for i in section.keys()])):
-                blueprint = self._add_instructions(
-                    name = name,
-                    design = None,
-                    blueprint = blueprint,
-                    manager = manager)
-        return blueprint
-        
-    """ Private Methods """
-    
-    def _add_instructions(self, name: str, design: str,
-                          blueprint: sourdough.products.Blueprint,
-                          manager: sourdough.Manager, **kwargs) -> (
-                              sourdough.products.Blueprint):
-        """[summary]
-
-        Args:
-            name (str): [description]
-            blueprint (sourdough.types.Lexicon): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        if name not in blueprint:
-            blueprint[name] = sourdough.products.Instructions(name = name)
-        # Adds appropraite design type to 'blueprint' for 'name'.
-        blueprint[name].design = self._get_design(
-            name = name, 
-            design = design,
-            manager = manager)
-        # Adds any appropriate parameters to 'blueprint' for 'name'.
-        blueprint[name].parameters = self._get_parameters(
-            name = name, 
-            manager = manager)
-        # If 'name' is in 'settings', this method iterates through each key, 
-        # value pair in section and stores or extracts the information needed
-        # to fill out the appropriate Instructions instance in blueprint.
-        if name in manager.project.settings:
-            instructions_attributes = {}
-            for key, value in manager.project.settings[name].items():
-                # If a 'key' has an underscore, text after the last underscore 
-                # becomes the 'suffix' and text before becomes the 
-                # 'prefix'. If there is no underscore, 'prefix' and
-                # 'suffix' are both assigned to 'key'.
-                prefix, suffix = self._divide_key(key = key)
-                # A 'key' ending with one of the component-related suffixes 
-                # triggers recursive searching throughout 'manager.project.settings'.
-                if suffix in sourdough.base.options.component_suffixes:
-                    contains = suffix.rstrip('s')
-                    blueprint[prefix].contents = sourdough.tools.listify(value)
-                    for item in blueprint[prefix].contents:
-                        blueprint = self._add_instructions(
-                            name = item,
-                            design = contains,
-                            blueprint = blueprint,
-                            manager = manager)
-                elif suffix in manager.project.settings.rules.special_section_suffixes:
-                    instruction_kwargs = {suffix: value}
-                    blueprint = self._add_instruction(
-                        name = prefix, 
-                        blueprint = blueprint,
-                        **instruction_kwargs)
-                # All other keys are presumed to be attributes to be added to a
-                # Component instance.
-                else:
-                    blueprint[name].attributes.update({key: value})
-        return blueprint
-
-    def _get_design(self, name: str, design: str, 
-                    manager: sourdough.Manager) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            design (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            str: [description]
-            
-        """
-        try:
-            return manager.project.settings[name][f'{name}_design']
-        except KeyError:
-            if design is None:
-                return manager.project.settings.rules.default_design
-            else:
-                return design
-
-    def _get_parameters(self, name: str, 
-                        manager: sourdough.Manager) -> Dict[Any, Any]:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            project (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        try:
-            return manager.project.settings[f'{name}_parameters']
-        except KeyError:
-            return {}
-        
-    def _divide_key(self, key: str, divider: str = None) -> Tuple[str, str]:
-        """[summary]
-
-        Args:
-            key (str): [description]
-
-        Returns:
-            
-            Tuple[str, str]: [description]
-            
-        """
-        if divider is None:
-            divider = '_'
-        if divider in key:
-            suffix = key.split('_')[-1]
-            prefix = key[:-len(suffix) - 1]
-        else:
-            prefix = suffix = key
-        return prefix, suffix
-       
-    def _add_instruction(self, name: str, 
-                         blueprint: sourdough.products.Blueprint, 
-                         **kwargs) -> sourdough.products.Blueprint:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            blueprint (sourdough.types.Lexicon): [description]
-
-        Returns:
-            sourdough.types.Lexicon: [description]
-            
-        """
-        # Adds any kwargs to 'blueprint' as appropriate.
-        for key, value in kwargs.items():
-            if isinstance(getattr(blueprint[name], key), list):
-                getattr(blueprint[name].key).extend(
-                    sourdough.tools.listify(value))
-            elif isinstance(getattr(blueprint[name], key), dict):
-                getattr(blueprint[name], key).update(value) 
-            else:
-                setattr(blueprint[name], key, value)           
-        return blueprint
-
-    """ Dunder Methods """
-    
-    def __str__(self) -> str:
-        return pprint.pformat(self, sort_dicts = False, compact = True)
-           
-      
-@dataclasses.dataclass
-class Factory(sourdough.Creator):
-    """Constructs finalized plan.
-    
-    Args:
-                        
-    """
-    action: ClassVar[str] = 'Creating'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'blueprint'
-    produces: ClassVar[Type] = 'plan'
-
-    """ Public Methods """
-
-    def create(self, manager: sourdough.Manager) -> sourdough.project.Component:
-        """Drafts a Workflow instance based on 'blueprint' in 'manager'.
-            
-        """ 
-        plan = manager.bases.product.acquire(key = self.produces)(
-            identification = manager.project.identification)
-        plan.contents = self._create_component(
-            name = manager.project.name, 
-            manager = manager)
-        return plan
-    
-    """ Private Methods """
-
-    def _create_component(self, name: str, 
-                          manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.project.Component: [description]
-            
-        """
-        component = self._get_component(name = name, manager = manager)
-        return self._finalize_component(component = component, 
-                                        manager = manager)
-
-    def _get_component(self, name: str,
-                       manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            manager (sourdough.Manager): [description]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            Mapping[str, sourdough.project.Component]: [description]
-            
-        """
-        instructions = manager['blueprint'][name]
-        kwargs = {'name': name, 'contents': instructions.contents}
-        try:
-            component = manager.bases.component.borrow(key = name)
-            for key, value in kwargs.items():
-                if value:
-                    setattr(component, key, value)
-        except KeyError:
-            try:
-                component = manager.bases.component.acquire(key = name)
-                component = component(**kwargs)
-            except KeyError:
-                try:
-                    component = manager.bases.component.acquire(
-                        key = instructions.design)
-                    component = component(**kwargs)
-                except KeyError:
-                    raise KeyError(f'{name} component does not exist')
-        return component
-
-    def _finalize_component(self, component: sourdough.project.Component,
-                            manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            component (sourdough.project.Component): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.project.Component: [description]
-            
-        """
-        if isinstance(component, Iterable):
-            if component.parallel:
-                finalizer = self._finalize_parallel
-            else:
-                finalizer = self._finalize_serial
-        else:
-            finalizer = self._finalize_element
-        component = finalizer(component = component, manager = manager)
-        component = self._add_attributes(
-            component = component, 
-            manager = manager)
-        return component
-
-    def _finalize_parallel(self, component: sourdough.project.Component,
-                           manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            component (sourdough.project.Component): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            sourdough.project.Component: [description]
-            
-        """
-        # Creates empy list of lists for all possible permutations to be stored.
-        possible = []
-        # Populates list of lists with different options.
-        for item in component.contents:
-            possible.append(manager['blueprint'][item].contents)
-        # Computes Cartesian product of possible permutations.
-        combos = list(map(list, itertools.product(*possible)))
-        wrappers = [
-            self._create_component(i, manager) for i in component.contents]
-        new_contents = []
-        for combo in combos:
-            new_combo = [self._create_component(i, manager) for i in combo]
-            steps = []
-            for i, step in enumerate(wrappers):
-                new_step = copy.deepcopy(step)
-                new_step.contents = new_combo[i]
-                steps.append(new_step)
-            new_contents.append(steps)
-        component.contents = new_contents
-        component = self._add_attributes(
-            component = component, 
-            manager = manager)
-        return component
-
-    def _finalize_serial(self, component: sourdough.project.Component, 
-                         manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            component (sourdough.project.Component): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            Component: [description]
-            
-        """
-        new_contents = []
-        for item in component.contents:
-            instance = self._create_component(
-                name = item, 
-                manager = manager)
-            new_contents.append(instance)
-        component.contents = new_contents
-        return component
-
-    def _finalize_element(self, component: sourdough.project.Component, 
-                          manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Args:
-            component (sourdough.project.Component): [description]
-            manager (sourdough.Manager): [description]
-
-        Returns:
-            Component: [description]
-            
-        """
-        try:
-            component.contents = sourdough.base.options.algorithms[component.name]
-        except KeyError:
-            component.contents = None
-        return component
-    
-    def _add_attributes(self, component: sourdough.project.Component,
-                        manager: sourdough.Manager) -> sourdough.project.Component:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-            
-        """
-        attributes = manager['blueprint'][component.name].attributes
-        for key, value in attributes.items():
-            setattr(component, key, value)
-        return component    
-
-
-@dataclasses.dataclass
-class Worker(sourdough.Creator):
-    """Applies a project Workflow and produces results.
-
-    Args:
-
-    """
-    action: ClassVar[str] = 'Computing'
-    needs: ClassVar[Union[str, Tuple[str]]] = 'plan'
-    produces: ClassVar[str] = 'results'
-    
-    """ Public Methods """
- 
-    def create(self, manager: sourdough.Manager, 
-               **kwargs) -> sourdough.types.Lexicon:        
-        """Computes results based on a plan.
-            
-        """
-        results = manager.basesproduct.acquire(key = self.produces)(
-            identification = manager.project.identification)
-        if manager.project.data is not None:
-            kwargs['data'] = manager.project.data
-        for component in manager['plan']:
-            results.update({component.name: component.execute(**kwargs)})
-        return results

@@ -58,8 +58,8 @@ class Bases(sourdough.quirks.Loader):
     filer: Union[str, Type] = 'sourdough.project.Filer' 
     workflow: Union[str, Type] = 'sourdough.project.Workflow'
     component: Union[str, Type] = 'sourdough.project.Component'
-    creator: Union[str, Type] = 'sourdough.project.Creator'
-    manager: Union[str, Type] = 'sourdough.project.Manager'
+    creator: Union[str, Type] = 'sourdough.foundry.Creator'
+    manager: Union[str, Type] = 'sourdough.foundry.Manager'
 
 
 @dataclasses.dataclass
