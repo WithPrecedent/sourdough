@@ -14,19 +14,24 @@ import copy
 import dataclasses
 import inspect
 import itertools
+from os import PRIO_PGRP
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
 
 
-
 @dataclasses.dataclass
-class ProcessedSection(object):
-    
+class Blueprint(object):
+    """[summary]
+
+    Args:
+        object ([type]): [description]
+        
+    """
+    name: str = None
     components: Dict[str, List] = dataclasses.field(default_factory = dict)
-    contains: Dict[str, str] = dataclasses.field(default_factory = dict)
-    design: str = None
+    designs: Dict[str, str] = dataclasses.field(default_factory = dict)
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
     attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
     other: Dict[str, Any] = dataclasses.field(default_factory = dict)
@@ -92,44 +97,64 @@ class WorkflowCreator(abc.ABC):
             Workflow: derived from 'section'.
             
         """
-        processed = self.parse_section(name = node)
-        adjacency = self.create_adjacency(processed = processed)
-        components = self.create_components(processed = processed)
+        blueprint = self.parse_section(name = node)
+        graph = self.create_graph(blueprint = blueprint)
+        components = self.create_components(blueprint = blueprint)
         return sourdough.project.Workflow(
-            contents = adjacency, 
+            contents = graph, 
             components = components)
 
-    def parse_section(self, name: str) -> ProcessedSection:
+    def parse_section(self, name: str) -> Blueprint:
         """[summary]
 
         Args:
 
         Returns:
-            ProcessedSection
+            Blueprint
             
         """
         section = self.settings[name]
-        processed = ProcessedSection()
-        processed.design = self._get_design(name = name, section = section)
-        component_suffixes = self.library.suffixes
-        section_component = self.library.borrow(name = [name, processed.design])
-        parameters = self._get_parameters(component = section_component)
+        blueprint = Blueprint(name = name)
+        design = self._get_design(name = name, section = section)
+        blueprint.designs[name] = design
+        parameters = self._get_parameters(names = [name, design])
         for key, value in section.items():
             prefix, suffix = self._divide_key(key = key)
             if 'design' == suffix:
                 pass
-            elif suffix in component_suffixes:
-                processed.contains[prefix] = [suffix[:-1]]
-                processed.components[prefix] = value 
+            elif suffix in self.library.suffixes:
+                blueprint.bases.update(dict.fromkeys(value, suffix[:-1]))
+                blueprint.components[prefix] = value 
             elif suffix in parameters:
-                processed.parameters[suffix] = value 
+                blueprint.parameters[suffix] = value 
             elif prefix == name:
-                processed.attributes[suffix] = value
+                blueprint.attributes[suffix] = value
             else:
-                processed.other[key] = value
-        return processed
+                blueprint.other[key] = value
+        return blueprint
    
-
+    def create_components(self, 
+            blueprint: Blueprint) -> Dict[str, sourdough.project.Component]:
+        """
+        """
+        instances = {}
+        design = blueprint.designs[blueprint.name]
+        section_keys = [blueprint.name, design]
+        section_component = self.library.borrow(name = [section_keys])
+        instances[blueprint.name] = section_component(
+            name = blueprint.name, 
+            **blueprint.parameters)
+        for value in blueprint.components.values():
+            for item in value:
+                if not item in self.settings:
+                    subcomponent_keys = [item, blueprint.designs[item]]
+                    subcomponent = self.library.borrow(name = subcomponent_keys)
+                    instance = subcomponent(name = item)
+                    instances[item] = self._inject_attributes(
+                        component = instance, 
+                        blueprint = blueprint)
+        return instances
+                     
     """ Private Methods """
 
     def _get_design(self, name: str, section: Mapping[str, Any]) -> str:
@@ -148,10 +173,12 @@ class WorkflowCreator(abc.ABC):
         return design
 
     def _get_parameters(self, 
-            component: Type[sourdough.types.Base], 
-            skip: List[str] = lambda: ['name', 'contents']) -> Tuple[str]:
+            names: List[str], 
+            skip: List[str] = lambda: [
+                'name', 'contents', 'design']) -> Tuple[str]:
         """
         """
+        component = self.library.borrow(name = names)
         parameters = list(component.__annotations__.keys())
         return tuple(i for i in parameters if i not in [skip])
 
@@ -177,11 +204,20 @@ class WorkflowCreator(abc.ABC):
 
     def _inject_attributes(self, 
             component: sourdough.project.Component, 
-            processed: ProcessedSection) -> sourdough.project.Component:
-        for key, value in processed.attributes.items():
+            blueprint: Blueprint) -> sourdough.project.Component:
+        """[summary]
+
+        Args:
+            component (sourdough.project.Component): [description]
+            blueprint (Blueprint): [description]
+
+        Returns:
+            sourdough.project.Component: [description]
+        """
+        for key, value in blueprint.attributes.items():
             setattr(component, key, value)
         return component
-     
+          
 
 @dataclasses.dataclass
 class Planner(WorkflowCreator):
@@ -201,7 +237,53 @@ class Planner(WorkflowCreator):
     
     """ Public Methods """
 
+    def create_graph(self, 
+            blueprint: Blueprint) -> Dict[str, List[str]]:
+        """[summary]
 
+        Args:
+            blueprint (Blueprint): [description]
+
+        Returns:
+            Dict[str, List[str]]: [description]
+            
+        """
+        graph = sourdough.composites.Graph()
+        graph = self._add_plan(
+            contents = blueprint.contents[blueprint.name],
+            blueprint = blueprint,
+            graph = graph)
+        return graph
+
+    """ Private Methods """
+          
+    def _add_plan(self, 
+            contents: List[str], 
+            blueprint: Blueprint,
+            graph: sourdough.composites.Graph) -> sourdough.composites.Graph:
+        """[summary]
+
+        Args:
+            contents (List[str]): [description]
+            blueprint (Blueprint): [description]
+            graph (sourdough.composites.Graph): [description]
+
+        Returns:
+            sourdough.composites.Graph: [description]
+            
+        """
+        for item in contents:
+            try:
+                subcontents = blueprint.components[item]
+                graph = self._add_plan(
+                    contents = subcontents,
+                    blueprint = blueprint,
+                    graph = graph)
+            except KeyError:
+                graph.extend(contents)
+        return graph
+                
+        
 @dataclasses.dataclass
 class Researcher(WorkflowCreator):
     """Creates a parallel workflow with edges to multiple serial workflows.
@@ -218,25 +300,25 @@ class Researcher(WorkflowCreator):
         repr = False, 
         default = None)
 
-    """ Class Methods """
+    """ Public Methods """
 
-    def add(self, nodes: List[List[str]], 
-            workflow: sourdough.project.Workflow) -> sourdough.project.Workflow:
+    def create_graph(self, 
+            blueprint: Blueprint) -> Dict[str, List[str]]:
         """[summary]
 
         Args:
-            nodes (Sequence[str]): [description]
-            workflow (sourdough.project.Workflow): [description]
+            blueprint (Blueprint): [description]
 
         Returns:
-            sourdough.project.Workflow: [description]
+            Dict[str, List[str]]: [description]
             
         """
-        for plan in nodes:
-            for endpoint in workflow.endpoints:
-                workflow.add_edge(start = endpoint, stop = plan[0])
-            workflow.append(nodes = nodes)
-        return workflow
+        graph = sourdough.composites.Graph()
+        graph = self._add_plan(
+            contents = blueprint.contents[blueprint.name],
+            blueprint = blueprint,
+            graph = graph)
+        return graph
        
     def create(self, 
             node: str,
@@ -267,4 +349,32 @@ class Researcher(WorkflowCreator):
         keys = {f'{prefix}_{i}' for i in len(permutations)}
         contents = dict(zip(keys, contents))
         return self(contents = contents, node = node, **kwargs)   
-    
+
+    """ Private Methods """
+          
+    def _add_plan(self, 
+            contents: List[str], 
+            blueprint: Blueprint,
+            graph: sourdough.composites.Graph) -> sourdough.composites.Graph:
+        """[summary]
+
+        Args:
+            contents (List[str]): [description]
+            blueprint (Blueprint): [description]
+            graph (sourdough.composites.Graph): [description]
+
+        Returns:
+            sourdough.composites.Graph: [description]
+            
+        """
+        for item in contents:
+            try:
+                subcontents = blueprint.components[item]
+                graph = self._add_plan(
+                    contents = subcontents,
+                    blueprint = blueprint,
+                    graph = graph)
+            except KeyError:
+                graph.extend(contents)
+        return graph
+      

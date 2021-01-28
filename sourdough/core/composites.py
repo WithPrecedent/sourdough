@@ -191,22 +191,6 @@ class Graph(sourdough.types.Lexicon):
                             'of two strings for adding an edge')
         return self
 
-    def add_node(self, node: str) -> None:
-        """Adds a node to 'contents'.
-        
-        Args:
-            node (str): node to add to the graph.
-            
-        Raises:
-            ValueError: if 'node' is already in 'contents'.
-        
-        """
-        if node in self.contents:
-            raise ValueError(f'{node} already exists in the graph')
-        else:
-            self.contents[node] = []
-        return self
-
     def add_edge(self, start: str, stop: str) -> None:
         """Adds an edge to 'contents'.
 
@@ -227,21 +211,22 @@ class Graph(sourdough.types.Lexicon):
             self.contents[start].append(stop)
         return self
 
-    def append(self, nodes: Sequence[str]) -> None:
-        """[summary]
-
+    def add_node(self, node: str) -> None:
+        """Adds a node to 'contents'.
+        
         Args:
-            nodes (Sequence[str]): [description]
+            node (str): node to add to the graph.
             
+        Raises:
+            ValueError: if 'node' is already in 'contents'.
+        
         """
-        for endpoint in self.endpoints:
-            self.add_edge(start = endpoint, stop = nodes[0])
-        previous_node = None
-        for node in nodes:
-            if previous_node is not None:
-                self.add_edge(start = previous_node, stop = node)
+        if node in self.contents:
+            raise ValueError(f'{node} already exists in the graph')
+        else:
+            self.contents[node] = []
         return self
-    
+
     def combine(self, graph: Graph) -> None:
         """Adds 'other' Graph to this Graph.
 
@@ -268,22 +253,6 @@ class Graph(sourdough.types.Lexicon):
         else:
             raise TypeError('graph must be a Graph type to combine')
         return self
-       
-    def delete_node(self, node: str) -> None:
-        """Deletes node from graph.
-        
-        Args:
-            node (str): node to delete from 'contents'.
-        
-        Raises:
-            KeyError: if 'node' is not in 'contents'.
-            
-        """
-        try:
-            del self.contents[node]
-        except KeyError:
-            raise KeyError(f'{node} does not exist in the graph')
-        return self
 
     def delete_edge(self, start: str, stop: str) -> None:
         """Deletes edge from graph.
@@ -304,7 +273,38 @@ class Graph(sourdough.types.Lexicon):
         except ValueError:
             raise ValueError(f'{stop} is not connected to {start}')
         return self
+       
+    def delete_node(self, node: str) -> None:
+        """Deletes node from graph.
+        
+        Args:
+            node (str): node to delete from 'contents'.
+        
+        Raises:
+            KeyError: if 'node' is not in 'contents'.
+            
+        """
+        try:
+            del self.contents[node]
+        except KeyError:
+            raise KeyError(f'{node} does not exist in the graph')
+        return self
 
+    def extend(self, nodes: Sequence[str]) -> None:
+        """[summary]
+
+        Args:
+            nodes (Sequence[str]): [description]
+            
+        """
+        for endpoint in self.endpoints:
+            self.add_edge(start = endpoint, stop = nodes[0])
+        previous_node = None
+        for node in nodes:
+            if previous_node is not None:
+                self.add_edge(start = previous_node, stop = node)
+        return self
+    
     def search(self, start: str = None, depth_first: bool = True) -> List[str]:
         """Returns a path through the Graph.
 
@@ -363,35 +363,6 @@ class Graph(sourdough.types.Lexicon):
             for edge in self[node]:
                 self._depth_first_search(node = edge, visited = visited)
         return visited
-       
-    def _find_all_permutations(self, 
-            starts: Union[str, Sequence[str]],
-            ends: Union[str, Sequence[str]]) -> List[List[str]]:
-        """[summary]
-
-        Args:
-            start (Union[str, Sequence[str]]): starting points for paths through
-                the Graph.
-            ends (Union[str, Sequence[str]]): endpoints for paths through the
-                Graph.
-
-        Returns:
-            List[List[str]]: list of all paths through the Graph from all
-                'starts' to all 'ends'.
-            
-        """
-        all_permutations = []
-        for start in sourdough.tools.listify(starts):
-            for end in sourdough.tools.listify(ends):
-                paths = self._find_all_paths(
-                    start = start, 
-                    end = end)
-                if paths:
-                    if all(isinstance(path, str) for path in paths):
-                        all_permutations.append(paths)
-                    else:
-                        all_permutations.extend(paths)
-        return all_permutations
     
     def _find_all_paths(self, start: str, end: str, 
                         path: List[str] = []) -> List[List[str]]:
@@ -425,6 +396,35 @@ class Graph(sourdough.types.Lexicon):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
+       
+    def _find_all_permutations(self, 
+            starts: Union[str, Sequence[str]],
+            ends: Union[str, Sequence[str]]) -> List[List[str]]:
+        """[summary]
+
+        Args:
+            start (Union[str, Sequence[str]]): starting points for paths through
+                the Graph.
+            ends (Union[str, Sequence[str]]): endpoints for paths through the
+                Graph.
+
+        Returns:
+            List[List[str]]: list of all paths through the Graph from all
+                'starts' to all 'ends'.
+            
+        """
+        all_permutations = []
+        for start in sourdough.tools.listify(starts):
+            for end in sourdough.tools.listify(ends):
+                paths = self._find_all_paths(
+                    start = start, 
+                    end = end)
+                if paths:
+                    if all(isinstance(path, str) for path in paths):
+                        all_permutations.append(paths)
+                    else:
+                        all_permutations.extend(paths)
+        return all_permutations
 
     """ Dunder Methods """
 

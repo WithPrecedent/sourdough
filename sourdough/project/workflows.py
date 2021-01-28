@@ -19,26 +19,19 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.composites.Graph):
-    """Stores lightweight workflow and corresponding components.
+class Workflow(sourdough.types.Proxy):
+    """Stores lightweight graph workflow and corresponding components.
     
     Args:
-        contents (Dict[str, List[str]]): an adjacency list where the keys are 
-            the names of nodes and the values are names of nodes which the key 
-            is connected to. Defaults to an empty dict.
-        default (Any): default value to use when a key is missing and a new
-            one is automatically corrected. Defaults to an empty list.
-        copy_components (bool): whether to make copies of stored components
-            before calling their 'execute' methods (True) or whether to simply
-            use the stored Component instance as is (False). Defaults to False.
-        components (ClassVar[Library]): stores Component instances that 
-            correspond to nodes in the Workflow. Defaults to an empty Library.
+        contents (sourdough.composites.Graph): a directed acylic graph using an
+            adjacency list to represented the graph. Defaults to an Graph.
+        components (Library): stores Component instances that correspond to 
+            nodes in 'contents'. Defaults to an empty Library.
             
     """  
-    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
-    default: Any = dataclasses.field(default_factory = list)
-    copy_components: bool = False
-    components: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    contents: sourdough.composites.Graph = dataclasses.field(
+        default_factory = sourdough.composites.Graph)
+    components: sourdough.types.Library = sourdough.types.Library()
 
     """ Public Methods """
     
@@ -50,10 +43,11 @@ class Workflow(sourdough.composites.Graph):
 
         Returns:
             sourdough.Project: [description]
+            
         """
-        for path in self.paths:
+        for path in self.contents.paths:
             for node in path:
-                if self.copy_components:
+                if self.contents.copy_components:
                     component = copy.deepcopy(self.components[node])
                 else:
                     component = self.components[node]

@@ -56,9 +56,15 @@ class Settings(sourdough.resources.Configuration):
                 'source_format': 'csv',
                 'interim_format': 'csv',
                 'final_format': 'csv',
-                'file_encoding': 'windows-1252'}})
+                'file_encoding': 'windows-1252'},
+            'sourdough': {
+                'default_design': 'pipeline'}})
     skip: Sequence[str] = dataclasses.field(
-        default_factory = lambda: ['general', 'files', 'filer', 'parameters'])
+        default_factory = lambda: [
+            'general', 
+            'files', 
+            'sourdough', 
+            'parameters'])
 
 
 @dataclasses.dataclass
