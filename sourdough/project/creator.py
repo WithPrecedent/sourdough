@@ -87,21 +87,21 @@ class WorkflowCreator(abc.ABC):
      
     """ Required Public Methods """
     
-    def create(self, node: str) -> sourdough.project.Workflow:
+    def create(self, name: str) -> sourdough.project.Workflow:
         """Creates a Creator instance from a section of a Settings instance.
 
         Args:
-            node (str): starting node in the workflow being created.
+            name (str): starting node in the workflow being created.
                 
         Returns:
             Workflow: derived from 'section'.
             
         """
-        blueprint = self.parse_section(name = node)
+        blueprint = self.parse_section(name = name)
         graph = self.create_graph(blueprint = blueprint)
         components = self.create_components(blueprint = blueprint)
         return sourdough.project.Workflow(
-            contents = graph, 
+            graph = graph, 
             components = components)
 
     def parse_section(self, name: str) -> Blueprint:

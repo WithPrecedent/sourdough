@@ -94,17 +94,15 @@ class Manager(sourdough.quirks.Element, sourdough.quirks.Validator,
         Args:
             
         """
-        design = self._get_design(name = self.name)
-        manager_component = self.bases.component.library.borrow(name = design)(
-            name = self.name,
-            contents = self.contents)
-        print('test manager workflow parallel', manager_component.parallel)
-        print('test workflow before builder', manager_component)
-        self.project.workflow = self.builder.create(
-            component = manager_component, 
-            workflow = self.project.workflow)
-        print('test workflow after builder', self.project.workflow)
-        return self
+        first_workflow = True
+        component_settings = self.settings.excludity(self.settings.skip)
+        for name in component_settings.keys():
+            if first_workflow:
+                workflow = self.builder.create(name = name)
+                first_workflow = False
+            else:
+                workflow.combine(self.builder.create(name = name))
+        return workflow
     
     """ Private Methods """
 

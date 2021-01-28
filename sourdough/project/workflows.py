@@ -19,23 +19,44 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.types.Proxy):
+class Workflow(object):
     """Stores lightweight graph workflow and corresponding components.
     
     Args:
-        contents (sourdough.composites.Graph): a directed acylic graph using an
-            adjacency list to represented the graph. Defaults to an Graph.
+        graph (sourdough.composites.Graph): a directed acylic graph using an
+            adjacency list to represented the graph. Defaults to a Graph.
         components (Library): stores Component instances that correspond to 
-            nodes in 'contents'. Defaults to an empty Library.
+            nodes in 'graph'. Defaults to an empty Library.
             
     """  
-    contents: sourdough.composites.Graph = dataclasses.field(
+    graph: sourdough.composites.Graph = dataclasses.field(
         default_factory = sourdough.composites.Graph)
     components: sourdough.types.Library = sourdough.types.Library()
-
+        
     """ Public Methods """
-    
-    def execute(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+
+    def combine(self, workflow: Workflow) -> None:
+        """Adds 'other' Workflow to this Workflow.
+
+        Combining creates an edge between every endpoint of this instance's
+        Workflow and the every root of 'workflow'.
+
+        Args:
+            workflow (Workflow): a second Workflow to combine with this one.
+            
+        Raises:
+            ValueError: if 'workflow' has nodes that are also in 'graph'.
+            
+        """
+        if any(k in workflow.components.keys() for k in self.components.keys()):
+                raise ValueError('Cannot combine Workflows with the same nodes')
+        else:
+            self.components.update(workflow.components)
+        self.graph.combine(graph = workflow.graph)
+        return self
+   
+    def execute(self, project: sourdough.Project, copy_components: bool = False,
+                **kwargs) -> sourdough.Project:
         """[summary]
 
         Args:
@@ -45,9 +66,9 @@ class Workflow(sourdough.types.Proxy):
             sourdough.Project: [description]
             
         """
-        for path in self.contents.paths:
+        for path in self.graph.paths:
             for node in path:
-                if self.contents.copy_components:
+                if copy_components:
                     component = copy.deepcopy(self.components[node])
                 else:
                     component = self.components[node]
