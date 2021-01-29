@@ -51,7 +51,6 @@ from .core import types
 from .core import quirks
 from .core import resources
 from .core import composites
-from .core import foundry
 from .project.interface import Project
 
 from . import project

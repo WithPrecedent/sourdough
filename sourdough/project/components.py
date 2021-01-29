@@ -1,5 +1,5 @@
 """
-nodes:
+components:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -18,81 +18,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
-    """Abstract base for parts of a sourdough composite workflow.
-    
-    All subclasses must have an 'implement' method.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Any): stored item for use by a Component subclass instance.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-                
-    """
-    name: str = None
-    contents: Any = None
-    iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    parallel: ClassVar[bool] = False
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-
-    """ Public Methods """
-    
-    def execute(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
-        """Calls 'implement' a number of times based on 'iterations'.
-        
-        Args:
-            project (Project): sourdough project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        if self.iterations in ['infinite']:
-            while True:
-                project = self.implement(project = project, **kwargs)
-        else:
-            for iteration in self.iterations:
-                project = self.implement(project = project, **kwargs)
-        return project
-
-    def implement(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
-        """Applies stored 'contents' with 'parameters'.
-        
-        Args:
-            project (Project): sourdough project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        if self.contents not in [None, 'None', 'none']:
-            project = self.contents.implement(
-                project = project, 
-                **self.parameters, 
-                **kwargs)
-        return project
-    
-
-@dataclasses.dataclass
-class Technique(sourdough.types.Proxy, Component):
+class Technique(sourdough.types.Proxy, sourdough.project.Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -140,7 +66,7 @@ class Technique(sourdough.types.Proxy, Component):
 
         
 @dataclasses.dataclass
-class Step(sourdough.types.Proxy, Component):
+class Step(sourdough.types.Proxy, sourdough.project.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement to 
@@ -214,7 +140,7 @@ class Step(sourdough.types.Proxy, Component):
 
 
 @dataclasses.dataclass
-class Contest(Component):
+class Contest(sourdough.project.Component):
     """Resolves a parallel workflow by selecting the best option.
 
     It resolves a parallel workflow based upon criteria in 'contents'
@@ -262,14 +188,14 @@ class Contest(Component):
             bases = project.bases
         if isinstance(project.workflow.active, List):
             components = [
-                bases.Component.library.borrow(c) 
+                bases.sourdough.project.Component.library.borrow(c) 
                 for c in project.workflow.active]
             project.results.best = self.contents(components)      
         return project
  
     
 @dataclasses.dataclass
-class Study(Component):
+class Study(sourdough.project.Component):
     """Allows parallel workflow to continue
 
     A Study might be wholly passive or implement some reporting or alterations
@@ -315,7 +241,7 @@ class Study(Component):
         return project    
         
 @dataclasses.dataclass
-class Survey(Component):
+class Survey(sourdough.project.Component):
     """Resolves a parallel workflow by averaging.
 
     It resolves a parallel workflow based upon the averaging criteria in 
@@ -364,7 +290,7 @@ class Survey(Component):
             bases = project.bases
         if isinstance(project.workflow.active, List):
             components = [
-                bases.Component.library.borrow(c) 
+                bases.sourdough.project.Component.library.borrow(c) 
                 for c in project.workflow.active]
             project.results.best = self.contents(components)      
         return project

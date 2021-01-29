@@ -1,13 +1,14 @@
 """
-base: essential classes executeing sourdough's core to a project
+base: essential base classes for a sourdough project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Bases
     Settings
     Filer
+    Workflow
+    
     Creator
     Component
 
@@ -24,7 +25,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Settings(sourdough.resources.Configuration):
+class Settings(sourdough.types.Base, sourdough.resources.Configuration):
     """Loads and Stores configuration settings for a Project.
 
     Args:
@@ -68,12 +69,12 @@ class Settings(sourdough.resources.Configuration):
 
 
 @dataclasses.dataclass
-class Filer(sourdough.resources.Clerk):
+class Filer(sourdough.types.Base, sourdough.resources.Clerk):
     pass  
 
 
 @dataclasses.dataclass
-class Workflow(object):
+class Workflow(sourdough.types.Base):
     """Stores lightweight graph workflow and corresponding components.
     
     Args:
@@ -124,35 +125,119 @@ class Workflow(object):
                     component = self.components[node]
                 project = component.execute(project = project, **kwargs)    
         return project
+    
+    # def _implement_parallel_in_parallel(self, data: Any) -> Any:
+    #     """Applies 'implementation' to data.
+        
+    #     Args:
+    #         data (Any): any item needed for the class 'implementation' to be
+    #             applied.
+                
+    #     Returns:
+    #         Any: item after 'implementation has been applied.
 
-  
+    #     """
+    #     all_data = []  
+    #     multiprocessing.set_start_method('spawn')
+    #     with multiprocessing.Pool() as pool:
+    #         all_data = pool.starmap(self.implementation, data)
+    #     return all_data      
+
+
+
 @dataclasses.dataclass
-class Report(sourdough.types.Lexicon):
-    """Stores output of Worker.
+class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+    """Abstract base for parts of a sourdough composite workflow.
+    
+    All subclasses must have an 'implement' method.
     
     Args:
-        contents (Mapping[str, Instructions]]): stored dictionary which contains
-            Instructions instances. Defaults to an empty dict.
-        identification (str): a unique identification name for the related 
-            Project instance.            
-            
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        contents (Any): stored item for use by a Component subclass instance.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'implement' method is called. Defaults to an empty dict.
+        parallel (ClassVar[bool]): indicates whether this Component design is
+            meant to be at the end of a parallel workflow structure. Defaults to 
+            False.
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+                
     """
-    contents: Mapping[str, Report] = dataclasses.field(default_factory = dict)
     name: str = None
+    contents: Any = None
+    iterations: Union[int, str] = 1
+    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parallel: ClassVar[bool] = False
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+
+    """ Public Methods """
     
+    def execute(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+        """Calls 'implement' a number of times based on 'iterations'.
+        
+        Args:
+            project (Project): sourdough project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if self.iterations in ['infinite']:
+            while True:
+                project = self.implement(project = project, **kwargs)
+        else:
+            for iteration in self.iterations:
+                project = self.implement(project = project, **kwargs)
+        return project
+
+    def implement(self, project: sourdough.Project, **kwargs) -> sourdough.Project:
+        """Applies stored 'contents' with 'parameters'.
+        
+        Args:
+            project (Project): sourdough project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if self.contents not in [None, 'None', 'none']:
+            project = self.contents.implement(
+                project = project, 
+                **self.parameters, 
+                **kwargs)
+        return project
+        
 
 @dataclasses.dataclass
-class Results(sourdough.Product):
+class Results(sourdough.quirks.Element, sourdough.types.Lexicon):
     """Stores output of Worker.
     
     Args:
-        contents (Mapping[str, Instructions]]): stored dictionary which contains
-            Instructions instances. Defaults to an empty dict.
-        identification (str): a unique identification name for the related 
-            Project instance.            
+        contents (Mapping[str, Any]]): stored dictionary which contains results
+            from a Project workflow's execution. Defaults to an empty dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+        identification (str): a unique identification name for a sourdough
+            Project. The name is used for creating file folders related to the 
+            project. It is attached to a Results instance so that it can be 
+            connected pack to other related files from the Project which 
+            produced the contained results. Defaults to None.            
             
     """
-    contents: Mapping[str, Report] = dataclasses.field(
-        default_factory = dict)
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
     identification: str = None
-

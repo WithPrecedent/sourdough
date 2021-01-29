@@ -7,6 +7,7 @@ Contents:
     
 """
 from __future__ import annotations
+import abc
 import copy
 import dataclasses
 import inspect
@@ -16,82 +17,7 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough  
 
-
-@dataclasses.dataclass
-class Workflow(object):
-    """Stores lightweight graph workflow and corresponding components.
-    
-    Args:
-        graph (sourdough.composites.Graph): a directed acylic graph using an
-            adjacency list to represented the graph. Defaults to a Graph.
-        components (Library): stores Component instances that correspond to 
-            nodes in 'graph'. Defaults to an empty Library.
-            
-    """  
-    graph: sourdough.composites.Graph = dataclasses.field(
-        default_factory = sourdough.composites.Graph)
-    components: sourdough.types.Library = sourdough.types.Library()
-        
-    """ Public Methods """
-
-    def combine(self, workflow: Workflow) -> None:
-        """Adds 'other' Workflow to this Workflow.
-
-        Combining creates an edge between every endpoint of this instance's
-        Workflow and the every root of 'workflow'.
-
-        Args:
-            workflow (Workflow): a second Workflow to combine with this one.
-            
-        Raises:
-            ValueError: if 'workflow' has nodes that are also in 'graph'.
-            
-        """
-        if any(k in workflow.components.keys() for k in self.components.keys()):
-                raise ValueError('Cannot combine Workflows with the same nodes')
-        else:
-            self.components.update(workflow.components)
-        self.graph.combine(graph = workflow.graph)
-        return self
-   
-    def execute(self, project: sourdough.Project, copy_components: bool = False,
-                **kwargs) -> sourdough.Project:
-        """[summary]
-
-        Args:
-            project (sourdough.Project): [description]
-
-        Returns:
-            sourdough.Project: [description]
-            
-        """
-        for path in self.graph.paths:
-            for node in path:
-                if copy_components:
-                    component = copy.deepcopy(self.components[node])
-                else:
-                    component = self.components[node]
-                project = component.execute(project = project, **kwargs)    
-        return project
-    
-    # def _implement_parallel_in_parallel(self, data: Any) -> Any:
-    #     """Applies 'implementation' to data.
-        
-    #     Args:
-    #         data (Any): any item needed for the class 'implementation' to be
-    #             applied.
-                
-    #     Returns:
-    #         Any: item after 'implementation has been applied.
-
-    #     """
-    #     all_data = []  
-    #     multiprocessing.set_start_method('spawn')
-    #     with multiprocessing.Pool() as pool:
-    #         all_data = pool.starmap(self.implementation, data)
-    #     return all_data      
-    
-    
+       
 @dataclasses.dataclass
 class Blueprint(object):
     """Stores information from a Settings section about a Workflow
@@ -110,7 +36,7 @@ class Blueprint(object):
 
 
 @dataclasses.dataclass
-class WorkflowCreator(sourdough.project.Creator):
+class Creator(sourdough.project.Creator):
     """Creates a sourdough object.
     
     Args:
@@ -128,8 +54,6 @@ class WorkflowCreator(sourdough.project.Creator):
     def library(self) -> sourdough.types.Library:
         return self.manager.bases.workflow.library
 
-    """ Properties """
-    
     @property
     def settings(self) -> sourdough.project.Settings:
         return self.manager.project.settings
@@ -356,7 +280,7 @@ class WorkflowCreator(sourdough.project.Creator):
 
 
 @dataclasses.dataclass
-class WorkflowManager(sourdough.quirks.Validator, sourdough.project.Manager):
+class Manager(sourdough.quirks.Validator, sourdough.project.Manager):
     """Creates and executes portions of a workflow in a sourdough project.
 
     Args:
@@ -383,7 +307,13 @@ class WorkflowManager(sourdough.quirks.Validator, sourdough.project.Manager):
         except AttributeError:
             pass
         self.validate()
-      
+
+    """ Properties """
+    
+    @property
+    def settings(self) -> sourdough.project.Settings:
+        return self.project.settings
+         
     """ Public Methods """
     
     def create(self, **kwargs) -> sourdough.project.Workflow:

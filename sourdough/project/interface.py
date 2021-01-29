@@ -58,13 +58,12 @@ class Bases(sourdough.quirks.Loader):
     filer: Union[str, Type] = 'sourdough.project.Filer' 
     workflow: Union[str, Type] = 'sourdough.project.Workflow'
     component: Union[str, Type] = 'sourdough.project.Component'
-    creator: Union[str, Type] = 'sourdough.foundry.Creator'
-    manager: Union[str, Type] = 'sourdough.foundry.Manager'
+    creator: Union[str, Type] = 'sourdough.project.Builder'
+    manager: Union[str, Type] = 'sourdough.project.Director'
 
 
 @dataclasses.dataclass
-class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
-              sourdough.composites.Pipeline):
+class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
@@ -89,8 +88,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             classes used by a Director instance. Defaults to an instance of 
             SimpleBases.
         workflow ()
-        identification (str): a unique identification name for a Director 
-            instance. The name is used for creating file folders related to the 
+        identification (str): a unique identification name for a sourdough
+            Project. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
         automatic (bool): whether to automatically advance 'manager' (True) or 
@@ -126,13 +125,21 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         sourdough.project.Workflow, 
         Type[sourdough.project.Workflow], 
         str] = None
-    results: Mapping[str, Any] = dataclasses.field(
-        default_factory = sourdough.types.Lexicon)
+    results: Union[
+        sourdough.project.Results,
+        Type[sourdough.project.Results] = dataclasses.field(
+            default_factory = sourdough.project.Results)
     identification: str = None
     automatic: bool = True
     data: Any = None
     validations: ClassVar[Sequence[str]] = [
-        'settings', 'name', 'identification', 'filer', 'workflow', 'contents']
+        'settings', 
+        'name', 
+        'identification', 
+        'filer', 
+        'workflow', 
+        'contents', 
+        'results']
     
     """ Initialization Methods """
 
@@ -149,8 +156,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         warnings.filterwarnings('ignore')
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
-        # Sets index for iteration.
-        self.index = 0
         # Calls 'create' and 'execute' if 'automatic' is True.
         if self.automatic:
             self.create()
@@ -165,7 +170,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             kwargs
             
         """
-        print('test workflow at project create', self.workflow)
         for manager in self.contents:
             manager.create()
         return self
@@ -173,6 +177,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
     def execute(self) -> None:
         """
         """
+        for manager in self.contents.values():
+            self.workflow.combine(workflow = manager.workflow)
         self.workflow.execute(project = self)
         return self
                   
@@ -198,8 +204,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             pass
         elif inspect.isclass(settings):
             settings = settings()
-        elif settings is None or isinstance(settings, 
-                                            (str, pathlib.Path, Mapping)):
+        elif (settings is None 
+                or isinstance(settings, str, pathlib.Path, Mapping)):
             settings = self.bases.settings(contents = settings)
         else:
             raise TypeError('settings must be a Settings, Path, str, or None.')
@@ -269,26 +275,19 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             sourdough.project.Workflow, 
             Type[sourdough.project.Workflow], 
             str]) -> sourdough.project.Workflow:
-        """Validates 'workflow' or converts it to a Structure instance.
+        """Validates 'workflow' or converts it to a Workflow instance.
         
         Args:
          
         """
         if workflow is None:
-            try:
-                workflow = self.settings[self.name][f'{self.name}_design']
-            except KeyError:
-                try:
-                    workflow = self.settings[self.name]['structure']
-                except KeyError:
-                    workflow = 'graph'
-        if isinstance(workflow, str):
-            name = copy.deepcopy(workflow)
-            workflow = self.bases.component.library.borrow(name = workflow)
-            workflow = workflow(name = name)
+            workflow = self.bases.workflow()
+        elif isinstance(workflow, str):
+            workflow = self.bases.workflow.library.borrow(name = workflow)
         elif isinstance(workflow, self.bases.workflow):
             pass
-        elif inspect.isclass(workflow):
+        elif (inspect.isclass(workflow) 
+                and issubclass(workflow, sourdough.bases.workflow)):
             workflow = workflow()
         else:
             raise TypeError('workflow must be a Workflow, str, or None.')
@@ -334,32 +333,23 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             raise TypeError('contents must be a list of str or Manager')
         return manager
 
-    """ Dunder Methods """     
-
-    def __iter__(self) -> Iterable:
-        """Returns iterable of a Project instance.
-
-        Returns:
-            Iterable: of the Project instance.
-
+    def _validate_results(self, results: Union[
+            sourdough.project.Results, 
+            Type[sourdough.project.Results], 
+            str]) -> sourdough.project.Results:
+        """Validates 'results' or converts it to a Results instance.
+        
+        Args:
+         
         """
-        return iter(self)
- 
-    def __next__(self) -> object:
-        """Returns completed Director instance.
-
-        Returns:
-            Any: item project by the 'create' method of a Creator.
-            
-        """
-        if self.index < len(self.managers):
-            manager = self.managers[self.index]
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'Starting {manager.__name__}')
-            manager.complete()
-            self.index += 1
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'Completed {manager.__name__}')
+        if results is None:
+            results = sourdough.project.Results()
+        elif isinstance(results, sourdough.project.Results):
+            pass
+        elif (inspect.isclass(results) 
+                and issubclass(results, sourdough.project.Results)):
+            results = results()
         else:
-            raise IndexError()
-        return self
+            raise TypeError('results must be a Results or None.')
+        return results
+        
