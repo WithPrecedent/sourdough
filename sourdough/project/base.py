@@ -125,4 +125,34 @@ class Workflow(object):
                 project = component.execute(project = project, **kwargs)    
         return project
 
+  
+@dataclasses.dataclass
+class Report(sourdough.types.Lexicon):
+    """Stores output of Worker.
+    
+    Args:
+        contents (Mapping[str, Instructions]]): stored dictionary which contains
+            Instructions instances. Defaults to an empty dict.
+        identification (str): a unique identification name for the related 
+            Project instance.            
+            
+    """
+    contents: Mapping[str, Report] = dataclasses.field(default_factory = dict)
+    name: str = None
+    
+
+@dataclasses.dataclass
+class Results(sourdough.Product):
+    """Stores output of Worker.
+    
+    Args:
+        contents (Mapping[str, Instructions]]): stored dictionary which contains
+            Instructions instances. Defaults to an empty dict.
+        identification (str): a unique identification name for the related 
+            Project instance.            
+            
+    """
+    contents: Mapping[str, Report] = dataclasses.field(
+        default_factory = dict)
+    identification: str = None
 

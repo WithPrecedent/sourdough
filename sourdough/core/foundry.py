@@ -66,12 +66,6 @@ class Builder(sourdough.types.Base, abc.ABC):
     def create(self, **kwargs) -> sourdough.types.Base:
         """Subclasses must provide their own methods."""
         pass
-
-    """ Properties """
-    
-    @property
-    def settings(self) -> sourdough.project.Settings:
-        return self.manager.project.settings
     
 
 @dataclasses.dataclass
@@ -124,3 +118,4 @@ class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
     @property
     def settings(self) -> sourdough.project.Settings:
         return self.project.settings
+    
