@@ -1094,7 +1094,7 @@ class Library(Catalog):
         match = self.default
         for item in sourdough.tools.listify(name):
             try:
-                match = self[item]
+                match = self.contents[item]
                 break
             except KeyError:
                 pass

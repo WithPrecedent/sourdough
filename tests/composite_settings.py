@@ -3,7 +3,6 @@ settings = {
         'verbose': True,
         'seed': 43,
         'settings_priority': True,
-        'early_validation': False,
         'conserve_memery': False,
         'parallelize': True},
     'files': {
@@ -16,8 +15,10 @@ settings = {
         'cool_project_managers': ['reviewer', 'parser', 'munger'],
         'cool_project_design': 'workflow'},
     'reviewer': {
-        'reviewer_design': 'plan',
-        'reviewer_techniques': ['scan', 'view']},
+        'reviewer_design': 'pipeline',
+        'reviewer_techniques': ['scan', 'view'],
+        'scan_techniques': ['spy', 'look', 'eye'],
+        'look_techniques': ['peer', 'see']},
     'parser': {
         'parser_design': 'contest',
         'parser_steps': ['divide', 'extract'],

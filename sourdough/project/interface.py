@@ -63,6 +63,30 @@ class Bases(sourdough.quirks.Loader):
 
 
 @dataclasses.dataclass
+class Results(sourdough.quirks.Element, sourdough.types.Lexicon):
+    """Stores output of Worker.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary which contains results
+            from a Project workflow's execution. Defaults to an empty dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+        identification (str): a unique identification name for a sourdough
+            Project. The name is used for creating file folders related to the 
+            project. It is attached to a Results instance so that it can be 
+            connected pack to other related files from the Project which 
+            produced the contained results. Defaults to None.            
+            
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    identification: str = None
+
+
+@dataclasses.dataclass
 class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
     """Constructs, organizes, and implements a sourdough project.
 
@@ -127,8 +151,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         str] = None
     results: Union[
         sourdough.project.Results,
-        Type[sourdough.project.Results] = dataclasses.field(
-            default_factory = sourdough.project.Results)
+        Type[sourdough.project.Results]] = dataclasses.field(
+            default_factory = Results)
     identification: str = None
     automatic: bool = True
     data: Any = None
@@ -177,8 +201,11 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
     def execute(self) -> None:
         """
         """
-        for manager in self.contents.values():
-            self.workflow.combine(workflow = manager.workflow)
+        for manager in self.contents:
+            if self.workflow.graph.contents:
+                self.workflow.combine(workflow = manager.workflow)
+            else:
+                self.workflow = manager.workflow
         self.workflow.execute(project = self)
         return self
                   
@@ -205,7 +232,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         elif inspect.isclass(settings):
             settings = settings()
         elif (settings is None 
-                or isinstance(settings, str, pathlib.Path, Mapping)):
+                or isinstance(settings, (str, pathlib.Path, Mapping))):
             settings = self.bases.settings(contents = settings)
         else:
             raise TypeError('settings must be a Settings, Path, str, or None.')
@@ -343,11 +370,10 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
          
         """
         if results is None:
-            results = sourdough.project.Results()
-        elif isinstance(results, sourdough.project.Results):
+            results = Results()
+        elif isinstance(results, Results):
             pass
-        elif (inspect.isclass(results) 
-                and issubclass(results, sourdough.project.Results)):
+        elif inspect.isclass(results) and issubclass(results, Results):
             results = results()
         else:
             raise TypeError('results must be a Results or None.')

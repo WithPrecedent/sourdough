@@ -64,12 +64,10 @@ class Graph(sourdough.types.Lexicon):
             
         """
         ends = [k for k in self.contents.keys() if not self.contents[k]]
-        if len(ends) > 1:
+        if len(ends) > 0:
             return ends
         elif len(ends) == 0:
             raise ValueError('Graph is not acyclic - it has no endpoints')
-        else:
-            return ends[0]
               
     @property
     def nodes(self) -> List[str]:
@@ -208,7 +206,10 @@ class Graph(sourdough.types.Lexicon):
         else:
             if stop not in self.contents:
                 self.add_node(node = stop)
-            self.contents[start].append(stop)
+            if start not in self.contents:
+                self.add_node(node = start)
+            if stop not in self.contents[start]:
+                self.contents[start].append(stop)
         return self
 
     def add_node(self, node: str) -> None:
@@ -297,12 +298,16 @@ class Graph(sourdough.types.Lexicon):
             nodes (Sequence[str]): [description]
             
         """
-        for endpoint in self.endpoints:
-            self.add_edge(start = endpoint, stop = nodes[0])
+        try:
+            for endpoint in self.endpoints:
+                self.add_edge(start = endpoint, stop = nodes[0])
+        except ValueError:
+            pass
         previous_node = None
-        for node in nodes:
+        for node in sourdough.tools.listify(nodes):
             if previous_node is not None:
                 self.add_edge(start = previous_node, stop = node)
+            previous_node = node
         return self
     
     def search(self, start: str = None, depth_first: bool = True) -> List[str]:

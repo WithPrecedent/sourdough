@@ -11,10 +11,8 @@ Contents:
 from .base import Settings
 from .base import Filer
 from .base import Workflow
-from .base import Component
 from .components import *
-from .workshop import Creator
-from .workshop import Manager
+from .workshop import *
 from .interface import Bases
 
 
