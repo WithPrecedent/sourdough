@@ -231,9 +231,11 @@ class Creator(Builder):
             blueprint = blueprint)
         print('test organized', organized)
         if blueprint.parallel:
-            graph = self._create_parallel_graph(blueprint = blueprint)
+            graph = self._create_parallel_graph(
+                organized = organized,
+                design = blueprint.designs[blueprint.name])
         else:
-            graph = self._create_serial_graph(blueprint = blueprint)
+            graph = self._create_serial_graph(organized = organized)
         return graph
                      
     """ Private Methods """
@@ -287,6 +289,7 @@ class Creator(Builder):
         """
 
         Args:
+            name (str):
             blueprint (Blueprint): [description]
 
         Returns:
@@ -294,24 +297,24 @@ class Creator(Builder):
             
         """
         organized = []
-        outer_components = blueprint.components[name]
-        for outer_component in outer_components:
-            organized_subcomponents = []
-            if outer_component in blueprint.components:
-                organized_subcomponents.append(outer_component)
-                organized_subcomponents.append(self._organize_components(
-                    name = outer_component, 
-                    blueprint = blueprint))
-            else:
-                organized_subcomponents.append(outer_component)
-            if len(organized_subcomponents) == 1:
-                organized.append(organized_subcomponents[0])
-            else:
-                organized.append(organized_subcomponents)
+        components = blueprint.components[name]
+        for component in components:
+            organized.append(component)
+            if component in blueprint.components:
+                organized_subcomponents = []
+                subcomponents = self._organize_components(
+                    name = component, 
+                    blueprint = blueprint)
+                organized_subcomponents.append(subcomponents)
+                if len(organized_subcomponents) == 1:
+                    organized.append(organized_subcomponents[0])
+                else:
+                    organized.append(organized_subcomponents)
         return organized
                 
-    def _create_parallel_graph(self,
-                              blueprint: Blueprint) -> Dict[str, List[str]]:
+    def _create_parallel_graph(self, 
+            organized: List, 
+            design: str) -> Dict[str, List[str]]:
         """Creates a Creator instance from a section of a Settings instance.
 
         Args:
@@ -323,20 +326,16 @@ class Creator(Builder):
             
         """
         graph = sourdough.composites.Graph()
-        steps = blueprint.components[blueprint.name]
-        possible = [blueprint.components[s] for s in steps]
+        possible = [i for i in organized if isinstance(i, list)]
+        steps = [i for i in organized if isinstance(i, str)]
         # Computes Cartesian product of possible paths.
-        permutations = list(map(list, itertools.product(*possible)))
-        paths = [p + [blueprint.designs[blueprint.name]] for p in permutations]
+        paths = list(map(list, itertools.product(*possible)))
         for path in paths:
-            graph = self._add_plan(
-                contents = path, 
-                blueprint = blueprint, 
-                graph = graph)
-        print('test graph in parallel', graph)
+            full_path = path + [design]
+            graph.combine(self._create_serial_graph(organized = full_path))
         return graph
 
-    def _create_serial_graph(self, blueprint: Blueprint) -> Dict[str, List[str]]:
+    def _create_serial_graph(self, organized: List) -> Dict[str, List[str]]:
         """[summary]
 
         Args:
@@ -347,10 +346,10 @@ class Creator(Builder):
             
         """
         graph = sourdough.composites.Graph()
-        graph = self._add_plan(
-            contents = blueprint.components[blueprint.name],
-            blueprint = blueprint,
-            graph = graph)
+        simplified = list(more_itertools.collapse(organized))
+        edges = more_itertools.windowed(simplified, 2)
+        for edge_pair in edges:
+            graph.add_edge(start = edge_pair[0], stop = edge_pair[1])
         return graph
 
     def _add_plan(self, 

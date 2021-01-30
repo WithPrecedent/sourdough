@@ -243,14 +243,14 @@ class Graph(sourdough.types.Lexicon):
             
         """
         if isinstance(graph, Graph):
-            if any(k in graph.keys() for k in self.keys()):
-                raise ValueError('Cannot combine Graphs with the same nodes')
-            else:
+            if self.contents:
                 current_endpoints = self.endpoints
                 self.contents.update(graph.contents)
                 for endpoint in current_endpoints:
                     for root in graph.roots:
                         self.add_edge(start = endpoint, stop = root)
+            else:
+                self.contents = graph.contents
         else:
             raise TypeError('graph must be a Graph type to combine')
         return self
