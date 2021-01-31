@@ -5,9 +5,8 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents: 
-    Bases (Loader):
-    Project (Hybrid): access point and interface for creating and implementing
-        sourdough projects.
+    Project (Element, Validator, Director): access point and interface for 
+        creating and implementing sourdough projects.
 
 """
 from __future__ import annotations
@@ -16,7 +15,6 @@ import dataclasses
 import inspect
 import logging
 import pathlib
-import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Set, Tuple, Type, Union)
 import warnings
@@ -26,19 +24,10 @@ import sourdough
 
 logger = logging.getLogger()
 
-BASES: sourdough.project.Bases = sourdough.project.Bases(
-    settings = 'sourdough.project.Settings',
-    filer = 'sourdough.project.Filer', 
-    workflow = 'sourdough.project.Workflow',
-    component = 'sourdough.project.Component',
-    creator = 'sourdough.project.Creator',
-    manager = 'sourdough.project.Manager',
-    results = 'sourdough.project.Results')
-  
-
 
 @dataclasses.dataclass
-class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
+class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
+              sourdough.project.Director):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
@@ -74,9 +63,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
         validations (Sequence[str]): 
-
-    Attributes:
-        creator
         
     """
     name: str = None
@@ -92,7 +78,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         Type[sourdough.project.Filer], 
         pathlib.Path, 
         str] = None
-    bases: sourdough.project.Bases = sourdough.project.bases
     managers: Sequence[Union[
         sourdough.project.Manager, 
         Type[sourdough.project.Manager],
@@ -103,16 +88,17 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         str] = None
     results: Union[
         sourdough.project.Results,
-        Type[sourdough.project.Results]] = dataclasses.field(
-            default_factory = Results)
+        Type[sourdough.project.Results],
+        str] = dataclasses.field(default_factory = sourdough.project.Results)
     automatic: bool = True
     data: Any = None
+    library: ClassVar[sourdough.quirks.Library] = sourdough.quirks.Library()
+    bases: ClassVar[sourdough.quirks.Bases] = sourdough.quirks.Bases()
     validations: ClassVar[Sequence[str]] = [
         'settings', 
         'name', 
         'identification', 
         'filer',
-        'bases', 
         'workflow', 
         'managers', 
         'results']
@@ -250,28 +236,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
             raise TypeError('filer must be a Filer, Path, str, or None.')
         return filer
 
-    def _validate_workflow(self, workflow: Union[
-            sourdough.project.Workflow, 
-            Type[sourdough.project.Workflow], 
-            str]) -> sourdough.project.Workflow:
-        """Validates 'workflow' or converts it to a Workflow instance.
-        
-        Args:
-         
-        """
-        if workflow is None:
-            workflow = self.bases.workflow()
-        elif isinstance(workflow, str):
-            workflow = self.bases.workflow.library.borrow(name = workflow)
-        elif isinstance(workflow, self.bases.workflow):
-            pass
-        elif (inspect.isclass(workflow) 
-                and issubclass(workflow, sourdough.bases.workflow)):
-            workflow = workflow()
-        else:
-            raise TypeError('workflow must be a Workflow, str, or None.')
-        return workflow
-    
     def _validate_managers(self, managers: Sequence[Union[
             sourdough.project.Manager, 
             Type[sourdough.project.Manager],
@@ -311,23 +275,3 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         else:
             raise TypeError('managers must be a list of str or Manager')
         return manager
-
-    def _validate_results(self, results: Union[
-            sourdough.project.Results, 
-            Type[sourdough.project.Results], 
-            str]) -> sourdough.project.Results:
-        """Validates 'results' or converts it to a Results instance.
-        
-        Args:
-         
-        """
-        if results is None:
-            results = Results()
-        elif isinstance(results, Results):
-            pass
-        elif inspect.isclass(results) and issubclass(results, Results):
-            results = results()
-        else:
-            raise TypeError('results must be a Results or None.')
-        return results
-        

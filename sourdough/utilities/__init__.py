@@ -9,27 +9,16 @@ Contents:
     memory: classes and functions for conserving system memory.
     tools: assorted functions for making basic tasks easier.
 
+ToDo:
+    Add lazy import system to the 'utilities' subpackage.
+    
 """
-
-from .decorators import *
-from .memory import *
-from .tools import *
-
-
-# from .tools import importify
-# from .tools import listify
-# from .tools import numify
-# from .tools import snakify
-# from .tools import subsetify
-# from .tools import typify
-# from .tools import datetime_string
-# from .tools import add_prefix
-# from .tools import add_suffix
-# from .tools import drop_prefix
-# from .tools import drop_suffix
-# from .tools import deduplicate
-
 
 __version__ = '0.1.2'
 
 __author__ = 'Corey Rayburn Yung'
+
+
+from .decorators import *
+from .memory import *
+from .tools import *

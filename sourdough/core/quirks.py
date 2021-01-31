@@ -42,6 +42,8 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import inspect
+import more_itertools
 import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union, get_args, 
@@ -335,10 +337,43 @@ class Validator(Quirk):
         for item in validations:
             if hasattr(self, f'_validate_{item}'):
                 kwargs = {item: getattr(self, item)}
-                setattr(self, item, getattr(
-                    self, f'_validate_{item}')(**kwargs))
+                validated = getattr(self, f'_validate_{item}')(**kwargs)
+            else:
+                value = getattr(self, item)
+                validated = self._validate_generic(value = value, name = item)
+            setattr(self, item, validated)
         return self     
 
+    """ Private Methods """
+
+    def _validate_generic(self, value: Any, name: str) -> Any:
+        """Generic validation method for an attribute.
+        
+        This only works if a class instance is also a subclass of Base.
+        
+        Args:
+            value (Any): value stored in an attribute to be validated.
+            name (str): name of the attribute to be validated. This is needed
+                to access potential Base subclasses in the even that 'value' is
+                a str.
+                
+        Returns:
+            Any: propertly validated or converted value.
+         
+        """
+        base = getattr(self.bases, name)
+        if value is None:
+            validated = base()
+        elif isinstance(value, base):
+            validated = value
+        elif inspect.isclass(value) and issubclass(value, base):
+            validated = value()
+        elif isinstance(value, str):
+            validated = base.library.borrow(name = name)
+        else:
+            raise TypeError(f'{value} could not be validated or converted')
+        return validated
+ 
  
 @dataclasses.dataclass
 class Registrar(Quirk):

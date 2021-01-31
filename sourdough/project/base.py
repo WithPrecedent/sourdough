@@ -15,9 +15,7 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import copy
 import dataclasses
-import inspect
 import pathlib
 import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
@@ -143,30 +141,27 @@ class Director(sourdough.quirks.Element, sourdough.Base, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, **kwargs) -> sourdough.Base:
+    def create(self, **kwargs) -> None:
         """Subclasses must provide their own methods."""
         pass
-  
+
+    @abc.abstractmethod
+    def execute(self, **kwargs) -> None:
+        """Subclasses must provide their own methods."""
+        pass
+    
   
 @dataclasses.dataclass
-class Results(sourdough.quirks.Element, types.SimpleNamespace):
-    """Stores output of Worker.
+class Results(sourdough.quirks.Element, sourdough.Base, types.SimpleNamespace):
+    """Stores output of a Project.
     
     Args:
-        contents (Mapping[str, Any]]): stored dictionary which contains results
-            from a Project workflow's execution. Defaults to an empty dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-        identification (str): a unique identification name for a sourdough
-            Project. The name is used for creating file folders related to the 
-            project. It is attached to a Results instance so that it can be 
-            connected pack to other related files from the Project which 
-            produced the contained results. Defaults to None.            
+        name (str): ideally, this should be the 'name' of the related Project so
+            that the Results can be matched with the Project.
+        identification (str): ideally, this should be the 'identification' of 
+            the related Project so that the Results can be matched with the 
+            Project.          
             
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     name: str = None
     identification: str = None
