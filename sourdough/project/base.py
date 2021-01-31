@@ -26,10 +26,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import sourdough
 
 
-
 @dataclasses.dataclass
 class Settings(sourdough.Base, sourdough.Configuration):
-    """Loads and Stores configuration settings for a Project.
+    """Loads and stores configuration settings for a Project.
 
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
@@ -93,9 +92,6 @@ class Builder(sourdough.Base, abc.ABC):
     def __init_subclass__(cls, **kwargs):
         """Adds 'cls' to 'library' if it is a concrete class."""
         super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.Library()
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             # Removes '_builder' from class name so that the key is consistent
@@ -134,9 +130,6 @@ class Director(sourdough.quirks.Element, sourdough.Base, abc.ABC):
     def __init_subclass__(cls, **kwargs):
         """Adds 'cls' to 'library' if it is a concrete class."""
         super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.Library()
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             # Removes '_director' from class name so that the key is consistent
@@ -155,7 +148,6 @@ class Director(sourdough.quirks.Element, sourdough.Base, abc.ABC):
         pass
   
   
-
 @dataclasses.dataclass
 class Results(sourdough.quirks.Element, types.SimpleNamespace):
     """Stores output of Worker.
