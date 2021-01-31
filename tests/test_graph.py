@@ -14,7 +14,7 @@ def test_graph():
     # Tests adjacency matrix constructor
     matrix = [[0, 0, 1], [1, 0, 0], [0, 0, 0]]
     names = ['scorpion', 'frog', 'river']
-    graph = sourdough.composites.Graph.from_matrix(
+    graph = sourdough.Graph.from_matrix(
         matrix = matrix, 
         names = names)
     assert 'scorpion' in graph['frog']
@@ -23,7 +23,7 @@ def test_graph():
     adjacency = {'grumpy': ['sleepy'],
                  'doc': [],
                  'sneezy': ['grumpy', 'bashful']}
-    graph = sourdough.composites.Graph.from_adjacency(adjacency = adjacency)
+    graph = sourdough.Graph.from_adjacency(adjacency = adjacency)
     assert 'sleepy' in graph['grumpy']
     assert 'bashful' in graph['sneezy']
     assert 'bashful' not in graph['doc']
@@ -32,12 +32,12 @@ def test_graph():
              ('camera', 'man'), 
              ('person', 'man'), 
              ('tv', 'person')]
-    graph_edges = sourdough.composites.Graph.from_edges(edges = edges)
+    graph_edges = sourdough.Graph.from_edges(edges = edges)
     assert 'woman' in graph_edges['camera']
     assert 'man' in graph_edges['camera']
     assert 'tv' not in graph_edges['person']
     # Tests manual construction
-    graph = sourdough.composites.Graph()
+    graph = sourdough.Graph()
     graph.add_node('bonnie')
     graph.add_node('clyde')
     graph.add_node('butch')

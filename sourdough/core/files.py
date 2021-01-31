@@ -29,7 +29,7 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Configuration(sourdough.types.Lexicon):
+class Configuration(sourdough.Lexicon):
     """Loads and stores configuration settings.
 
     To create Configuration instance, a user can pass a:
@@ -157,7 +157,7 @@ class Configuration(sourdough.types.Lexicon):
         except AttributeError:
             pass
         if additional:
-            sections.extend(sourdough.tools.listify(additional))
+            sections.extend(more_itertools.always_iterable(additional))
         for section in sections:
             try:
                 for key, value in self.contents[section].items():

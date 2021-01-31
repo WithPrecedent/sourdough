@@ -9,8 +9,8 @@ Contents:
         All subclasses must have 'apply' and 'find' methods. Its 'library'
         class attribute stores all subclasses.
     Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
-    Pipeline (Hybrid, Structure): a simple serial pipeline data structure.
-    Tree (Hybrid, Structure): a general tree data structure.
+    # Pipeline (Hybrid, Structure): a simple serial pipeline data structure.
+    # Tree (Hybrid, Structure): a general tree data structure.
     
 """
 from __future__ import annotations
@@ -26,7 +26,214 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Graph(sourdough.types.Lexicon):
+class Structure(sourdough.Bunch, abc.ABC):
+    """Abstract base class for iterable sourdough data structures.
+    
+    Args:
+        contents (Iterable[Any]): stored iterable. Defaults to None.
+              
+    """
+    contents: Iterable[Any] = None
+
+    """ Required Subclass Properties """
+           
+    @abc.abstractproperty
+    def endpoints(self) -> List[str]:
+        """Returns endpoint nodes in the Graph.
+
+        Subclasses must provide their own properties.
+        
+        Returns:
+            List[str] namea of endpoints in the stored data structure.
+            
+        """
+        pass
+           
+    @abc.abstractproperty              
+    def nodes(self) -> List[str]:
+        """Returns all nodes in the Graph.
+
+        Subclasses must provide their own properties.
+        
+        Returns:
+            List[str]: names of all nodes in the stored data structure.
+            
+        """
+        pass
+        
+    @abc.abstractproperty
+    def paths(self) -> List[List[str]]:
+        """Returns all paths through the stored data structure.
+
+        Subclasses must provide their own properties.
+                
+        Returns:
+            List[List[str]]: returns all paths from 'roots' to 'endpoints' in a 
+                list of lists of names of nodes.
+                
+        """
+        pass
+           
+    @abc.abstractproperty
+    def roots(self) -> List[str]:
+        """Returns root nodes in the stored data structure.
+
+        Subclasses must provide their own properties.
+
+        Returns:
+            List[str]: names of root nodes in the stored data structure.
+            
+        """
+        pass
+
+    """ Required Subclass Class Methods """
+    
+    @abc.abstractclassmethod
+    def create(cls, source: Any, **kwargs) -> Structure:
+        """Creates an instance of a Structure subclass from 'source'.
+        
+        Subclasses must proivde their own classmethods.
+        
+        Args:
+            source (Any): data in another form to convert to the internal 
+                structure in a Structure subclass.
+                
+        """
+        pass
+ 
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def add(self, nodes: Any, **kwargs) -> None:
+        """Adds 'nodes' to the stored data structure.
+        
+        Subclasses must provide their own methods.
+        
+        Args:
+            nodes (Any): item(s) to add to 'contents'.
+            
+        """
+        return self
+
+    @abc.abstractmethod
+    def append(self, 
+               node: str,
+               start: Union[str, Sequence[str]] = None, 
+               **kwargs) -> None:
+        """Appends 'node' to the stored data structure.
+
+        Subclasses must provide their own methods.
+        
+        Args:
+            node (str): item to add to 'contents'.
+            start (Union[str, Sequence[str]]): where to add new node to. If
+                there are multiple nodes in 'start', 'node' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+            
+        """ 
+        return self  
+    
+    @abc.abstractmethod
+    def branchify(self, 
+                  nodes: Sequence[Sequence[str]],
+                  start: Union[str, Sequence[str]] = None, 
+                  **kwargs) -> None:
+        """Adds parallel paths to the stored data structure.
+
+        Subclasses must provide their own methods.
+
+        Args:
+            nodes (Sequence[Sequence[str]]): a list of list of nodes which
+                should have a Cartesian product determined and extended to
+                the stored data structure.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """ 
+        return self    
+
+    @abc.abstractmethod
+    def combine(self, structure: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Subclasses must provide their own methods.
+        
+        Args:
+            structure (Structure): a second Structure to combine with this one.
+            
+        """
+        return self
+
+    @abc.abstractmethod
+    def extend(self, 
+               nodes: Sequence[str],
+               start: Union[str, Sequence[str]] = None) -> None:
+        """Adds 'nodes' to the stored data structure.
+
+        Subclasses must provide their own methods.
+
+        Args:
+            nodes (Sequence[str]): names of items to add.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """
+        pass
+    
+    @abc.abstractmethod      
+    def search(self, start: str = None, depth_first: bool = True) -> List[str]:
+        """Returns a path through the stored data structure.
+
+        Subclasses must provide their own methods.
+
+        Args:
+            start (str): node to start the path from. If None, it is assigned to
+                'roots'. Defaults to None.
+            depth_first (bool): whether the search should be depth first (True)
+                or breadth first (False). Defaults to True.
+
+        Returns:
+            List[str]: nodes in a path through the stored data structure.
+            
+        """        
+        pass
+
+    """ Dunder Methods """
+
+    def __add__(self, other: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Structure adding uses the 'combine' method. Read its docstring for further
+        details about how the graphs are added together.
+        
+        Args:
+            other (Structure): a second Structure to combine with this one.
+            
+        """
+        self.combine(graph = other)        
+        return self
+
+    def __iadd__(self, other: Any) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Structure adding uses the 'combine' method. Read its docstring for further
+        details about how the graphs are added together.
+        
+        Args:
+            other (Structure): a second Structure to combine with this one.
+            
+        """
+        self.combine(graph = other)        
+        return self
+
+
+@dataclasses.dataclass
+class Graph(sourdough.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG) as an adjacency list.
 
     Despite being called an adjacency "list," the typical and most efficient
@@ -113,7 +320,38 @@ class Graph(sourdough.types.Lexicon):
             raise ValueError('Graph is not acyclic - it has no roots')
     
     """ Class Methods """
-       
+    
+    @classmethod
+    def create(cls, source: Any, **kwargs) -> Graph:
+        """Creates an instance of a Graph subclass from 'source'.
+        
+        'source' must be an adjacency list, adjacency matrix, or edge list. For
+        specific formatting of each supported source type, look at the docs for
+        each of the called methods beginning with 'from_'.
+                
+        If 'source' is an adjacency matrix, 'names' should also be passed as a
+        list of node names corresponding with the adjacency matrix.
+        
+        Args:
+            source (Any): data in another form to convert to the internal 
+                structure in a Graph.
+                
+        Raises:
+            TypeError: if source is not an adjacency list, adjacency matrix, or
+                edge list.
+                
+        """
+        if (isinstance(source, Dict) 
+                and all(isinstance(v, List) for v in source.values())):
+            return cls.from_adjacency(adjaceny = source)
+        elif isinstance(source, List):
+            if all(isinstance(i, Tuple) for i in source):
+                return cls.from_edges(egdes = source)
+            elif all(isinstance(i, List) for i in source):
+                return cls.from_matrix(matrix = source, **kwargs)
+        raise TypeError(
+            'source must be an adjacency list, adjacency matrix, or edge list')
+           
     @classmethod
     def from_adjacency(cls, adjacency: Dict[str, List[str]]) -> Graph:
         """Creates a Graph instance from an adjacency list.
@@ -126,12 +364,11 @@ class Graph(sourdough.types.Lexicon):
         return cls(contents = adjacency)
     
     @classmethod
-    def from_edges(cls, edges: List[Sequence[str]]) -> Graph:
+    def from_edges(cls, edges: List[Tuple[str]]) -> Graph:
         """Creates a Graph instance from an edge list.
 
         Args:
-            edges (List[Sequence[str]]): Edge list used to create a Graph 
-                instance.
+            edges (List[Tuple[str]]): Edge list used to create a Graph instance.
             
         """
         contents = {}
@@ -171,23 +408,23 @@ class Graph(sourdough.types.Lexicon):
     
     """ Public Methods """
     
-    def add(self, item: Union[str, Tuple[str]]) -> None:
-        """Adds a node or edge to 'contents' depending on type.
+    def add(self, nodes: Union[str, Tuple[str]]) -> None:
+        """Adds nodes or edges to 'contents' depending on type.
         
         Args:
-            item (Union[str, Tuple[str]]): either a str name or a tuple 
+            nodes (Union[str, Tuple[str]]): either a str name or a tuple 
                 containing the names of nodes for an edge to be created.
         
         Raises:
-            TypeError: if 'item' is neither a str or a tuple of two strings.
+            TypeError: if 'nodes' is neither a str or a tuple of two strings.
             
         """
-        if isinstance(item, str):
-            self.add_node(node = item)
-        elif isinstance(item, tuple) and len(item) == 2:
-            self.add_edge(start = item[0], stop = item[1])
+        if isinstance(nodes, str):
+            self.add_node(node = nodes)
+        elif isinstance(nodes, tuple) and len(nodes) == 2:
+            self.add_edge(start = nodes[0], stop = nodes[1])
         else:
-            raise TypeError('item must be a str for adding a node or a tuple '
+            raise TypeError('nodes must be a str for adding a node or a tuple '
                             'of two strings for adding an edge')
         return self
 
@@ -233,13 +470,17 @@ class Graph(sourdough.types.Lexicon):
     def append(self, 
                node: str,
                start: Union[str, Sequence[str]] = None) -> None:
-        """[summary]
+        """Appends 'node' to the stored data structure.
 
+        Subclasses must provide their own methods.
+        
         Args:
-            nodes (Sequence[Sequence[str]]): [description]
-            start (Union[str, Sequence[str]], optional): [description]. 
-                Defaults to None.
-                
+            node (str): item to add to 'contents'.
+            start (Union[str, Sequence[str]]): where to add new node to. If
+                there are multiple nodes in 'start', 'node' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+            
         """ 
         if start is None:
             try:
@@ -253,11 +494,18 @@ class Graph(sourdough.types.Lexicon):
     def branchify(self, 
                   nodes: Sequence[Sequence[str]],
                   start: Union[str, Sequence[str]] = None) -> None:
-        """[summary]
+        """Adds parallel paths to the stored data structure.
+
+        Subclasses must provide their own methods.
 
         Args:
-            nodes (Sequence[Sequence[str]]): [description]
-            start (Union[str, Sequence[str]], optional): [description]. 
+            nodes (Sequence[Sequence[str]]): a list of list of nodes which
+                should have a Cartesian product determined and extended to
+                the stored data structure.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.tr]], optional): [description]. 
                 Defaults to None.
                 
         """ 
@@ -352,12 +600,14 @@ class Graph(sourdough.types.Lexicon):
     def extend(self, 
                nodes: Sequence[str],
                start: Union[str, Sequence[str]] = None) -> None:
-        """[summary]
+        """Adds 'nodes' to the stored data structure.
 
         Args:
-            nodes (Sequence[str]): [description]
-            start (Union[str, Sequence[str]], optional): [description]. 
-                Defaults to None.
+            nodes (Sequence[str]): names of items to add.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
                 
         """
         if start is None:
@@ -373,16 +623,16 @@ class Graph(sourdough.types.Lexicon):
         return self  
            
     def search(self, start: str = None, depth_first: bool = True) -> List[str]:
-        """Returns a path through the Graph.
+        """Returns a path through the stored data structure.
 
         Args:
             start (str): node to start the path from. If None, it is assigned to
-                the first root in the Graph. Defaults to None.
+                'roots'. Defaults to None.
             depth_first (bool): whether the search should be depth first (True)
                 or breadth first (False). Defaults to True.
 
         Returns:
-            List[str]: nodes in a path through the Graph.
+            List[str]: nodes in a path through the stored data structure.
             
         """        
         if start is None:
@@ -497,8 +747,8 @@ class Graph(sourdough.types.Lexicon):
             
         """
         all_permutations = []
-        for start in sourdough.tools.listify(starts):
-            for end in sourdough.tools.listify(ends):
+        for start in more_itertools.always_iterable(starts):
+            for end in more_itertools.always_iterable(ends):
                 paths = self._find_all_paths(
                     start = start, 
                     end = end)
@@ -510,33 +760,7 @@ class Graph(sourdough.types.Lexicon):
         return all_permutations
 
     """ Dunder Methods """
-
-    def __add__(self, other: Graph) -> None:
-        """Adds 'other' Graph to this Graph.
-
-        Graph adding uses the 'combine' method. Read its docstring for further
-        details about how the graphs are added together.
-        
-        Args:
-            other (Graph): a second Graph to combine with this one.
-            
-        """
-        self.combine(graph = other)        
-        return self
-
-    def __iadd__(self, other: Any) -> None:
-        """Adds 'other' Graph to this Graph.
-
-        Graph adding uses the 'combine' method. Read its docstring for further
-        details about how the graphs are added together.
-        
-        Args:
-            other (Graph): a second Graph to combine with this one.
-            
-        """
-        self.combine(graph = other)        
-        return self
-       
+    
     def __missing__(self, key: str) -> List:
         """Returns an empty list when a missing 'key' is sought.
 
@@ -548,10 +772,10 @@ class Graph(sourdough.types.Lexicon):
             
         """
         return self.default
-
+    
 
 # @dataclasses.dataclass
-# class Pipeline(sourdough.types.Hybrid):
+# class Pipeline(sourdough.Hybrid):
 #     """Stores a linear pipeline data structure.
     
 #     A Pipeline differs from a Hybrid in 2 significant ways:
@@ -613,7 +837,7 @@ class Graph(sourdough.types.Lexicon):
 #         """
 #         matches = []
 #         for node in self.contents:
-#             matches.extend(sourdough.tools.listify(tool(node, **kwargs)))
+#             matches.extend(more_itertools.always_iterable(tool(node, **kwargs)))
 #         return matches
 
 #     def reorder(self, order: Sequence[str]) -> None:
@@ -633,7 +857,7 @@ class Graph(sourdough.types.Lexicon):
         
         
 # @dataclasses.dataclass
-# class Tree(sourdough.types.Hybrid, Structure):
+# class Tree(sourdough.Hybrid, Structure):
 #     """Stores a general tree data structure.
     
 #     A Tree differs from a Hybrid in 3 significant ways:
@@ -715,7 +939,7 @@ class Graph(sourdough.types.Lexicon):
 #         if matches is None:
 #             matches = []
 #         for item in iter(self.contents):
-#             matches.extend(sourdough.tools.listify(tool(item, **kwargs)))
+#             matches.extend(more_itertools.always_iterable(tool(item, **kwargs)))
 #             if isinstance(item, Iterable) and recursive:
 #                 matches.extend(item.find(tool = tool, recursive = True,
 #                                          matches = matches, **kwargs))

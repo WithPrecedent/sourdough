@@ -21,7 +21,7 @@ class AnotherElement(sourdough.quirks.Element):
 
 
 def test_hybrid():
-    workflow = sourdough.types.Hybrid()
+    workflow = sourdough.Hybrid()
     workflow.setdefault('default value')
     a_element = AnElement(name = 'test_name')
     another_element = AnotherElement()
@@ -49,7 +49,7 @@ def test_hybrid():
         'test_name', 
         'test_name']
     assert workflow.pop(1) == another_element
-    assert workflow.pop('test_name') == sourdough.types.Hybrid(
+    assert workflow.pop('test_name') == sourdough.Hybrid(
         contents = [a_element, a_element])
     workflow.update({'new_workflow': a_element})
     assert workflow.keys() == [

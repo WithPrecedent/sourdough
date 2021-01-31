@@ -16,6 +16,7 @@ import dataclasses
 import inspect
 import logging
 import pathlib
+import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Set, Tuple, Type, Union)
 import warnings
@@ -24,30 +25,16 @@ import sourdough
 
 
 logger = logging.getLogger()
-    
 
-@dataclasses.dataclass
-class Results(sourdough.quirks.Element, sourdough.types.Lexicon):
-    """Stores output of Worker.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary which contains results
-            from a Project workflow's execution. Defaults to an empty dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-        identification (str): a unique identification name for a sourdough
-            Project. The name is used for creating file folders related to the 
-            project. It is attached to a Results instance so that it can be 
-            connected pack to other related files from the Project which 
-            produced the contained results. Defaults to None.            
-            
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    identification: str = None
+BASES: sourdough.project.Bases = sourdough.project.Bases(
+    settings = 'sourdough.project.Settings',
+    filer = 'sourdough.project.Filer', 
+    workflow = 'sourdough.project.Workflow',
+    component = 'sourdough.project.Component',
+    creator = 'sourdough.project.Creator',
+    manager = 'sourdough.project.Manager',
+    results = 'sourdough.project.Results')
+  
 
 
 @dataclasses.dataclass
@@ -105,7 +92,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         Type[sourdough.project.Filer], 
         pathlib.Path, 
         str] = None
-    bases: sourdough.project.Bases = sourdough.project.Bases()
+    bases: sourdough.project.Bases = sourdough.project.bases
     managers: Sequence[Union[
         sourdough.project.Manager, 
         Type[sourdough.project.Manager],
@@ -124,7 +111,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         'settings', 
         'name', 
         'identification', 
-        'filer', 
+        'filer',
+        'bases', 
         'workflow', 
         'managers', 
         'results']

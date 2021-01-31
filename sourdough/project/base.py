@@ -19,14 +19,16 @@ import copy
 import dataclasses
 import inspect
 import pathlib
+import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
 import sourdough
 
 
+
 @dataclasses.dataclass
-class Settings(sourdough.types.Base, sourdough.resources.Configuration):
+class Settings(sourdough.Base, sourdough.Configuration):
     """Loads and Stores configuration settings for a Project.
 
     Args:
@@ -70,12 +72,12 @@ class Settings(sourdough.types.Base, sourdough.resources.Configuration):
 
 
 @dataclasses.dataclass
-class Filer(sourdough.types.Base, sourdough.resources.Clerk):
+class Filer(sourdough.Base, sourdough.Clerk):
     pass  
 
 
 @dataclasses.dataclass
-class Builder(sourdough.types.Base, abc.ABC):
+class Builder(sourdough.Base, abc.ABC):
     """Creates a sourdough object.
 
     Args:
@@ -84,7 +86,7 @@ class Builder(sourdough.types.Base, abc.ABC):
             stored subclasses.
                        
     """
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    library: ClassVar[sourdough.Library] = sourdough.Library()
     
     """ Initialization Methods """
     
@@ -93,7 +95,7 @@ class Builder(sourdough.types.Base, abc.ABC):
         super().__init_subclass__(**kwargs)
         # Creates 'library' class attribute if it doesn't exist.
         if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
+            cls.library = sourdough.Library()
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             # Removes '_builder' from class name so that the key is consistent
@@ -107,13 +109,13 @@ class Builder(sourdough.types.Base, abc.ABC):
     """ Required Subclass Class Methods """
     
     @abc.abstractmethod
-    def create(self, **kwargs) -> sourdough.types.Base:
+    def create(self, **kwargs) -> sourdough.Base:
         """Subclasses must provide their own methods."""
         pass
     
 
 @dataclasses.dataclass
-class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+class Director(sourdough.quirks.Element, sourdough.Base, abc.ABC):
     """Directs actions of a stored Builder instance.
 
     Args:
@@ -125,7 +127,7 @@ class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
     
     """
     name: str = None
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    library: ClassVar[sourdough.Library] = sourdough.Library()
     
     """ Initialization Methods """
     
@@ -134,7 +136,7 @@ class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
         super().__init_subclass__(**kwargs)
         # Creates 'library' class attribute if it doesn't exist.
         if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
+            cls.library = sourdough.Library()
         if not abc.ABC in cls.__bases__:
             key = sourdough.tools.snakify(cls.__name__)
             # Removes '_director' from class name so that the key is consistent
@@ -148,7 +150,31 @@ class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def create(self, **kwargs) -> sourdough.types.Base:
+    def create(self, **kwargs) -> sourdough.Base:
         """Subclasses must provide their own methods."""
         pass
   
+  
+
+@dataclasses.dataclass
+class Results(sourdough.quirks.Element, types.SimpleNamespace):
+    """Stores output of Worker.
+    
+    Args:
+        contents (Mapping[str, Any]]): stored dictionary which contains results
+            from a Project workflow's execution. Defaults to an empty dict.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+        identification (str): a unique identification name for a sourdough
+            Project. The name is used for creating file folders related to the 
+            project. It is attached to a Results instance so that it can be 
+            connected pack to other related files from the Project which 
+            produced the contained results. Defaults to None.            
+            
+    """
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    identification: str = None

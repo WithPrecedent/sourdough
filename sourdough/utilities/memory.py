@@ -15,7 +15,7 @@ def add_slots(cls) -> object:
     """Adds slots to dataclass with default values.
     
     Derived from code here: 
-    https://github.com/ericvsmith/dataclasses/blob/master/dataclass_tools.py
+    https://gitquirks.com/ericvsmith/dataclasses/blob/master/dataclass_tools.py
     
     Args:
         cls: class to add slots to

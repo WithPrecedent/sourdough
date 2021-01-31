@@ -52,7 +52,7 @@ class WorkflowCreator(base.Builder):
     """ Properties """
     
     @property
-    def components(self) -> sourdough.types.Library:
+    def components(self) -> sourdough.Library:
         return self.manager.bases.component.library
 
     @property
@@ -245,7 +245,7 @@ class WorkflowCreator(base.Builder):
             Creator: derived from 'section'
             
         """
-        graph = sourdough.composites.Graph()
+        graph = sourdough.Graph()
         possible = [i for i in organized if isinstance(i, list)]
         steps = [i for i in organized if isinstance(i, str)]
         # Computes Cartesian product of possible paths.
@@ -267,21 +267,21 @@ class WorkflowCreator(base.Builder):
         """ 
         nodes = list(more_itertools.collapse(organized))
         edges = more_itertools.windowed(nodes)
-        return sourdough.composites.Graph.from_edges(edges = edges)
+        return sourdough.Graph.from_edges(edges = edges)
 
     def _add_plan(self, 
             contents: List[str], 
             blueprint: Blueprint,
-            graph: sourdough.composites.Graph) -> sourdough.composites.Graph:
+            graph: sourdough.Graph) -> sourdough.Graph:
         """[summary]
 
         Args:
             contents (List[str]): [description]
             blueprint (Blueprint): [description]
-            graph (sourdough.composites.Graph): [description]
+            graph (sourdough.Graph): [description]
 
         Returns:
-            sourdough.composites.Graph: [description]
+            sourdough.Graph: [description]
             
         """
         for item in contents:   
@@ -431,7 +431,7 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
 
   
 # @dataclasses.dataclass    
-# class Parameters(sourdough.types.Lexicon):
+# class Parameters(sourdough.Lexicon):
 #     """
 #     """
 #     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)

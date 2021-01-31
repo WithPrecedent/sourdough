@@ -1,5 +1,5 @@
 """
-structure:
+process:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -20,19 +20,19 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.types.Base, collections.abc.Iterator):
+class Workflow(sourdough.Base, collections.abc.Iterator):
     """Stores lightweight graph workflow and corresponding components.
     
     Args:
-        graph (sourdough.composites.Graph): a directed acylic graph using an
+        graph (sourdough.Graph): a directed acylic graph using an
             adjacency list to represented the graph. Defaults to a Graph.
         components (Library): stores Component instances that correspond to 
             nodes in 'graph'. Defaults to an empty Library.
             
     """  
-    graph: sourdough.composites.Graph = dataclasses.field(
-        default_factory = sourdough.composites.Graph)
-    components: sourdough.types.Library = sourdough.types.Library()
+    graph: sourdough.Graph = dataclasses.field(
+        default_factory = sourdough.Graph)
+    components: sourdough.Library = sourdough.Library()
     paths: Mapping[str: str] = dataclasses.field(default_factory = dict)
     copy_components: ClassVar[bool] = False
     copy_data: ClassVar[bool] = False
@@ -128,7 +128,7 @@ class Workflow(sourdough.types.Base, collections.abc.Iterator):
         
 
 @dataclasses.dataclass
-class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+class Component(sourdough.quirks.Element, sourdough.Base, abc.ABC):
     """Abstract base for parts of a sourdough composite workflow.
     
     All subclasses must have an 'implement' method.
@@ -159,7 +159,7 @@ class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
     iterations: Union[int, str] = 1
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = False
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    library: ClassVar[sourdough.Library] = sourdough.Library()
 
     """ Public Methods """
     
@@ -202,7 +202,7 @@ class Component(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
         
         
 @dataclasses.dataclass
-class Technique(sourdough.types.Proxy, Component):
+class Technique(sourdough.Proxy, Component):
     """Base class for primitive objects in a sourdough composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -250,7 +250,7 @@ class Technique(sourdough.types.Proxy, Component):
 
         
 @dataclasses.dataclass
-class Step(sourdough.types.Proxy, Component):
+class Step(sourdough.Proxy, Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement to 

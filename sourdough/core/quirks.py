@@ -42,7 +42,7 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
-from sourdough.utilities.tools import deannotate
+import types
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union, get_args, 
                     get_origin)
@@ -51,7 +51,203 @@ import sourdough
 
 
 @dataclasses.dataclass
-class Quirk(sourdough.types.Base, abc.ABC):
+class Library(sourdough.Catalog):
+    """Stores Base subclasses in a dictionary.
+
+    A Library inherits the differences between a Catalog and a Lexicon.
+    
+    A Library differs from a Catalog in 2 significant ways:
+        1) It should only store Base subclasses as values.
+        2) It includes methods for accessing, building, customizing, and 
+            instancing the stored subclasses.
+        
+    Args:
+        contents (Mapping[Any, Type[Base]]): stored dictionary with only Base 
+            subclasses as values. Defaults to an empty dict.
+        defaults (Sequence[Any]]): a list of keys in 'contents' which will be 
+            used to return items when 'default' is sought. If not passed, 
+            'default' will be set to all keys.
+        always_return_list (bool): whether to return a list even when the key 
+            passed is not a list or special access key (True) or to return a 
+            list only when a list or special access key is used (False). 
+            Defaults to False.       
+    """
+    contents: Mapping[Any, Type[Base]] = dataclasses.field(
+        default_factory = dict)
+    default: Any = None
+    defaults: Sequence[Any] = dataclasses.field(default_factory = list)
+    always_return_list: bool = False
+
+    """ Properties """
+    
+    @property
+    def suffixes(self) -> Tuple[str]:
+        """
+        """
+        return tuple(key + 's' for key in self.contents.keys())
+    
+    """ Public Methods """
+
+    def borrow(self, name: Union[str, Sequence[str]]) -> Type[Base]:
+        """Returns a stored subclass unchanged.
+
+        Args:
+            name (str): key to accessing subclass in 'contents'.
+
+        Returns:
+            Type[Base]: corresponding Base subclass.
+            
+        """
+        match = self.default
+        for item in more_itertools.always_iterable(name):
+            try:
+                match = self.contents[item]
+                break
+            except KeyError:
+                pass
+        return match
+
+    def build(self, name: str, 
+              quirks: Union[str, Sequence[str]] = None) -> Type[Base]:
+        """Returns subclass matching 'name' with selected quirks.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            quirks (Union[str, Sequence[str]]): names of Quirk subclasses to
+                add to the custom built class. Defaults to None.
+
+        Returns:
+            Type: stored class.
+            
+        """
+        bases = []
+        if quirks is not None:
+            bases.extend(more_itertools.always_iterable(
+                sourdough.base.Quirk.library.select(name = quirks)))
+        bases.append(self.select(name = name))
+        return dataclasses.dataclass(type(name, tuple(bases), {}))
+    
+    def instance(self, name: str, quirks: Union[str, Sequence[str]] = None, 
+                 **kwargs) -> object:
+        """Returns the stored class instance matching 'name'.
+        
+        If 'quirks' are also passed, they will be added to the returned class
+        inheritance.
+
+        Args:
+            name (str): key name of stored class in 'contents' to returned.
+            quirks (Union[str, Sequence[str]]): names of Quirk subclasses to
+                add to the custom built class. Defaults to None.
+            kwargs: parameters and arguments to pass to the instanced class.
+
+        Returns:
+            object: stored class instance or custom built class with 'quirks'.
+            
+        """
+        if quirks is None:
+            return self.select(name = name)(**kwargs)
+        else:
+            return self.build(name = name, quirks = quirks)(**kwargs)
+
+
+@dataclasses.dataclass
+class Bases(types.SimpleNamespace):
+    """Base classes for a sourdough projects.
+    
+    Changing the attributes on a Bases instance allows users to specify 
+    different base classes for a sourdough project in the necessary categories.
+    Project will automatically use the base classes in the Bases instance 
+    passed to it.
+    
+    Attribute values can either be classes or strings of the import path of 
+    classes. In the latter case, the base classes will be lazily loaded when 
+    called.
+            
+    """
+
+    """ Public Methods """
+    
+    def add(self, name: str, base: Union[str, Type]) -> None:
+        setattr(self, name, base)
+        return self
+        
+    def delete(self, name: str) -> None:
+        delattr(self, name)
+        return self
+
+    """ Public Methods """
+
+    def importify(self, path: str, instance: bool = False) -> Type:
+        """Returns object named by 'key'.
+
+        Args:
+            key (str): name of class, function, or variable to try to import 
+                from modules listed in 'modules'.
+
+        Returns:
+            object: imported from a python module.
+
+        """
+        item = path.split('.')[-1]
+        module = path[:-len(item) - 1]
+        return sourdough.tools.importify(module = module, key = item)
+
+    """ Dunder Methods """
+
+    def __getattribute__(self, name: str) -> Any:
+        """Converts stored import paths into the corresponding objects.
+
+        If an import path is stored, that attribute is permanently converted
+        from a str to the imported object or class.
+        
+        Args:
+            name (str): name of attribute sought.
+
+        Returns:
+            Any: the stored value or, if the value is an import path, the
+                class or object stored at the designated import path.
+            
+        """
+        value = super().__getattribute__(name)
+        if (isinstance(value, str) and '.' in value):
+            value = self.importify(path = value)
+            super().__setattr__(name, value)
+        return value
+
+
+@dataclasses.dataclass
+class Base(abc.ABC):
+    """Abstract base class for connecting a base class to a Library.
+    
+    Any subclass will automatically store itself in the class attribute 
+    'library' using the snakecase name of the class as the key.
+    
+    Args:
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+        
+    """
+    library: ClassVar[Library] = Library()
+    bases: ClassVar[Bases] = Bases()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates a snakecase key of the class name.
+        key = sourdough.tools.snakify(cls.__name__)
+        # Adds base classes to 'bases' using 'key'.
+        if Base in cls.__bases__:
+            cls.bases.add(name = key, base = cls)
+        # Adds concrete subclasses to 'library' using 'key'.
+        elif not abc.ABC in cls.__bases__:
+            cls.library[key] = cls
+           
+           
+@dataclasses.dataclass
+class Quirk(Base, abc.ABC):
     """Base class for sourdough quirks (mixin-approximations).
     
     Args:
@@ -60,7 +256,7 @@ class Quirk(sourdough.types.Base, abc.ABC):
             stored subclasses.
         
     """
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    library: ClassVar[sourdough.Library] = sourdough.Library()
     
 
 @dataclasses.dataclass
@@ -158,7 +354,7 @@ class Registrar(Quirk):
         registry (ClassVar[Mapping[str, Type]]):
     
     """
-    registry: ClassVar[Mapping[str, Type]] = sourdough.types.Catalog()
+    registry: ClassVar[Mapping[str, Type]] = sourdough.Catalog()
 
     """ Initialization Methods """
     
@@ -207,7 +403,7 @@ class Librarian(Quirk):
     To use this quirk, the '__post_init__' method must be called.
     
     """
-    store: ClassVar[Mapping[str, object]] = sourdough.types.Catalog()
+    store: ClassVar[Mapping[str, object]] = sourdough.Catalog()
 
     """ Initialization Methods """
 
