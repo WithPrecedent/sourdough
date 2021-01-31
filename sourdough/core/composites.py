@@ -1,7 +1,7 @@
 """
 structures: lightweight composite structures adapted to sourdough
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
-Copyright 2020, Corey Rayburn Yung
+Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
@@ -15,8 +15,10 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import copy
 import dataclasses
 import itertools
+import more_itertools
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -35,9 +37,9 @@ class Graph(sourdough.types.Lexicon):
     Graph also supports autovivification where a list is created as a value for
     a missing key. This means that a Graph need not inherit from defaultdict.
     
-    The Graph does not actually store Node instances. Rather, it maintains the
-    string names of Nodes which can then be used to create and iterate over
-    Nodes.
+    The Graph does not actually store node objects. Rather, it maintains the
+    string names of nodes which can then be used to create and iterate over
+    nodes (as is done by Workflow in the project subpackage).
     
     Args:
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
@@ -228,6 +230,42 @@ class Graph(sourdough.types.Lexicon):
             self.contents[node] = []
         return self
 
+    def append(self, 
+               node: str,
+               start: Union[str, Sequence[str]] = None) -> None:
+        """[summary]
+
+        Args:
+            nodes (Sequence[Sequence[str]]): [description]
+            start (Union[str, Sequence[str]], optional): [description]. 
+                Defaults to None.
+                
+        """ 
+        if start is None:
+            try:
+                start = self.endpoints
+            except ValueError:
+                start = []
+        for node in more_itertools.always_iterable(start):
+            self.add_edge(start = node, stop = node)
+        return self  
+    
+    def branchify(self, 
+                  nodes: Sequence[Sequence[str]],
+                  start: Union[str, Sequence[str]] = None) -> None:
+        """[summary]
+
+        Args:
+            nodes (Sequence[Sequence[str]]): [description]
+            start (Union[str, Sequence[str]], optional): [description]. 
+                Defaults to None.
+                
+        """ 
+        paths = list(map(list, itertools.product(*nodes))) 
+        for path in paths:
+            self.extend(nodes = path, start = start) 
+        return self    
+
     def combine(self, graph: Graph) -> None:
         """Adds 'other' Graph to this Graph.
 
@@ -289,27 +327,51 @@ class Graph(sourdough.types.Lexicon):
             del self.contents[node]
         except KeyError:
             raise KeyError(f'{node} does not exist in the graph')
+        self.contents = {
+            k: v.remove(node) for k, v in self.contents.items() if node in v}
         return self
+       
+    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Graph:
+        """Returns a new instance without a subset of 'contents'.
 
-    def extend(self, nodes: Sequence[str]) -> None:
+        Args:
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
+                from 'contents' should not be returned.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+
+        Returns:
+            Graph: with only key/value pairs with keys not in 'subset'.
+
+        """
+        new_graph = copy.deepcopy(self)
+        for node in more_itertools.always_iterable(subset):
+            new_graph.delete_node(node)
+        return new_graph
+
+    def extend(self, 
+               nodes: Sequence[str],
+               start: Union[str, Sequence[str]] = None) -> None:
         """[summary]
 
         Args:
             nodes (Sequence[str]): [description]
-            
+            start (Union[str, Sequence[str]], optional): [description]. 
+                Defaults to None.
+                
         """
-        try:
-            for endpoint in self.endpoints:
-                self.add_edge(start = endpoint, stop = nodes[0])
-        except ValueError:
-            pass
-        previous_node = None
-        for node in sourdough.tools.listify(nodes):
-            if previous_node is not None:
-                self.add_edge(start = previous_node, stop = node)
-            previous_node = node
-        return self
-    
+        if start is None:
+            try:
+                start = self.endpoints
+            except ValueError:
+                start = []
+        for node in more_itertools.always_iterable(start):
+            self.add_edge(start = node, stop = nodes[0])
+        edges = more_itertools.windowed(nodes, 2)
+        for edge_pair in edges:
+            self.add_edge(start = edge_pair[0], stop = edge_pair[1])
+        return self  
+           
     def search(self, start: str = None, depth_first: bool = True) -> List[str]:
         """Returns a path through the Graph.
 
@@ -330,6 +392,22 @@ class Graph(sourdough.types.Lexicon):
         else:
             visited = self._breadth_first_search(node = start)
         return visited
+                   
+    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Graph:
+        """Returns a new instance with a subset of 'contents'.
+
+        Args:
+            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
+                from 'contents' should be returned.
+            kwargs: creates a consistent interface even when subclasses have
+                additional parameters.
+
+        Returns:
+            Graph: with only key/value pairs with keys in 'subset'.
+
+        """
+        excludables = [i for i in self.contents if i not in subset]
+        return self.excludify(subset = excludables, **kwargs)
 
     """ Private Methods """
 

@@ -1,7 +1,7 @@
 """
 interface: user interface for sourdough project construction and iteration
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
-Copyright 2020, Corey Rayburn Yung
+Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents: 
@@ -20,47 +20,11 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Set, Tuple, Type, Union)
 import warnings
 
-import sourdough 
+import sourdough
 
 
 logger = logging.getLogger()
     
-
-@dataclasses.dataclass
-class Bases(sourdough.quirks.Loader):
-    """Base classes for a sourdough projects.
-    
-    Changing the attributes on a Bases instance allows users to specify 
-    different base classes for a sourdough project in the necessary categories.
-    Project will automatically use the base classes in the Bases instance 
-    passed to it.
-    
-    Since this is a subclass of Loader, attribute values can either be classes
-    or strings of the import path of classes. In the latter case, the base
-    classes will be lazily loaded when called.
-    
-    Args:
-        settings (Union[str, Type]): configuration class or a str of the import
-            path for the configuration class. 
-        filer (Union[str, Type]): file management class or a str of the import
-            path for the file management class. 
-        component (Union[str, Type]): base node class or a str of the import
-            path for the base node class. 
-        manager (Union[str, Type]): base director class or a str of the import
-            path for the base director class.
-        quirk (Union[str, Type]): base mixin class or a str of the import
-            path for the base mixin class. This base is only needed if the
-            user is creating custom classes from strings at runtime using the
-            sourdough Library class.
-            
-    """
-    settings: Union[str, Type] = 'sourdough.project.Settings'
-    filer: Union[str, Type] = 'sourdough.project.Filer' 
-    workflow: Union[str, Type] = 'sourdough.project.Workflow'
-    component: Union[str, Type] = 'sourdough.project.Component'
-    creator: Union[str, Type] = 'sourdough.project.Builder'
-    manager: Union[str, Type] = 'sourdough.project.Director'
-
 
 @dataclasses.dataclass
 class Results(sourdough.quirks.Element, sourdough.types.Lexicon):
@@ -91,7 +55,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
-        contents (Mapping[str, object]): keys are names of objects stored and 
+        managers (Mapping[str, object]): keys are names of objects stored and 
             values are the stored objects. Defaults to an empty dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout sourdough. For example, if a 
@@ -128,11 +92,8 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         creator
         
     """
-    contents: Sequence[Union[
-        sourdough.project.Manager, 
-        Type[sourdough.project.Manager],
-        str]] = dataclasses.field(default_factory = list)
     name: str = None
+    identification: str = None
     settings: Union[
         sourdough.project.Settings, 
         Type[sourdough.project.Settings], 
@@ -144,7 +105,11 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         Type[sourdough.project.Filer], 
         pathlib.Path, 
         str] = None
-    bases: Bases = Bases()
+    bases: sourdough.project.Bases = sourdough.project.Bases()
+    managers: Sequence[Union[
+        sourdough.project.Manager, 
+        Type[sourdough.project.Manager],
+        str]] = dataclasses.field(default_factory = list)
     workflow: Union[
         sourdough.project.Workflow, 
         Type[sourdough.project.Workflow], 
@@ -153,7 +118,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         sourdough.project.Results,
         Type[sourdough.project.Results]] = dataclasses.field(
             default_factory = Results)
-    identification: str = None
     automatic: bool = True
     data: Any = None
     validations: ClassVar[Sequence[str]] = [
@@ -162,7 +126,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         'identification', 
         'filer', 
         'workflow', 
-        'contents', 
+        'managers', 
         'results']
     
     """ Initialization Methods """
@@ -194,15 +158,15 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
             kwargs
             
         """
-        for manager in self.contents:
+        for manager in self.managers:
             manager.create()
         return self
     
     def execute(self) -> None:
         """
         """
-        for manager in self.contents:
-            if self.workflow.graph.contents:
+        for manager in self.managers:
+            if self.workflow.graph.managers:
                 self.workflow.combine(workflow = manager.workflow)
             else:
                 self.workflow = manager.workflow
@@ -320,29 +284,29 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
             raise TypeError('workflow must be a Workflow, str, or None.')
         return workflow
     
-    def _validate_contents(self, contents: Sequence[Union[
+    def _validate_managers(self, managers: Sequence[Union[
             sourdough.project.Manager, 
             Type[sourdough.project.Manager],
             str]]) -> Sequence[sourdough.project.Manager]:
         """[summary]
 
         Args:
-            contents (Sequence[Union[ sourdough.project.Manager, 
+            managers (Sequence[Union[ sourdough.project.Manager, 
                 Type[sourdough.project.Manager], str]]): [description]
 
         Returns:
             Sequence[sourdough.project.Manager]: [description]
             
         """
-        if not contents:
+        if not managers:
             try:
-                contents = self.settings[self.name][f'{self.name}_managers']
+                managers = self.settings[self.name][f'{self.name}_managers']
             except KeyError:
                 pass
-        new_contents = []
-        for manager in contents:
-            new_contents.append(self._validate_manager(manager = manager))
-        return new_contents
+        new_managers = []
+        for manager in managers:
+            new_managers.append(self._validate_manager(manager = manager))
+        return new_managers
 
     def _validate_manager(self, manager: Union[str, object]) -> object:
         """
@@ -357,7 +321,7 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator):
         elif isinstance(manager, self.bases.settings.manager):
             manager.project = self
         else:
-            raise TypeError('contents must be a list of str or Manager')
+            raise TypeError('managers must be a list of str or Manager')
         return manager
 
     def _validate_results(self, results: Union[

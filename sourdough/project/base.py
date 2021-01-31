@@ -1,7 +1,7 @@
 """
 base: essential base classes for a sourdough project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
-Copyright 2020, Corey Rayburn Yung
+Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
@@ -14,6 +14,7 @@ Contents:
 
 """
 from __future__ import annotations
+import abc
 import copy
 import dataclasses
 import inspect
@@ -74,76 +75,80 @@ class Filer(sourdough.types.Base, sourdough.resources.Clerk):
 
 
 @dataclasses.dataclass
-class Workflow(sourdough.types.Base):
-    """Stores lightweight graph workflow and corresponding components.
-    
+class Builder(sourdough.types.Base, abc.ABC):
+    """Creates a sourdough object.
+
     Args:
-        graph (sourdough.composites.Graph): a directed acylic graph using an
-            adjacency list to represented the graph. Defaults to a Graph.
-        components (Library): stores Component instances that correspond to 
-            nodes in 'graph'. Defaults to an empty Library.
-            
-    """  
-    graph: sourdough.composites.Graph = dataclasses.field(
-        default_factory = sourdough.composites.Graph)
-    components: sourdough.types.Library = sourdough.types.Library()
-        
-    """ Public Methods """
-
-    def combine(self, workflow: Workflow) -> None:
-        """Adds 'other' Workflow to this Workflow.
-        Combining creates an edge between every endpoint of this instance's
-        Workflow and the every root of 'workflow'.
-        Args:
-            workflow (Workflow): a second Workflow to combine with this one.
-            
-        Raises:
-            ValueError: if 'workflow' has nodes that are also in 'graph'.
-            
-        """
-        if any(k in workflow.components.keys() for k in self.components.keys()):
-                raise ValueError('Cannot combine Workflows with the same nodes')
-        else:
-            self.components.update(workflow.components)
-        try:
-            self.graph.combine(graph = workflow.graph)
-        except ValueError:
-            self.graph = workflow.graph
-        return self
-   
-    def execute(self, project: sourdough.Project, copy_components: bool = False,
-                **kwargs) -> sourdough.Project:
-        """[summary]
-        Args:
-            project (sourdough.Project): [description]
-        Returns:
-            sourdough.Project: [description]
-            
-        """
-        print('test execute', self.graph)
-        for path in self.graph.paths:
-            for node in path:
-                if copy_components:
-                    component = copy.deepcopy(self.components[node])
-                else:
-                    component = self.components[node]
-                project = component.execute(project = project, **kwargs)    
-        return project
+        library (ClassVar[Library]): related Library instance that will store
+            subclasses and allow runtime construction and instancing of those
+            stored subclasses.
+                       
+    """
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
     
-    # def _implement_parallel_in_parallel(self, data: Any) -> Any:
-    #     """Applies 'implementation' to data.
-        
-    #     Args:
-    #         data (Any): any item needed for the class 'implementation' to be
-    #             applied.
-                
-    #     Returns:
-    #         Any: item after 'implementation has been applied.
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = sourdough.types.Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            # Removes '_builder' from class name so that the key is consistent
+            # with the key name for the class being constructed.
+            try:
+                key.replace('_builder', '')
+            except ValueError:
+                pass
+            cls.library[key] = cls
+                          
+    """ Required Subclass Class Methods """
+    
+    @abc.abstractmethod
+    def create(self, **kwargs) -> sourdough.types.Base:
+        """Subclasses must provide their own methods."""
+        pass
+    
 
-    #     """
-    #     all_data = []  
-    #     multiprocessing.set_start_method('spawn')
-    #     with multiprocessing.Pool() as pool:
-    #         all_data = pool.starmap(self.implementation, data)
-    #     return all_data      
+@dataclasses.dataclass
+class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
+    """Directs actions of a stored Builder instance.
 
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout sourdough. For example, if a 
+            sourdough instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None. 
+    
+    """
+    name: str = None
+    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'library' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Creates 'library' class attribute if it doesn't exist.
+        if not hasattr(cls, 'library'):  
+            cls.library = sourdough.types.Library()
+        if not abc.ABC in cls.__bases__:
+            key = sourdough.tools.snakify(cls.__name__)
+            # Removes '_director' from class name so that the key is consistent
+            # with the key name for the class being constructed.
+            try:
+                key.replace('_director', '')
+            except ValueError:
+                pass
+            cls.library[key] = cls
+                 
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def create(self, **kwargs) -> sourdough.types.Base:
+        """Subclasses must provide their own methods."""
+        pass
+  

@@ -1,7 +1,7 @@
 """
-workshop:
+workbench:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
-Copyright 2020, Corey Rayburn Yung
+Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     
@@ -17,7 +17,9 @@ import multiprocessing
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
-import sourdough  
+import sourdough
+from . import base
+from . import structure 
 
        
 @dataclasses.dataclass
@@ -35,88 +37,9 @@ class Blueprint(object):
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
     attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
 
-
-@dataclasses.dataclass
-class Builder(sourdough.types.Base, abc.ABC):
-    """Creates a sourdough object.
-
-    Args:
-        library (ClassVar[Library]): related Library instance that will store
-            subclasses and allow runtime construction and instancing of those
-            stored subclasses.
-                       
-    """
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            # Removes '_builder' from class name so that the key is consistent
-            # with the key name for the class being constructed.
-            try:
-                key.replace('_builder', '')
-            except ValueError:
-                pass
-            cls.library[key] = cls
-                          
-    """ Required Subclass Class Methods """
-    
-    @abc.abstractmethod
-    def create(self, **kwargs) -> sourdough.types.Base:
-        """Subclasses must provide their own methods."""
-        pass
-    
-
-@dataclasses.dataclass
-class Director(sourdough.quirks.Element, sourdough.types.Base, abc.ABC):
-    """Directs actions of a stored Builder instance.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout sourdough. For example, if a 
-            sourdough instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None. 
-    
-    """
-    name: str = None
-    library: ClassVar[sourdough.types.Library] = sourdough.types.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Creates 'library' class attribute if it doesn't exist.
-        if not hasattr(cls, 'library'):  
-            cls.library = sourdough.types.Library()
-        if not abc.ABC in cls.__bases__:
-            key = sourdough.tools.snakify(cls.__name__)
-            # Removes '_director' from class name so that the key is consistent
-            # with the key name for the class being constructed.
-            try:
-                key.replace('_director', '')
-            except ValueError:
-                pass
-            cls.library[key] = cls
-                 
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def create(self, **kwargs) -> sourdough.types.Base:
-        """Subclasses must provide their own methods."""
-        pass
-    
     
 @dataclasses.dataclass
-class Creator(Builder):
+class WorkflowCreator(base.Builder):
     """Creates a sourdough object.
     
     Args:
@@ -124,9 +47,7 @@ class Creator(Builder):
             for creating objects.
                        
     """
-    manager: sourdough.project.Manager = dataclasses.field(
-        repr = False, 
-        default = None)
+    manager: Manager = dataclasses.field(repr = False, default = None)
 
     """ Properties """
     
@@ -152,7 +73,6 @@ class Creator(Builder):
         """
         blueprint = self.parse_section(name = name)
         graph = self.create_graph(blueprint = blueprint)
-        print('test graph', graph)
         components = self.create_components(blueprint = blueprint)
         return sourdough.project.Workflow(
             graph = graph, 
@@ -344,13 +264,10 @@ class Creator(Builder):
         Returns:
             Dict[str, List[str]]: [description]
             
-        """
-        graph = sourdough.composites.Graph()
-        simplified = list(more_itertools.collapse(organized))
-        edges = more_itertools.windowed(simplified, 2)
-        for edge_pair in edges:
-            graph.add_edge(start = edge_pair[0], stop = edge_pair[1])
-        return graph
+        """ 
+        nodes = list(more_itertools.collapse(organized))
+        edges = more_itertools.windowed(nodes)
+        return sourdough.composites.Graph.from_edges(edges = edges)
 
     def _add_plan(self, 
             contents: List[str], 
@@ -399,7 +316,7 @@ class Creator(Builder):
 
 
 @dataclasses.dataclass
-class Manager(sourdough.quirks.Validator, Director):
+class WorkflowManager(sourdough.quirks.Validator, Director):
     """Creates and executes portions of a workflow in a sourdough project.
 
     Args:
