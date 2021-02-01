@@ -29,7 +29,7 @@ class Workflow(sourdough.Base, collections.abc.Iterator):
         components (Library): stores Component instances that correspond to 
             nodes in 'graph'. Defaults to an empty Library.
             
-    """  
+    """  de
     graph: sourdough.Graph = dataclasses.field(
         default_factory = sourdough.Graph)
     components: sourdough.Library = sourdough.Library()
