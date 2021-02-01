@@ -17,7 +17,6 @@ __version__ = '0.1.2'
 __author__ = 'Corey Rayburn Yung'
 
 
-import importlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Set, Tuple, Type, Union)
 
@@ -34,10 +33,13 @@ importables: Dict[str, str] = {
     'Filer': 'base.Filer',
     'Workflow': 'base.Workflow',
     'Component': 'base.Component',
-    'Manager': 'workbench.Manager',
-    'Creator': 'workbench.Creator',
+    'Manager': 'base.Manager',
+    'Creator': 'base.Creator',
+    'Results': 'base.Results',
+    'Step': 'process.Step',
+    'Technique': 'process.Technique',
     'interface': 'interface',
-    'structure': 'structure',
+    'process': 'process',
     'base': 'base',
     'workbench': 'workbench'}
 
@@ -46,7 +48,7 @@ def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them.
     
     For further information about how this lazy import system works, read the
-    documentation accompanying the 'lazily_import' function.
+    documentation accompanying the 'sourdough.lazily_import' function.
     
     Args:
         name (str): name of sourdough project module or item.
@@ -58,4 +60,7 @@ def __getattr__(name: str) -> Any:
         Any: a module or item stored within a module.
         
     """
-    return sourdough.lazily_import(name = name)
+    return sourdough.lazily_import(name = name, 
+                                   package = __name__, 
+                                   mapping = importables)
+    

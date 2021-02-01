@@ -19,8 +19,6 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import sourdough
 from . import base
-from . import structure 
-
        
 @dataclasses.dataclass
 class Blueprint(object):
@@ -39,7 +37,7 @@ class Blueprint(object):
 
     
 @dataclasses.dataclass
-class WorkflowCreator(base.Builder):
+class WorkflowCreator(base.Creator):
     """Creates a sourdough object.
     
     Args:
@@ -47,7 +45,7 @@ class WorkflowCreator(base.Builder):
             for creating objects.
                        
     """
-    manager: Manager = dataclasses.field(repr = False, default = None)
+    manager: base.Manager = dataclasses.field(repr = False, default = None)
 
     """ Properties """
     
@@ -56,12 +54,12 @@ class WorkflowCreator(base.Builder):
         return self.manager.bases.component.library
 
     @property
-    def settings(self) -> sourdough.project.Settings:
+    def settings(self) -> base.Settings:
         return self.manager.project.settings
          
     """ Required Public Methods """
     
-    def create(self, name: str = None) -> sourdough.project.Workflow:
+    def create(self, name: str = None) -> base.Workflow:
         """Creates a Creator instance from a section of a Settings instance.
 
         Args:
@@ -74,7 +72,7 @@ class WorkflowCreator(base.Builder):
         blueprint = self.parse_section(name = name)
         graph = self.create_graph(blueprint = blueprint)
         components = self.create_components(blueprint = blueprint)
-        return sourdough.project.Workflow(
+        return base.Workflow(
             graph = graph, 
             components = components)
 
@@ -114,7 +112,7 @@ class WorkflowCreator(base.Builder):
         return blueprint
    
     def create_components(self, 
-            blueprint: Blueprint) -> Dict[str, sourdough.project.Component]:
+            blueprint: Blueprint) -> Dict[str, base.Component]:
         """
         """
         instances = {}
@@ -299,16 +297,16 @@ class WorkflowCreator(base.Builder):
         return graph
       
     def _inject_attributes(self, 
-            component: sourdough.project.Component, 
-            blueprint: Blueprint) -> sourdough.project.Component:
+            component: base.Component, 
+            blueprint: Blueprint) -> base.Component:
         """[summary]
 
         Args:
-            component (sourdough.project.Component): [description]
+            component (base.Component): [description]
             blueprint (Blueprint): [description]
 
         Returns:
-            sourdough.project.Component: [description]
+            base.Component: [description]
         """
         for key, value in blueprint.attributes.items():
             setattr(component, key, value)
@@ -316,7 +314,7 @@ class WorkflowCreator(base.Builder):
 
 
 @dataclasses.dataclass
-class WorkflowManager(sourdough.quirks.Validator, Director):
+class WorkflowManager(sourdough.quirks.Validator, base.Manager):
     """Creates and executes portions of a workflow in a sourdough project.
 
     Args:
@@ -326,14 +324,14 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
 
     """
     name: str = None
-    creator: Creator = None
+    creator: base.Creator = None
     project: sourdough.Project = dataclasses.field(repr = False, default = None)
-    bases: sourdough.project.Bases = dataclasses.field(
+    bases: base.Bases = dataclasses.field(
         repr = False, 
         default = None)
     workflow: Union[
-        sourdough.project.Workflow, 
-        Type[sourdough.project.Workflow], 
+        base.Workflow, 
+        Type[base.Workflow], 
         str] = None
     validations: ClassVar[Sequence[str]] = ['bases', 'creator', 'workflow']
     
@@ -351,12 +349,12 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
     """ Properties """
     
     @property
-    def settings(self) -> sourdough.project.Settings:
+    def settings(self) -> base.Settings:
         return self.project.settings
          
     """ Public Methods """
     
-    def create(self, **kwargs) -> sourdough.project.Workflow:
+    def create(self, **kwargs) -> base.Workflow:
         """Builds and stores an instance based on 'name' and 'kwargs'.
 
         Args:
@@ -368,13 +366,13 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
     """ Private Methods """
 
     def _validate_bases(self, bases: Union[
-            Type[sourdough.project.Bases],
-            sourdough.project.Bases]):
+            Type[base.Bases],
+            base.Bases]):
         """[summary]
 
         Args:
-            bases (Union[ Type[sourdough.project.Bases], 
-                sourdough.project.Bases]): [description]
+            bases (Union[ Type[base.Bases], 
+                base.Bases]): [description]
 
         Raises:
             TypeError: [description]
@@ -384,10 +382,10 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
         """
         if bases is None:
             bases = self.project.bases
-        elif isinstance(bases, sourdough.project.Bases):
+        elif isinstance(bases, base.Bases):
             pass
         elif (inspect.isclass(bases) 
-                and issubclass(bases, sourdough.project.Bases)):
+                and issubclass(bases, base.Bases)):
             bases = bases()
         else:
             raise TypeError('bases must be a Bases or None.')
@@ -407,9 +405,9 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
         return creator
 
     def _validate_workflow(self, workflow: Union[
-            sourdough.project.Workflow, 
-            Type[sourdough.project.Workflow], 
-            str]) -> sourdough.project.Workflow:
+            base.Workflow, 
+            Type[base.Workflow], 
+            str]) -> base.Workflow:
         """Validates 'workflow' or converts it to a Workflow instance.
         
         Args:
@@ -444,11 +442,11 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
     
 #     """ Public Methods """
     
-#     def create(self, builder: sourdough.project.Creator, **kwargs) -> None:
+#     def create(self, builder: base.Creator, **kwargs) -> None:
 #         """[summary]
 
 #         Args:
-#             builder (sourdough.project.Creator): [description]
+#             builder (base.Creator): [description]
 
 #         """
 #         if not kwargs:
@@ -460,12 +458,12 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
     
 #     """ Private Methods """
     
-#     def _get_settings(self, builder: sourdough.project.Creator, 
+#     def _get_settings(self, builder: base.Creator, 
 #                       **kwargs) -> Dict[str, Any]:
 #         """[summary]
 
 #         Args:
-#             builder (sourdough.project.Creator): [description]
+#             builder (base.Creator): [description]
 
 #         Returns:
 #             Dict[str, Any]: [description]
@@ -477,12 +475,12 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
 #             pass
 #         return kwargs
     
-#     def _get_required(self, builder: sourdough.project.Creator, 
+#     def _get_required(self, builder: base.Creator, 
 #                       **kwargs) -> Dict[str, Any]:
 #         """[summary]
 
 #         Args:
-#             builder (sourdough.project.Creator): [description]
+#             builder (base.Creator): [description]
 
 #         Returns:
 #             Dict[str, Any]: [description]
@@ -493,12 +491,12 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
 #                 kwargs[item] = self.default[item]
 #         return kwargs
     
-#     def _get_runtime(self, builder: sourdough.project.Creator, 
+#     def _get_runtime(self, builder: base.Creator, 
 #                       **kwargs) -> Dict[str, Any]:
 #         """[summary]
 
 #         Args:
-#             builder (sourdough.project.Creator): [description]
+#             builder (base.Creator): [description]
 
 #         Returns:
 #             Dict[str, Any]: [description]
@@ -511,12 +509,12 @@ class WorkflowManager(sourdough.quirks.Validator, Director):
 #                 pass
 #         return kwargs
 
-#     def _get_selected(self, builder: sourdough.project.Creator, 
+#     def _get_selected(self, builder: base.Creator, 
 #                       **kwargs) -> Dict[str, Any]:
 #         """[summary]
 
 #         Args:
-#             builder (sourdough.project.Creator): [description]
+#             builder (base.Creator): [description]
 
 #         Returns:
 #             Dict[str, Any]: [description]

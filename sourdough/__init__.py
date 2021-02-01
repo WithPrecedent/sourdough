@@ -97,9 +97,13 @@ def __getattr__(name: str) -> Any:
         Any: a module or item stored within a module.
         
     """
-    return lazily_import(name = name)
+    return lazily_import(name = name,
+                         package = __name__,  
+                         mapping = importables)
 
-def lazily_import(name: str) -> Any:
+def lazily_import(name: str, 
+                  package: str = None, 
+                  mapping: Dict[str, str] = None) -> Any:
     """Lazily imports modules and items within them.
 
     Lazy importing means that modules are only imported when they are first
@@ -141,13 +145,44 @@ def lazily_import(name: str) -> Any:
         Any: a module or item stored within a module.
         
     """
-    if name in importables:
-        key = '.' + importables[name]
+    package = package or __name__
+    mapping = mapping or importables
+    if name in mapping:
+        key = '.' + mapping[name]
         try:
-            return importlib.import_module(key, package = __name__)
+            return importlib.import_module(key, package = package)
         except ModuleNotFoundError:
             item = key.split('.')[-1]
             module_name = key[:-len(item) - 1]
-            module = importlib.import_module(module_name, package = __name__)
+            module = importlib.import_module(module_name, package = package)
             return getattr(module, item)
-    raise AttributeError(f'module {__name__} has no attribute {name}')
+    raise AttributeError(f'module {package} has no attribute {name}')   
+    
+    
+    # if '.' in name:
+    #     print('test yes .')
+    #     parts = name.split('.')
+    #     subpackage_name = '.' + parts[0]
+    #     remainder = parts[1:]
+    #     subpackage = importlib.import_module(
+    #         subpackage_name, 
+    #         package = package)
+    #     return getattr(subpackage, remainder)
+    # elif name in importables:
+    #     key = '.' + importables[name]
+    #     try:
+    #         return importlib.import_module(key, package = package)
+    #     except ModuleNotFoundError:
+    #         item = key.split('.')[-1]
+    #         module_name = key[:-len(item) - 1]
+    #         module = importlib.import_module(module_name, package = package)
+    #         return getattr(module, item)      
+    # elif '.' in name:
+    #     parts = name.split('.')
+    #     subpackage_name = '.' + parts[0]
+    #     remainder = parts[1:]
+    #     subpackage = importlib.import_module(
+    #         subpackage_name, 
+    #         package = package)
+    #     return getattr(subpackage, remainder)
+    # raise AttributeError(f'module {__name__} has no attribute {name}')

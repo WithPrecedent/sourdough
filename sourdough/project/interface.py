@@ -26,8 +26,7 @@ logger = logging.getLogger()
 
 
 @dataclasses.dataclass
-class Project(sourdough.quirks.Element, sourdough.quirks.Validator, 
-              sourdough.project.Director):
+class Project(sourdough.quirks.Validator, sourdough.project.Manager):
     """Constructs, organizes, and implements a sourdough project.
 
     Args:
@@ -63,6 +62,10 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
         validations (Sequence[str]): 
+    
+    Attributes:
+        bases
+        library
         
     """
     name: str = None
@@ -92,8 +95,6 @@ class Project(sourdough.quirks.Element, sourdough.quirks.Validator,
         str] = dataclasses.field(default_factory = sourdough.project.Results)
     automatic: bool = True
     data: Any = None
-    library: ClassVar[sourdough.quirks.Library] = sourdough.quirks.Library()
-    bases: ClassVar[sourdough.quirks.Bases] = sourdough.quirks.Bases()
     validations: ClassVar[Sequence[str]] = [
         'settings', 
         'name', 

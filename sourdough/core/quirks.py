@@ -243,6 +243,7 @@ class Base(abc.ABC):
         # Adds base classes to 'bases' using 'key'.
         if Base in cls.__bases__:
             cls.bases.add(name = key, base = cls)
+            # setattr(cls.bases, key, cls)
         # Adds concrete subclasses to 'library' using 'key'.
         elif not abc.ABC in cls.__bases__:
             cls.library[key] = cls
